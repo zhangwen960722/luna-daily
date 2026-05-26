@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>子账号管理</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-bg-color: #F5F7FA;
+            --el-text-color-regular: #606266;
+            --el-border-radius-base: 4px;
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background-color: var(--el-bg-color);
+            font-family: sans-serif;
+            box-sizing: border-box;
+            height: 100vh;
+        }
+
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .search-card {
+            background-color: #fff;
+            border-radius: var(--el-border-radius-base);
+            padding: 16px;
+        }
+
+        .content-card {
+            background-color: #fff;
+            border-radius: var(--el-border-radius-base);
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .search-area {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-item label {
+            margin-right: 8px;
+            color: var(--el-text-color-regular);
+            font-size: 14px;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .pagination-area {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .el-table th.el-table__cell {
+            background-color: #FAFAFA;
+            color: #303133;
+            font-weight: 500;
+        }
+
+        /* 无障碍表单布局 (响应式标签间距) */
+        .a11y-form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .a11y-form-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px; /* 桌面端 8px 间距 */
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.2;
+        }
+        .a11y-form-label.is-required::before {
+            content: '*';
+            color: var(--el-color-danger, #f56c6c);
+            margin-right: 4px;
+        }
+        @media screen and (max-width: 768px) {
+            .a11y-form-label {
+                margin-bottom: 12px; /* 移动端 12px 间距 */
+            }
+        }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+        /* 资源树自定义节点样式 */
+        .custom-tree-node {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            padding-right: 8px;
+        }
+        .node-label {
+            margin-right: 8px;
+        }
+        .node-type-tag {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transform: scale(0.9);
+        }
+        .node-type-menu {
+            color: #2DA44E;
+            background-color: #ecf5ff;
+            border: 1px solid #d9ecff;
+        }
+        .node-type-button {
+            color: #E6A23C;
+            background-color: #fdf6ec;
+            border: 1px solid #faecd8;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索条件区 -->
+        <div class="search-card">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.account" placeholder="账号" clearable style="width: 150px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.email" placeholder="邮箱" clearable style="width: 180px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.name" placeholder="姓名" clearable style="width: 150px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.phone" placeholder="手机号" clearable style="width: 150px;"></el-input>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+                <div style="margin-left: auto;">
+                    <el-button type="success" @click="handleAdd">新增子账号</el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="content-card">
+            <!-- 表格区 -->
+            <div class="table-container" style="margin-top: 0;">
+                <el-table :data="tableData" border height="100%" style="width: 100%">
+                    <el-table-column prop="account" label="账号" min-width="120"></el-table-column>
+                    <el-table-column prop="name" label="姓名" min-width="120"></el-table-column>
+                    <el-table-column prop="gender" label="性别" min-width="80"></el-table-column>
+                    <el-table-column prop="phone" label="手机号" min-width="120"></el-table-column>
+                    <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="status" label="状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    
+                    <el-table-column label="操作" width="220" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button link type="primary" size="small" @click="handleAssign(scope.row)">分配资源</el-button>
+                            <el-button v-if="scope.row.status === '正常'" link type="danger" size="small" @click="handleToggleStatus(scope.row)">冻结</el-button>
+                            <el-button v-else link type="success" size="small" @click="handleToggleStatus(scope.row)">启用</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页区 -->
+            <div class="pagination-area">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="total"
+                />
+            </div>
+        </div>
+
+        <!-- 新增/编辑子账号弹窗 -->
+        <el-dialog v-model="editDialogVisible" :title="dialogTitle" width="600px" destroy-on-close>
+            <el-form :model="editForm" @submit.prevent label-position="top">
+                <el-row :gutter="20">
+                    <el-col :span="24">
+                        <div class="a11y-form-group">
+                            <label for="account" class="a11y-form-label is-required">账号</label>
+                            <el-input id="account" v-model="editForm.account" placeholder="请输入账号"></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="lastName" class="a11y-form-label is-required">姓</label>
+                            <el-input id="lastName" v-model="editForm.lastName" placeholder="请输入姓氏"></el-input>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="firstName" class="a11y-form-label is-required">名</label>
+                            <el-input id="firstName" v-model="editForm.firstName" placeholder="请输入名字"></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="gender" class="a11y-form-label is-required">性别</label>
+                            <el-select id="gender" v-model="editForm.gender" placeholder="请选择" style="width: 100%;">
+                                <el-option label="男" value="男"></el-option>
+                                <el-option label="女" value="女"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="phone" class="a11y-form-label is-required">手机号</label>
+                            <el-input id="phone" v-model="editForm.phone" placeholder="请输入手机号" type="number"></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="24">
+                        <div class="a11y-form-group">
+                            <label for="email" class="a11y-form-label">邮箱</label>
+                            <el-input id="email" v-model="editForm.email" placeholder="请输入邮箱"></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="editDialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="saveAccount">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 分配资源弹窗 (角色选择) -->
+        <el-dialog v-model="assignDialogVisible" title="分配资源" width="500px" destroy-on-close>
+            <el-form :model="assignForm" @submit.prevent label-position="top">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label class="a11y-form-label">账号</label>
+                            <div style="padding: 8px 0; font-size: 14px; color: #303133;">{{ assignForm.account }}</div>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label class="a11y-form-label">姓名</label>
+                            <div style="padding: 8px 0; font-size: 14px; color: #303133;">{{ assignForm.name }}</div>
+                        </div>
+                    </el-col>
+                </el-row>
+                
+                <div class="a11y-form-group">
+                    <label class="a11y-form-label is-required">分配角色</label>
+                    <el-select v-model="assignForm.roleIds" multiple placeholder="请选择角色" style="width: 100%;">
+                        <el-option label="财务角色" value="role_finance"></el-option>
+                        <el-option label="业务角色" value="role_business"></el-option>
+                        <el-option label="客服角色" value="role_service"></el-option>
+                    </el-select>
+                    <div style="font-size: 12px; color: #909399; margin-top: 8px;">子账号的系统权限将由所选角色的权限组合决定</div>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="assignDialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="saveAssign">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                // 搜索与分页
+                const searchForm = reactive({ account: '', email: '', name: '', phone: '' });
+                const currentPage = ref(1);
+                const pageSize = ref(10);
+                const total = ref(3);
+
+                // 表格数据
+                const tableData = ref([
+                    { id: 1, account: 'zhangsan001', name: '张三', gender: '男', phone: '13800138000', email: 'zhangsan@example.com', status: '正常' },
+                    { id: 2, account: 'lisi002', name: '李四', gender: '女', phone: '13900139000', email: 'lisi@example.com', status: '已冻结' },
+                    { id: 3, account: 'wangwu003', name: '王五', gender: '男', phone: '13700137000', email: 'wangwu@example.com', status: '正常' }
+                ]);
+
+                // 动作方法
+                const handleSearch = () => {
+                    ElMessage.success('执行查询操作');
+                };
+
+                const resetSearch = () => {
+                    searchForm.account = '';
+                    searchForm.email = '';
+                    searchForm.name = '';
+                    searchForm.phone = '';
+                };
+
+                // 新增/编辑弹窗状态
+                const editDialogVisible = ref(false);
+                const dialogTitle = ref('新增子账号');
+                const dialogMode = ref('add');
+                const currentEditRow = ref(null);
+
+                const editForm = reactive({
+                    account: '',
+                    lastName: '',
+                    firstName: '',
+                    gender: '男',
+                    phone: '',
+                    email: ''
+                });
+
+                const handleAdd = () => {
+                    dialogTitle.value = '新增子账号';
+                    dialogMode.value = 'add';
+                    Object.assign(editForm, {
+                        account: '', lastName: '', firstName: '', gender: '男', phone: '', email: ''
+                    });
+                    editDialogVisible.value = true;
+                };
+
+                const handleEdit = (row) => {
+                    dialogTitle.value = '编辑子账号';
+                    dialogMode.value = 'edit';
+                    currentEditRow.value = row;
+                    // Mock splitting the name back to first/last for demo purposes
+                    const lastName = row.name.charAt(0);
+                    const firstName = row.name.substring(1);
+                    
+                    Object.assign(editForm, {
+                        account: row.account,
+                        lastName: lastName,
+                        firstName: firstName,
+                        gender: row.gender,
+                        phone: row.phone,
+                        email: row.email
+                    });
+                    editDialogVisible.value = true;
+                };
+
+                const handleToggleStatus = (row) => {
+                    const action = row.status === '正常' ? '冻结' : '启用';
+                    const newStatus = row.status === '正常' ? '已冻结' : '正常';
+                    
+                    ElMessageBox.confirm(
+                        `确定要${action}账号 [${row.account}] 吗？`,
+                        `${action}确认`,
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    ).then(() => {
+                        row.status = newStatus;
+                        ElMessage.success(`已${action}该账号`);
+                    }).catch(() => {});
+                };
+
+                const saveAccount = () => {
+                    if (!editForm.account || !editForm.lastName || !editForm.firstName || !editForm.gender || !editForm.phone) {
+                        ElMessage.warning('请完善必填信息');
+                        return;
+                    }
+                    
+                    const fullName = editForm.lastName + editForm.firstName;
+
+                    if (dialogMode.value === 'add') {
+                        tableData.value.unshift({ 
+                            id: Date.now(), 
+                            account: editForm.account,
+                            name: fullName,
+                            gender: editForm.gender,
+                            phone: editForm.phone,
+                            email: editForm.email,
+                            status: '正常'
+                        });
+                        total.value++;
+                        ElMessage.success('新增子账号成功');
+                    } else {
+                        Object.assign(currentEditRow.value, {
+                            account: editForm.account,
+                            name: fullName,
+                            gender: editForm.gender,
+                            phone: editForm.phone,
+                            email: editForm.email
+                        });
+                        ElMessage.success('编辑子账号成功');
+                    }
+                    editDialogVisible.value = false;
+                };
+
+                // 分配资源弹窗状态
+                const assignDialogVisible = ref(false);
+                const assignForm = reactive({ account: '', name: '', roleIds: [] });
+
+                const handleAssign = (row) => {
+                    assignForm.account = row.account;
+                    assignForm.name = row.name;
+                    assignForm.roleIds = []; // mock resetting role selection
+                    assignDialogVisible.value = true;
+                };
+
+                const saveAssign = () => {
+                    ElMessage.success(`成功为账号 [${assignForm.account}] 分配角色`);
+                    assignDialogVisible.value = false;
+                };
+
+                return {
+                    searchForm, currentPage, pageSize, total, tableData,
+                    handleSearch, resetSearch,
+                    editDialogVisible, dialogTitle, editForm, handleAdd, handleEdit, saveAccount,
+                    handleToggleStatus,
+                    assignDialogVisible, assignForm, handleAssign, saveAssign
+                };
+            }
+        });
+
+        // 注册 Element Plus 图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

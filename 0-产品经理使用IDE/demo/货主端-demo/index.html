@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞点跨境供应链系统 - 货主端</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            overflow: hidden;
+        }
+        #app {
+            height: 100vh;
+        }
+        .el-container {
+            height: 100%;
+        }
+        
+        /* 侧边栏样式 */
+        .el-aside {
+            background-color: #304156;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+            box-shadow: 2px 0 6px rgba(0,21,41,.35);
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .sidebar-logo-container {
+            height: 60px;
+            line-height: 60px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #2b3643;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .el-scrollbar {
+            flex: 1;
+        }
+        .sidebar-toggle-container {
+            height: 40px;
+            line-height: 40px;
+            width: 100%;
+            background-color: #2b3643;
+            color: #bfcbd9;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.3s;
+            border-top: 1px solid #1f2d3d;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-toggle-container:hover {
+            background-color: #263445;
+            color: #2DA44E;
+        }
+        .sidebar-toggle-icon {
+            font-size: 18px;
+        }
+        .el-menu {
+            border-right: none;
+            background-color: transparent;
+        }
+        .el-menu-item, .el-sub-menu__title {
+            color: #bfcbd9 !important;
+        }
+        .el-menu-item:hover, .el-sub-menu__title:hover {
+            background-color: #263445 !important;
+        }
+        .el-menu-item.is-active {
+            color: #2DA44E !important;
+            background-color: #263445 !important;
+        }
+        .el-menu-item i, .el-sub-menu__title i {
+            color: #bfcbd9;
+        }
+        
+        /* 顶部导航样式 */
+        .el-header {
+            background-color: #fff;
+            border-bottom: 1px solid #d8dce5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 1px 4px rgba(0,21,41,.08);
+            z-index: 999;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        /* 主体内容区样式 */
+        .el-main {
+            background-color: #f0f2f5;
+            padding: 0;
+            position: relative;
+            overflow: hidden; /* 由 iframe 内部去滚动 */
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        
+        /* 标签页导航（模拟） */
+        .tags-view-container {
+            height: 34px;
+            width: 100%;
+            background: #fff;
+            border-bottom: 1px solid #d8dce5;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .12), 0 0 3px 0 rgba(0, 0, 0, .04);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+            z-index: 998;
+            position: relative;
+        }
+        .tags-view-item {
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+            height: 26px;
+            line-height: 26px;
+            border: 1px solid #d8dce5;
+            color: #495060;
+            background: #fff;
+            padding: 0 8px;
+            font-size: 12px;
+            margin-left: 5px;
+            border-radius: 2px;
+        }
+        .tags-view-item.active {
+            background-color: #2DA44E;
+            color: #fff;
+            border-color: #2DA44E;
+        }
+        .tags-view-item.active::before {
+            content: '';
+            background: #fff;
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: relative;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-container>
+            <!-- 左侧菜单 -->
+            <el-aside :width="isCollapse ? '64px' : '240px'">
+                <div class="sidebar-logo-container">
+                    <el-icon style="margin-right: 12px; font-size: 24px; color: #2DA44E;"><Platform /></el-icon>
+                    <span v-show="!isCollapse">飞点跨境货主端</span>
+                </div>
+                <el-scrollbar>
+                    <el-menu
+                        :default-active="activeMenu"
+                        class="el-menu-vertical-demo"
+                        background-color="#304156"
+                        text-color="#bfcbd9"
+                        active-text-color="#2DA44E"
+                        :collapse="isCollapse"
+                        :collapse-transition="false"
+                        @select="handleSelect"
+                        :default-openeds="['1', '2', '3', '4', '5']"
+                    >
+                        <el-menu-item index="首页.html">
+                            <el-icon><HomeFilled /></el-icon>
+                            <template #title><span>首页</span></template>
+                        </el-menu-item>
+                        
+                        <el-menu-item index="查价订舱.html">
+                            <el-icon><Search /></el-icon>
+                            <template #title><span>查价订舱</span></template>
+                        </el-menu-item>
+
+                        <el-sub-menu index="1">
+                            <template #title>
+                                <el-icon><List /></el-icon>
+                                <span>订单中心</span>
+                            </template>
+                            <el-menu-item v-for="item in orderMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+
+                        <el-sub-menu index="2">
+                            <template #title>
+                                <el-icon><Wallet /></el-icon>
+                                <span>财务中心</span>
+                            </template>
+                            <el-menu-item v-for="item in financeMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+
+                        <el-sub-menu index="3">
+                            <template #title>
+                                <el-icon><Document /></el-icon>
+                                <span>基础资料</span>
+                            </template>
+                            <el-menu-item v-for="item in basicMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+
+                        <el-sub-menu index="4">
+                            <template #title>
+                                <el-icon><Setting /></el-icon>
+                                <span>企业设置</span>
+                            </template>
+                            <el-menu-item v-for="item in settingMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                    </el-menu>
+                </el-scrollbar>
+                <!-- 左下角折叠按钮 -->
+                <div class="sidebar-toggle-container" @click="toggleCollapse">
+                    <el-icon class="sidebar-toggle-icon"><Fold v-show="!isCollapse" /><Expand v-show="isCollapse" /></el-icon>
+                </div>
+            </el-aside>
+            
+            <!-- 右侧主体 -->
+            <el-container style="flex-direction: column;">
+                <!-- 顶部 Header -->
+                <el-header height="50px">
+                    <div class="header-left">
+                        <el-icon style="font-size: 20px; cursor: pointer; margin-right: 15px;" @click="toggleCollapse"><Fold v-show="!isCollapse" /><Expand v-show="isCollapse" /></el-icon>
+                        <el-breadcrumb separator="/">
+                            <el-breadcrumb-item>首页</el-breadcrumb-item>
+                            <el-breadcrumb-item v-if="currentTopMenuName && currentTopMenuName !== '首页'">{{ currentTopMenuName }}</el-breadcrumb-item>
+                            <el-breadcrumb-item style="font-weight: bold; color: #303133;">{{ currentMenuName }}</el-breadcrumb-item>
+                        </el-breadcrumb>
+                    </div>
+                    <div class="header-right">
+                        <el-tooltip content="全屏" placement="bottom">
+                            <el-icon style="font-size: 18px; cursor: pointer;"><FullScreen /></el-icon>
+                        </el-tooltip>
+                        <el-badge :value="3" class="item" style="margin-right: 15px; cursor: pointer;">
+                            <el-icon style="font-size: 18px;"><Bell /></el-icon>
+                        </el-badge>
+                        <el-dropdown>
+                            <span class="el-dropdown-link" style="cursor: pointer; display: flex; align-items: center; color: #5a5e66;">
+                                <img src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" style="width: 30px; height: 30px; border-radius: 10px; margin-right: 8px;">
+                                {{ currentUsername }} <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                            </span>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item>个人中心</el-dropdown-item>
+                                    <el-dropdown-item>企业认证</el-dropdown-item>
+                                    <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
+                    </div>
+                </el-header>
+                
+                <!-- 标签页导航 -->
+                <div class="tags-view-container">
+                    <span class="tags-view-item active">
+                        {{ currentMenuName }}
+                    </span>
+                </div>
+                
+                <!-- 页面内容 (Iframe 承载各独立页面) -->
+                <el-main>
+                    <iframe :src="currentIframeSrc" name="mainIframe" id="mainIframe"></iframe>
+                </el-main>
+            </el-container>
+        </el-container>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        const app = createApp({
+            setup() {
+                // 订单中心菜单
+                const orderMenuList = [
+                    { index: '我的订单.html', name: '我的订单' },
+                    { index: '草稿箱.html', name: '草稿箱' },
+                    { index: '异常订单.html', name: '异常订单' }
+                ];
+
+                // 财务中心菜单
+                const financeMenuList = [
+                    { index: '账单管理.html', name: '账单管理' },
+                    { index: '发票管理.html', name: '发票管理' },
+                    { index: '充值与流水.html', name: '充值与流水' }
+                ];
+
+                // 基础资料菜单
+                const basicMenuList = [
+                    { index: '商品管理.html', name: '商品管理' },
+                    { index: '收货地址管理.html', name: '收货地址管理' },
+                    { index: 'VAT管理.html', name: 'VAT管理' }
+                ];
+
+                // 企业设置菜单
+                const settingMenuList = [
+                    { index: '角色管理.html', name: '角色管理' },
+                    { index: '子账号管理.html', name: '子账号管理' }
+                ];
+
+                // 登录状态校验联动
+                const checkLogin = () => {
+                    const token = localStorage.getItem('shipper_token');
+                    if (!token) {
+                        ElementPlus.ElMessage.warning('请先登录');
+                        window.location.href = 'login.html';
+                    }
+                };
+                checkLogin();
+
+                const isCollapse = ref(false);
+                const toggleCollapse = () => {
+                    isCollapse.value = !isCollapse.value;
+                };
+
+                const currentUsername = ref(localStorage.getItem('shipper_username') || '客户企业名称');
+
+                const handleLogout = () => {
+                    localStorage.removeItem('shipper_token');
+                    localStorage.removeItem('shipper_username');
+                    ElementPlus.ElMessage.success('已退出登录');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 500);
+                };
+
+                const activeMenu = ref('首页.html');
+                const currentIframeSrc = ref('首页.html');
+
+                const currentMenuName = computed(() => {
+                    if (activeMenu.value === '首页.html') return '工作台';
+                    if (activeMenu.value === '查价订舱.html') return '查价订舱';
+                    
+                    let item = orderMenuList.find(m => m.index === activeMenu.value) ||
+                               financeMenuList.find(m => m.index === activeMenu.value) ||
+                               basicMenuList.find(m => m.index === activeMenu.value) ||
+                               settingMenuList.find(m => m.index === activeMenu.value);
+                    return item ? item.name : '';
+                });
+
+                const currentTopMenuName = computed(() => {
+                    if (activeMenu.value === '首页.html') return '首页';
+                    if (activeMenu.value === '查价订舱.html') return '查价订舱';
+                    if (orderMenuList.find(m => m.index === activeMenu.value)) return '订单中心';
+                    if (financeMenuList.find(m => m.index === activeMenu.value)) return '财务中心';
+                    if (basicMenuList.find(m => m.index === activeMenu.value)) return '基础资料';
+                    if (settingMenuList.find(m => m.index === activeMenu.value)) return '企业设置';
+                    return '';
+                });
+
+                const handleSelect = (index) => {
+                    activeMenu.value = index;
+                    currentIframeSrc.value = index;
+                };
+
+                // 监听 iframe 内部发送的消息，实现跨页面路由切换
+                window.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'navigate') {
+                        const targetUrl = event.data.url;
+                        if (targetUrl) {
+                            const baseUrl = targetUrl.split('?')[0];
+                            handleSelect(baseUrl);
+                            setTimeout(() => {
+                                currentIframeSrc.value = targetUrl;
+                            }, 0);
+                        }
+                    }
+                });
+
+                return {
+                    orderMenuList,
+                    financeMenuList,
+                    basicMenuList,
+                    settingMenuList,
+                    activeMenu,
+                    currentIframeSrc,
+                    currentMenuName,
+                    currentTopMenuName,
+                    handleSelect,
+                    isCollapse,
+                    toggleCollapse,
+                    currentUsername,
+                    handleLogout
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Optional: other init logic
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>费用类型 - 主列表</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            height: 100%;
+        }
+        #app {
+            padding: 20px;
+            box-sizing: border-box;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 统一卡片样式 */
+        .content-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,21,41,.08);
+            margin-bottom: 16px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0;
+        }
+
+        /* 搜索区域样式 */
+        .search-area {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .search-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .search-item label {
+            color: #606266;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            height: 32px;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            height: 32px;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+
+        /* 操作栏与表格样式 */
+        .action-bar {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 10px;
+        }
+        .table-container {
+            flex: 1;
+            overflow: hidden;
+        }
+        .pagination-container {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* 表格首行视觉区分优化 */
+        .el-table th.el-table__cell {
+            background-color: #FAFAFA !important;
+            color: #303133;
+            font-weight: 500;
+        }
+
+        /* 无障碍表单布局 (响应式标签间距) */
+        .a11y-form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .a11y-form-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px; /* 桌面端 8px 间距 */
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.2;
+        }
+        @media screen and (max-width: 768px) {
+            .a11y-form-label {
+                margin-bottom: 12px; /* 移动端 12px 间距 */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索区域 -->
+        <div class="content-card">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.feeName" placeholder="费用名称" clearable style="width: 220px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-select v-model="searchForm.feeDirection" placeholder="费用方向" clearable style="width: 200px;">
+                        <el-option label="应收" value="应收"></el-option>
+                        <el-option label="应付" value="应付"></el-option>
+                    </el-select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+                <!-- 将新增按钮移至搜索区右侧 -->
+                <div style="margin-left: auto;">
+                    <el-button type="primary" @click="openDialog('add')">
+                        <el-icon style="margin-right: 4px;"><Plus /></el-icon>新增费用类型
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="content-card main-content">
+            <!-- 数据表格 -->
+            <div class="table-container">
+                <el-table 
+                    :data="tableData" 
+                    border 
+                    style="width: 100%" 
+                    height="100%">
+                    <el-table-column prop="feeName" label="费用名称" min-width="180"></el-table-column>
+                    <el-table-column prop="feeDirection" label="费用方向" min-width="120">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.feeDirection === '应收' ? 'success' : 'warning'">
+                                {{ scope.row.feeDirection }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="status" label="状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'" effect="plain">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
+                    <el-table-column label="操作" width="180" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">
+                                编辑
+                            </el-button>
+                            <el-button 
+                                link 
+                                :type="scope.row.status === '正常' ? 'danger' : 'success'" 
+                                size="small" 
+                                @click="toggleStatus(scope.row)">
+                                {{ scope.row.status === '正常' ? '禁用' : '启用' }}
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination-container">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="total">
+                </el-pagination>
+            </div>
+        </div>
+
+        <!-- 新增/编辑弹窗 -->
+        <el-dialog 
+            :title="dialogType === 'add' ? '新增费用类型' : '编辑费用类型'" 
+            v-model="dialogVisible" 
+            width="500px"
+            destroy-on-close>
+            <div style="padding: 10px 0;">
+                <div class="a11y-form-group">
+                    <label for="fee-name-input" class="a11y-form-label">
+                        <span style="color: #F56C6C; margin-right: 4px;">*</span>费用名称
+                    </label>
+                    <el-input 
+                        id="fee-name-input"
+                        v-model="formData.feeName" 
+                        placeholder="请输入费用名称">
+                    </el-input>
+                </div>
+                
+                <div class="a11y-form-group">
+                    <label for="fee-direction-select" class="a11y-form-label">
+                        <span style="color: #F56C6C; margin-right: 4px;">*</span>费用方向
+                    </label>
+                    <el-select 
+                        id="fee-direction-select"
+                        v-model="formData.feeDirection" 
+                        placeholder="请选择费用方向"
+                        style="width: 100%;">
+                        <el-option label="应收" value="应收"></el-option>
+                        <el-option label="应付" value="应付"></el-option>
+                    </el-select>
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="saveData">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+
+        const app = createApp({
+            setup() {
+                // 搜索表单
+                const searchForm = reactive({
+                    feeName: '',
+                    feeDirection: ''
+                });
+
+                // 表格数据
+                const tableData = ref([
+                    { id: 1, feeName: '周六派送费', feeDirection: '应收', status: '正常', operator: '张三' },
+                    { id: 2, feeName: '超重费', feeDirection: '应付', status: '冻结', operator: '李四' }
+                ]);
+                
+                // 分页
+                const currentPage = ref(1);
+                const pageSize = ref(10);
+                const total = ref(2);
+                
+                // 搜索逻辑
+                const handleSearch = () => {
+                    ElementPlus.ElMessage.success('执行搜索');
+                };
+                const resetSearch = () => {
+                    searchForm.feeName = '';
+                    searchForm.feeDirection = '';
+                    ElementPlus.ElMessage.success('已重置搜索条件');
+                };
+
+                // 切换状态 (启用/禁用)
+                const toggleStatus = (row) => {
+                    const action = row.status === '正常' ? '禁用' : '启用';
+                    ElementPlus.ElMessageBox.confirm(
+                        `确定要${action}费用类型【${row.feeName}】吗？`,
+                        `${action}提示`,
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    ).then(() => {
+                        row.status = row.status === '正常' ? '冻结' : '正常';
+                        ElementPlus.ElMessage.success(`已${action}`);
+                    }).catch(() => {});
+                };
+
+                // 弹窗控制
+                const dialogVisible = ref(false);
+                const dialogType = ref('add');
+                const formData = reactive({
+                    id: null,
+                    feeName: '',
+                    feeDirection: ''
+                });
+
+                // 打开弹窗
+                const openDialog = (type, row) => {
+                    dialogType.value = type;
+                    if (type === 'edit' && row) {
+                        formData.id = row.id;
+                        formData.feeName = row.feeName;
+                        formData.feeDirection = row.feeDirection;
+                    } else {
+                        formData.id = null;
+                        formData.feeName = '';
+                        formData.feeDirection = '';
+                    }
+                    dialogVisible.value = true;
+                };
+
+                // 保存数据
+                const saveData = () => {
+                    if (!formData.feeName.trim()) {
+                        ElementPlus.ElMessage.warning('请输入费用名称');
+                        return;
+                    }
+                    if (!formData.feeDirection) {
+                        ElementPlus.ElMessage.warning('请选择费用方向');
+                        return;
+                    }
+                    
+                    ElementPlus.ElMessage.success(dialogType.value === 'add' ? '新增成功' : '编辑成功');
+                    dialogVisible.value = false;
+                };
+
+                return {
+                    searchForm,
+                    tableData,
+                    currentPage,
+                    pageSize,
+                    total,
+                    handleSearch,
+                    resetSearch,
+                    toggleStatus,
+                    dialogVisible,
+                    dialogType,
+                    formData,
+                    openDialog,
+                    saveData
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        } else {
+            console.warn('ElementPlusIconsVue 未加载成功，可能导致图标无法显示。');
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

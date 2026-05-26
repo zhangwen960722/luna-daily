@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>干线运输服务 - 新增</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #2C974B;
+            --el-border-color: #DCDFE6;
+            --el-bg-color: #F5F7FA;
+            --el-text-color-primary: #303133;
+            --el-text-color-regular: #606266;
+            --el-border-radius-base: 4px;
+        }
+        
+        body {
+            font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+            background-color: var(--el-bg-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .demo-container {
+            width: 1000px;
+            background-color: #fff;
+            padding: 0;
+            border-radius: var(--el-border-radius-base);
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
+            position: relative;
+            padding-bottom: 60px; /* 留出底部操作栏空间 */
+        }
+
+        .dialog-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--el-border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .dialog-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--el-text-color-primary);
+        }
+
+        .dialog-body {
+            padding: 24px;
+        }
+
+        /* 模块标题样式 */
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--el-text-color-primary);
+            margin: 24px 0 16px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: var(--el-color-primary);
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        /* 统一 label 样式 */
+        .el-form-item__label {
+            font-weight: 500;
+        }
+
+        /* 计费规则动态行容器 */
+        .billing-rules-container {
+            background-color: #fafafa;
+            border: 1px solid var(--el-border-color);
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .billing-rule-row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .billing-rule-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .rule-index {
+            width: 24px;
+            height: 24px;
+            background-color: #e6e8eb;
+            color: #666;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        /* 底部固定操作栏 */
+        .footer-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 24px;
+            background-color: #fff;
+            border-top: 1px solid var(--el-border-color);
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            border-radius: 0 0 var(--el-border-radius-base) var(--el-border-radius-base);
+        }
+
+        .combinations-alert {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: #fdf6ec;
+            border-radius: 4px;
+            color: #b88230;
+            font-size: 13px;
+        }
+        .combinations-alert strong {
+            color: #b88230;
+            font-size: 14px;
+            margin: 0 2px;
+        }
+
+        /* 单位后缀样式 */
+        .el-input-group__append {
+            padding: 0 12px;
+            background-color: #f5f7fa;
+            color: #909399;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="demo-container">
+            <div class="dialog-header">
+                <div class="dialog-title">{{ pageTitle }}</div>
+                <el-icon style="cursor: pointer;" @click="handleCancel"><Close /></el-icon>
+            </div>
+            
+            <div class="dialog-body">
+                <el-form 
+                    ref="formRef"
+                    :model="formData" 
+                    :rules="rules"
+                    label-position="top"
+                    require-asterisk-position="left">
+                    
+                    <!-- 基本信息 -->
+                    <div class="section-title">基本信息</div>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="服务渠道" prop="channelName">
+                                <el-input v-model="formData.channelName" placeholder="请输入服务渠道名称"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="包税方式" prop="taxType">
+                                <el-select v-model="formData.taxType" multiple collapse-tags placeholder="请选择包税方式(多选)" style="width: 100%;">
+                                    <el-option label="包税" value="包税"></el-option>
+                                    <el-option label="不包税" value="不包税"></el-option>
+                                    <el-option label="自主税号" value="自主税号"></el-option>
+                                    <el-option label="自税递延" value="自税递延"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="服务类型" prop="serviceType">
+                                <el-checkbox-group v-model="formData.serviceType">
+                                    <el-checkbox label="散货">散货</el-checkbox>
+                                    <el-checkbox label="整柜">整柜</el-checkbox>
+                                </el-checkbox-group>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="计费方式" prop="billingMethod">
+                                <el-checkbox-group v-model="formData.billingMethod">
+                                    <el-checkbox label="重量KG">重量KG</el-checkbox>
+                                    <el-checkbox label="体积m³">体积m³</el-checkbox>
+                                </el-checkbox-group>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+
+                    <!-- 运输配置 -->
+                    <div class="section-title">运输配置</div>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="起运国" prop="originCountry">
+                                <el-select v-model="formData.originCountry" placeholder="请选择起运国" style="width: 100%;">
+                                    <el-option label="中国" value="中国"></el-option>
+                                    <el-option label="美国" value="美国"></el-option>
+                                    <el-option label="英国" value="英国"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="目的国" prop="destCountry">
+                                <el-select v-model="formData.destCountry" multiple collapse-tags placeholder="请选择目的国(多选)" style="width: 100%;">
+                                    <el-option label="美国" value="美国"></el-option>
+                                    <el-option label="中国" value="中国"></el-option>
+                                    <el-option label="英国" value="英国"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="运输方式" prop="transportMethod">
+                                <el-select v-model="formData.transportMethod" placeholder="请选择运输方式" style="width: 100%;">
+                                    <el-option label="海运" value="海运"></el-option>
+                                    <el-option label="空运" value="空运"></el-option>
+                                    <el-option label="洲际火车" value="洲际火车"></el-option>
+                                    <el-option label="洲际卡车" value="洲际卡车"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="是否需要时效理赔" prop="needClaim">
+                                <el-select v-model="formData.needClaim" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="是" value="Y"></el-option>
+                                    <el-option label="否" value="N"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="尾程派送方式" prop="lastMileMethod">
+                                <el-checkbox-group v-model="formData.lastMileMethod">
+                                    <el-checkbox label="快递派">快递派</el-checkbox>
+                                    <el-checkbox label="卡派">卡派</el-checkbox>
+                                </el-checkbox-group>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+
+                </el-form>
+            </div>
+
+            <!-- 底部操作按钮区 -->
+            <div class="footer-actions">
+                <div v-if="pageTitle === '新增干线运输服务' && combinationsCount > 0" class="combinations-alert">
+                    <el-icon color="#E6A23C"><WarningFilled /></el-icon>
+                    <span>当前服务范围将生成 <strong>{{ combinationsCount }}</strong> 个服务组合。</span>
+                </div>
+                <div style="flex: 1;"></div>
+                <el-button @click="handleCancel">取消</el-button>
+                <el-button type="primary" @click="handleSubmit">保存</el-button>
+                <!-- 仅在新增时显示“保存并生成服务组合” -->
+                <el-button v-if="pageTitle === '新增干线运输服务'" type="success" @click="handleSaveAndGenerate">保存并生成组合</el-button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, watch, onMounted, computed } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const formRef = ref(null);
+                
+                // 页面标题状态
+                const pageTitle = ref('新增干线运输服务');
+                
+                // 校验 URL 参数并初始化数据
+                onMounted(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const action = urlParams.get('action');
+                    const serviceName = urlParams.get('serviceName');
+                    
+                    if (action === 'edit') {
+                        pageTitle.value = '编辑干线运输服务';
+                        if (serviceName) {
+                            formData.value.channelName = decodeURIComponent(serviceName);
+                        }
+                        
+                        // 尝试从 sessionStorage 中恢复数据
+                        const editDataStr = sessionStorage.getItem('editTransportServiceData');
+                        if (editDataStr) {
+                            try {
+                                const editData = JSON.parse(editDataStr);
+                                formData.value.tenant = editData.tenant || '';
+                                formData.value.needClaim = editData.needClaim === '是' ? 'Y' : (editData.needClaim === '否' ? 'N' : '');
+                                
+                                // 处理复选框和多选下拉框的数据
+                                if (editData.transportMode) formData.value.transportMethod = editData.transportMode;
+                                if (editData.taxType) formData.value.taxType = editData.taxType.split(',').map(s => s.trim());
+                                if (editData.serviceType) formData.value.serviceType = editData.serviceType.split(',').map(s => s.trim());
+                                if (editData.billingMethod) formData.value.billingMethod = editData.billingMethod.split(',').map(s => s.trim());
+                                if (editData.lastMileMethod) formData.value.lastMileMethod = editData.lastMileMethod.split(',').map(s => s.trim());
+                                
+                            } catch (e) {
+                                console.error('Failed to parse edit data:', e);
+                            }
+                        }
+                    }
+                });
+
+                const formData = ref({
+                    // 基本信息
+                    channelName: '',
+                    originCountry: '中国', // 默认中国
+                    destCountry: [], // 目的国改为数组以支持多选
+                    serviceType: [], // 服务类型
+                    taxType: [], // 包税方式
+                    
+                    // 运输配置
+                    transportMethod: '',
+                    needClaim: '',
+                    lastMileMethod: [],
+                    billingMethod: [] // 计费方式
+                });
+
+                const rules = ref({
+                    channelName: [{ required: true, message: '请输入服务渠道', trigger: 'blur' }],
+                    originCountry: [{ required: true, message: '请选择起运国', trigger: 'change' }],
+                    destCountry: [{ required: true, message: '请选择目的国', trigger: 'change' }],
+                    serviceType: [{ required: true, type: 'array', message: '请选择服务类型', trigger: 'change' }],
+                    taxType: [{ required: true, type: 'array', message: '请选择包税方式', trigger: 'change' }],
+                    
+                    transportMethod: [{ required: true, message: '请选择运输方式', trigger: 'change' }],
+                    needClaim: [{ required: true, message: '请选择是否理赔', trigger: 'change' }],
+                    lastMileMethod: [{ required: true, type: 'array', message: '请选择尾程派送方式', trigger: 'change' }],
+                    billingMethod: [{ required: true, type: 'array', message: '请选择计费方式', trigger: 'change' }]
+                });
+
+                // 计算将生成的服务组合数量
+                const combinationsCount = computed(() => {
+                    const transportMethodsCount = formData.value.transportMethod ? 1 : 0;
+                    const lastMileMethodsCount = Math.max(formData.value.lastMileMethod.length, 1);
+                    const billingMethodsCount = Math.max(formData.value.billingMethod.length, 1);
+                    const taxTypesCount = Math.max(formData.value.taxType.length, 1);
+                    const serviceTypesCount = Math.max(formData.value.serviceType.length, 1);
+                    
+                    // 只有当至少有一个影响因素被选择时才计算
+                    if (!formData.value.transportMethod && 
+                        formData.value.lastMileMethod.length === 0 && 
+                        formData.value.billingMethod.length === 0 && 
+                        formData.value.taxType.length === 0 && 
+                        formData.value.serviceType.length === 0) {
+                        return 0;
+                    }
+
+                    // 如果任意一个数组被选了，那么没有选的维度算作 1 种组合（默认空值）
+                    // 但更严谨的计算是，只有多选项都至少选了 1 个，才有实际意义的相乘。
+                    // 为了让用户在勾选过程中实时看到变化，这里采用：各维度选项数相乘（未选项数默认为1）。
+                    // 如果需要更严格（必须全选完才显示），可加判断。这里采用实时动态计算：
+                    const t = formData.value.transportMethod ? 1 : 1; // 即使没选也算1，保证能算出数字，如果严格要求必须选，可以改逻辑
+                    const l = formData.value.lastMileMethod.length || 1;
+                    const b = formData.value.billingMethod.length || 1;
+                    const tx = formData.value.taxType.length || 1;
+                    const s = formData.value.serviceType.length || 1;
+                    
+                    return t * l * b * tx * s;
+                });
+
+                const handleSubmit = async () => {
+                    if (!formRef.value) return;
+                    await formRef.value.validate((valid) => {
+                        if (valid) {
+                            ElementPlus.ElMessage.success('保存成功！联动逻辑验证通过。');
+                            setTimeout(() => {
+                                window.history.back();
+                            }, 500);
+                        } else {
+                            ElementPlus.ElMessage.warning('请检查必填项及标红的联动字段！');
+                        }
+                    });
+                };
+
+                const handleCancel = () => {
+                    window.history.back();
+                };
+
+                const goBack = () => {
+                    window.history.back();
+                };
+
+                const handleSaveAndGenerate = async () => {
+                    if (!formRef.value) return;
+                    await formRef.value.validate((valid) => {
+                        if (valid) {
+                            // 组合逻辑: 服务名称-头程运输方式-尾程运输方式-计价方式-包税方式-散货/整柜
+                            // 遍历所有多选项生成组合
+                            const combinations = [];
+                            
+                            // 由于运输方式（头程）是单选（formData.transportMethod），但需求说“海运支持多选，多选则进行组合”？
+                            // 表单里运输方式是单选，但如果是多选的话，这里先兼容处理为数组。假设 formData.transportMethod 是字符串或数组
+                            const transportMethods = Array.isArray(formData.value.transportMethod) ? formData.value.transportMethod : [formData.value.transportMethod];
+                            
+                            // 其他为多选
+                            const lastMileMethods = formData.value.lastMileMethod.length ? formData.value.lastMileMethod : [''];
+                            const billingMethods = formData.value.billingMethod.length ? formData.value.billingMethod : [''];
+                            const taxTypes = formData.value.taxType.length ? formData.value.taxType : [''];
+                            const serviceTypes = formData.value.serviceType.length ? formData.value.serviceType : [''];
+                            
+                            transportMethods.forEach(tm => {
+                                lastMileMethods.forEach(lm => {
+                                    billingMethods.forEach(bm => {
+                                        taxTypes.forEach(tt => {
+                                            serviceTypes.forEach(st => {
+                                                const combinationName = [formData.value.channelName, tm, lm, bm, tt, st].filter(v => v).join('-');
+                                                
+                                                combinations.push({
+                                                    serviceName: combinationName,
+                                                    serviceInfo: combinationName,
+                                                    status: '正常',
+                                                    visibleTo: '全部',
+                                                    
+                                                    // 将生成时的原始选项也带过去
+                                                    tsName: formData.value.channelName,
+                                                    transportMethod: tm,
+                                                    deliveryMethod: lm,
+                                                    billingMethod: bm,
+                                                    taxType: tt,
+                                                    serviceType: st
+                                                });
+                                            });
+                                        });
+                                    });
+                                });
+                            });
+                            
+                            // 存入 sessionStorage 供 服务组合_主列表.html 使用
+                            sessionStorage.setItem('generatedServiceCombinations', JSON.stringify(combinations));
+                            
+                            ElementPlus.ElMessage.success('保存并生成组合成功！共生成 ' + combinations.length + ' 条组合数据。');
+                            setTimeout(() => {
+                                window.location.href = '服务组合_主列表.html';
+                            }, 1000);
+                        } else {
+                            ElementPlus.ElMessage.warning('请检查必填项！');
+                        }
+                    });
+                };
+
+                return {
+                    formRef,
+                    pageTitle,
+                    formData,
+                    rules,
+                    combinationsCount,
+                    handleSubmit,
+                    handleSaveAndGenerate,
+                    handleCancel,
+                    goBack
+                };
+            }
+        });
+
+        // 注册图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

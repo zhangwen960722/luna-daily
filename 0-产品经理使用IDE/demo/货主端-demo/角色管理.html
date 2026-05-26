@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色管理</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-bg-color: #F5F7FA;
+            --el-text-color-regular: #606266;
+            --el-border-radius-base: 4px;
+        }
+
+        body {
+            margin: 0;
+            padding: 16px;
+            background-color: var(--el-bg-color);
+            font-family: sans-serif;
+            box-sizing: border-box;
+            height: 100vh;
+        }
+
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .search-card {
+            background-color: #fff;
+            border-radius: var(--el-border-radius-base);
+            padding: 16px;
+        }
+
+        .content-card {
+            background-color: #fff;
+            border-radius: var(--el-border-radius-base);
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .search-area {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-item label {
+            margin-right: 8px;
+            color: var(--el-text-color-regular);
+            font-size: 14px;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .pagination-area {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .el-table th.el-table__cell {
+            background-color: #FAFAFA;
+            color: #303133;
+            font-weight: 500;
+        }
+
+        /* 无障碍表单布局 (响应式标签间距) */
+        .a11y-form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .a11y-form-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px; /* 桌面端 8px 间距 */
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.2;
+        }
+        .a11y-form-label.is-required::before {
+            content: '*';
+            color: var(--el-color-danger, #f56c6c);
+            margin-right: 4px;
+        }
+        @media screen and (max-width: 768px) {
+            .a11y-form-label {
+                margin-bottom: 12px; /* 移动端 12px 间距 */
+            }
+        }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+        /* 资源树自定义节点样式 */
+        .custom-tree-node {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            padding-right: 8px;
+        }
+        .node-label {
+            margin-right: 8px;
+        }
+        .node-type-tag {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transform: scale(0.9);
+        }
+        .node-type-menu {
+            color: #2DA44E;
+            background-color: #ecf5ff;
+            border: 1px solid #d9ecff;
+        }
+        .node-type-button {
+            color: #E6A23C;
+            background-color: #fdf6ec;
+            border: 1px solid #faecd8;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索条件区 -->
+        <div class="search-card">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.roleName" placeholder="角色名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-select v-model="searchForm.type" placeholder="角色类型" clearable style="width: 150px;">
+                        <el-option label="系统默认" value="系统默认"></el-option>
+                        <el-option label="自定义" value="自定义"></el-option>
+                    </el-select>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+                <div style="margin-left: auto;">
+                    <el-button type="success" @click="handleAdd">新增角色</el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="content-card">
+            <!-- 表格区 -->
+            <div class="table-container" style="margin-top: 0;">
+                <el-table :data="tableData" border height="100%" style="width: 100%">
+                    <el-table-column prop="roleName" label="角色名称" min-width="120"></el-table-column>
+                    <el-table-column prop="roleCode" label="角色代码" min-width="120"></el-table-column>
+                    <el-table-column prop="status" label="状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
+                    
+                    <el-table-column label="操作" width="200" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button link type="primary" size="small" @click="handleAssign(scope.row)">分配资源</el-button>
+                            <el-button v-if="scope.row.status === '正常'" link type="danger" size="small" @click="handleToggleStatus(scope.row)">冻结</el-button>
+                            <el-button v-else link type="success" size="small" @click="handleToggleStatus(scope.row)">启用</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页区 -->
+            <div class="pagination-area">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="total"
+                />
+            </div>
+        </div>
+
+        <!-- 新增/编辑角色弹窗 -->
+        <el-dialog v-model="editDialogVisible" :title="dialogTitle" width="500px" destroy-on-close>
+            <el-form :model="editForm" @submit.prevent>
+                <div class="a11y-form-group">
+                    <label for="role-code" class="a11y-form-label is-required">角色代码</label>
+                    <el-input id="role-code" v-model="editForm.roleCode" placeholder="请输入角色代码"></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="role-name" class="a11y-form-label is-required">角色名称</label>
+                    <el-input id="role-name" v-model="editForm.roleName" placeholder="请输入角色名称"></el-input>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="editDialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="saveRole">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 分配资源弹窗 -->
+        <el-dialog v-model="assignDialogVisible" title="分配资源" width="600px" destroy-on-close>
+            <el-form :model="assignForm" @submit.prevent>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="assign-role-name" class="a11y-form-label">角色名称</label>
+                            <el-input id="assign-role-name" v-model="assignForm.roleName" disabled></el-input>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="assign-role-code" class="a11y-form-label">角色代码</label>
+                            <el-input id="assign-role-code" v-model="assignForm.roleCode" disabled></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+                
+                <div class="a11y-form-group">
+                    <label class="a11y-form-label">菜单权限分配 (菜单名称 / 按钮名称)</label>
+                    <div style="border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px; max-height: 400px; overflow-y: auto;">
+                        <el-tree
+                            :data="resourceTreeData"
+                            show-checkbox
+                            node-key="id"
+                            :default-expand-all="true"
+                            :props="defaultProps"
+                        >
+                            <template #default="{ node, data }">
+                                <span class="custom-tree-node">
+                                    <span class="node-label">{{ node.label }}</span>
+                                    <span v-if="data.type === 'menu'" class="node-type-tag node-type-menu">菜单</span>
+                                    <span v-else-if="data.type === 'button'" class="node-type-tag node-type-button">按钮</span>
+                                </span>
+                            </template>
+                        </el-tree>
+                    </div>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="assignDialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="saveAssign">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                // 搜索与分页
+                const searchForm = reactive({ roleName: '', type: '' });
+                const currentPage = ref(1);
+                const pageSize = ref(10);
+                const total = ref(3);
+
+                // 表格数据
+                const tableData = ref([
+                    { id: 1, roleName: '主账号默认角色', roleCode: 'main_account', type: '系统默认', status: '正常', remark: '系统默认主账号角色，拥有所有权限' },
+                    { id: 2, roleName: '财务角色', roleCode: 'finance_role', type: '自定义', status: '正常', remark: '仅能查看账单和发票管理' },
+                    { id: 3, roleName: '业务角色', roleCode: 'business_role', type: '自定义', status: '冻结', remark: '仅能查看订单和查价订舱' }
+                ]);
+
+                // 批量操作
+                const selectedRows = ref([]);
+
+                const handleSelectionChange = (val) => {
+                    selectedRows.value = val;
+                };
+
+                const handleBatchDelete = () => {
+                    if (selectedRows.value.length === 0) return;
+                    ElMessageBox.confirm(
+                        `确定要删除选中的 ${selectedRows.value.length} 个角色吗？此操作不可恢复。`,
+                        '批量删除确认',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    ).then(() => {
+                        const selectedIds = selectedRows.value.map(row => row.id);
+                        tableData.value = tableData.value.filter(row => !selectedIds.includes(row.id));
+                        total.value = tableData.value.length;
+                        ElMessage.success('批量删除成功');
+                    }).catch(() => {});
+                };
+
+                // 动作方法
+                const handleSearch = () => {
+                    ElMessage.success('执行查询操作');
+                };
+
+                const resetSearch = () => {
+                    searchForm.roleName = '';
+                    searchForm.type = '';
+                };
+
+                // 新增/编辑弹窗状态
+                const editDialogVisible = ref(false);
+                const dialogTitle = ref('新增角色');
+                const dialogMode = ref('add');
+                const currentEditRow = ref(null);
+
+                const editForm = reactive({
+                    roleName: '',
+                    roleCode: '',
+                    type: '自定义',
+                    remark: ''
+                });
+
+                const handleAdd = () => {
+                    dialogTitle.value = '新增角色';
+                    dialogMode.value = 'add';
+                    Object.assign(editForm, {
+                        roleName: '', roleCode: '', type: '自定义', remark: ''
+                    });
+                    editDialogVisible.value = true;
+                };
+
+                const handleEdit = (row) => {
+                    dialogTitle.value = '编辑角色';
+                    dialogMode.value = 'edit';
+                    currentEditRow.value = row;
+                    Object.assign(editForm, {
+                        roleName: row.roleName,
+                        roleCode: row.roleCode,
+                        type: row.type,
+                        remark: row.remark
+                    });
+                    editDialogVisible.value = true;
+                };
+
+                const handleToggleStatus = (row) => {
+                    const action = row.status === '正常' ? '冻结' : '启用';
+                    const newStatus = row.status === '正常' ? '冻结' : '正常';
+                    
+                    ElMessageBox.confirm(
+                        `确定要${action}角色 [${row.roleName}] 吗？`,
+                        `${action}确认`,
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    ).then(() => {
+                        row.status = newStatus;
+                        ElMessage.success(`已${action}该角色`);
+                    }).catch(() => {});
+                };
+
+                const saveRole = () => {
+                    if (!editForm.roleName || !editForm.roleCode) {
+                        ElMessage.warning('请完善必填信息');
+                        return;
+                    }
+                    
+                    if (dialogMode.value === 'add') {
+                        tableData.value.unshift({ id: Date.now(), ...editForm, status: '正常' });
+                        total.value++;
+                        ElMessage.success('新增角色成功');
+                    } else {
+                        Object.assign(currentEditRow.value, editForm);
+                        ElMessage.success('编辑角色成功');
+                    }
+                    editDialogVisible.value = false;
+                };
+
+                // 分配资源弹窗状态
+                const assignDialogVisible = ref(false);
+                const assignForm = reactive({ roleName: '', roleCode: '' });
+                
+                const resourceTreeData = ref([
+                    {
+                        id: 1,
+                        label: '首页',
+                        type: 'menu',
+                        children: [
+                            { id: 11, label: '查看统计', type: 'button' },
+                            { id: 12, label: '快捷入口', type: 'button' }
+                        ]
+                    },
+                    {
+                        id: 2,
+                        label: '订单中心',
+                        type: 'menu',
+                        children: [
+                            { 
+                                id: 21, 
+                                label: '我的订单',
+                                type: 'menu',
+                                children: [
+                                    { id: 211, label: '新增订单', type: 'button' },
+                                    { id: 212, label: '编辑订单', type: 'button' },
+                                    { id: 213, label: '导出订单', type: 'button' },
+                                    { id: 214, label: '取消订单', type: 'button' }
+                                ]
+                            },
+                            { 
+                                id: 22, 
+                                label: '草稿箱',
+                                type: 'menu',
+                                children: [
+                                    { id: 221, label: '编辑', type: 'button' },
+                                    { id: 222, label: '删除', type: 'button' }
+                                ]
+                            },
+                            { 
+                                id: 23, 
+                                label: '异常订单',
+                                type: 'menu',
+                                children: [
+                                    { id: 231, label: '处理异常', type: 'button' }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        id: 3,
+                        label: '财务中心',
+                        type: 'menu',
+                        children: [
+                            { 
+                                id: 31, 
+                                label: '账单管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 311, label: '导出账单', type: 'button' },
+                                    { id: 312, label: '申请开票', type: 'button' }
+                                ]
+                            },
+                            { 
+                                id: 32, 
+                                label: '发票管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 321, label: '下载发票', type: 'button' }
+                                ]
+                            },
+                            { id: 33, label: '充值与流水', type: 'menu' }
+                        ]
+                    },
+                    {
+                        id: 4,
+                        label: '基础资料',
+                        type: 'menu',
+                        children: [
+                            { 
+                                id: 41, 
+                                label: '商品管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 411, label: '新增商品', type: 'button' },
+                                    { id: 412, label: '编辑商品', type: 'button' },
+                                    { id: 413, label: '删除商品', type: 'button' }
+                                ]
+                            },
+                            { 
+                                id: 42, 
+                                label: '收货地址管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 421, label: '新增收货地址', type: 'button' },
+                                    { id: 422, label: '编辑收货地址', type: 'button' },
+                                    { id: 423, label: '删除收货地址', type: 'button' }
+                                ]
+                            },
+                            { 
+                                id: 43, 
+                                label: 'VAT管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 431, label: '新增VAT', type: 'button' },
+                                    { id: 432, label: '编辑VAT', type: 'button' }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        id: 5,
+                        label: '企业设置',
+                        type: 'menu',
+                        children: [
+                            { 
+                                id: 51, 
+                                label: '角色管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 511, label: '新增角色', type: 'button' },
+                                    { id: 512, label: '编辑角色', type: 'button' },
+                                    { id: 513, label: '分配资源', type: 'button' },
+                                    { id: 514, label: '冻结/启用', type: 'button' }
+                                ]
+                            },
+                            { 
+                                id: 52, 
+                                label: '子账号管理',
+                                type: 'menu',
+                                children: [
+                                    { id: 521, label: '新增账号', type: 'button' },
+                                    { id: 522, label: '编辑账号', type: 'button' },
+                                    { id: 523, label: '冻结/启用', type: 'button' }
+                                ]
+                            }
+                        ]
+                    }
+                ]);
+
+                const defaultProps = {
+                    children: 'children',
+                    label: 'label',
+                };
+
+                const handleAssign = (row) => {
+                    assignForm.roleName = row.roleName;
+                    assignForm.roleCode = row.roleCode;
+                    assignDialogVisible.value = true;
+                };
+
+                const saveAssign = () => {
+                    ElMessage.success(`成功为角色 [${assignForm.roleName}] 分配资源`);
+                    assignDialogVisible.value = false;
+                };
+
+                return {
+                    searchForm, currentPage, pageSize, total, tableData,
+                    selectedRows, handleSelectionChange, handleBatchDelete,
+                    handleSearch, resetSearch,
+                    editDialogVisible, dialogTitle, editForm, handleAdd, handleEdit, saveRole,
+                    handleToggleStatus,
+                    assignDialogVisible, assignForm, resourceTreeData, defaultProps, handleAssign, saveAssign
+                };
+            }
+        });
+
+        // 注册 Element Plus 图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

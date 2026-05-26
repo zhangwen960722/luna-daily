@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户管理 - 列表页</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        /* 全局基础规范 */
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #2C974B;
+            --el-color-danger: #F53F3F;
+            --el-border-color: #DCDFE6;
+            --el-bg-color: #F5F7FA;
+            --el-text-color-primary: #303133;
+            --el-text-color-regular: #606266;
+            --el-border-radius-base: 4px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+            background-color: var(--el-bg-color);
+            color: var(--el-text-color-primary);
+            font-size: 14px;
+        }
+
+        /* 页面整体布局规范 */
+        .layout-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 左侧侧边栏 (已删除) */
+        /* .layout-sidebar { ... } */
+
+        /* 顶部与内容区容器 */
+        .layout-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* 顶部标签导航栏（已删除） */
+        /* .layout-header { ... } */
+
+        /* 右侧内容区 */
+        .layout-content {
+            flex: 1;
+            padding: 16px;
+            overflow: auto;
+        }
+
+        .content-card {
+            background-color: #FFFFFF;
+            border-radius: var(--el-border-radius-base);
+            padding: 16px;
+            min-height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 搜索筛选区 */
+        .search-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .search-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-item label {
+            color: var(--el-text-color-regular);
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+
+        .search-item .el-input,
+        .search-item .el-select {
+            width: 220px;
+        }
+
+        .search-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        /* 表格区 */
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .table-container {
+            flex: 1;
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid var(--el-border-color);
+            border-bottom: none;
+        }
+
+        .el-table {
+            --el-table-header-bg-color: #FAFAFA;
+            --el-table-header-text-color: #303133;
+        }
+
+        .el-table th.el-table__cell {
+            font-weight: 500;
+        }
+
+        .pagination-area {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        /* 动态表格统一样式 */
+        .dynamic-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        .dynamic-table th, .dynamic-table td { border: 1px solid var(--el-border-color); padding: 12px; text-align: left; }
+        .dynamic-table th { background-color: #FAFAFA; color: var(--el-text-color-primary); font-weight: 500; }
+        .dynamic-table .el-form-item { margin-bottom: 0; }
+
+        /* 资料展示列表样式 */
+        .material-section { margin-top: 8px; }
+        .material-add-btn { margin-bottom: 24px; }
+        .material-item { display: flex; align-items: flex-start; margin-bottom: 12px; }
+        .material-label { width: 140px; text-align: right; padding-right: 16px; line-height: 40px; font-size: 14px; color: var(--el-text-color-regular); }
+        .material-label.is-required::before { content: '*'; color: var(--el-color-danger); margin-right: 4px; }
+        .material-files { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .material-file-card { display: flex; align-items: center; border: 1px solid var(--el-border-color); border-radius: 6px; padding: 0 16px; height: 40px; background-color: #fff; max-width: 500px; transition: border-color 0.3s; }
+        .material-file-card:hover { border-color: var(--el-color-primary); }
+        .material-file-icon { font-size: 18px; margin-right: 8px; }
+        .material-file-icon.is-image { color: #F3C43D; }
+        .material-file-icon.is-pdf { color: #F53F3F; }
+        .material-file-name { flex: 1; font-size: 14px; color: var(--el-text-color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .material-file-actions { display: flex; gap: 16px; color: #909399; align-items: center; }
+        .material-file-actions .el-icon { cursor: pointer; transition: color 0.3s; font-size: 16px; outline: none; }
+        .material-file-actions .el-icon:hover { color: var(--el-color-primary); }
+        .material-file-actions .el-icon-delete:hover { color: var(--el-color-danger); }
+        .section-title { font-size: 14px; font-weight: bold; color: var(--el-text-color-primary); margin-top: 16px; margin-bottom: 16px; padding-left: 8px; border-left: 4px solid var(--el-color-primary); }
+
+        /* 身份证正反面大图上传样式 */
+        .person-idcard-uploader {
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            height: 180px;
+        }
+        
+        .person-idcard-uploader .el-upload {
+            border: 1px dashed var(--el-border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: var(--el-transition-duration-fast);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            background-color: #fafafa;
+        }
+
+        .person-idcard-uploader .el-upload:hover {
+            border-color: var(--el-color-primary);
+        }
+
+        .person-idcard-icon-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            color: #8c939d;
+        }
+
+        .person-idcard-icon-container .el-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        .idcard-upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 600px;
+        }
+        .avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="error-log" style="color: red; font-weight: bold; padding: 20px; z-index: 9999; position: relative;"></div>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            document.getElementById('error-log').innerHTML += msg + '<br>';
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            document.getElementById('error-log').innerHTML += event.reason + '<br>';
+        });
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+            document.getElementById('error-log').innerHTML += args.join(' ') + '<br>';
+            originalConsoleError.apply(console, args);
+        };
+    </script>
+    <div id="app" class="layout-container">
+        <!-- 右侧主体 -->
+        <div class="layout-main">
+            <!-- 内容区 -->
+            <div class="layout-content">
+                <div class="content-card">
+                    
+                    <!-- 搜索筛选区与新增按钮 -->
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                        <div class="search-area" style="margin-bottom: 0;">
+                            <div class="search-item">
+                                <el-input v-model="searchForm.name" placeholder="客户名称" clearable></el-input>
+                            </div>
+                            <div class="search-item">
+                                <el-select v-model="searchForm.customerType" placeholder="客户类型" clearable>
+                                    <el-option label="自然人" value="自然人"></el-option>
+                                    <el-option label="企业" value="企业"></el-option>
+                                </el-select>
+                            </div>
+                            <div class="search-item">
+                                <el-select v-model="searchForm.enterpriseAttribute" placeholder="客户属地" clearable>
+                                    <el-option label="中国大陆" value="中国大陆"></el-option>
+                                    <el-option label="中国香港" value="中国香港"></el-option>
+                                </el-select>
+                            </div>
+                            <div class="search-item">
+                                <el-select v-model="searchForm.isPeer" placeholder="是否同行" clearable>
+                                    <el-option label="是" value="是"></el-option>
+                                    <el-option label="否" value="否"></el-option>
+                                </el-select>
+                            </div>
+                            <div class="search-item">
+                                <el-select v-model="searchForm.signStatus" placeholder="合同签署状态" clearable>
+                                    <el-option label="已签约" value="已签约"></el-option>
+                                    <el-option label="未签约" value="未签约"></el-option>
+                                    <el-option label="签约中" value="签约中"></el-option>
+                                    <el-option label="已过期" value="已过期"></el-option>
+                                </el-select>
+                            </div>
+                            <div class="search-actions">
+                                <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+                                <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                            </div>
+                        </div>
+                        <div class="toolbar-right">
+                            <el-button type="primary" @click="handleAddCommand('manual')">
+                                新增客户
+                            </el-button>
+                            <el-button type="warning" plain @click="handleTransferSupplier" :disabled="selectedRows.length !== 1">
+                                <el-icon style="margin-right: 4px;"><Switch /></el-icon>转供应商
+                            </el-button>
+                        </div>
+                    </div>
+
+                    <!-- 列表状态tab -->
+                    <el-tabs v-model="activeTab" class="demo-tabs" @tab-click="handleTabClick">
+                        <el-tab-pane label="正常" name="正常"></el-tab-pane>
+                        <el-tab-pane label="已冻结" name="已冻结"></el-tab-pane>
+                        <el-tab-pane label="全部" name="全部"></el-tab-pane>
+                    </el-tabs>
+
+                    <!-- 表格工具栏 (仅保留左侧数据统计) -->
+                    <div class="table-toolbar" style="margin-top: -12px;">
+                        <div class="toolbar-left">
+                            <span style="font-size: 14px; color: var(--el-text-color-regular);">共 {{ total }} 条数据</span>
+                        </div>
+                    </div>
+
+                    <!-- 表格区 -->
+                    <div class="table-container">
+                        <el-table 
+                            :data="tableData" 
+                            style="width: 100%; min-width: 1200px;" 
+                            border 
+                            height="100%"
+                            @selection-change="handleSelectionChange">
+                            
+                            <el-table-column type="selection" width="50" align="center"></el-table-column>
+                            <el-table-column prop="customerCode" label="客户编号" min-width="120"></el-table-column>
+                            <el-table-column prop="customerName" label="客户名称" min-width="180" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="customerType" label="客户类型" min-width="100">
+                                <template #default="scope">
+                                    {{ scope.row.customerType || '企业' }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="enterpriseAttribute" label="客户属地" min-width="100"></el-table-column>
+                            <el-table-column prop="csRepresentative" label="客服代表" min-width="120"></el-table-column>
+                            <el-table-column prop="salesRepresentative" label="销售代表" min-width="120"></el-table-column>
+                            <el-table-column prop="customerLevel" label="客户等级" min-width="100"></el-table-column>
+                            <el-table-column prop="signStatus" label="合同签署状态" min-width="120">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.signStatus === '已签约' ? 'success' : (scope.row.signStatus === '签约中' ? 'warning' : (scope.row.signStatus === '已过期' ? 'danger' : 'info'))">{{ scope.row.signStatus }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="contractStartDate" label="合同开始日期" min-width="120"></el-table-column>
+                            <el-table-column prop="contractEndDate" label="合同结束日期" min-width="120"></el-table-column>
+                            <el-table-column prop="serviceStatus" label="服务状态" min-width="100">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.serviceStatus === '正常' ? 'success' : 'danger'">{{ scope.row.serviceStatus }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="paymentTerm" label="账期" min-width="120"></el-table-column>
+                            <el-table-column prop="firstOrderTime" label="首次下单时间" min-width="160"></el-table-column>
+                            <el-table-column prop="daysWithoutOrder" label="未下单天数" min-width="120"></el-table-column>
+                            
+                            <el-table-column label="操作" width="220" fixed="right" align="center">
+                                <template #default="scope">
+                                    <el-button link type="primary" size="small" @click="handleEdit(scope.row)">
+                                        <el-icon><Edit /></el-icon> 编辑
+                                    </el-button>
+                                    
+                                    <el-button link type="primary" size="small" @click="handleSign(scope.row)" v-if="['已过期', '未签约'].includes(scope.row.signStatus) && scope.row.serviceStatus === '正常'">
+                                         <el-icon><DocumentChecked /></el-icon> 签约
+                                     </el-button>
+                                    
+                                    <template v-if="scope.row.serviceStatus === '正常'">
+                                        <el-button link type="danger" size="small" @click="handleDisable(scope.row)">
+                                            <el-icon><Remove /></el-icon> 冻结
+                                        </el-button>
+                                    </template>
+                                    <template v-else-if="scope.row.serviceStatus === '已冻结' || scope.row.serviceStatus === '停用'">
+                                        <el-button link type="success" size="small" @click="handleEnable(scope.row)">
+                                            <el-icon><CircleCheck /></el-icon> 启用
+                                        </el-button>
+                                    </template>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+
+                    <!-- 分页区 -->
+                    <div class="pagination-area">
+                        <el-pagination
+                            v-model:current-page="currentPage"
+                            v-model:page-size="pageSize"
+                            :page-sizes="[10, 20, 50, 100]"
+                            layout="total, sizes, prev, pager, next, jumper"
+                            :total="total"
+                            @size-change="handleSizeChange"
+                            @current-change="handleCurrentChange"
+                        />
+                    </div>
+
+                    <!-- 合同签约弹窗 -->
+                    <el-dialog v-model="signDialogVisible" title="合同签约" width="550px" destroy-on-close>
+                        <el-form :model="signForm" label-position="top">
+                            <el-form-item label="是否简易合同：" required>
+                                <el-select v-model="signForm.isSimple" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="是" value="是"></el-option>
+                                    <el-option label="否" value="否"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            
+                            <el-form-item label="是否标准合同：" required>
+                                <el-select v-model="signForm.isStandard" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="是" value="是"></el-option>
+                                    <el-option label="否" value="否"></el-option>
+                                </el-select>
+                            </el-form-item>
+
+                            <el-form-item label="我司合同抬头：" required>
+                                <el-select v-model="signForm.companyTitle" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="广东省飞点跨境供应链有限公司" value="广东省飞点跨境供应链有限公司"></el-option>
+                                </el-select>
+                            </el-form-item>
+
+                            <!-- 非简易合同 && 标准合同 -->
+                            <template v-if="signForm.isSimple === '否' && signForm.isStandard === '是'">
+                                <el-form-item label="账期：" required>
+                                    <el-select v-model="signForm.paymentTerm" placeholder="请选择" style="width: 100%;">
+                                        <el-option label="月结" value="月结"></el-option>
+                                        <el-option label="周结" value="周结"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                
+                                <el-form-item label="合同有限期限：" required>
+                                    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                        <el-select v-model="signForm.contractYears" placeholder="请选择" style="flex: 1;">
+                                            <el-option label="1" value="1"></el-option>
+                                            <el-option label="2" value="2"></el-option>
+                                            <el-option label="3" value="3"></el-option>
+                                        </el-select>
+                                        <span>年</span>
+                                    </div>
+                                </el-form-item>
+
+                                <el-form-item label="合同开始日期：">
+                                    <el-date-picker v-model="signForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                                </el-form-item>
+                                
+                                <el-form-item label="合同结束日期：">
+                                    <el-date-picker v-model="signForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                                </el-form-item>
+                            </template>
+
+                            <!-- 非简易合同 && 非标准合同 -->
+                            <template v-else-if="signForm.isSimple === '否' && signForm.isStandard === '否'">
+                                <el-form-item label="合同修改内容：" required>
+                                    <el-input 
+                                        type="textarea" 
+                                        v-model="signForm.modifyContent" 
+                                        :rows="4" 
+                                        placeholder="写明修改内容（如账期、赔付等）+单箱货值是多少&#10;+若单箱超过3K/箱，保险如何承担等">
+                                    </el-input>
+                                </el-form-item>
+                                
+                                <el-form-item label-width="0">
+                                    <div style="width: 100%; padding-left: 20px;">
+                                        <el-upload
+                                            class="upload-demo"
+                                            action="#"
+                                            :limit="1"
+                                            :auto-upload="false"
+                                        >
+                                            <el-button size="small"><el-icon><Upload /></el-icon> 上传文件</el-button>
+                                            <template #tip>
+                                                <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                                                    限制上传1个文件，最大附件2MB/个
+                                                </div>
+                                            </template>
+                                        </el-upload>
+                                        
+                                        <div style="margin-top: 16px; display: flex; align-items: center; background: #F5F7FA; padding: 8px 12px; border-radius: 4px; border: 1px solid #E4E7ED;">
+                                            <el-icon style="color: #F56C6C; margin-right: 8px; font-size: 16px;"><Document /></el-icon>
+                                            <span style="flex: 1; font-size: 14px; color: #606266;">客户档案表.pdf</span>
+                                            <div style="display: flex; gap: 12px; color: #909399; cursor: pointer;">
+                                                <el-icon><View /></el-icon>
+                                                <el-icon><Download /></el-icon>
+                                                <el-icon><Delete /></el-icon>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </el-form-item>
+                            </template>
+
+                            <!-- 简易合同 && 标准合同 -->
+                            <template v-else-if="signForm.isSimple === '是' && signForm.isStandard === '是'">
+                                <el-form-item label="账期：" required>
+                                    <el-select v-model="signForm.paymentTerm" placeholder="请选择" style="width: 100%;">
+                                        <el-option label="月结" value="月结"></el-option>
+                                        <el-option label="周结" value="周结"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                                
+                                <el-form-item label="合同有限期限：" required>
+                                    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                        <el-select v-model="signForm.contractYears" placeholder="请选择" style="flex: 1;">
+                                            <el-option label="1" value="1"></el-option>
+                                            <el-option label="2" value="2"></el-option>
+                                            <el-option label="3" value="3"></el-option>
+                                        </el-select>
+                                        <span>年</span>
+                                    </div>
+                                </el-form-item>
+
+                                <el-form-item label="签订日期：">
+                                    <el-date-picker v-model="signForm.signDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                                </el-form-item>
+                            </template>
+
+                            <!-- 简易合同 && 非标准合同 -->
+                            <template v-else-if="signForm.isSimple === '是' && signForm.isStandard === '否'">
+                                <el-form-item label="合同有限期限：" required>
+                                    <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                                        <el-select v-model="signForm.contractYears" placeholder="请选择" style="flex: 1;">
+                                            <el-option label="1" value="1"></el-option>
+                                            <el-option label="2" value="2"></el-option>
+                                            <el-option label="3" value="3"></el-option>
+                                        </el-select>
+                                        <span>年</span>
+                                    </div>
+                                </el-form-item>
+
+                                <el-form-item label="签订日期：">
+                                    <el-date-picker v-model="signForm.signDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                                </el-form-item>
+
+                                <el-form-item label="合同修改内容：" required>
+                                    <el-input 
+                                        type="textarea" 
+                                        v-model="signForm.modifyContent" 
+                                        :rows="4" 
+                                        placeholder="写明修改内容（如账期、赔付等）+单箱货值是多少&#10;+若单箱超过3K/箱，保险如何承担等">
+                                    </el-input>
+                                </el-form-item>
+                                
+                                <el-form-item label-width="0">
+                                    <div style="width: 100%; padding-left: 20px;">
+                                        <el-upload
+                                            class="upload-demo"
+                                            action="#"
+                                            :limit="1"
+                                            :auto-upload="false"
+                                        >
+                                            <el-button size="small"><el-icon><Upload /></el-icon> 上传文件</el-button>
+                                            <template #tip>
+                                                <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                                                    限制上传1个文件，最大附件2MB/个
+                                                </div>
+                                            </template>
+                                        </el-upload>
+                                        
+                                        <div style="margin-top: 16px; display: flex; align-items: center; background: #F5F7FA; padding: 8px 12px; border-radius: 4px; border: 1px solid #E4E7ED;">
+                                            <el-icon style="color: #F56C6C; margin-right: 8px; font-size: 16px;"><Document /></el-icon>
+                                            <span style="flex: 1; font-size: 14px; color: #606266;">客户档案表.pdf</span>
+                                            <div style="display: flex; gap: 12px; color: #909399; cursor: pointer;">
+                                                <el-icon><View /></el-icon>
+                                                <el-icon><Download /></el-icon>
+                                                <el-icon><Delete /></el-icon>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </el-form-item>
+                            </template>
+
+                        </el-form>
+                        <template #footer>
+                            <span class="dialog-footer">
+                                <el-button @click="signDialogVisible = false">返回</el-button>
+                                <el-button type="primary" @click="confirmSign">确 定</el-button>
+                            </span>
+                        </template>
+                    </el-dialog>
+
+                    <!-- 合同签约弹窗 (针对中国香港特殊客户) -->
+                    <el-dialog v-model="hkSignDialogVisible" title="合同签约" width="550px" destroy-on-close>
+                        <el-form :model="hkSignForm" :rules="hkSignRules" ref="hkSignFormRef" label-position="top">
+                            <el-row :gutter="24">
+                                <el-col :span="12">
+                                    <el-form-item label="合同开始日期" prop="startDate">
+                                        <el-date-picker v-model="hkSignForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="合同结束日期" prop="endDate">
+                                        <el-date-picker v-model="hkSignForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-form-item label="服务合同协议" prop="files">
+                                <el-upload
+                                    class="upload-demo"
+                                    action="#"
+                                    :limit="1"
+                                    :auto-upload="false"
+                                    :on-change="handleHkFileChange"
+                                    :on-remove="handleHkFileRemove"
+                                >
+                                    <el-button type="primary" size="small"><el-icon><Upload /></el-icon> 点击上传</el-button>
+                                    <template #tip>
+                                        <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                                            只能上传 pdf/jpg/png 文件
+                                        </div>
+                                    </template>
+                                </el-upload>
+                            </el-form-item>
+                        </el-form>
+                        <template #footer>
+                            <span class="dialog-footer">
+                                <el-button @click="hkSignDialogVisible = false">返回</el-button>
+                                <el-button type="primary" @click="confirmHkSign">保 存</el-button>
+                            </span>
+                        </template>
+                    </el-dialog>
+
+                    <!-- 转供应商弹窗 -->
+                    <el-dialog v-model="transferSupplierDialogVisible" title="转为供应商" width="900px" destroy-on-close>
+                        <el-form ref="transferSupplierFormRef" :model="transferSupplierForm" :rules="transferSupplierRules" label-position="top">
+                            <div class="section-title">基本信息</div>
+                            <el-row :gutter="24">
+                                <el-col :span="12">
+                                    <el-form-item label="供应商名称">
+                                        <el-input v-model="transferSupplierForm.supplierName" disabled></el-input>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="供应商大类" prop="supplierCategory">
+                                        <el-select v-model="transferSupplierForm.supplierCategory" multiple collapse-tags placeholder="请选择供应商大类" style="width: 100%;" @change="handleSupplierCategoryChange">
+                                            <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-row :gutter="24">
+                                <el-col :span="12">
+                                    <el-form-item label="供应商明细" prop="supplierDetails">
+                                        <el-select v-model="transferSupplierForm.supplierDetails" multiple collapse-tags placeholder="请选择供应商明细" style="width: 100%;">
+                                            <el-option v-for="detail in availableSupplierDetails" :key="detail" :label="detail" :value="detail"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="SCAC" prop="scac" :rules="scacRules">
+                                        <el-input v-model="transferSupplierForm.scac" placeholder="请输入 SCAC 代码 (海运/快递/卡车必填)"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-row :gutter="24">
+                                <el-col :span="12">
+                                    <el-form-item label="供应商等级" prop="level">
+                                        <el-select v-model="transferSupplierForm.level" placeholder="请选择供应商等级" style="width: 100%;">
+                                            <el-option v-for="lvl in ['SS', 'S', 'A', 'B', 'C', 'D', 'F', 'G']" :key="lvl" :label="lvl" :value="lvl"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+
+                            <div class="section-title" style="margin-top: 24px;">更多信息</div>
+                            <el-tabs type="border-card">
+                                <el-tab-pane label="联系人">
+                                    <div style="margin-bottom: 12px;">
+                                        <el-button type="primary" size="small" @click="addTransferSupplierContact">
+                                            <el-icon><Plus /></el-icon> 新增联系人
+                                        </el-button>
+                                    </div>
+                                    <table class="dynamic-table">
+                                        <thead>
+                                            <tr>
+                                                <th><span style="color: red;">*</span> 姓名</th>
+                                                <th><span style="color: red;">*</span> 联系电话</th>
+                                                <th><span style="color: red;">*</span> 邮箱</th>
+                                                <th style="text-align: center;"><span style="color: red;">*</span> 合同对接人</th>
+                                                <th style="text-align: center;"><span style="color: red;">*</span> 系统账号接收人</th>
+                                                <th style="text-align: center;">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(contact, index) in transferSupplierForm.contacts" :key="contact.id">
+                                                <td>
+                                                    <el-form-item :prop="'contacts.' + index + '.name'" :rules="{required: true, message: '必填', trigger: 'blur'}" label-width="0">
+                                                        <el-input v-model="contact.name" placeholder="姓名" size="small"></el-input>
+                                                    </el-form-item>
+                                                </td>
+                                                <td>
+                                                    <el-form-item :prop="'contacts.' + index + '.phone'" :rules="[{required: true, message: '必填', trigger: 'blur'}, {pattern: /^[0-9]+$/, message: '仅限数字', trigger: 'blur'}]" label-width="0">
+                                                        <el-input v-model="contact.phone" placeholder="电话(纯数字)" size="small"></el-input>
+                                                    </el-form-item>
+                                                </td>
+                                                <td>
+                                                    <el-form-item :prop="'contacts.' + index + '.email'" :rules="[{required: true, message: '必填', trigger: 'blur'}, {type: 'email', message: '格式错误', trigger: ['blur', 'change']}]" label-width="0">
+                                                        <el-input v-model="contact.email" placeholder="邮箱" size="small"></el-input>
+                                                    </el-form-item>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <el-radio v-model="transferSupplierForm.contractContactId" :label="contact.id">设为对接人</el-radio>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <el-radio v-model="transferSupplierForm.accountContactId" :label="contact.id">设为接收人</el-radio>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <el-button link type="danger" @click="removeTransferSupplierContact(index)">删除</el-button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </el-tab-pane>
+                            </el-tabs>
+                        </el-form>
+                        <template #footer>
+                            <span class="dialog-footer">
+                                <el-button @click="transferSupplierDialogVisible = false">取消</el-button>
+                                <el-button type="primary" @click="confirmTransferSupplier">确 定</el-button>
+                            </span>
+                        </template>
+                    </el-dialog>
+
+                    <!-- 编辑/新增客户弹窗 -->
+                    <el-dialog v-model="editDialogVisible" :title="dialogTitle" width="900px" destroy-on-close>
+                        <el-form ref="editFormRef" :model="editFormData" :rules="editRules" label-position="top" style="height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 16px;">
+                            <!-- 基本信息 -->
+                            <div class="section-title">基本信息</div>
+                            <el-row :gutter="24">
+                                <el-col :span="6">
+                                    <el-form-item label="客户编号" prop="customerCode">
+                                        <el-input v-model="editFormData.customerCode" disabled placeholder="系统自动生成"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="客户类型" prop="customerType">
+                                        <el-select v-model="editFormData.customerType" placeholder="请选择" style="width: 100%;" @change="handleCustomerTypeChange" :disabled="dialogTitle === '编辑客户'">
+                                            <el-option label="自然人" value="自然人"></el-option>
+                                            <el-option label="企业" value="企业"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="客户名称" prop="customerName">
+                                        <el-input v-model="editFormData.customerName" placeholder="请输入客户名称" :disabled="dialogTitle === '编辑客户'"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="统一社会信用代码" prop="creditCode" :required="editFormData.customerType === '企业'">
+                                        <el-input v-model="editFormData.creditCode" placeholder="请输入" :disabled="dialogTitle === '编辑客户' || editFormData.customerType === '自然人'"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-row :gutter="24">
+                                <el-col :span="6">
+                                    <el-form-item label="客户属地" prop="enterpriseAttribute">
+                                        <el-select v-model="editFormData.enterpriseAttribute" placeholder="请选择" style="width: 100%;" :disabled="dialogTitle === '编辑客户'">
+                                            <el-option label="中国大陆" value="中国大陆"></el-option>
+                                            <el-option label="中国香港" value="中国香港"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="是否同行" prop="isPeer">
+                                        <el-select v-model="editFormData.isPeer" placeholder="请选择" style="width: 100%;">
+                                            <el-option label="是" value="是"></el-option>
+                                            <el-option label="否" value="否"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="客户等级" prop="customerLevel">
+                                        <el-select v-model="editFormData.customerLevel" placeholder="请选择" style="width: 100%;">
+                                            <el-option v-for="lvl in ['SS', 'S', 'A', 'B', 'C', 'D', 'F', 'G']" :key="lvl" :label="lvl" :value="lvl"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="客服代表" prop="csRepresentative">
+                                        <el-select v-model="editFormData.csRepresentative" multiple collapse-tags placeholder="请选择" style="width: 100%;">
+                                            <el-option label="张客服" value="张客服"></el-option>
+                                            <el-option label="王客服" value="王客服"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-row :gutter="24">
+                                <el-col :span="6">
+                                    <el-form-item label="销售代表" prop="salesRepresentative">
+                                        <el-select v-model="editFormData.salesRepresentative" placeholder="请选择" style="width: 100%;">
+                                            <el-option label="李销售" value="李销售"></el-option>
+                                            <el-option label="赵销售" value="赵销售"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="销售来源" prop="salesSource">
+                                        <el-input v-model="editFormData.salesSource" placeholder="请输入销售来源"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
+                                    <el-form-item label="开通业务" prop="businessTypes">
+                                        <el-select v-model="editFormData.businessTypes" multiple placeholder="请选择" style="width: 100%;">
+                                            <el-option label="TMS" value="TMS"></el-option>
+                                            <el-option label="WMS" value="WMS"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+
+                            <!-- 更多信息tab -->
+                            <div class="section-title" style="margin-top: 32px;">更多信息</div>
+                            <el-tabs type="border-card">
+                                
+                                <!-- 账期Tab -->
+                                <el-tab-pane label="账期">
+                                    <el-row :gutter="24">
+                                        <el-col :span="12">
+                                            <el-form-item label="账单周期" prop="billingCycle">
+                                                <el-select v-model="editFormData.billingCycle" placeholder="请选择" style="width: 100%;" @change="handleBillingCycleChange">
+                                                    <el-option label="固定" value="固定"></el-option>
+                                                    <el-option label="不固定" value="不固定"></el-option>
+                                                </el-select>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <el-form-item label="账期" prop="paymentTerm">
+                                                <el-select v-model="editFormData.paymentTerm" placeholder="请选择" style="width: 100%;" @change="handlePaymentTermChange">
+                                                    <el-option v-for="term in availablePaymentTerms" :key="term" :label="term" :value="term"></el-option>
+                                                </el-select>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <el-form-item label="结算类型" prop="settlementType">
+                                                <el-select v-model="editFormData.settlementType" placeholder="请选择" style="width: 100%;" disabled>
+                                                    <el-option label="按月" value="按月"></el-option>
+                                                    <el-option label="按天" value="按天"></el-option>
+                                                </el-select>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="12" v-if="editFormData.settlementType === '按月'">
+                                            <el-form-item label="结算月" prop="settlementMonth">
+                                                <el-select v-model="editFormData.settlementMonth" placeholder="请选择" style="width: 100%;" disabled>
+                                                    <el-option label="0" :value="0"></el-option>
+                                                    <el-option label="1" :value="1"></el-option>
+                                                    <el-option label="2" :value="2"></el-option>
+                                                </el-select>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <el-form-item label="天数/号" prop="daysOrDate" :rules="[{type: 'number', min: 0, message: '必须为大于等于0的整数', trigger: 'blur'}]">
+                                                <el-input-number v-model="editFormData.daysOrDate" :min="0" :precision="0" :step="1" placeholder="请输入" style="width: 100%;"></el-input-number>
+                                            </el-form-item>
+                                        </el-col>
+                                    </el-row>
+                                </el-tab-pane>
+
+                                <!-- 合同信息Tab -->
+                                <el-tab-pane label="合同信息">
+                                    <div style="margin-bottom: 16px; color: var(--el-text-color-regular); font-size: 13px; background-color: #f4f4f5; padding: 8px 12px; border-radius: 4px;">
+                                        <el-icon style="color: #909399;"><InfoFilled /></el-icon> 
+                                        <strong>日期说明：</strong>中国大陆标准合同在发起签约时填；中国大陆非标合同需在此处手工回填。<br>
+                                        <el-icon style="color: #909399; margin-left: 0;"><InfoFilled /></el-icon> 
+                                        <strong>协议说明：</strong>中国香港客户需手工上传服务合同协议；中国大陆客户E签报签约流程完成后自动回传。
+                                    </div>
+                                    <el-row :gutter="24">
+                                        <el-col :span="12">
+                                            <el-form-item label="合同开始日期" prop="contractStartDate">
+                                                <el-date-picker v-model="editFormData.contractStartDate" type="date" placeholder="请选择开始日期" style="width: 100%;"></el-date-picker>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <el-form-item label="合同结束日期" prop="contractEndDate">
+                                                <el-date-picker v-model="editFormData.contractEndDate" type="date" placeholder="请选择结束日期" style="width: 100%;"></el-date-picker>
+                                            </el-form-item>
+                                        </el-col>
+                                    </el-row>
+                                    
+                                    <div class="material-section" style="margin-top: 16px;">
+                                        <div class="material-list">
+                                            <div class="material-item">
+                                                <div class="material-label">服务合同协议：</div>
+                                                <div class="material-files">
+                                                    <!-- 显示上传按钮 -->
+                                                    <el-upload action="#" :auto-upload="false" multiple :limit="1" style="margin-bottom: 8px;">
+                                                        <el-button size="small"><el-icon><Upload /></el-icon> 上传合同协议</el-button>
+                                                    </el-upload>
+                                                    
+                                                    <!-- 移除了上传按钮，仅保留列表展示 (原有展示逻辑保留) -->
+                                                    <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--el-border-color); border-radius: 6px; padding: 0 16px; height: 40px; background-color: #f5f7fa; transition: border-color 0.3s; margin-bottom: 8px;" v-for="(file, fIndex) in editFormData.contractFiles" :key="fIndex">
+                                                        <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
+                                                            <el-icon class="material-file-icon" :class="file.type === 'pdf' ? 'is-pdf' : 'is-image'">
+                                                                <Picture v-if="file.type === 'image'" />
+                                                                <Document v-else />
+                                                            </el-icon>
+                                                            <div class="material-file-name" style="color: #909399;">{{ file.name }} <el-tag size="small" type="info" style="margin-left: 8px;">E签宝回传</el-tag></div>
+                                                        </div>
+                                                        <div class="material-file-actions">
+                                                            <el-icon title="预览" @click="handlePreview(file)"><View /></el-icon>
+                                                            <el-icon title="下载"><Download /></el-icon>
+                                                            <el-icon title="删除" class="el-icon-delete"><Delete /></el-icon>
+                                                        </div>
+                                                    </div>
+                                                    <el-empty v-if="!editFormData.contractFiles || editFormData.contractFiles.length === 0" description="暂无服务合同协议" :image-size="60" style="padding: 20px 0;"></el-empty>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </el-tab-pane>
+
+                                <!-- 资料Tab -->
+                                <el-tab-pane label="资料">
+                                    <div class="material-section">
+                                        <div class="material-add-btn">
+                                            <el-button style="background-color: #8b81ff; border-color: #8b81ff; color: white;" @click="addCustomMaterial">
+                                                <el-icon><Plus /></el-icon> 新增
+                                            </el-button>
+                                        </div>
+                                        <div class="material-list">
+                                            <div class="material-item" v-for="(mat, mIndex) in editFormData.materials" :key="mIndex">
+                                                <div class="material-label" :class="{ 'is-required': mat.required || (mat.label === '营业执照' && editFormData.customerType === '企业') }">
+                                                    <el-input v-if="mat.isCustom" v-model="mat.label" placeholder="自定义的资料" size="small" style="width: 110px;"></el-input>
+                                                    <template v-else>{{ mat.label }}：</template>
+                                                </div>
+                                                <div class="material-files">
+                                                    <!-- 身份证正反面特殊上传样式 -->
+                                                    <div v-if="mat.label === '身份证正反面'" class="idcard-upload-grid" style="margin-bottom: 8px;">
+                                                        <el-upload 
+                                                            class="person-idcard-uploader" 
+                                                            action="#" 
+                                                            :show-file-list="false" 
+                                                            :auto-upload="false"
+                                                            :on-change="(file) => handleIdCardChange(file, 'front')"
+                                                        >
+                                                            <img v-if="editFormData.idCardFrontUrl" :src="editFormData.idCardFrontUrl" class="avatar" />
+                                                            <div v-else class="person-idcard-icon-container">
+                                                                <el-icon><Plus /></el-icon>
+                                                                <span>身份证人像面照片</span>
+                                                            </div>
+                                                        </el-upload>
+                                                        <el-upload 
+                                                            class="person-idcard-uploader" 
+                                                            action="#" 
+                                                            :show-file-list="false" 
+                                                            :auto-upload="false"
+                                                            :on-change="(file) => handleIdCardChange(file, 'back')"
+                                                        >
+                                                            <img v-if="editFormData.idCardBackUrl" :src="editFormData.idCardBackUrl" class="avatar" />
+                                                            <div v-else class="person-idcard-icon-container">
+                                                                <el-icon><Plus /></el-icon>
+                                                                <span>身份证国徽面照片</span>
+                                                            </div>
+                                                        </el-upload>
+                                                    </div>
+                                                    
+                                                    <!-- 常规上传按钮 -->
+                                                    <el-upload v-else action="#" :auto-upload="false" multiple :limit="5" style="margin-bottom: 8px;">
+                                                        <el-button size="small"><el-icon><Upload /></el-icon> 上传附件</el-button>
+                                                    </el-upload>
+
+                                                    <!-- 常规附件列表展示 -->
+                                                    <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--el-border-color); border-radius: 6px; padding: 0 16px; height: 40px; background-color: #fff; transition: border-color 0.3s; margin-bottom: 8px;" v-for="(file, fIndex) in mat.files" :key="fIndex" v-show="mat.label !== '身份证正反面'">
+                                                        <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
+                                                            <el-icon class="material-file-icon" :class="file.type === 'pdf' ? 'is-pdf' : 'is-image'">
+                                                                <Picture v-if="file.type === 'image'" />
+                                                                <Document v-else />
+                                                            </el-icon>
+                                                            <div class="material-file-name">{{ file.name }}</div>
+                                                        </div>
+                                                        <div class="material-file-actions">
+                                                            <el-icon title="预览" @click="handlePreview(file)"><View /></el-icon>
+                                                            <el-icon title="下载"><Download /></el-icon>
+                                                            <el-icon title="删除" class="el-icon-delete" v-if="file.canDelete" @click="removeMaterialFile(mIndex, fIndex)"><Delete /></el-icon>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </el-tab-pane>
+
+                                <!-- 地址库Tab -->
+                                <el-tab-pane label="地址库">
+                                    <div style="margin-bottom: 12px; color: var(--el-text-color-regular); font-size: 13px;">
+                                        <el-icon><InfoFilled /></el-icon> 此处地址信息仅供查看，来源于客户档案或客户端填写。
+                                    </div>
+                                    <el-table :data="editFormData.addresses" border style="width: 100%;">
+                                        <el-table-column prop="type" label="地址类型" min-width="100"></el-table-column>
+                                        <el-table-column prop="contactName" label="联系人名称" min-width="120"></el-table-column>
+                                        <el-table-column prop="phone" label="联系电话" min-width="150"></el-table-column>
+                                        <el-table-column prop="zipcode" label="邮编" min-width="100"></el-table-column>
+                                        <el-table-column prop="address" label="详细地址" min-width="250" show-overflow-tooltip></el-table-column>
+                                        <!-- 空状态展示 -->
+                                        <template #empty>
+                                            <el-empty description="暂无地址信息"></el-empty>
+                                        </template>
+                                    </el-table>
+                                </el-tab-pane>
+
+                                <!-- 联系人Tab -->
+                                <el-tab-pane label="联系人">
+                                    <div style="margin-bottom: 12px; color: var(--el-text-color-regular); font-size: 13px;">
+                                        <el-icon><InfoFilled /></el-icon> 默认必须提供以下三个角色的联系人信息。请指定单选人员。
+                                    </div>
+                                    <table class="dynamic-table">
+                                        <thead>
+                                            <tr>
+                                                <th>角色标签</th>
+                                                <th><span style="color: red;">*</span> 姓名</th>
+                                                <th><span style="color: red;">*</span> 联系电话</th>
+                                                <th><span style="color: red;">*</span> 邮箱</th>
+                                                <th style="text-align: center;"><span style="color: red;">*</span> 合同对接人</th>
+                                                <th style="text-align: center;"><span style="color: red;">*</span> 系统账号接收人</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(contact, index) in editFormData.contacts" :key="index">
+                                                <td><el-tag type="info">{{ contact.role }}</el-tag></td>
+                                                <td>
+                                                    <el-form-item :prop="'contacts.' + index + '.name'" :rules="{required: true, message: '必填', trigger: 'blur'}" label-width="0">
+                                                        <el-input v-model="contact.name" placeholder="请输入姓名" size="small"></el-input>
+                                                    </el-form-item>
+                                                </td>
+                                                <td>
+                                                    <el-form-item :prop="'contacts.' + index + '.phone'" :rules="{required: true, message: '必填', trigger: 'blur'}" label-width="0">
+                                                        <el-input v-model="contact.phone" placeholder="请输入电话" size="small"></el-input>
+                                                    </el-form-item>
+                                                </td>
+                                                <td>
+                                                    <el-form-item :prop="'contacts.' + index + '.email'" :rules="[{required: true, message: '必填', trigger: 'blur'}, {type: 'email', message: '请输入正确的邮箱格式', trigger: ['blur', 'change']}]" label-width="0">
+                                                        <el-input v-model="contact.email" placeholder="请输入邮箱" size="small"></el-input>
+                                                    </el-form-item>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <el-radio v-model="editFormData.contractContactId" :label="contact.id">设为对接人</el-radio>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <el-radio v-model="editFormData.accountContactId" :label="contact.id">设为接收人</el-radio>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </el-tab-pane>
+
+                                <!-- 通信信息Tab -->
+                                <el-tab-pane label="通信信息">
+                                    <el-row :gutter="24">
+                                        <el-col :span="12">
+                                            <el-form-item label="工具类型">
+                                                <el-input v-model="editFormData.commType" disabled placeholder="默认：企业微信"></el-input>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="12">
+                                            <el-form-item label="群聊ID" prop="groupId" :rules="{required: true, message: '必填', trigger: 'blur'}">
+                                                <el-input v-model="editFormData.groupId" placeholder="请输入群聊ID"></el-input>
+                                            </el-form-item>
+                                        </el-col>
+                                    </el-row>
+                                </el-tab-pane>
+
+                                <!-- 关联账户Tab -->
+                                <el-tab-pane label="关联账户">
+                                    <div style="margin-bottom: 12px; color: var(--el-text-color-regular); font-size: 13px;">
+                                        <el-icon><InfoFilled /></el-icon> 此处显示当前客户在系统内关联的登录账户信息。
+                                    </div>
+                                    <el-table :data="editFormData.relatedAccounts" border style="width: 100%;">
+                                        <el-table-column prop="accountName" label="账户名称" min-width="120"></el-table-column>
+                                        <el-table-column prop="accountRole" label="账户角色" min-width="100"></el-table-column>
+                                        <el-table-column prop="accountEmail" label="绑定邮箱" min-width="150"></el-table-column>
+                                        <el-table-column prop="accountStatus" label="账户状态" min-width="100">
+                                            <template #default="scope">
+                                                <el-tag :type="scope.row.accountStatus === '正常' ? 'success' : 'danger'" size="small">
+                                                    {{ scope.row.accountStatus }}
+                                                </el-tag>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="lastLoginTime" label="最近登录时间" min-width="160"></el-table-column>
+                                        <template #empty>
+                                            <el-empty description="暂无关联账户"></el-empty>
+                                        </template>
+                                    </el-table>
+                                </el-tab-pane>
+
+                                <!-- 占位功能Tab -->
+                                <el-tab-pane label="评分详情">
+                                    <el-empty description="暂时未定义字段，二期排期功能"></el-empty>
+                                </el-tab-pane>
+                                <el-tab-pane label="开票抬头">
+                                    <el-empty description="暂时未定义字段，二期排期功能"></el-empty>
+                                </el-tab-pane>
+                            </el-tabs>
+                        </el-form>
+                        <template #footer>
+                            <span class="dialog-footer">
+                                <el-button @click="handleCancelEdit">返回</el-button>
+                                <el-button type="primary" @click="confirmEdit">保 存</el-button>
+                                <el-button type="success" v-if="dialogTitle === '手工创建客户'" @click="confirmAndGenerateAccount">保存并生成账户</el-button>
+                            </span>
+                        </template>
+                    </el-dialog>
+
+                    <!-- 预览弹窗 -->
+                    <el-dialog v-model="previewVisible" title="资料预览" width="800px" destroy-on-close>
+                        <div style="text-align: center; background-color: #f5f7fa; padding: 20px; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                            <img v-if="previewType === 'image'" :src="previewUrl" style="max-width: 100%; max-height: 60vh; box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);" />
+                            <div v-else style="font-size: 16px; color: #909399; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                                <el-icon style="font-size: 48px; color: #F53F3F;"><Document /></el-icon>
+                                <span>PDF 文件预览区 (模拟)</span>
+                                <el-button type="primary" plain>下载文件</el-button>
+                            </div>
+                        </div>
+                        <template #footer>
+                            <span class="dialog-footer">
+                                <el-button @click="previewVisible = false">返回</el-button>
+                            </span>
+                        </template>
+                    </el-dialog>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('正常');
+                
+                // 搜索表单
+                const searchForm = reactive({
+                    customerCode: '',
+                    name: '',
+                    customerType: '',
+                    enterpriseAttribute: '',
+                    isPeer: '',
+                    signStatus: '',
+                    serviceStatus: ''
+                });
+
+                // 分页
+                const currentPage = ref(1);
+                const pageSize = ref(10);
+                const total = ref(4);
+
+                // 表格数据
+                const allData = ref([
+                    {
+                        customerCode: 'K10001',
+                        customerType: '企业',
+                        customerName: '深圳市大卖科技有限公司',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '张客服',
+                        salesRepresentative: '李销售',
+                        customerLevel: 'SS',
+                        ratingScore: '98',
+                        signStatus: '已签约',
+                        contractStartDate: '2023-02-15',
+                        contractEndDate: '2027-02-14',
+                        serviceStatus: '正常',
+                        paymentTerm: '月结',
+                        firstOrderTime: '2023-02-15 10:00:00',
+                        daysWithoutOrder: '5'
+                    },
+                    {
+                        customerCode: 'K10004',
+                        customerType: '企业',
+                        customerName: '义乌市星光进出口有限公司',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '李客服',
+                        salesRepresentative: '赵销售',
+                        customerLevel: 'B',
+                        ratingScore: '80',
+                        signStatus: '签约中',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '正常',
+                        paymentTerm: '周结',
+                        firstOrderTime: '2024-01-10 11:20:00',
+                        daysWithoutOrder: '15'
+                    },
+                    {
+                        customerCode: 'K10002',
+                        customerType: '企业',
+                        customerName: '广州小卖贸易有限责任公司',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '王客服',
+                        salesRepresentative: '赵销售',
+                        customerLevel: 'A',
+                        ratingScore: '85',
+                        signStatus: '未签约',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '已冻结',
+                        paymentTerm: '周结',
+                        firstOrderTime: '2023-05-20 14:30:00',
+                        daysWithoutOrder: '120'
+                    },
+                    {
+                        customerCode: 'K10003',
+                        customerType: '企业',
+                        customerName: '杭州中卖物流有限公司',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '李客服',
+                        salesRepresentative: '王销售',
+                        customerLevel: 'B',
+                        ratingScore: '75',
+                        signStatus: '未签约',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '已冻结',
+                        paymentTerm: '双月结',
+                        firstOrderTime: '2023-08-10 09:00:00',
+                        daysWithoutOrder: '90'
+                    },
+                    {
+                        customerCode: 'K10005',
+                        customerType: '企业',
+                        customerName: '北京跨境易达电商服务有限公司',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '张客服',
+                        salesRepresentative: '王销售',
+                        customerLevel: 'A',
+                        ratingScore: '88',
+                        signStatus: '已过期',
+                        contractStartDate: '2022-11-11',
+                        contractEndDate: '2023-11-10',
+                        serviceStatus: '正常',
+                        paymentTerm: '月结',
+                        firstOrderTime: '2022-11-11 10:00:00',
+                        daysWithoutOrder: '2'
+                    },
+                    {
+                        customerCode: 'K10006',
+                        customerType: '企业',
+                        customerName: '上海新源供应链有限公司',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '王客服',
+                        salesRepresentative: '李销售',
+                        customerLevel: 'C',
+                        ratingScore: '82',
+                        signStatus: '未签约',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '正常',
+                        paymentTerm: '双月结',
+                        firstOrderTime: '2024-05-01 09:15:00',
+                        daysWithoutOrder: '30'
+                    },
+                    {
+                        customerCode: 'K10007',
+                        customerType: '企业',
+                        customerName: '香港大卖实业有限公司-中国香港',
+                        enterpriseAttribute: '中国香港',
+                        csRepresentative: '张客服',
+                        salesRepresentative: '王销售',
+                        customerLevel: 'B',
+                        ratingScore: '85',
+                        signStatus: '未签约',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '正常',
+                        paymentTerm: '月结',
+                        firstOrderTime: '2023-08-15 10:00:00',
+                        daysWithoutOrder: '5'
+                    },
+                    {
+                        customerCode: 'K10008',
+                        customerType: '企业',
+                        customerName: '九龙汇通贸易有限公司-中国香港',
+                        enterpriseAttribute: '中国香港',
+                        csRepresentative: '李客服',
+                        salesRepresentative: '赵销售',
+                        customerLevel: 'A',
+                        ratingScore: '92',
+                        signStatus: '未签约',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '正常',
+                        paymentTerm: '周结',
+                        firstOrderTime: '2024-02-20 14:30:00',
+                        daysWithoutOrder: '12'
+                    },
+                    {
+                        customerCode: 'K10009',
+                        customerType: '自然人',
+                        customerName: '王五 (个人)',
+                        enterpriseAttribute: '中国大陆',
+                        csRepresentative: '张客服',
+                        salesRepresentative: '李销售',
+                        customerLevel: 'C',
+                        ratingScore: '-',
+                        signStatus: '未签约',
+                        contractStartDate: '-',
+                        contractEndDate: '-',
+                        serviceStatus: '正常',
+                        paymentTerm: '-',
+                        firstOrderTime: '-',
+                        daysWithoutOrder: '-'
+                    }
+                ]);
+
+                const selectedRows = ref([]);
+                const handleSelectionChange = (selection) => {
+                    selectedRows.value = selection;
+                };
+
+                // 加载并同步 localStorage 的客户状态
+                const syncStatusToLocal = () => {
+                    const statusMap = JSON.parse(localStorage.getItem('globalCustomerStatus') || '{}');
+                    allData.value.forEach(item => {
+                        if (statusMap[item.customerName]) {
+                            item.serviceStatus = statusMap[item.customerName];
+                        } else {
+                            statusMap[item.customerName] = item.serviceStatus;
+                        }
+                    });
+                    localStorage.setItem('globalCustomerStatus', JSON.stringify(statusMap));
+                };
+                syncStatusToLocal();
+
+                // 签约弹窗相关状态
+                const signDialogVisible = ref(false);
+                const currentSignRow = ref(null);
+                const signForm = reactive({
+                    isSimple: '否',
+                    isStandard: '是',
+                    companyTitle: '广东省飞点跨境供应链有限公司',
+                    paymentTerm: '月结',
+                    contractYears: '1',
+                    startDate: '',
+                    endDate: '',
+                    signDate: '',
+                    modifyContent: ''
+                });
+
+                // HK 签约弹窗相关状态
+                const hkSignDialogVisible = ref(false);
+                const hkSignFormRef = ref(null);
+                
+                // 转供应商弹窗相关
+                const categoryMap = {
+                    '干线运输供应商': ['汽运', '海运', '空运', '铁路'],
+                    '揽货服务商': ['货拉拉', '拖车'],
+                    '仓储供应商': ['海外中转仓', '保税仓', '退件仓'],
+                    '关务供应商': ['报关行', '清关行', '查验行'],
+                    '尾程运输供应商': ['快递', '卡车'],
+                    '综合代理': ['同行'],
+                    '其他': ['其他']
+                };
+                const categoryOptions = Object.keys(categoryMap);
+
+                const transferSupplierDialogVisible = ref(false);
+                const transferSupplierFormRef = ref(null);
+                const currentTransferCustomer = ref(null);
+                const transferSupplierForm = reactive({
+                    supplierName: '',
+                    supplierCategory: [],
+                    supplierDetails: [],
+                    scac: '',
+                    level: 'G',
+                    contacts: [],
+                    contractContactId: null,
+                    accountContactId: null
+                });
+                
+                const availableSupplierDetails = ref([]);
+                const handleSupplierCategoryChange = (val) => {
+                    transferSupplierForm.supplierDetails = [];
+                    if (Array.isArray(val)) {
+                        availableSupplierDetails.value = val.flatMap(c => categoryMap[c] || []);
+                    } else {
+                        availableSupplierDetails.value = [];
+                    }
+                };
+
+                const validateScac = (rule, value, callback) => {
+                    const needsScac = transferSupplierForm.supplierDetails.some(d => ['海运', '快递', '卡车'].includes(d));
+                    if (needsScac && !value) {
+                        callback(new Error('选择海运/快递/卡车时，SCAC必填'));
+                    } else {
+                        callback();
+                    }
+                };
+
+                const scacRules = Vue.computed(() => {
+                    return [{ validator: validateScac, trigger: ['blur', 'change'] }];
+                });
+
+                const transferSupplierRules = reactive({
+                    supplierCategory: [{ required: true, type: 'array', min: 1, message: '请选择供应商大类', trigger: 'change' }],
+                    supplierDetails: [{ required: true, type: 'array', min: 1, message: '请选择供应商明细', trigger: 'change' }],
+                    level: [{ required: true, message: '请选择供应商等级', trigger: 'change' }]
+                });
+
+                const handleTransferSupplier = () => {
+                    if (selectedRows.value.length !== 1) {
+                        ElMessage.warning('请选择一条需要转为供应商的客户数据');
+                        return;
+                    }
+                    currentTransferCustomer.value = selectedRows.value[0];
+                    // 重置表单
+                    transferSupplierForm.supplierName = currentTransferCustomer.value.customerName;
+                    transferSupplierForm.supplierCategory = [];
+                    transferSupplierForm.supplierDetails = [];
+                    transferSupplierForm.scac = '';
+                    transferSupplierForm.level = 'G';
+                    transferSupplierForm.contacts = [{ id: Date.now(), name: '', phone: '', email: '' }];
+                    transferSupplierForm.contractContactId = null;
+                    transferSupplierForm.accountContactId = null;
+                    availableSupplierDetails.value = [];
+                    transferSupplierDialogVisible.value = true;
+                    if (transferSupplierFormRef.value) {
+                        Vue.nextTick(() => transferSupplierFormRef.value.clearValidate());
+                    }
+                };
+
+                const addTransferSupplierContact = () => {
+                    transferSupplierForm.contacts.push({ id: Date.now(), name: '', phone: '', email: '' });
+                };
+                
+                const removeTransferSupplierContact = (index) => {
+                    transferSupplierForm.contacts.splice(index, 1);
+                };
+
+                const confirmTransferSupplier = () => {
+                    if (!transferSupplierFormRef.value) return;
+                    transferSupplierFormRef.value.validate((valid) => {
+                        if (valid) {
+                            if (!transferSupplierForm.contractContactId) {
+                                ElMessage.warning('请指定一名联系人作为合同对接人');
+                                return;
+                            }
+                            if (!transferSupplierForm.accountContactId) {
+                                ElMessage.warning('请指定一名联系人作为系统账号接收人');
+                                return;
+                            }
+                            ElMessage.success(`已成功将客户 [${currentTransferCustomer.value.customerName}] 插入至供应商管理中！`);
+                            transferSupplierDialogVisible.value = false;
+                        }
+                    });
+                };
+
+                const hkSignForm = reactive({
+                    startDate: '',
+                    endDate: '',
+                    files: []
+                });
+                const validateHkEndDate = (rule, value, callback) => {
+                    if (!value) {
+                        callback(new Error('必填'));
+                    } else if (hkSignForm.startDate && new Date(value) < new Date(hkSignForm.startDate)) {
+                        callback(new Error('合同结束日期不可早于开始日期'));
+                    } else {
+                        callback();
+                    }
+                };
+                const hkSignRules = reactive({
+                    startDate: [{ required: true, message: '必填', trigger: 'change' }],
+                    endDate: [{ required: true, validator: validateHkEndDate, trigger: 'change' }],
+                    files: [{ required: true, type: 'array', min: 1, message: '必须上传服务合同协议', trigger: 'change' }]
+                });
+
+                const handleHkFileChange = (file, fileList) => {
+                    hkSignForm.files = fileList;
+                    if (hkSignFormRef.value) {
+                        hkSignFormRef.value.validateField('files');
+                    }
+                };
+                const handleHkFileRemove = (file, fileList) => {
+                    hkSignForm.files = fileList;
+                };
+
+                const confirmHkSign = () => {
+                    if (!hkSignFormRef.value) return;
+                    hkSignFormRef.value.validate((valid) => {
+                        if (valid) {
+                            if (currentSignRow.value) {
+                                currentSignRow.value.signStatus = '已签约';
+                                // 格式化日期对象
+                                const formatDate = (date) => {
+                                    if (!date) return '-';
+                                    const d = new Date(date);
+                                    if (isNaN(d.getTime())) return date;
+                                    const year = d.getFullYear();
+                                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                                    const day = String(d.getDate()).padStart(2, '0');
+                                    return `${year}-${month}-${day}`;
+                                };
+                                currentSignRow.value.contractStartDate = formatDate(hkSignForm.startDate);
+                                currentSignRow.value.contractEndDate = formatDate(hkSignForm.endDate);
+                            }
+                            hkSignDialogVisible.value = false;
+                            ElMessage.success('合同签约成功！');
+                        }
+                    });
+                };
+
+                // 基于当前 tab 过滤表格数据
+                const tableData = Vue.computed(() => {
+                    let data = allData.value;
+                    
+                    if (searchForm.customerCode) {
+                        data = data.filter(item => item.customerCode.toLowerCase().includes(searchForm.customerCode.toLowerCase()));
+                    }
+                    if (searchForm.name) {
+                        data = data.filter(item => item.customerName.toLowerCase().includes(searchForm.name.toLowerCase()));
+                    }
+                    if (searchForm.customerType) {
+                        data = data.filter(item => (item.customerType || '企业') === searchForm.customerType);
+                    }
+                    if (searchForm.enterpriseAttribute) {
+                        data = data.filter(item => item.enterpriseAttribute === searchForm.enterpriseAttribute);
+                    }
+                    if (searchForm.isPeer) {
+                        data = data.filter(item => (item.isPeer || '否') === searchForm.isPeer);
+                    }
+                    if (searchForm.signStatus) {
+                        data = data.filter(item => item.signStatus === searchForm.signStatus);
+                    }
+                    
+                    if (activeTab.value !== '全部') {
+                        data = data.filter(item => item.serviceStatus === activeTab.value);
+                    }
+                    
+                    total.value = data.length;
+                    return data;
+                });
+
+                // 方法
+                const handleTabClick = (tab) => {
+                    // ElMessage.success(`切换状态：${tab.props.name}`);
+                };
+
+                const handleSearch = () => {
+                    ElMessage.success('执行查询操作');
+                };
+
+                const resetSearch = () => {
+                    searchForm.customerCode = '';
+                    searchForm.name = '';
+                    searchForm.customerType = '';
+                    searchForm.enterpriseAttribute = '';
+                    searchForm.isPeer = '';
+                    searchForm.signStatus = '';
+                    searchForm.serviceStatus = '';
+                    ElMessage.info('已重置查询条件');
+                };
+
+                const handleAddCommand = (command) => {
+                    if (command === 'manual') {
+                        dialogTitle.value = '手工创建客户';
+                        // 重置表单数据为初始状态
+                            Object.assign(editFormData, {
+                                customerCode: 'K' + new Date().getTime().toString().slice(-5), // 模拟生成一个编号
+                                customerType: '', // 默认置空
+                                customerName: '',
+                                creditCode: '',
+                                enterpriseAttribute: '',
+                                customerLevel: 'G',
+                                signStatus: '新增', // 新增模式标记
+                                csRepresentative: '',
+                                salesRepresentative: '',
+                                salesSource: '',
+                                businessTypes: [],
+                                billingCycle: '',
+                                paymentTerm: '',
+                                settlementType: '',
+                                settlementMonth: null,
+                                daysOrDate: null,
+                                contractStartDate: '',
+                                contractEndDate: '',
+                                contractFiles: [],
+                                idCardFrontUrl: '', // 身份证人像面
+                                idCardBackUrl: '',  // 身份证国徽面
+                                materials: [
+                                     { label: '营业执照', required: false, isCustom: false, files: [] }, // 初始状态为非必传，等选择了客户类型后再根据联动更新
+                                     { label: '身份证正反面', required: true, isCustom: false, files: [] },
+                                     { label: '天眼查风险信息', required: false, isCustom: false, files: [] }
+                                 ],
+                                addresses: [], // 置空地址列表，仅只读
+                                contacts: [
+                                     { id: 1, role: '公司负责人', name: '', phone: '', email: '' },
+                                     { id: 2, role: '物流联系人', name: '', phone: '', email: '' },
+                                     { id: 3, role: '财务负责人', name: '', phone: '', email: '' }
+                                 ],
+                                 relatedAccounts: [], // 默认置空
+                                 contractContactId: null,
+                            accountContactId: null,
+                            commType: '企业微信',
+                            groupId: ''
+                        });
+                        editDialogVisible.value = true;
+                    } else if (command === 'import') {
+                        ElMessage.info('打开模板导入下载界面');
+                    }
+                };
+
+                // 编辑客户相关
+                const editDialogVisible = ref(false);
+                const dialogTitle = ref('编辑客户');
+                const editFormRef = ref(null);
+                
+                const editFormData = reactive({
+                    customerCode: '',
+                    customerType: '',
+                    customerName: '',
+                    creditCode: '',
+                    enterpriseAttribute: '',
+                    isPeer: '',
+                    customerLevel: '',
+                    signStatus: '',
+                    csRepresentative: [],
+                    salesRepresentative: '',
+                    salesSource: '',
+                    businessTypes: [],
+                    billingCycle: '',
+                    paymentTerm: '',
+                    settlementType: '',
+                    settlementMonth: null,
+                    daysOrDate: null,
+                    contractStartDate: '',
+                    contractEndDate: '',
+                    contractFiles: [],
+                    idCardFrontUrl: '', // 身份证人像面
+                    idCardBackUrl: '',  // 身份证国徽面
+                    materials: [
+                        { label: '营业执照', required: false, isCustom: false, files: [] },
+                        { label: '身份证正反面', required: true, isCustom: false, files: [] },
+                        { label: '天眼查风险信息', required: false, isCustom: false, files: [] }
+                    ],
+                    addresses: [], // 默认置空
+                    contacts: [
+                        { id: 1, role: '公司负责人', name: '王霸天', phone: '13800138000', email: 'wangbt@example.com' },
+                        { id: 2, role: '物流联系人', name: '李运来', phone: '13912345678', email: 'liyl@example.com' },
+                        { id: 3, role: '财务负责人', name: '赵算盘', phone: '13798765432', email: 'zhaosp@example.com' }
+                    ],
+                    relatedAccounts: [
+                        { accountName: 'wangbt_admin', accountRole: '主账号', accountEmail: 'wangbt@example.com', accountStatus: '正常', lastLoginTime: '2026-04-14 09:30:00' },
+                        { accountName: 'liyl_op', accountRole: '操作员', accountEmail: 'liyl@example.com', accountStatus: '正常', lastLoginTime: '2026-04-13 14:20:00' }
+                    ],
+                    contractContactId: 1, // 模拟默认选中“王霸天”作为对接人
+                    accountContactId: 2,  // 模拟默认选中“李运来”作为账号接收人
+                    commType: '企业微信',
+                    groupId: ''
+                });
+
+                const validateCreditCode = (rule, value, callback) => {
+                    if (editFormData.customerType === '企业' && !value) {
+                        callback(new Error('企业客户必须输入统一社会信用代码'));
+                    } else {
+                        callback();
+                    }
+                };
+
+                const editRules = {
+                    customerType: [{ required: true, message: '请选择客户类型', trigger: 'change' }],
+                    customerName: [{ required: true, message: '请输入客户名称', trigger: 'blur' }],
+                    creditCode: [{ validator: validateCreditCode, trigger: 'blur' }],
+                    enterpriseAttribute: [{ required: true, message: '请选择客户属地', trigger: 'change' }],
+                    isPeer: [{ required: true, message: '请选择是否同行', trigger: 'change' }],
+                    customerLevel: [{ required: true, message: '必选', trigger: 'change' }],
+                    csRepresentative: [{ required: true, message: '必选', trigger: 'change', type: 'array' }],
+                    salesRepresentative: [{ required: true, message: '必选', trigger: 'change' }],
+                    businessTypes: [{ required: true, message: '必选', trigger: 'change', type: 'array' }]
+                };
+
+                // 已废弃，原用于限制合同编辑
+                const isContractEditable = Vue.computed(() => {
+                    return true;
+                });
+
+                const availablePaymentTerms = ref([]);
+                const handleBillingCycleChange = (val) => {
+                    editFormData.paymentTerm = '';
+                    editFormData.settlementType = '';
+                    editFormData.settlementMonth = null;
+                    if (val === '固定') {
+                        availablePaymentTerms.value = ['月结', '双月结', '三月结'];
+                    } else if (val === '不固定') {
+                        availablePaymentTerms.value = ['周结', '到港前结', '签收月结', '到海外仓结', '签收结'];
+                    } else {
+                        availablePaymentTerms.value = [];
+                    }
+                };
+
+                const handlePaymentTermChange = (val) => {
+                    if (['月结', '双月结', '三月结'].includes(val)) {
+                        editFormData.settlementType = '按月';
+                        if (val === '月结') {
+                            editFormData.settlementMonth = 0;
+                        } else if (val === '双月结') {
+                            editFormData.settlementMonth = 1;
+                        } else if (val === '三月结') {
+                            editFormData.settlementMonth = 2;
+                        }
+                    } else if (['周结', '到港前结', '签收月结', '到海外仓结', '签收结'].includes(val)) {
+                        editFormData.settlementType = '按天';
+                        editFormData.settlementMonth = null;
+                    }
+                };
+
+                const addAccount = () => {
+                    editFormData.accounts.push({ name: '', accountNo: '', bank: '', branch: '', usage: '' });
+                };
+                
+                const removeAccount = (index) => {
+                    editFormData.accounts.splice(index, 1);
+                };
+
+                const addCustomMaterial = () => {
+                    editFormData.materials.push({
+                        label: '自定义的资料',
+                        required: false,
+                        isCustom: true,
+                        files: [
+                            { name: '新上传的资料.pdf', type: 'pdf', canDelete: true }
+                        ]
+                    });
+                };
+                
+                const removeMaterialFile = (mIndex, fIndex) => {
+                    editFormData.materials[mIndex].files.splice(fIndex, 1);
+                    if (editFormData.materials[mIndex].files.length === 0 && editFormData.materials[mIndex].isCustom) {
+                        editFormData.materials.splice(mIndex, 1);
+                    }
+                };
+
+                const handleCustomerTypeChange = (val) => {
+                    // 已去除与客户属地的级联清空逻辑
+                    if (val === '自然人') {
+                        editFormData.creditCode = ''; // 切换为自然人时，清空统一社会信用代码
+                    }
+                    // 动态更新资料中“营业执照”的必填状态
+                    const licenseMaterial = editFormData.materials.find(m => m.label === '营业执照');
+                    if (licenseMaterial) {
+                        licenseMaterial.required = val === '企业';
+                    }
+                };
+
+                const openAddDialog = () => {
+                    dialogTitle.value = '手工创建客户';
+                    // 初始化新增表单数据
+                    Object.assign(editFormData, {
+                        customerCode: '',
+                        customerType: '',
+                        customerName: '',
+                        creditCode: '',
+                        enterpriseAttribute: '',
+                        isPeer: '',
+                        customerLevel: '',
+                        signStatus: '未签约',
+                        csRepresentative: [],
+                        salesRepresentative: '',
+                        salesSource: '',
+                        businessTypes: [],
+                        billingCycle: '',
+                        paymentTerm: '',
+                        settlementType: '',
+                        settlementMonth: null,
+                        daysOrDate: null,
+                        contractStartDate: '',
+                        contractEndDate: '',
+                        contractFiles: [],
+                        idCardFrontUrl: '', // 身份证人像面
+                        idCardBackUrl: '',  // 身份证国徽面
+                        materials: [
+                             { label: '营业执照', required: false, isCustom: false, files: [] }, // 初始状态为非必传，等选择了客户类型后再根据联动更新
+                             { label: '身份证正反面', required: true, isCustom: false, files: [] },
+                             { label: '天眼查风险信息', required: false, isCustom: false, files: [] }
+                         ],
+                        addresses: [], // 置空地址列表，仅只读
+                        contacts: [
+                             { id: 1, role: '公司负责人', name: '', phone: '', email: '' },
+                             { id: 2, role: '物流联系人', name: '', phone: '', email: '' },
+                             { id: 3, role: '财务负责人', name: '', phone: '', email: '' }
+                         ],
+                        contractContactId: null,
+                        accountContactId: null,
+                        relatedAccounts: []
+                    });
+                    editFormData.contractContactId = editFormData.contacts[0].id;
+                    editFormData.accountContactId = editFormData.contacts[0].id;
+
+                    if (editFormRef.value) {
+                        editFormRef.value.clearValidate();
+                    }
+                    editDialogVisible.value = true;
+                };
+
+                const handleEdit = (row) => {
+                    dialogTitle.value = '编辑客户';
+                    editFormData.customerCode = row.customerCode;
+                    editFormData.customerType = row.customerType || ''; // 如果没有类型，则置空
+                    editFormData.customerName = row.customerName;
+                    editFormData.creditCode = '91440300MA5EXXXXXX'; // 模拟一个统一社会信用代码回显
+                    editFormData.enterpriseAttribute = row.customerName && row.customerName.includes('中国香港') ? '中国香港' : '中国大陆';
+                    editFormData.isPeer = '否'; // 模拟默认数据
+                    editFormData.customerLevel = row.customerLevel;
+                    editFormData.signStatus = row.signStatus; // 保存当前签约状态
+                    editFormData.csRepresentative = row.csRepresentative ? row.csRepresentative.split('、') : [];
+                    editFormData.salesRepresentative = row.salesRepresentative;
+                    editFormData.businessTypes = ['TMS']; // 模拟带出数据
+                    editFormData.paymentTerm = row.paymentTerm;
+                    editFormData.contractStartDate = row.contractStartDate && row.contractStartDate !== '-' ? row.contractStartDate : '';
+                    editFormData.contractEndDate = row.contractEndDate && row.contractEndDate !== '-' ? row.contractEndDate : '';
+                    
+                    // 模拟带出E签宝回传的合同文件
+                    editFormData.contractFiles = row.signStatus === '已签约' ? [
+                        { name: '飞点服务合同协议.pdf', type: 'pdf' }
+                    ] : [];
+                    
+                    editFormData.idCardFrontUrl = row.idCardFrontUrl || '';
+                    editFormData.idCardBackUrl = row.idCardBackUrl || '';
+                    
+                    // 模拟带出原有附件 (取消必填)
+                    editFormData.materials = [
+                        { label: '营业执照', required: editFormData.customerType === '企业', isCustom: false, files: [ { name: '营业执照.jpg', type: 'image', canDelete: false } ] },
+                        { label: '身份证正反面', required: true, isCustom: false, files: [] },
+                        { label: '天眼查风险信息', required: false, isCustom: false, files: [ { name: '天眼查风险报告.pdf', type: 'pdf', canDelete: false } ] }
+                    ];
+                    
+                    // 清空地址列表及关联账户重新赋值
+                    editFormData.addresses = [];
+                    editFormData.relatedAccounts = [
+                        { accountName: row.customerCode + '_admin', accountRole: '主账号', accountEmail: 'admin@example.com', accountStatus: row.serviceStatus, lastLoginTime: '2026-04-14 09:30:00' },
+                        { accountName: row.customerCode + '_op', accountRole: '操作员', accountEmail: 'op@example.com', accountStatus: row.serviceStatus, lastLoginTime: '2026-04-13 14:20:00' }
+                    ];
+                    
+                    // 设置其他模拟数据
+                    if (['月结', '双月结', '三月结'].includes(row.paymentTerm)) {
+                        editFormData.billingCycle = '固定';
+                        availablePaymentTerms.value = ['月结', '双月结', '三月结'];
+                        editFormData.settlementType = '按月';
+                        if (row.paymentTerm === '月结') {
+                            editFormData.settlementMonth = 0;
+                        } else if (row.paymentTerm === '双月结') {
+                            editFormData.settlementMonth = 1;
+                        } else if (row.paymentTerm === '三月结') {
+                            editFormData.settlementMonth = 2;
+                        }
+                        editFormData.daysOrDate = 15;
+                    } else if (row.paymentTerm) {
+                        editFormData.billingCycle = '不固定';
+                        availablePaymentTerms.value = ['周结', '到港前结', '签收月结', '到海外仓结', '签收结'];
+                        editFormData.settlementType = '按天';
+                        editFormData.settlementMonth = null;
+                        editFormData.daysOrDate = 7;
+                    } else {
+                        editFormData.billingCycle = '';
+                        availablePaymentTerms.value = [];
+                        editFormData.settlementType = '';
+                        editFormData.settlementMonth = null;
+                        editFormData.daysOrDate = null;
+                    }
+                    
+                    editFormData.contractContactId = editFormData.contacts[0].id;
+                    editFormData.accountContactId = editFormData.contacts[0].id;
+                    
+                    if (editFormRef.value) {
+                        editFormRef.value.clearValidate();
+                    }
+                    editDialogVisible.value = true;
+                };
+
+                const removeManualContact = (index) => {
+                    // 已废弃，因为默认固定三行且不允许删除
+                };
+
+                const confirmAndGenerateAccount = () => {
+                    if (!editFormRef.value) return;
+                    editFormRef.value.validate((valid) => {
+                        if (valid) {
+                            if (!editFormData.contractContactId) {
+                                ElMessage.warning('请指定一名联系人作为合同对接人');
+                                return;
+                            }
+                            if (!editFormData.accountContactId) {
+                                ElMessage.warning('请指定一名联系人作为系统账号接收人');
+                                return;
+                            }
+
+                            // 校验身份证正反面必传
+                            if (!editFormData.idCardFrontUrl || !editFormData.idCardBackUrl) {
+                                ElMessage.warning('请上传完整的身份证正反面照片');
+                                return;
+                            }
+
+                            // 校验身份证正反面必传
+                            if (!editFormData.idCardFrontUrl || !editFormData.idCardBackUrl) {
+                                ElMessage.warning('请上传完整的身份证正反面照片');
+                                return;
+                            }
+
+                            // 校验企业类型的营业执照必传
+                            if (editFormData.customerType === '企业') {
+                                const licenseMaterial = editFormData.materials.find(m => m.label === '营业执照');
+                                if (licenseMaterial && licenseMaterial.files.length === 0) {
+                                    ElMessage.warning('企业客户必须上传营业执照');
+                                    return;
+                                }
+                            }
+                            
+                            // 模拟将表单数据保存回主列表
+                            const index = allData.value.findIndex(item => item.customerCode === editFormData.customerCode);
+                            if (index === -1) {
+                                allData.value.unshift({
+                                    customerCode: editFormData.customerCode,
+                                    customerName: editFormData.customerName,
+                                    csRepresentative: editFormData.csRepresentative,
+                                    salesRepresentative: editFormData.salesRepresentative,
+                                    customerLevel: editFormData.customerLevel,
+                                    ratingScore: '-',
+                                    signStatus: '未签约',
+                                    contractStartDate: '-',
+                                    contractEndDate: '-',
+                                    serviceStatus: '正常',
+                                    paymentTerm: editFormData.paymentTerm || '-',
+                                    firstOrderTime: '-',
+                                    daysWithoutOrder: '-'
+                                });
+                            }
+                            
+                            ElMessage.success('保存成功，并已为该客户生成系统账户！');
+                            editDialogVisible.value = false;
+                        } else {
+                            ElMessage.warning('请完善必填信息！');
+                        }
+                    });
+                };
+
+                const confirmEdit = () => {
+                    if (!editFormRef.value) return;
+                    editFormRef.value.validate((valid) => {
+                        if (valid) {
+                            if (!editFormData.contractContactId) {
+                                ElMessage.warning('请指定一名联系人作为合同对接人');
+                                return;
+                            }
+                            if (!editFormData.accountContactId) {
+                                ElMessage.warning('请指定一名联系人作为系统账号接收人');
+                                return;
+                            }
+
+                            // 校验企业类型的营业执照必传
+                            if (editFormData.customerType === '企业') {
+                                const licenseMaterial = editFormData.materials.find(m => m.label === '营业执照');
+                                if (licenseMaterial && licenseMaterial.files.length === 0) {
+                                    ElMessage.warning('企业客户必须上传营业执照');
+                                    return;
+                                }
+                            }
+                            
+                            // 模拟将表单数据保存回主列表
+                            const index = allData.value.findIndex(item => item.customerCode === editFormData.customerCode);
+                            if (index !== -1) {
+                                // 格式化日期对象
+                                const formatDate = (date) => {
+                                    if (!date) return '-';
+                                    const d = new Date(date);
+                                    if (isNaN(d.getTime())) return date;
+                                    const year = d.getFullYear();
+                                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                                    const day = String(d.getDate()).padStart(2, '0');
+                                    return `${year}-${month}-${day}`;
+                                };
+                                allData.value[index].contractStartDate = formatDate(editFormData.contractStartDate);
+                                allData.value[index].contractEndDate = formatDate(editFormData.contractEndDate);
+                                allData.value[index].customerName = editFormData.customerName;
+                                allData.value[index].customerLevel = editFormData.customerLevel;
+                                allData.value[index].csRepresentative = editFormData.csRepresentative;
+                                allData.value[index].salesRepresentative = editFormData.salesRepresentative;
+                            }
+                            
+                            ElMessage.success(`${dialogTitle.value}成功！`);
+                            editDialogVisible.value = false;
+                        } else {
+                            ElMessage.warning('请完善必填信息！');
+                        }
+                    });
+                };
+
+                const handleCancelEdit = () => {
+                    ElMessageBox.confirm('返回后，当前已填写的数据将丢失。确认返回？', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        editDialogVisible.value = false;
+                    }).catch(() => {
+                        // 取消则不执行任何操作
+                    });
+                };
+
+                const previewVisible = ref(false);
+                const previewUrl = ref('');
+                const previewType = ref('image');
+
+                onMounted(() => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if (urlParams.get('action') === 'edit') {
+                        const customerName = urlParams.get('customerName');
+                        let targetRow = allData.value.find(item => item.customerName === customerName);
+                        if (!targetRow) {
+                            targetRow = allData.value[0];
+                        }
+                        setTimeout(() => {
+                            handleEdit(targetRow);
+                        }, 100);
+                    }
+                });
+
+                const handlePreview = (file) => {
+                    previewType.value = file.type || 'image';
+                    previewUrl.value = 'https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png';
+                    previewVisible.value = true;
+                };
+
+                const handleSign = (row) => {
+                    currentSignRow.value = row;
+                    if (row.customerName && row.customerName.includes('中国香港')) {
+                        // 重置 HK 表单状态
+                        hkSignForm.startDate = '';
+                        hkSignForm.endDate = '';
+                        hkSignForm.files = [];
+                        hkSignDialogVisible.value = true;
+                        if (hkSignFormRef.value) {
+                            Vue.nextTick(() => {
+                                hkSignFormRef.value.clearValidate();
+                            });
+                        }
+                    } else {
+                        // 重置普通表单状态
+                        signForm.isSimple = '否';
+                        signForm.isStandard = '是';
+                        signForm.companyTitle = '广东省飞点跨境供应链有限公司';
+                        signForm.paymentTerm = '月结';
+                        signForm.contractYears = '1';
+                        signForm.startDate = '';
+                        signForm.endDate = '';
+                        signForm.signDate = '';
+                        signForm.modifyContent = '';
+                        signDialogVisible.value = true;
+                    }
+                };
+
+                const confirmSign = () => {
+                    if (currentSignRow.value) {
+                        currentSignRow.value.signStatus = '已签署';
+                    }
+                    signDialogVisible.value = false;
+                    ElMessage.success('合同签约成功！');
+                };
+
+                const handleDisable = (row) => {
+                    ElMessageBox.confirm(`确定要冻结 [${row.customerName}] 吗？关联的 [${row.customerCode}_admin] 等账户也会同步冻结，请谨慎操作。`, '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        row.serviceStatus = '已冻结';
+                        const statusMap = JSON.parse(localStorage.getItem('globalCustomerStatus') || '{}');
+                        statusMap[row.customerName] = '已冻结';
+                        localStorage.setItem('globalCustomerStatus', JSON.stringify(statusMap));
+                        ElMessage.success(`客户 ${row.customerName} 及关联账户已冻结`);
+                    }).catch(() => {});
+                };
+
+                const handleEnable = (row) => {
+                    ElMessageBox.confirm(`确定要启用 [${row.customerName}] 吗？关联的 [${row.customerCode}_admin] 等账户也会同步启用，请谨慎操作。`, '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        row.serviceStatus = '正常';
+                        const statusMap = JSON.parse(localStorage.getItem('globalCustomerStatus') || '{}');
+                        statusMap[row.customerName] = '正常';
+                        localStorage.setItem('globalCustomerStatus', JSON.stringify(statusMap));
+                        ElMessage.success(`客户 ${row.customerName} 及关联账户已启用，转入正常状态`);
+                    }).catch(() => {});
+                };
+
+                const handleSizeChange = (val) => {
+                    pageSize.value = val;
+                };
+
+                const handleCurrentChange = (val) => {
+                    currentPage.value = val;
+                };
+
+                const handleIdCardChange = (file, side) => {
+                    if (side === 'front') {
+                        editFormData.idCardFrontUrl = URL.createObjectURL(file.raw);
+                    } else {
+                        editFormData.idCardBackUrl = URL.createObjectURL(file.raw);
+                    }
+                };
+
+                return {
+                    activeTab,
+                    searchForm,
+                    tableData,
+                    currentPage,
+                    pageSize,
+                    total,
+                    handleTabClick,
+                    handleSearch,
+                    resetSearch,
+                    handleAddCommand,
+                    handleEdit,
+                    handleSign,
+                    confirmSign,
+                    handleDisable,
+                    handleEnable,
+                    handleSizeChange,
+                    handleCurrentChange,
+                    signDialogVisible,
+                    signForm,
+                    hkSignDialogVisible,
+                    hkSignForm,
+                    hkSignRules,
+                    hkSignFormRef,
+                    handleHkFileChange,
+                    handleHkFileRemove,
+                    confirmHkSign,
+                    
+                    selectedRows,
+                    handleSelectionChange,
+                    transferSupplierDialogVisible,
+                    transferSupplierFormRef,
+                    currentTransferCustomer,
+                    transferSupplierForm,
+                    transferSupplierRules,
+                    scacRules,
+                    categoryOptions,
+                    availableSupplierDetails,
+                    handleSupplierCategoryChange,
+                    handleTransferSupplier,
+                    confirmTransferSupplier,
+                    addTransferSupplierContact,
+                    removeTransferSupplierContact,
+
+                    editDialogVisible,
+                    dialogTitle,
+                    editFormRef,
+                    editFormData,
+                    editRules,
+                    handleCustomerTypeChange,
+                    availablePaymentTerms,
+                    handleBillingCycleChange,
+                    handlePaymentTermChange,
+                    addAccount,
+                    removeAccount,
+                    addCustomMaterial,
+                    removeMaterialFile,
+                    handleIdCardChange,
+                    confirmEdit,
+                    confirmAndGenerateAccount,
+                    previewVisible,
+                    previewUrl,
+                    previewType,
+                    handlePreview,
+                    handleCancelEdit,
+                    isContractEditable
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

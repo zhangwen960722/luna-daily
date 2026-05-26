@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>供应商管理</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        /* 全局基础规范 */
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #2C974B;
+            --el-color-danger: #F53F3F;
+            --el-border-color: #DCDFE6;
+            --el-bg-color: #F5F7FA;
+            --el-text-color-primary: #303133;
+            --el-text-color-regular: #606266;
+            --el-border-radius-base: 4px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+            background-color: var(--el-bg-color);
+            color: var(--el-text-color-primary);
+            font-size: 14px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #app {
+            flex: 1;
+            padding: 16px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .content-card {
+            background-color: #FFFFFF;
+            border-radius: var(--el-border-radius-base);
+            padding: 16px;
+            height: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 搜索筛选区 */
+        .search-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .search-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-item .el-input,
+        .search-item .el-select {
+            width: 220px;
+        }
+
+        .search-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 表格区 */
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .table-container {
+            flex: 1;
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid var(--el-border-color);
+            border-bottom: none;
+        }
+
+        .el-table {
+            --el-table-header-bg-color: #FAFAFA;
+            --el-table-header-text-color: #303133;
+        }
+
+        .el-table th.el-table__cell {
+            font-weight: 500;
+        }
+
+        .pagination-area {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        
+        /* 弹窗及表单样式 */
+        .section-title { 
+            font-size: 14px; 
+            font-weight: bold; 
+            color: var(--el-text-color-primary); 
+            margin-top: 16px; 
+            margin-bottom: 16px; 
+            padding-left: 8px; 
+            border-left: 4px solid #2DA44E; 
+        }
+
+        .dynamic-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        .dynamic-table th, .dynamic-table td { border: 1px solid var(--el-border-color); padding: 12px; text-align: left; }
+        .dynamic-table th { background-color: #FAFAFA; color: var(--el-text-color-primary); font-weight: 500; }
+        .dynamic-table .el-form-item { margin-bottom: 0; }
+
+        /* 资料展示列表样式 */
+        .material-section { margin-top: 8px; }
+        .material-add-btn { margin-bottom: 24px; }
+        .material-item { display: flex; align-items: flex-start; margin-bottom: 12px; }
+        .material-label { width: 140px; text-align: right; padding-right: 16px; line-height: 40px; font-size: 14px; color: var(--el-text-color-regular); }
+        .material-label.is-required::before { content: '*'; color: var(--el-color-danger); margin-right: 4px; }
+        .material-files { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .material-file-icon { font-size: 18px; margin-right: 8px; }
+        .material-file-icon.is-image { color: #F3C43D; }
+        .material-file-icon.is-pdf { color: #F53F3F; }
+        .material-file-name { flex: 1; font-size: 14px; color: var(--el-text-color-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .material-file-actions { display: flex; gap: 16px; color: #909399; align-items: center; }
+        .material-file-actions .el-icon { cursor: pointer; transition: color 0.3s; font-size: 16px; outline: none; }
+        .material-file-actions .el-icon:hover { color: var(--el-color-primary); }
+        .material-file-actions .el-icon-delete:hover { color: var(--el-color-danger); }
+
+        /* 身份证正反面大图上传样式 */
+        .person-idcard-uploader {
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            height: 180px;
+        }
+        
+        .person-idcard-uploader .el-upload {
+            border: 1px dashed var(--el-border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: var(--el-transition-duration-fast);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            background-color: #fafafa;
+        }
+
+        .person-idcard-uploader .el-upload:hover {
+            border-color: var(--el-color-primary);
+        }
+
+        .person-idcard-icon-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            color: #8c939d;
+        }
+
+        .person-idcard-icon-container .el-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        .idcard-upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 600px;
+        }
+        .avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="content-card">
+            
+            <!-- 搜索筛选区与新增按钮 -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+                <div class="search-area" style="margin-bottom: 0;">
+                    <div class="search-item">
+                        <el-input v-model="searchForm.supplierName" placeholder="供应商名称" clearable></el-input>
+                    </div>
+                    <div class="search-item">
+                        <el-select v-model="searchForm.supplierCategory" placeholder="供应商大类" clearable @change="handleSearchCategoryChange">
+                            <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat"></el-option>
+                        </el-select>
+                    </div>
+                    <div class="search-item">
+                        <el-select v-model="searchForm.supplierDetail" placeholder="供应商明细" clearable :disabled="!searchForm.supplierCategory">
+                            <el-option v-for="det in searchDetailOptions" :key="det" :label="det" :value="det"></el-option>
+                        </el-select>
+                    </div>
+                    <div class="search-actions">
+                        <el-button class="btn-search-primary" @click="handleSearch">
+                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        </el-button>
+                        <el-button class="btn-search-reset" @click="resetSearch">
+                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <el-button type="primary" @click="openDialog('add')">
+                        <el-icon style="margin-right: 4px;"><Plus /></el-icon>新增供应商
+                    </el-button>
+                    <el-button type="warning" @click="handleTransferToCustomer" :disabled="selectedRows.length !== 1">
+                        <el-icon style="margin-right: 4px;"><Switch /></el-icon>转客户
+                    </el-button>
+                </div>
+            </div>
+
+            <!-- 列表状态tab -->
+            <el-tabs v-model="activeTab" class="demo-tabs" @tab-click="handleTabClick">
+                <el-tab-pane label="正常" name="正常"></el-tab-pane>
+                <el-tab-pane label="已冻结" name="已冻结"></el-tab-pane>
+                <el-tab-pane label="全部" name="全部"></el-tab-pane>
+            </el-tabs>
+
+            <!-- 表格区 -->
+            <div class="table-container">
+                <el-table 
+                    :data="tableData" 
+                    style="width: 100%; min-width: 1200px;" 
+                    border 
+                    height="100%"
+                    @selection-change="handleSelectionChange">
+                    
+                    <el-table-column type="selection" width="55" align="center"></el-table-column>
+                    <el-table-column prop="supplierCode" label="供应商编号" min-width="120"></el-table-column>
+                    <el-table-column prop="supplierName" label="供应商名称" min-width="200" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="supplierCategory" label="供应商大类" min-width="150">
+                        <template #default="scope">
+                            {{ Array.isArray(scope.row.supplierCategory) ? scope.row.supplierCategory.join('、') : scope.row.supplierCategory }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="supplierDetail" label="供应商明细" min-width="150">
+                        <template #default="scope">
+                            {{ Array.isArray(scope.row.supplierDetail) ? scope.row.supplierDetail.join('、') : scope.row.supplierDetail }}
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="level" label="供应商等级" min-width="100" align="center"></el-table-column>
+                    <el-table-column prop="serviceStatus" label="服务状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.serviceStatus === '正常' ? 'success' : 'danger'">{{ scope.row.serviceStatus }}</el-tag>
+                        </template>
+                    </el-table-column>
+                    
+                    <el-table-column label="操作" width="160" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">
+                                编辑
+                            </el-button>
+                            <el-button 
+                                link 
+                                type="danger" 
+                                size="small" 
+                                @click="handleFreeze(scope.row)" 
+                                v-if="scope.row.serviceStatus === '正常'">
+                                冻结
+                            </el-button>
+                            <el-button 
+                                link 
+                                type="success" 
+                                size="small" 
+                                @click="handleUnfreeze(scope.row)" 
+                                v-if="scope.row.serviceStatus === '已冻结'">
+                                启用
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页区 -->
+            <div class="pagination-area">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="total"
+                />
+            </div>
+        </div>
+
+        <!-- 新增/编辑弹窗 -->
+        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="900px" destroy-on-close>
+            <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top" style="height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 16px;">
+                
+                <div class="section-title">基本信息</div>
+                <el-row :gutter="24">
+                    <el-col :span="8">
+                        <el-form-item label="供应商编号" prop="supplierCode">
+                            <el-input v-model="formData.supplierCode" disabled placeholder="系统自动生成"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="供应商名称" prop="supplierName">
+                            <el-input v-model="formData.supplierName" placeholder="请输入"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="供应商简称" prop="supplierShortName">
+                            <el-input v-model="formData.supplierShortName" placeholder="请输入"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                
+                <el-row :gutter="24">
+                    <el-col :span="8">
+                        <el-form-item label="供应商大类" prop="supplierCategory">
+                            <el-select v-model="formData.supplierCategory" placeholder="请选择 (多选)" multiple collapse-tags style="width: 100%;" @change="handleFormCategoryChange">
+                                <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="供应商明细" prop="supplierDetail">
+                            <el-select v-model="formData.supplierDetail" placeholder="请选择 (多选)" multiple collapse-tags style="width: 100%;" :disabled="!formData.supplierCategory">
+                                <el-option v-for="det in formDetailOptions" :key="det" :label="det" :value="det"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="SCAC" prop="scac">
+                            <el-input v-model="formData.scac" placeholder="海运/快递/卡车 必填"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="24">
+                    <el-col :span="8">
+                        <el-form-item label="供应商等级" prop="level">
+                            <el-select v-model="formData.level" placeholder="请选择" style="width: 100%;">
+                                <el-option v-for="lvl in ['SS', 'S', 'A', 'B', 'C', 'D', 'E', 'F', 'G']" :key="lvl" :label="lvl" :value="lvl"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="是否同行" prop="isPeer">
+                            <el-select v-model="formData.isPeer" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <div class="section-title" style="margin-top: 24px;">更多信息</div>
+                <el-tabs type="border-card">
+                    <!-- 联系人 Tab -->
+                    <el-tab-pane label="联系人">
+                        <div style="margin-bottom: 12px;">
+                            <el-button type="primary" size="small" @click="addContact">
+                                <el-icon><Plus /></el-icon> 新增联系人
+                            </el-button>
+                        </div>
+                        <table class="dynamic-table">
+                            <thead>
+                                <tr>
+                                    <th><span style="color: red;">*</span> 姓名</th>
+                                    <th><span style="color: red;">*</span> 联系电话</th>
+                                    <th><span style="color: red;">*</span> 邮箱</th>
+                                    <th style="text-align: center;"><span style="color: red;">*</span> 合同对接人</th>
+                                    <th style="text-align: center;"><span style="color: red;">*</span> 系统账号接收人</th>
+                                    <th style="text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(contact, index) in formData.contacts" :key="contact.id">
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.name'" :rules="{required: true, message: '必填', trigger: 'blur'}" label-width="0">
+                                            <el-input v-model="contact.name" placeholder="姓名" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.phone'" :rules="[{required: true, message: '必填', trigger: 'blur'}, {pattern: /^[0-9]+$/, message: '仅限数字', trigger: 'blur'}]" label-width="0">
+                                            <el-input v-model="contact.phone" placeholder="电话(纯数字)" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.email'" :rules="[{required: true, message: '必填', trigger: 'blur'}, {type: 'email', message: '格式错误', trigger: ['blur', 'change']}]" label-width="0">
+                                            <el-input v-model="contact.email" placeholder="邮箱" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-radio v-model="formData.contractContactId" :label="contact.id">设为对接人</el-radio>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-radio v-model="formData.accountContactId" :label="contact.id">设为接收人</el-radio>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-button link type="danger" @click="removeContact(index)">删除</el-button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </el-tab-pane>
+
+                    <!-- 打单服务 Tab -->
+                    <el-tab-pane label="打单服务">
+                        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                            <el-button type="primary" size="small" @click="addPrintService">
+                                <el-icon><Plus /></el-icon> 新增服务
+                            </el-button>
+                        </div>
+                        <table class="dynamic-table">
+                            <thead>
+                                <tr>
+                                    <th width="30%">收货渠道</th>
+                                    <th width="15%" style="text-align: center;">状态</th>
+                                    <th width="25%" style="text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="formData.printServices.length === 0">
+                                    <td colspan="3" style="text-align: center; color: #909399; padding: 20px;">暂无数据</td>
+                                </tr>
+                                <tr v-for="(service, index) in formData.printServices" :key="service.id">
+                                    <td>
+                                        <el-form-item :prop="'printServices.' + index + '.receiveChannel'" label-width="0">
+                                            <el-input v-model="service.receiveChannel" placeholder="收货渠道" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-tag :type="service.status === '正常' ? 'success' : 'danger'" size="small">{{ service.status }}</el-tag>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-button link type="success" size="small" v-if="service.status === '已冻结'" @click="service.status = '正常'">启用</el-button>
+                                        <el-button link type="danger" size="small" v-if="service.status === '正常'" @click="service.status = '已冻结'">冻结</el-button>
+                                        <el-button link type="danger" size="small" @click="removePrintService(index)">删除</el-button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </el-tab-pane>
+
+                    <!-- 资料 Tab -->
+                    <el-tab-pane label="资料">
+                        <div style="margin-bottom: 16px;">
+                            <el-button type="primary" size="small" @click="addMaterial">
+                                <el-icon><Plus /></el-icon> 新增资料
+                            </el-button>
+                        </div>
+                        <div v-for="(mat, mIndex) in formData.materials" :key="mat.id" style="display: flex; align-items: flex-start; margin-bottom: 16px; gap: 16px; border: 1px solid #ebeef5; padding: 12px; border-radius: 4px;">
+                            <div style="width: 150px;">
+                                <el-input v-model="mat.label" placeholder="自定义资料名称" size="small"></el-input>
+                            </div>
+                            <div style="flex: 1;">
+                                <el-upload
+                                    action="#"
+                                    :limit="1"
+                                    :auto-upload="false"
+                                    style="margin-bottom: 8px;"
+                                >
+                                    <el-button size="small">上传文件</el-button>
+                                </el-upload>
+                                <!-- 模拟已上传文件展示 -->
+                                <div v-for="(file, fIndex) in mat.files" :key="fIndex" style="background: #f8f9fb; padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; font-size: 12px; margin-right: 8px;">
+                                    <el-icon style="margin-right: 4px;"><Document /></el-icon>
+                                    {{ file.name }}
+                                </div>
+                            </div>
+                            <div>
+                                <el-button link type="danger" @click="removeMaterial(mIndex)">
+                                    <el-icon><Delete /></el-icon>
+                                </el-button>
+                            </div>
+                        </div>
+                    </el-tab-pane>
+                </el-tabs>
+
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="confirmSave">确 定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 转客户弹窗 -->
+        <el-dialog v-model="transferDialogVisible" title="转为客户" width="900px" destroy-on-close>
+            <el-form ref="transferFormRef" :model="transferFormData" :rules="transferFormRules" label-position="top" style="height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 16px;">
+                
+                <div class="section-title">基本信息</div>
+                <el-row :gutter="24">
+                    <el-col :span="6">
+                        <el-form-item label="客户编号" prop="customerCode">
+                            <el-input v-model="transferFormData.customerCode" disabled placeholder="系统自动生成"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="客户类型" prop="customerType">
+                            <el-select v-model="transferFormData.customerType" placeholder="请选择" style="width: 100%;" @change="handleTransferCustomerTypeChange">
+                                <el-option label="自然人" value="自然人"></el-option>
+                                <el-option label="企业" value="企业"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="客户名称" prop="customerName">
+                            <el-input v-model="transferFormData.customerName" disabled></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="统一社会信用代码" prop="creditCode" :required="transferFormData.customerType === '企业'">
+                            <el-input v-model="transferFormData.creditCode" placeholder="请输入" :disabled="transferFormData.customerType === '自然人'"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="24">
+                    <el-col :span="6">
+                        <el-form-item label="客户属地" prop="enterpriseAttribute">
+                            <el-select v-model="transferFormData.enterpriseAttribute" placeholder="请选择" style="width: 100%;">
+                                <el-option label="中国大陆" value="中国大陆"></el-option>
+                                <el-option label="中国香港" value="中国香港"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="是否同行" prop="isPeer">
+                            <el-select v-model="transferFormData.isPeer" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="客户等级" prop="customerLevel">
+                            <el-select v-model="transferFormData.customerLevel" placeholder="请选择" style="width: 100%;">
+                                <el-option v-for="lvl in ['SS', 'S', 'A', 'B', 'C', 'D', 'F', 'G']" :key="lvl" :label="lvl" :value="lvl"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="客服代表" prop="csRepresentative">
+                            <el-select v-model="transferFormData.csRepresentative" multiple collapse-tags placeholder="请选择" style="width: 100%;">
+                                <el-option label="张客服" value="张客服"></el-option>
+                                <el-option label="王客服" value="王客服"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="24">
+                    <el-col :span="6">
+                        <el-form-item label="销售代表" prop="salesRepresentative">
+                            <el-select v-model="transferFormData.salesRepresentative" placeholder="请选择" style="width: 100%;">
+                                <el-option label="李销售" value="李销售"></el-option>
+                                <el-option label="赵销售" value="赵销售"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="销售来源" prop="salesSource">
+                            <el-input v-model="transferFormData.salesSource" placeholder="请输入销售来源"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="6">
+                        <el-form-item label="开通业务" prop="businessTypes">
+                            <el-select v-model="transferFormData.businessTypes" multiple placeholder="请选择" style="width: 100%;">
+                                <el-option label="TMS" value="TMS"></el-option>
+                                <el-option label="WMS" value="WMS"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <div class="section-title" style="margin-top: 24px;">更多信息</div>
+                <el-tabs type="border-card">
+                    <el-tab-pane label="联系人">
+                        <div style="margin-bottom: 12px; color: var(--el-text-color-regular); font-size: 13px;">
+                            <el-icon><InfoFilled /></el-icon> 默认必须提供以下三个角色的联系人信息。请指定单选人员。
+                        </div>
+                        <table class="dynamic-table">
+                            <thead>
+                                <tr>
+                                    <th>角色标签</th>
+                                    <th><span style="color: red;">*</span> 姓名</th>
+                                    <th><span style="color: red;">*</span> 联系电话</th>
+                                    <th><span style="color: red;">*</span> 邮箱</th>
+                                    <th style="text-align: center;"><span style="color: red;">*</span> 合同对接人</th>
+                                    <th style="text-align: center;"><span style="color: red;">*</span> 系统账号接收人</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(contact, index) in transferFormData.contacts" :key="contact.id">
+                                    <td><el-tag type="info">{{ contact.role }}</el-tag></td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.name'" :rules="{required: true, message: '必填', trigger: 'blur'}" label-width="0">
+                                            <el-input v-model="contact.name" placeholder="请输入姓名" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.phone'" :rules="{required: true, message: '必填', trigger: 'blur'}" label-width="0">
+                                            <el-input v-model="contact.phone" placeholder="请输入电话" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.email'" :rules="[{required: true, message: '必填', trigger: 'blur'}, {type: 'email', message: '请输入正确的邮箱格式', trigger: ['blur', 'change']}]" label-width="0">
+                                            <el-input v-model="contact.email" placeholder="请输入邮箱" size="small"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-radio v-model="transferFormData.contractContactId" :label="contact.id">设为对接人</el-radio>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <el-radio v-model="transferFormData.accountContactId" :label="contact.id">设为接收人</el-radio>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </el-tab-pane>
+
+                    <!-- 资料Tab -->
+                    <el-tab-pane label="资料">
+                        <div class="material-section">
+                            <div class="material-add-btn">
+                                <el-button style="background-color: #8b81ff; border-color: #8b81ff; color: white;" @click="addTransferCustomMaterial">
+                                    <el-icon><Plus /></el-icon> 新增
+                                </el-button>
+                            </div>
+                            <div class="material-list">
+                                <div class="material-item" v-for="(mat, mIndex) in transferFormData.materials" :key="mIndex">
+                                    <div class="material-label" :class="{ 'is-required': mat.required || (mat.label === '营业执照' && transferFormData.customerType === '企业') }">
+                                        <el-input v-if="mat.isCustom" v-model="mat.label" placeholder="自定义的资料" size="small" style="width: 110px;"></el-input>
+                                        <template v-else>{{ mat.label }}：</template>
+                                    </div>
+                                    <div class="material-files">
+                                        <!-- 身份证正反面特殊上传样式 -->
+                                        <div v-if="mat.label === '身份证正反面'" class="idcard-upload-grid" style="margin-bottom: 8px;">
+                                            <el-upload 
+                                                class="person-idcard-uploader" 
+                                                action="#" 
+                                                :show-file-list="false" 
+                                                :auto-upload="false"
+                                                :on-change="(file) => handleTransferIdCardChange(file, 'front')"
+                                            >
+                                                <img v-if="transferFormData.idCardFrontUrl" :src="transferFormData.idCardFrontUrl" class="avatar" />
+                                                <div v-else class="person-idcard-icon-container">
+                                                    <el-icon><Plus /></el-icon>
+                                                    <span>身份证人像面照片</span>
+                                                </div>
+                                            </el-upload>
+                                            <el-upload 
+                                                class="person-idcard-uploader" 
+                                                action="#" 
+                                                :show-file-list="false" 
+                                                :auto-upload="false"
+                                                :on-change="(file) => handleTransferIdCardChange(file, 'back')"
+                                            >
+                                                <img v-if="transferFormData.idCardBackUrl" :src="transferFormData.idCardBackUrl" class="avatar" />
+                                                <div v-else class="person-idcard-icon-container">
+                                                    <el-icon><Plus /></el-icon>
+                                                    <span>身份证国徽面照片</span>
+                                                </div>
+                                            </el-upload>
+                                        </div>
+                                        
+                                        <!-- 常规上传按钮 -->
+                                        <el-upload v-else action="#" :auto-upload="false" multiple :limit="5" style="margin-bottom: 8px;">
+                                            <el-button size="small"><el-icon><Upload /></el-icon> 上传附件</el-button>
+                                        </el-upload>
+
+                                        <!-- 常规附件列表展示 -->
+                                        <div style="display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--el-border-color); border-radius: 6px; padding: 0 16px; height: 40px; background-color: #fff; transition: border-color 0.3s; margin-bottom: 8px;" v-for="(file, fIndex) in mat.files" :key="fIndex" v-show="mat.label !== '身份证正反面'">
+                                            <div style="display: flex; align-items: center; flex: 1; overflow: hidden;">
+                                                <el-icon class="material-file-icon" :class="file.type === 'pdf' ? 'is-pdf' : 'is-image'">
+                                                    <Picture v-if="file.type === 'image'" />
+                                                    <Document v-else />
+                                                </el-icon>
+                                                <div class="material-file-name">{{ file.name }}</div>
+                                            </div>
+                                            <div class="material-file-actions">
+                                                <el-icon title="预览"><View /></el-icon>
+                                                <el-icon title="下载"><Download /></el-icon>
+                                                <el-icon title="删除" class="el-icon-delete" v-if="file.canDelete" @click="removeTransferMaterialFile(mIndex, fIndex)"><Delete /></el-icon>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </el-tab-pane>
+
+                    <!-- 通信信息Tab -->
+                    <el-tab-pane label="通信信息">
+                        <el-row :gutter="24">
+                            <el-col :span="12">
+                                <el-form-item label="工具类型">
+                                    <el-input v-model="transferFormData.commType" disabled placeholder="默认：企业微信"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="群聊ID" prop="groupId" :rules="{required: true, message: '必填', trigger: 'blur'}">
+                                    <el-input v-model="transferFormData.groupId" placeholder="请输入群聊ID"></el-input>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                    </el-tab-pane>
+                </el-tabs>
+
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="transferDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="confirmTransfer">确 定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('正常');
+                
+                const searchForm = reactive({
+                    supplierName: '',
+                    supplierCategory: '',
+                    supplierDetail: ''
+                });
+
+                const categoryMap = {
+                    '干线运输供应商': ['汽运', '海运', '空运', '铁路'],
+                    '揽货服务商': ['货拉拉', '拖车'],
+                    '仓储供应商': ['海外中转仓', '保税仓', '退件仓'],
+                    '关务供应商': ['报关行', '清关行', '查验行'],
+                    '尾程运输供应商': ['快递', '卡车'],
+                    '综合代理': ['同行'],
+                    '其他': ['其他']
+                };
+
+                const categoryOptions = Object.keys(categoryMap);
+                
+                const searchDetailOptions = ref([]);
+                const handleSearchCategoryChange = (val) => {
+                    searchForm.supplierDetail = '';
+                    searchDetailOptions.value = val ? categoryMap[val] : [];
+                };
+
+                const formDetailOptions = ref([]);
+                const handleFormCategoryChange = (val) => {
+                    formData.supplierDetail = []; // 切换大类清空明细
+                    if (Array.isArray(val)) {
+                        formDetailOptions.value = val.flatMap(c => categoryMap[c] || []);
+                    } else {
+                        formDetailOptions.value = [];
+                    }
+                };
+
+                // 分页
+                const currentPage = ref(1);
+                const pageSize = ref(10);
+
+                // 原始数据
+                const allData = ref([
+                    { supplierCode: 'G10001', supplierName: 'maston', supplierCategory: ['干线运输供应商'], supplierDetail: ['海运'], level: 'SS', serviceStatus: '正常' },
+                    { supplierCode: 'G10002', supplierName: '货拉拉', supplierCategory: ['揽货服务商'], supplierDetail: ['拖车'], level: 'S', serviceStatus: '正常' },
+                    { supplierCode: 'G10003', supplierName: 'FlexChain', supplierCategory: ['仓储供应商'], supplierDetail: ['保税仓'], level: 'A', serviceStatus: '正常' },
+                    { supplierCode: 'G10004', supplierName: '深圳市汇嘉达供应链有限公司', supplierCategory: ['关务供应商'], supplierDetail: ['报关行'], level: 'B', serviceStatus: '正常' },
+                    { supplierCode: 'G10005', supplierName: 'UPS', supplierCategory: ['尾程运输供应商'], supplierDetail: ['快递'], level: 'C', serviceStatus: '正常' },
+                    { supplierCode: 'G10006', supplierName: '积米', supplierCategory: ['综合代理'], supplierDetail: ['同行'], level: 'D', serviceStatus: '正常' },
+                    { supplierCode: 'G10007', supplierName: '飞点', supplierCategory: ['其他'], supplierDetail: ['其他'], level: 'E', serviceStatus: '正常' },
+                    { supplierCode: 'G10008', supplierName: 'smart', supplierCategory: ['其他'], supplierDetail: ['其他'], level: 'F', serviceStatus: '正常' },
+                    { supplierCode: 'G10009', supplierName: 'usprimeagency', supplierCategory: ['其他'], supplierDetail: ['其他'], level: 'G', serviceStatus: '正常' },
+                    { supplierCode: 'G10010', supplierName: '上海华宇物流', supplierCategory: ['干线运输供应商'], supplierDetail: ['空运'], level: 'C', serviceStatus: '已冻结' },
+                    { supplierCode: 'G10011', supplierName: '天津快运通', supplierCategory: ['尾程运输供应商'], supplierDetail: ['卡车'], level: 'B', serviceStatus: '已冻结' }
+                ]);
+
+                const tableData = computed(() => {
+                    if (activeTab.value === '全部') return allData.value;
+                    return allData.value.filter(item => item.serviceStatus === activeTab.value);
+                });
+                
+                const total = computed(() => tableData.value.length);
+
+                const selectedRows = ref([]);
+                const handleSelectionChange = (selection) => {
+                    selectedRows.value = selection;
+                };
+
+                const handleTabClick = () => {};
+                const handleSearch = () => { ElMessage.success('查询成功'); };
+                const resetSearch = () => {
+                    searchForm.supplierName = '';
+                    searchForm.supplierCategory = '';
+                    searchForm.supplierDetail = '';
+                    searchDetailOptions.value = [];
+                };
+
+                // 弹窗逻辑
+                const dialogVisible = ref(false);
+                const dialogTitle = ref('');
+                const formRef = ref(null);
+                const { ElMessageBox } = ElementPlus;
+                
+                const formData = reactive({
+                    supplierCode: '',
+                    supplierName: '',
+                    supplierShortName: '',
+                    supplierCategory: [],
+                    supplierDetail: [],
+                    scac: '',
+                    level: '',
+                    isPeer: '',
+                    contacts: [],
+                    contractContactId: null,
+                    accountContactId: null,
+                    materials: [],
+                    printServices: []
+                });
+
+                // SCAC 条件必填校验
+                const validateScac = (rule, value, callback) => {
+                    const needsScac = formData.supplierDetail.some(d => ['海运', '快递', '卡车'].includes(d));
+                    if (needsScac && !value) {
+                        callback(new Error('选择海运/快递/卡车时，此项必填'));
+                    } else {
+                        callback();
+                    }
+                };
+
+                const formRules = reactive({
+                    supplierName: [{ required: true, message: '必填', trigger: 'blur' }],
+                    supplierShortName: [{ required: true, message: '必填', trigger: 'blur' }],
+                    supplierCategory: [{ required: true, message: '必选', trigger: 'change' }],
+                    supplierDetail: [{ required: true, message: '必选', trigger: 'change' }],
+                    level: [{ required: true, message: '必选', trigger: 'change' }],
+                    isPeer: [{ required: true, message: '必选', trigger: 'change' }],
+                    scac: [{ validator: validateScac, trigger: ['blur', 'change'] }]
+                });
+
+                // 模拟 API 对接账号数据
+                const apiAccountOptions = ref([
+                    { label: '账号A-UPS对接', value: 'ACC_001', defaultServiceName: 'UPS基础服务' },
+                    { label: '账号B-FedEx对接', value: 'ACC_002', defaultServiceName: 'FedEx优先服务' },
+                    { label: '账号C-DHL对接', value: 'ACC_003', defaultServiceName: 'DHL标准服务' }
+                ]);
+
+                const openDialog = (type, row) => {
+                    if (formRef.value) formRef.value.resetFields();
+                    
+                    if (type === 'add') {
+                        dialogTitle.value = '新增供应商';
+                        Object.assign(formData, {
+                            supplierCode: 'G' + (10001 + allData.value.length),
+                            supplierName: '', supplierShortName: '', supplierCategory: [], supplierDetail: [], scac: '', level: 'G', isPeer: '是',
+                            contacts: [{ id: Date.now(), name: '', phone: '', email: '' }],
+                            contractContactId: null, accountContactId: null,
+                            materials: [], printServices: []
+                        });
+                        formDetailOptions.value = [];
+                    } else {
+                        dialogTitle.value = '编辑供应商';
+                        Object.assign(formData, JSON.parse(JSON.stringify(row)));
+                        
+                        // 确保 supplierCategory 是数组
+                        formData.supplierCategory = Array.isArray(row.supplierCategory) ? [...row.supplierCategory] : [row.supplierCategory].filter(Boolean);
+
+                        // 补充缺少的模拟字段
+                        formData.supplierShortName = row.supplierName.substring(0, 4);
+                        formData.scac = '';
+                        formData.isPeer = row.isPeer || '是';
+                        formData.contacts = [
+                            { id: 1, name: '联系人A', phone: '13800138000', email: 'test@exp.com' }
+                        ];
+                        formData.contractContactId = 1;
+                        formData.accountContactId = 1;
+                        formData.materials = [];
+                        formData.printServices = [
+                            { id: 1, receiveChannel: '测试收货渠道', status: '正常' }
+                        ];
+                        
+                        formDetailOptions.value = formData.supplierCategory.flatMap(c => categoryMap[c] || []);
+                    }
+                    dialogVisible.value = true;
+                };
+
+                // 联系人操作
+                const addContact = () => {
+                    formData.contacts.push({ id: Date.now(), name: '', phone: '', email: '' });
+                };
+                const removeContact = (index) => {
+                    formData.contacts.splice(index, 1);
+                };
+
+                // 资料操作
+                const addMaterial = () => {
+                    formData.materials.push({ id: Date.now(), label: '', files: [] });
+                };
+                const removeMaterial = (index) => {
+                    formData.materials.splice(index, 1);
+                };
+
+                // 打单服务操作
+                const addPrintService = () => {
+                    formData.printServices.push({ id: Date.now(), receiveChannel: '', status: '正常' });
+                };
+                
+                const removePrintService = (index) => {
+                    formData.printServices.splice(index, 1);
+                };
+
+                const confirmSave = () => {
+                    if (!formRef.value) return;
+                    formRef.value.validate((valid) => {
+                        if (valid) {
+                            if (!formData.contractContactId) {
+                                ElMessage.warning('请指定一名联系人作为合同对接人');
+                                return;
+                            }
+                            if (!formData.accountContactId) {
+                                ElMessage.warning('请指定一名联系人作为系统账号接收人');
+                                return;
+                            }
+                            ElMessage.success('保存成功');
+                            dialogVisible.value = false;
+                        }
+                    });
+                };
+
+                const handleFreeze = (row) => {
+                    ElMessageBox.confirm(`确定要冻结供应商【${row.supplierName}】吗？`, '冻结确认', {
+                        type: 'warning'
+                    }).then(() => {
+                        row.serviceStatus = '已冻结';
+                        ElMessage.success('已冻结');
+                    }).catch(() => {});
+                };
+                
+                const handleUnfreeze = (row) => {
+                    row.serviceStatus = '正常';
+                    ElMessage.success('已启用');
+                };
+
+                // 转客户逻辑
+                const transferDialogVisible = ref(false);
+                const transferFormRef = ref(null);
+                const transferFormData = reactive({
+                    customerCode: '',
+                    customerType: '',
+                    customerName: '',
+                    creditCode: '',
+                    enterpriseAttribute: '',
+                    isPeer: '',
+                    customerLevel: '',
+                    csRepresentative: [],
+                    salesRepresentative: '',
+                    salesSource: '',
+                    businessTypes: [],
+                    contacts: [],
+                    contractContactId: null,
+                    accountContactId: null,
+                    idCardFrontUrl: '',
+                    idCardBackUrl: '',
+                    materials: [
+                        { label: '营业执照', required: false, isCustom: false, files: [] },
+                        { label: '身份证正反面', required: true, isCustom: false, files: [] },
+                        { label: '天眼查风险信息', required: false, isCustom: false, files: [] }
+                    ],
+                    commType: '企业微信',
+                    groupId: ''
+                });
+
+                const validateTransferCreditCode = (rule, value, callback) => {
+                    if (transferFormData.customerType === '企业' && !value) {
+                        callback(new Error('企业客户必须输入统一社会信用代码'));
+                    } else {
+                        callback();
+                    }
+                };
+
+                const transferFormRules = reactive({
+                    customerType: [{ required: true, message: '必选', trigger: 'change' }],
+                    creditCode: [{ validator: validateTransferCreditCode, trigger: 'blur' }],
+                    enterpriseAttribute: [{ required: true, message: '必选', trigger: 'change' }],
+                    isPeer: [{ required: true, message: '必选', trigger: 'change' }],
+                    customerLevel: [{ required: true, message: '必选', trigger: 'change' }],
+                    csRepresentative: [{ required: true, message: '必选', trigger: 'change', type: 'array' }],
+                    salesRepresentative: [{ required: true, message: '必选', trigger: 'change' }],
+                    businessTypes: [{ required: true, message: '必选', trigger: 'change', type: 'array' }]
+                });
+
+                const addTransferContact = () => {
+                    transferFormData.contacts.push({ id: Date.now(), name: '', phone: '', email: '' });
+                };
+                
+                const removeTransferContact = (index) => {
+                    transferFormData.contacts.splice(index, 1);
+                };
+
+                const handleTransferToCustomer = () => {
+                    if (selectedRows.value.length !== 1) return;
+                    const row = selectedRows.value[0];
+                    transferFormData.customerCode = '';
+                    transferFormData.customerName = row.supplierName;
+                    transferFormData.creditCode = '';
+                    transferFormData.customerType = '';
+                    transferFormData.enterpriseAttribute = '';
+                    transferFormData.isPeer = '';
+                    transferFormData.customerLevel = '';
+                    transferFormData.csRepresentative = [];
+                    transferFormData.salesRepresentative = '';
+                    transferFormData.salesSource = '';
+                    transferFormData.businessTypes = [];
+                    transferFormData.contacts = [
+                        { id: 1, role: '公司负责人', name: '', phone: '', email: '' },
+                        { id: 2, role: '物流联系人', name: '', phone: '', email: '' },
+                        { id: 3, role: '财务负责人', name: '', phone: '', email: '' }
+                    ];
+                    transferFormData.contractContactId = null;
+                    transferFormData.accountContactId = null;
+                    transferFormData.idCardFrontUrl = '';
+                    transferFormData.idCardBackUrl = '';
+                    transferFormData.materials = [
+                        { label: '营业执照', required: false, isCustom: false, files: [] },
+                        { label: '身份证正反面', required: true, isCustom: false, files: [] },
+                        { label: '天眼查风险信息', required: false, isCustom: false, files: [] }
+                    ];
+                    transferFormData.commType = '企业微信';
+                    transferFormData.groupId = '';
+                    if (transferFormRef.value) {
+                        transferFormRef.value.clearValidate();
+                    }
+                    transferDialogVisible.value = true;
+                };
+
+                const handleTransferCustomerTypeChange = (val) => {
+                    if (val === '自然人') {
+                        transferFormData.creditCode = '';
+                    }
+                    const licenseMaterial = transferFormData.materials.find(m => m.label === '营业执照');
+                    if (licenseMaterial) {
+                        licenseMaterial.required = val === '企业';
+                    }
+                };
+
+                const addTransferCustomMaterial = () => {
+                    transferFormData.materials.push({
+                        label: '自定义的资料',
+                        required: false,
+                        isCustom: true,
+                        files: [
+                            { name: '新上传的资料.pdf', type: 'pdf', canDelete: true }
+                        ]
+                    });
+                };
+                
+                const removeTransferMaterialFile = (mIndex, fIndex) => {
+                    transferFormData.materials[mIndex].files.splice(fIndex, 1);
+                    if (transferFormData.materials[mIndex].files.length === 0 && transferFormData.materials[mIndex].isCustom) {
+                        transferFormData.materials.splice(mIndex, 1);
+                    }
+                };
+
+                const handleTransferIdCardChange = (file, side) => {
+                    if (side === 'front') {
+                        transferFormData.idCardFrontUrl = URL.createObjectURL(file.raw);
+                    } else {
+                        transferFormData.idCardBackUrl = URL.createObjectURL(file.raw);
+                    }
+                };
+
+                const confirmTransfer = () => {
+                    if (!transferFormRef.value) return;
+                    transferFormRef.value.validate((valid) => {
+                        if (valid) {
+                            if (!transferFormData.contractContactId || !transferFormData.accountContactId) {
+                                ElMessage.warning('请指定合同对接人和系统账号接收人');
+                                return;
+                            }
+                            
+                            // 校验身份证正反面必传
+                            if (!transferFormData.idCardFrontUrl || !transferFormData.idCardBackUrl) {
+                                ElMessage.warning('请上传完整的身份证正反面照片');
+                                return;
+                            }
+
+                            // 校验企业类型的营业执照必传
+                            if (transferFormData.customerType === '企业') {
+                                const licenseMaterial = transferFormData.materials.find(m => m.label === '营业执照');
+                                if (licenseMaterial && licenseMaterial.files.length === 0) {
+                                    ElMessage.warning('企业客户必须上传营业执照');
+                                    return;
+                                }
+                            }
+
+                            ElMessage.success('已成功转为客户');
+                            transferDialogVisible.value = false;
+                        }
+                    });
+                };
+
+                return {
+                    activeTab, searchForm, tableData, currentPage, pageSize, total,
+                    categoryOptions, searchDetailOptions, handleSearchCategoryChange,
+                    handleTabClick, handleSearch, resetSearch,
+                    dialogVisible, dialogTitle, formRef, formData, formRules, formDetailOptions, handleFormCategoryChange,
+                    addPrintService, removePrintService,
+                    openDialog, addContact, removeContact, addMaterial, removeMaterial, confirmSave, handleFreeze, handleUnfreeze,
+                    selectedRows, handleSelectionChange, transferDialogVisible, transferFormRef, transferFormData, transferFormRules, handleTransferToCustomer, confirmTransfer, handleTransferCustomerTypeChange,
+                    addTransferCustomMaterial, removeTransferMaterialFile, handleTransferIdCardChange
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

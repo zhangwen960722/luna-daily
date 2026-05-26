@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收货地址管理 - 主列表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: sans-serif; }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .search-item { display: flex; align-items: center; }
+        .search-item label { margin-right: 8px; color: var(--el-text-color-regular); font-size: 14px; }
+        .table-container { flex: 1; overflow: hidden; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+
+        /* 审核详情弹窗样式 */
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #303133;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--el-border-color-light, #E4E7ED);
+            display: flex;
+            align-items: center;
+        }
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 14px;
+            background-color: var(--el-color-primary);
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+        .detail-row {
+            margin-bottom: 16px;
+        }
+        .detail-label {
+            color: #909399;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .detail-value {
+            color: #303133;
+            font-size: 14px;
+            padding: 6px 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #e4e7ed;
+            min-height: 20px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索与新增区域独立卡片 -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px; padding-bottom: 0;">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.customerName" placeholder="用户名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.contact" placeholder="联系人" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.phone" placeholder="联系电话" clearable style="width: 200px;"></el-input>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card" style="height: calc(100vh - 106px);">
+            <!-- Tab 页签 -->
+            <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+                <el-tab-pane label="待审核" name="待审核"></el-tab-pane>
+                <el-tab-pane label="已通过" name="已通过"></el-tab-pane>
+                <el-tab-pane label="已拒绝" name="已拒绝"></el-tab-pane>
+                <el-tab-pane label="全部" name="全部"></el-tab-pane>
+            </el-tabs>
+
+            <!-- 表格 -->
+            <div class="table-container">
+                <el-table :data="tableData" border height="100%" style="width: 100%">
+                    <!-- <el-table-column prop="userAccount" label="用户" min-width="120"></el-table-column> -->
+                    <el-table-column prop="contact" label="联系人" min-width="120"></el-table-column>
+                    <el-table-column prop="phone" label="联系电话" min-width="150"></el-table-column>
+                    <el-table-column prop="country" label="国家" min-width="100"></el-table-column>
+                    <el-table-column prop="state" label="省/州" min-width="100"></el-table-column>
+                    <el-table-column prop="city" label="城市" min-width="120"></el-table-column>
+                    <el-table-column prop="zip" label="邮编" min-width="100"></el-table-column>
+                    <el-table-column prop="address" label="详细地址" min-width="200" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="customerName" label="用户名称" min-width="180" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="status" label="审核状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')">
+                                {{ scope.row.status === '待审核' ? '未审核' : (scope.row.status === '已通过' ? '已审核' : scope.row.status) }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button v-if="scope.row.status === '待审核'" link type="primary" size="small" @click="handleAudit(scope.row)">审核</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="total"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 审核弹窗 -->
+        <el-dialog v-model="auditDialogVisible" title="收货地址审核" width="600px" destroy-on-close>
+            <div class="audit-detail-section">
+                <div class="section-title">收货人信息</div>
+                <el-row :gutter="20" class="detail-row">
+                    <el-col :span="12">
+                        <span class="detail-label">联系人</span>
+                        <div class="detail-value">{{ currentAuditRow?.contact }}</div>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">联系电话</span>
+                        <div class="detail-value">{{ currentAuditRow?.phone }}</div>
+                    </el-col>
+                </el-row>
+
+                <div class="section-title" style="margin-top: 20px;">地址详情</div>
+                <el-row :gutter="20" class="detail-row">
+                    <el-col :span="8">
+                        <span class="detail-label">国家</span>
+                        <div class="detail-value">{{ currentAuditRow?.country }}</div>
+                    </el-col>
+                    <el-col :span="8">
+                        <span class="detail-label">省/州</span>
+                        <div class="detail-value">{{ currentAuditRow?.state }}</div>
+                    </el-col>
+                    <el-col :span="8">
+                        <span class="detail-label">城市</span>
+                        <div class="detail-value">{{ currentAuditRow?.city }}</div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20" class="detail-row">
+                    <el-col :span="8">
+                        <span class="detail-label">邮编</span>
+                        <div class="detail-value">{{ currentAuditRow?.zip }}</div>
+                    </el-col>
+                    <el-col :span="16">
+                        <span class="detail-label">详细地址</span>
+                        <div class="detail-value">{{ currentAuditRow?.address }}</div>
+                    </el-col>
+                </el-row>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="auditDialogVisible = false">返回</el-button>
+                    <el-button type="danger" @click="handleReject">审核拒绝</el-button>
+                    <el-button type="success" @click="handleApprove">审核通过</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('待审核');
+                const searchForm = reactive({ customerName: '', contact: '', phone: '' });
+                const total = ref(2);
+                
+                const allData = [
+                    { customerName: '深圳市大卖科技有限公司', contact: 'Greg Bailys', phone: '904-559-3808', country: 'US', state: 'FL', city: 'Jacksonville', zip: '32256', address: '7800 Bayberry Road', status: '待审核' },
+                    { customerName: '义乌市星光进出口有限公司', contact: 'Sunny', phone: '+1 (626) 838-2088', country: 'US', state: 'CA', city: 'Commerce', zip: '90040', address: '2638 Yates Ave', status: '已通过' }
+                ];
+
+                const tableData = computed(() => {
+                    let data = allData;
+                    if (searchForm.customerName) {
+                        data = data.filter(item => item.customerName.includes(searchForm.customerName));
+                    }
+                    if (activeTab.value === '全部') {
+                        return data;
+                    }
+                    return data.filter(item => item.status === activeTab.value);
+                });
+
+                const handleTabClick = () => { ElMessage.success('切换标签'); };
+                const handleSearch = () => { ElMessage.success('执行搜索'); };
+                const resetSearch = () => { searchForm.customerName = ''; searchForm.contact = ''; searchForm.phone = ''; };
+                
+                const auditDialogVisible = ref(false);
+                const currentAuditRow = ref(null);
+
+                const handleAudit = (row) => { 
+                    currentAuditRow.value = row;
+                    auditDialogVisible.value = true;
+                };
+
+                const handleReject = () => {
+                    ElMessageBox.prompt('请输入拒绝原因', '审核拒绝', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        inputPattern: /\S+/,
+                        inputErrorMessage: '拒绝原因不能为空'
+                    }).then(({ value }) => {
+                        if (currentAuditRow.value) {
+                            currentAuditRow.value.status = '已拒绝';
+                        }
+                        ElMessage.error(`地址审核已拒绝，原因：${value}`);
+                        auditDialogVisible.value = false;
+                    }).catch(() => {});
+                };
+
+                const handleApprove = () => {
+                    ElMessageBox.confirm('确认该收货地址信息无误并审核通过？', '审核通过', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'success'
+                    }).then(() => {
+                        if (currentAuditRow.value) {
+                            currentAuditRow.value.status = '已通过';
+                        }
+                        ElMessage.success('地址审核已通过！');
+                        auditDialogVisible.value = false;
+                    }).catch(() => {});
+                };
+
+                return { 
+                    activeTab, searchForm, tableData, total, 
+                    handleTabClick, handleSearch, resetSearch, 
+                    auditDialogVisible, currentAuditRow, handleAudit, handleReject, handleApprove 
+                };
+            }
+        });
+        
+        // 注册 Element Plus 图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

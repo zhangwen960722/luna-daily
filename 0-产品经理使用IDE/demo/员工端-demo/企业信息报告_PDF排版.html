@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业信用信息报告</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        :root {
+            --primary-color: #0066cc;
+            --border-color: #e8e8e8;
+            --bg-light: #f7f9fa;
+            --text-main: #333;
+            --text-secondary: #666;
+            --text-light: #999;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text-main);
+            -webkit-print-color-adjust: exact;
+        }
+
+        .action-bar {
+            width: 800px;
+            margin: 0 auto 16px;
+            text-align: right;
+        }
+        
+        .btn-print {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 102, 204, 0.2);
+            transition: opacity 0.2s;
+        }
+        
+        .btn-print:hover {
+            opacity: 0.8;
+        }
+
+        /* A4 纸张容器 */
+        .a4-page {
+            width: 800px;
+            min-height: 1131px; /* 约等于A4比例 */
+            margin: 0 auto;
+            background-color: white;
+            padding: 48px 56px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* 页眉页脚 */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 12px;
+            margin-bottom: 32px;
+        }
+        
+        .report-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+        }
+        
+        .report-meta {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* 企业名头 */
+        .company-header {
+            margin-bottom: 32px;
+        }
+        
+        .company-name-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .company-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: #111;
+        }
+        
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 2px;
+            font-size: 12px;
+            font-weight: normal;
+            border: 1px solid transparent;
+        }
+        /* 存续/在业状态 */
+        .status-badge.status-active {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border-color: #91d5ff;
+        }
+        /* 注销状态 */
+        .status-badge.status-cancelled {
+            background-color: #f5f5f5;
+            color: #666;
+            border-color: #d9d9d9;
+        }
+        /* 吊销状态 */
+        .status-badge.status-revoked {
+            background-color: #fff1f0;
+            color: #cf1322;
+            border-color: #ffa39e;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .tag-badge {
+            background-color: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        /* 数据汇总条 */
+        .summary-bar {
+            display: flex;
+            background-color: var(--bg-light);
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 32px;
+        }
+        
+        .summary-item {
+            flex: 1;
+            border-right: 1px solid var(--border-color);
+            padding: 0 16px;
+        }
+        
+        .summary-item:last-child {
+            border-right: none;
+        }
+        
+        .summary-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+        
+        .summary-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* 详情区块 */
+        .section {
+            margin-bottom: 32px;
+            page-break-inside: avoid;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: var(--primary-color);
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        /* 表格样式 */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .info-table th, .info-table td {
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+        }
+        
+        .info-table th {
+            background-color: var(--bg-light);
+            color: var(--text-secondary);
+            font-weight: normal;
+            text-align: right;
+            width: 18%;
+        }
+        
+        .info-table td {
+            color: var(--text-main);
+            width: 32%;
+        }
+        
+        .info-table td.full-width {
+            width: 82%;
+        }
+
+        .scope-text {
+            text-align: justify;
+            word-break: break-all;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: hidden;
+        }
+
+        /* 打印时专用的样式 */
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .a4-page {
+                width: 100%;
+                box-shadow: none;
+                padding: 0;
+                min-height: auto;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* 保证表格边框和背景色在PDF中正常显示 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 1.5cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 操作条 (打印时不显示) -->
+        <div class="action-bar no-print">
+            <button class="btn-print" @click="printPDF">保存为PDF / 打印</button>
+        </div>
+
+        <!-- A4 页面容器 -->
+        <div class="a4-page">
+            
+            <div class="report-header">
+                <div class="report-title">企业信用信息报告</div>
+                <div class="report-meta">
+                    生成时间：{{ currentDate }}<br>
+                    数据来源：天眼查API对接
+                </div>
+            </div>
+
+            <div class="company-header">
+                <div class="company-name-row">
+                    <div class="company-name">{{ apiData.name || '-' }}</div>
+                    <div class="status-badge" :class="getStatusClass(apiData.regStatus)" v-if="apiData.regStatus">{{ apiData.regStatus }}</div>
+                </div>
+                <div class="tags-container" v-if="apiData.tags">
+                    <span class="tag-badge" v-for="tag in formatTags(apiData.tags)" :key="tag">{{ tag }}</span>
+                </div>
+            </div>
+
+            <div class="summary-bar">
+                <div class="summary-item" style="padding-left: 0;">
+                    <div class="summary-label">法定代表人</div>
+                    <div class="summary-value">{{ apiData.legalPersonName || '-' }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">注册资本</div>
+                    <div class="summary-value">{{ apiData.regCapital || '-' }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">成立日期</div>
+                    <div class="summary-value">{{ formatDate(apiData.estiblishTime) || '-' }}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">天眼评分</div>
+                    <div class="summary-value" style="color: #f5222d;">{{ apiData.percentileScore ? (apiData.percentileScore/100).toFixed(2) : '-' }} 分</div>
+                </div>
+            </div>
+
+            <!-- 1. 工商基本信息 -->
+            <div class="section">
+                <div class="section-title">工商基本信息</div>
+                <table class="info-table">
+                    <tr>
+                        <th>统一社会信用代码</th>
+                        <td>{{ apiData.creditCode || '-' }}</td>
+                        <th>企业名称</th>
+                        <td>{{ apiData.name || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>法定代表人</th>
+                        <td>{{ apiData.legalPersonName || '-' }}</td>
+                        <th>企业状态</th>
+                        <td>{{ apiData.regStatus || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>注册资本</th>
+                        <td>{{ apiData.regCapital || '-' }}</td>
+                        <th>实收注册资金</th>
+                        <td>{{ apiData.actualCapital || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>成立日期</th>
+                        <td>{{ formatDate(apiData.estiblishTime) || '-' }}</td>
+                        <th>核准日期</th>
+                        <td>{{ formatDate(apiData.approvedTime) || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>注册号</th>
+                        <td>{{ apiData.regNumber || '-' }}</td>
+                        <th>组织机构代码</th>
+                        <td>{{ apiData.orgNumber || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>纳税人识别号</th>
+                        <td>{{ apiData.taxNumber || '-' }}</td>
+                        <th>企业类型</th>
+                        <td>{{ apiData.companyOrgType || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>营业期限</th>
+                        <td colspan="3" class="full-width">
+                            {{ formatDate(apiData.fromTime) || '-' }} 至 {{ formatDate(apiData.toTime) || '无固定期限' }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>登记机关</th>
+                        <td colspan="3" class="full-width">{{ apiData.regInstitute || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>注册地址</th>
+                        <td colspan="3" class="full-width">{{ apiData.regLocation || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>经营范围</th>
+                        <td colspan="3" class="full-width">
+                            <div class="scope-text">{{ apiData.businessScope || '-' }}</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 2. 行业与规模 -->
+            <div class="section">
+                <div class="section-title">行业与规模信息</div>
+                <table class="info-table">
+                    <tr>
+                        <th>所属行业</th>
+                        <td>{{ apiData.industry || '-' }}</td>
+                        <th>国民经济行业分类</th>
+                        <td>
+                            {{ apiData.category || '-' }} 
+                            <span v-if="apiData.categoryMiddle">> {{ apiData.categoryMiddle }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>人员规模</th>
+                        <td>{{ apiData.staffNumRange || '-' }}</td>
+                        <th>参保人数</th>
+                        <td>{{ apiData.socialStaffNum ? apiData.socialStaffNum + '人' : '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>行政区划</th>
+                        <td>{{ apiData.base || '-' }} {{ apiData.city || '-' }} {{ apiData.district || '-' }}</td>
+                        <th>经济功能区</th>
+                        <td>{{ apiData.economicFunctionZone1 || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>规上企业</th>
+                        <td colspan="3" class="full-width">{{ apiData.aboveScale || '否' }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 3. 其他信息 -->
+            <div class="section">
+                <div class="section-title">附加与变更信息</div>
+                <table class="info-table">
+                    <tr>
+                        <th>企业简称</th>
+                        <td>{{ apiData.alias || '-' }}</td>
+                        <th>英文名</th>
+                        <td>{{ apiData.property3 || '-' }}</td>
+                    </tr>
+                    <tr>
+                        <th>曾用名</th>
+                        <td colspan="3" class="full-width">{{ apiData.historyNames || '-' }}</td>
+                    </tr>
+                    <tr v-if="apiData.bondName || apiData.bondNum">
+                        <th>股票信息</th>
+                        <td colspan="3" class="full-width">
+                            {{ apiData.bondName || '-' }} ({{ apiData.bondNum || '-' }}) - {{ apiData.bondType || '-' }}
+                        </td>
+                    </tr>
+                    <tr v-if="apiData.revokeDate || apiData.cancelDate">
+                        <th>注销/吊销记录</th>
+                        <td colspan="3" class="full-width">
+                            <div v-if="apiData.cancelDate">注销日期: {{ formatDate(apiData.cancelDate) }} (原因: {{ apiData.cancelReason || '-' }})</div>
+                            <div v-if="apiData.revokeDate">吊销日期: {{ formatDate(apiData.revokeDate) }} (原因: {{ apiData.revokeReason || '-' }})</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        const app = createApp({
+            setup() {
+                // 当前日期
+                const currentDate = ref(new Date().toLocaleDateString('zh-CN', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                }));
+
+                // 这里模拟了天眼查 API 返回的完整字段数据结构 (包含截图中的绝大多数核心字段)
+                const apiData = ref({
+                    "name": "北京抖音信息服务有限公司 (演示注销状态)",
+                    "legalPersonName": "张楠",
+                    "regCapital": "20000万人民币",
+                    "actualCapital": "20000万人民币",
+                    "estiblishTime": 1331481600000,
+                    "approvedTime": 1618243200000,
+                    "fromTime": 1331481600000,
+                    "toTime": 1672531200000,
+                    "regStatus": "注销", // 演示状态修改为注销
+                    "cancelDate": 1672531200000, // 模拟注销日期: 2023-01-01
+                    "cancelReason": "决议解散", // 模拟注销原因
+                    "revokeDate": null, // 如果有吊销日期，可以填入时间戳
+                    "revokeReason": "",
+                    "creditCode": "91110108592343248B",
+                    "regNumber": "110108014666493",
+                    "taxNumber": "91110108592343248B",
+                    "orgNumber": "59234324-8",
+                    "companyOrgType": "有限责任公司（法人独资）",
+                    "industry": "互联网和相关服务",
+                    "category": "互联网和相关服务",
+                    "categoryBig": "互联网信息服务",
+                    "categoryMiddle": "互联网信息服务",
+                    "regInstitute": "北京市海淀区市场监督管理局",
+                    "regLocation": "北京市海淀区知春路51号4层408",
+                    "businessScope": "技术开发、技术推广、技术转让、技术咨询、技术服务；计算机系统服务；数据处理（数据处理中的银行卡中心、PUE值在1.4以上的云计算数据中心除外）；基础软件服务；应用软件服务；设计、制作、代理、发布广告；组织文化艺术交流活动（不含营业性演出）；第二类增值电信业务中的信息服务业务（仅限互联网信息服务）（增值电信业务经营许可证有效期至2024年01月16日）；广播电视节目制作；从事互联网文化活动；出版物零售；演出经纪。（市场主体依法自主选择经营项目，开展经营活动；从事互联网文化活动、出版物零售、广播电视节目制作、演出经纪以及依法须经批准的项目，经相关部门批准后依批准的内容开展经营活动；不得从事国家和本市产业政策禁止和限制类项目的经营活动。）",
+                    "staffNumRange": "10000人以上",
+                    "socialStaffNum": 12534,
+                    "tags": "高新技术企业,专精特新,独角兽企业,大厂",
+                    "percentileScore": 9980, // 万分制 99.80
+                    "alias": "抖音",
+                    "property3": "Beijing Douyin Information Service Co., Ltd.",
+                    "historyNames": "北京字节跳动科技有限公司",
+                    "base": "京",
+                    "city": "北京市",
+                    "district": "海淀区",
+                    "economicFunctionZone1": "中关村国家自主创新示范区",
+                    "isMicroEnt": 0
+                });
+
+                // 获取状态样式类
+                const getStatusClass = (status) => {
+                    if (!status) return '';
+                    if (status.includes('注销')) return 'status-cancelled';
+                    if (status.includes('吊销')) return 'status-revoked';
+                    return 'status-active';
+                };
+
+                // 格式化时间戳 (毫秒转 YYYY-MM-DD)
+                const formatDate = (timestamp) => {
+                    if (!timestamp) return '';
+                    const date = new Date(Number(timestamp));
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                };
+
+                // 格式化标签字符串 (逗号分隔转数组)
+                const formatTags = (tagsStr) => {
+                    if (!tagsStr) return [];
+                    return tagsStr.split(',').filter(t => t.trim());
+                };
+
+                // 调用浏览器打印/存为PDF功能
+                const printPDF = () => {
+                    window.print();
+                };
+
+                return {
+                    currentDate,
+                    apiData,
+                    getStatusClass,
+                    formatDate,
+                    formatTags,
+                    printPDF
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

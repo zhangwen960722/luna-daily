@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>标识管理</title>
+  <!-- 引入 Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- 引入 Element Plus 样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <!-- 引入 Element Plus 组件库 -->
+  <script src="https://unpkg.com/element-plus"></script>
+  <!-- 引入 Element Plus 图标 -->
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f0f2f5;
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    }
+    #app {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .search-card {
+      margin: 16px;
+      margin-bottom: 0;
+    }
+    .table-card {
+      margin: 16px;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .table-card .el-card__body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+    }
+    
+    /* 颜色展示圆点 */
+    .color-circle {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #dcdfe6;
+      vertical-align: middle;
+    }
+    
+    /* 弹窗及卡片样式优化 */
+    .custom-dialog .el-dialog__body {
+      padding: 16px 20px;
+      background-color: #fff;
+    }
+    
+    /* 吸底操作栏 */
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid #dcdfe6;
+    }
+
+    /* 自定义颜色选择器样式 */
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 40px);
+      gap: 10px;
+    }
+    .color-option {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      cursor: pointer;
+      box-sizing: border-box;
+      transition: all 0.2s;
+    }
+    .color-option:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .color-option.is-active {
+      border: 2px solid #2DA44E;
+      transform: scale(1.1);
+    }
+    /* 覆盖 Element Plus 颜色选择器默认样式以融入网格 */
+    .custom-color-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background-color: #fff;
+    }
+    .custom-color-wrapper .el-color-picker {
+      height: 100%;
+      width: 100%;
+    }
+    .custom-color-wrapper .el-color-picker__trigger {
+      height: 100%;
+      width: 100%;
+      border: none;
+      padding: 0;
+      border-radius: 4px;
+    }
+
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+
+
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部搜索栏 -->
+    <el-card class="search-card" shadow="sm">
+      <el-form :inline="true" :model="searchForm" class="search-form">
+        <el-form-item>
+          <el-input v-model="searchForm.name" placeholder="标识名称" clearable style="width: 200px;"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-select v-model="searchForm.moduleScope" placeholder="请选择模块范围" clearable style="width: 180px;">
+            <el-option label="运单" value="运单"></el-option>
+            <el-option label="提单" value="提单"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+          <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+        </el-form-item>
+        <el-form-item style="float: right; margin-right: 0;">
+          <el-button type="primary" @click="openAddDialog">新增</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 主体数据表格 -->
+    <el-card class="table-card" shadow="sm">
+      <el-table :data="tableData" style="width: 100%" border stripe height="100%" :header-cell-style="{ background: '#f5f7fa', color: '#606266' }">
+        <el-table-column prop="name" label="标识名称" min-width="150" align="center"></el-table-column>
+        <el-table-column label="颜色" width="100" align="center">
+          <template #default="scope">
+            <span class="color-circle" :style="{ backgroundColor: scope.row.color }"></span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="moduleScope" label="模块范围" width="150" align="center"></el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" align="center"></el-table-column>
+        <el-table-column prop="status" label="状态" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="scope.row.status === '正常' ? 'success' : 'info'" effect="light">
+              {{ scope.row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180" fixed="right" align="center">
+          <template #default="scope">
+            <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button 
+              link 
+              :type="scope.row.status === '正常' ? 'danger' : 'success'" 
+              @click="toggleStatus(scope.row)">
+              {{ scope.row.status === '正常' ? '冻结' : '启用' }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 标识新增/编辑弹窗 -->
+    <el-dialog 
+      :title="dialogTitle" 
+      v-model="dialogVisible" 
+      width="400px" 
+      class="custom-dialog"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <el-form :model="formData" :rules="formRules" ref="formRef" label-position="top">
+        <el-form-item label="标识名称:" prop="name" required>
+          <el-input v-model="formData.name" placeholder="请输入标识名称"></el-input>
+        </el-form-item>
+        
+        <el-form-item label="模块范围:" prop="moduleScope">
+          <el-select v-model="formData.moduleScope" placeholder="请选择" style="width: 100%;">
+            <el-option v-for="item in moduleScopeOptions" :key="item.value" :label="item.label" :value="item.value"></el-option>
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item label="颜色:" prop="color" required>
+          <div>
+            <!-- 预设颜色网格及自定义颜色 -->
+            <div class="color-grid">
+              <div 
+                v-for="color in presetColors" 
+                :key="color.value"
+                class="color-option"
+                :style="{ backgroundColor: color.value }"
+                :class="{ 'is-active': formData.color === color.value }"
+                @click="selectColor(color.value)"
+              ></div>
+              <!-- 自定义颜色选择器 -->
+              <el-tooltip content="自定义其他颜色" placement="top">
+                <div class="color-option custom-color-wrapper" :class="{ 'is-active': isCustomColor }">
+                  <el-color-picker v-model="customColorVal" @change="handleCustomColorChange" size="small"></el-color-picker>
+                </div>
+              </el-tooltip>
+            </div>
+            <!-- 已选颜色色值提示 -->
+            <div style="margin-top: 10px; font-size: 12px; color: #909399;">
+              当前色值: {{ formData.color || '未选择' }}
+            </div>
+          </div>
+        </el-form-item>
+      </el-form>
+      
+      <!-- 吸底操作栏 -->
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitForm">确定</el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, computed, onMounted } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    const app = createApp({
+      setup() {
+        // 搜索表单
+        const searchForm = reactive({
+          name: '',
+          moduleScope: ''
+        });
+
+        // 模拟预设颜色库
+        const presetColors = [
+          { name: 'blue', value: '#00FFFF' }, // 对应原型的浅蓝/青色
+          { name: 'pink', value: '#FFC0CB' },
+          { name: 'yellow', value: '#FFFF00' },
+          { name: 'orange', value: '#FFA500' },
+          { name: 'gray', value: '#D3D3D3' },
+          { name: 'green', value: '#98FB98' },
+          { name: 'purple', value: '#DDA0DD' },
+          { name: 'red', value: '#FF6B6B' },
+          { name: 'darkblue', value: '#2DA44E' },
+          { name: 'brown', value: '#CD853F' }
+        ];
+
+        // 模拟表格数据
+        const mockData = [
+          { id: 1, name: '国内贴标费', color: '#00FFFF', moduleScope: '运单', createTime: '2026-04-14 10:00:00', status: '正常' },
+          { id: 2, name: '超重费', color: '#FFC0CB', moduleScope: '运单', createTime: '2026-04-14 11:00:00', status: '已冻结' },
+          { id: 3, name: '国外查验', color: '#FFFF00', moduleScope: '提单', createTime: '2026-04-14 12:00:00', status: '正常' }
+        ];
+
+        const tableData = ref([]);
+
+        // 加载表格数据
+        const loadTableData = () => {
+          tableData.value = [...mockData];
+        };
+
+        // 搜索与重置
+        const handleSearch = () => {
+          ElMessage.success('执行查询操作');
+        };
+        const resetSearch = () => {
+          searchForm.name = '';
+          searchForm.moduleScope = '';
+          loadTableData();
+        };
+
+        // 状态切换（冻结/启用）
+        const toggleStatus = (row) => {
+          const actionText = row.status === '正常' ? '冻结' : '启用';
+          ElMessageBox.confirm(`确认要${actionText}标识 [${row.name}] 吗？`, '提示', {
+            type: 'warning'
+          }).then(() => {
+            row.status = row.status === '正常' ? '已冻结' : '正常';
+            ElMessage.success(`标识已成功${actionText}`);
+          }).catch(() => {});
+        };
+
+        // 弹窗相关
+        const dialogVisible = ref(false);
+        const dialogTitle = ref('标识新增');
+        const formRef = ref(null);
+        
+        // 表单数据模型
+        const initFormData = () => ({
+          id: null,
+          name: '',
+          moduleScope: '运单', // 默认选中 运单
+          color: '#00FFFF', // 默认选中青色
+        });
+
+        const formData = reactive(initFormData());
+
+        const formRules = {
+          name: [{ required: true, message: '请输入标识名称', trigger: 'blur' }],
+          color: [{ required: true, message: '请选择颜色', trigger: 'change' }]
+        };
+
+        const moduleScopeOptions = computed(() => {
+          return [
+            { label: '运单', value: '运单' },
+            { label: '提单', value: '提单' }
+          ];
+        });
+
+        // 自定义调色板的绑定值
+        const customColorVal = ref('');
+
+        // 计算属性：判断当前是否是自定义颜色
+        const isCustomColor = computed(() => {
+          return formData.color && !presetColors.find(c => c.value === formData.color);
+        });
+
+        // 快速选择预设颜色
+        const selectColor = (val) => {
+          formData.color = val;
+          customColorVal.value = ''; // 清空自定义选择器绑定的色值，防止视觉混淆
+        };
+
+        // 颜色选择回调 (自定义调色板)
+        const handleCustomColorChange = (val) => {
+          if (val) {
+            formData.color = val;
+          }
+        };
+
+        // 打开新增弹窗
+        const openAddDialog = () => {
+          dialogTitle.value = '标识新增';
+          Object.assign(formData, initFormData());
+          dialogVisible.value = true;
+          customColorVal.value = '';
+          if (formRef.value) formRef.value.clearValidate();
+        };
+
+        // 打开编辑弹窗
+        const handleEdit = (row) => {
+          dialogTitle.value = '标识编辑';
+          Object.assign(formData, {
+            id: row.id,
+            name: row.name,
+            moduleScope: row.moduleScope,
+            color: row.color
+          });
+          dialogVisible.value = true;
+          // 初始化自定义颜色组件的绑定值
+          customColorVal.value = isCustomColor.value ? row.color : '';
+        };
+
+        // 提交表单
+        const submitForm = () => {
+          if (!formRef.value) return;
+          formRef.value.validate((valid) => {
+            if (valid) {
+              if (formData.id) {
+                // 编辑
+                const index = tableData.value.findIndex(item => item.id === formData.id);
+                if (index !== -1) {
+                  tableData.value[index] = { 
+                    ...tableData.value[index], 
+                    name: formData.name,
+                    moduleScope: formData.moduleScope,
+                    color: formData.color
+                  };
+                }
+              } else {
+                // 新增
+                tableData.value.unshift({
+                  id: Date.now(),
+                  name: formData.name,
+                  color: formData.color,
+                  moduleScope: formData.moduleScope,
+                  createTime: new Date().toLocaleString().replace(/\//g, '-'),
+                  status: '正常'
+                });
+              }
+              ElMessage.success('保存成功！');
+              dialogVisible.value = false;
+            } else {
+              ElMessage.error('请完善必填信息');
+              return false;
+            }
+          });
+        };
+
+        onMounted(() => {
+          loadTableData();
+        });
+
+        return {
+          searchForm,
+          handleSearch,
+          resetSearch,
+          tableData,
+          toggleStatus,
+          dialogVisible,
+          dialogTitle,
+          formRef,
+          formData,
+          formRules,
+          presetColors,
+          customColorVal,
+          isCustomColor,
+          moduleScopeOptions,
+          handleCustomColorChange,
+          selectColor,
+          openAddDialog,
+          handleEdit,
+          submitForm
+        };
+      }
+    });
+
+    // 注册所有图标
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component);
+    }
+
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品管理 - 主列表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: sans-serif; }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .search-item { display: flex; align-items: center; }
+        .search-item label { margin-right: 8px; color: var(--el-text-color-regular); font-size: 14px; }
+        .table-container { flex: 1; overflow: hidden; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+
+        /* 弹窗内表单分区标题样式 */
+        .section-header {
+            font-size: 15px;
+            font-weight: 600;
+            color: #303133;
+            margin: 24px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #EBEEF5;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-header:first-child {
+            margin-top: 0;
+        }
+        .section-header::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: var(--el-color-primary);
+            margin-right: 4px;
+            border-radius: 2px;
+        }
+
+        /* 属性复选框标签化美化 */
+        .attr-group .el-checkbox-button__inner {
+            border: 1px solid #d1d5db !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+            margin-right: 12px;
+            margin-bottom: 12px;
+            padding: 8px 20px;
+            background-color: #f9fafb;
+            color: #4b5563;
+            transition: all 0.2s ease;
+            font-weight: normal;
+        }
+        
+        .attr-group .el-checkbox-button.is-checked .el-checkbox-button__inner {
+            background-color: #eff6ff;
+            border-color: #3b82f6 !important;
+            color: #1d4ed8;
+            font-weight: 600;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+        }
+
+        /* 尺寸输入框组合化 */
+        .size-inputs {
+            display: flex;
+            align-items: center;
+            background: #f9fafb;
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+        .size-inputs:hover {
+            border-color: #9ca3af;
+        }
+        .size-inputs .el-input__wrapper {
+            box-shadow: none !important;
+            background: transparent;
+            padding: 0 8px;
+        }
+        .size-separator {
+            color: #9ca3af;
+            font-size: 12px;
+            padding: 0 4px;
+        }
+        .size-unit {
+            color: #6b7280;
+            font-size: 13px;
+            padding: 0 16px;
+            font-weight: 500;
+            background: #e5e7eb;
+            border-radius: 4px;
+            line-height: 28px;
+            margin-left: 4px;
+        }
+
+        /* 动态表格轻量化 */
+        .styled-table {
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--el-border-color);
+        }
+        .styled-table .el-table__header-wrapper th {
+            background-color: #f9fafb;
+            color: #4b5563;
+            font-weight: 600;
+            padding: 10px 0;
+        }
+
+        /* 图片上传区方块美化 */
+        .img-uploader .el-upload {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 220px;
+            background: #f9fafb;
+            transition: all 0.3s;
+        }
+        .img-uploader .el-upload:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+        .upload-icon-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .upload-icon-box .el-icon {
+            font-size: 32px;
+            color: #9ca3af;
+            margin-bottom: 12px;
+            transition: color 0.3s;
+        }
+        .img-uploader .el-upload:hover .upload-icon-box .el-icon {
+            color: #3b82f6;
+        }
+        .upload-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索与新增区域独立卡片 -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px; padding-bottom: 0;">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.sku" placeholder="商品SKU" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.cnName" placeholder="商品中文名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.enName" placeholder="商品英文名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+                <div style="margin-left: auto;">
+                    <el-button type="success" @click="handleAdd">新增商品</el-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card" style="height: calc(100vh - 106px);">
+            <!-- Tab 页签 -->
+            <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+                <el-tab-pane label="待审核" name="待审核"></el-tab-pane>
+                <el-tab-pane label="已通过" name="已通过"></el-tab-pane>
+                <el-tab-pane label="已拒绝" name="已拒绝"></el-tab-pane>
+                <el-tab-pane label="全部" name="全部"></el-tab-pane>
+            </el-tabs>
+
+            <!-- 表格 -->
+            <div class="table-container">
+                <el-table :data="filteredTableData" border height="100%" style="width: 100%">
+                    <!-- <el-table-column prop="userAccount" label="用户" min-width="120"></el-table-column> -->
+                            <el-table-column label="商品图片" width="100" align="center">
+                        <template #default="scope">
+                            <el-image 
+                                style="width: 60px; height: 60px; border-radius: 4px;"
+                                :src="scope.row.image"
+                                :preview-src-list="[scope.row.image]"
+                                fit="cover"
+                            ></el-image>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="sku" label="商品SKU" min-width="120"></el-table-column>
+                    <el-table-column prop="cnName" label="商品中文名称" min-width="150" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="enName" label="商品英文名称" min-width="150" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="property" label="商品属性" min-width="100"></el-table-column>
+                    <el-table-column prop="volume" label="体积" min-width="150"></el-table-column>
+                    <el-table-column prop="weight" label="重量" min-width="100"></el-table-column>
+                    <el-table-column prop="material" label="材质" min-width="100"></el-table-column>
+                    <el-table-column prop="model" label="型号" min-width="100"></el-table-column>
+                    <el-table-column prop="usage" label="用途" min-width="100"></el-table-column>
+                    <el-table-column prop="status" label="状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="120" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button v-if="scope.row.status === '待审核'" link type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
+                            <el-button v-if="scope.row.status === '已通过'" link type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
+                            <el-button v-if="scope.row.status === '已拒绝'" link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="total"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 弹窗：新增/编辑/审核 SKU -->
+        <el-dialog
+            :title="dialogTitle"
+            v-model="dialogVisible"
+            width="1000px"
+            destroy-on-close
+            top="5vh"
+        >
+            <el-form 
+                ref="formRef" 
+                :model="formData" 
+                :rules="rules" 
+                label-position="top"
+                require-asterisk-position="left">
+                
+                <!-- 1. 核心基础信息 -->
+                <div class="section-header">
+                    核心基础信息
+                    <span style="font-size: 13px; color: #9ca3af; font-weight: normal; margin-left: 8px;">(带 * 为必填项，完成即可保存)</span>
+                </div>
+                
+                <el-row :gutter="40" style="margin-top: 16px;">
+                    <!-- 左侧：基础字段 -->
+                    <el-col :span="16">
+                        <el-row :gutter="24">
+                            <el-col :span="12">
+                                <el-form-item label="商品 SKU" prop="sku">
+                                    <el-input v-model="formData.sku" placeholder="创建后不可修改" :disabled="pageMode !== 'add'">
+                                        <template #prefix><el-icon><CollectionTag /></el-icon></template>
+                                    </el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="产品属性 (多选)" prop="attributes">
+                                    <el-select v-model="formData.attributes" multiple collapse-tags placeholder="请选择产品属性" style="width: 100%;" :disabled="pageMode === 'view'">
+                                        <el-option v-for="attr in attrOptions" :key="attr" :label="attr" :value="attr"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                        <el-row :gutter="24">
+                            <el-col :span="12">
+                                <el-form-item label="申报中文名" prop="cnName">
+                                    <el-input v-model="formData.cnName" placeholder="请输入中文品名" :disabled="pageMode === 'view'"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="申报英文名" prop="enName">
+                                    <el-input v-model="formData.enName" placeholder="请输入英文品名" :disabled="pageMode === 'view'"></el-input>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
+                        <!-- 申报单价 -->
+                        <el-form-item label="申报单价" prop="prices" style="margin-bottom: 0;">
+                            <el-table :data="formData.prices" class="styled-table" style="width: 100%; margin-bottom: 12px;">
+                                <el-table-column label="默认" width="60" align="center">
+                                    <template #default="scope">
+                                        <el-radio v-model="formData.defaultCurrency" :label="scope.row.currency" :disabled="pageMode === 'view'"><span></span></el-radio>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="申报币种" width="160">
+                                    <template #default="scope">
+                                        <el-select v-model="scope.row.currency" style="width: 100%;" @change="(val) => handleCurrencyChange(val, scope.$index)" :disabled="pageMode === 'view'">
+                                            <el-option v-for="item in availableCurrencies(scope.row.currency)" :key="item.value" :label="item.label" :value="item.value"></el-option>
+                                        </el-select>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="申报单价">
+                                    <template #header><span style="color: var(--el-color-danger); margin-right: 4px;">*</span> 申报单价</template>
+                                    <template #default="scope">
+                                        <el-form-item :prop="'prices.' + scope.$index + '.price'" :rules="{ required: true, message: '单价必填', trigger: 'blur' }" style="margin-bottom: 0;">
+                                            <el-input-number v-model="scope.row.price" :precision="2" :step="0.1" :min="0" style="width: 100%;" controls-position="right" placeholder="请输入" @keydown="preventNegative" :disabled="pageMode === 'view'"></el-input-number>
+                                        </el-form-item>
+                                    </template>
+                                </el-table-column>
+                                <el-table-column label="操作" width="80" align="center" v-if="pageMode !== 'view'">
+                                    <template #default="scope">
+                                        <el-button link type="danger" @click="removePrice(scope.$index)" :disabled="scope.row.isDefault"><el-icon><Delete /></el-icon></el-button>
+                                    </template>
+                                </el-table-column>
+                            </el-table>
+                            <el-button style="width: 100%; border-style: dashed;" @click="addPrice" v-if="pageMode !== 'view'">
+                                <el-icon><Plus /></el-icon> 添加申报单价
+                            </el-button>
+                        </el-form-item>
+                    </el-col>
+
+                    <!-- 右侧：图片与提示 -->
+                    <el-col :span="8">
+                        <el-form-item label="产品图片" prop="imageUrl">
+                            <el-upload class="img-uploader" action="#" :show-file-list="false" :auto-upload="false" style="width: 100%;" :disabled="pageMode === 'view'">
+                                <div v-if="formData.imageUrl" class="avatar" style="width: 100%; height: 100%;">
+                                    <img :src="formData.imageUrl" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" />
+                                </div>
+                                <div v-else class="upload-icon-box" style="height: 200px;">
+                                    <el-icon><PictureRounded /></el-icon>
+                                    <span class="upload-text">点击上传图片</span>
+                                </div>
+                            </el-upload>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <!-- 2. 详细属性与海关信息 -->
+                <div class="section-header">
+                    详细属性与海关信息
+                </div>
+                <el-row :gutter="24">
+                    <el-col :span="8"><el-form-item label="海关编码" prop="hsCode"><el-input v-model="formData.hsCode" placeholder="请输入HS Code" :disabled="pageMode === 'view'"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="材质" prop="material"><el-input v-model="formData.material" placeholder="请输入产品材质" :disabled="pageMode === 'view'"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="品牌" prop="brand"><el-input v-model="formData.brand" placeholder="请输入品牌名称" :disabled="pageMode === 'view'"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row :gutter="24">
+                    <el-col :span="8"><el-form-item label="型号" prop="model"><el-input v-model="formData.model" placeholder="请输入产品型号" :disabled="pageMode === 'view'"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="用途" prop="usage"><el-input v-model="formData.usage" placeholder="请输入产品用途" :disabled="pageMode === 'view'"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="销售链接"><el-input v-model="formData.salesLink" placeholder="条件必填，欧洲国家需要" :disabled="pageMode === 'view'"><template #prefix><el-icon><Link /></el-icon></template></el-input></el-form-item></el-col>
+                </el-row>
+
+                <!-- 3. 规格与重量 -->
+                <div class="section-header">
+                    规格与重量
+                </div>
+                <el-row :gutter="32">
+                    <el-col :span="12">
+                        <el-form-item label="产品尺寸 (长 × 宽 × 高)">
+                            <div class="size-inputs">
+                                <el-input v-model="formData.length" type="number" placeholder="长" :min="0" style="text-align: center;" @keydown="preventNegative" :disabled="pageMode === 'view'"></el-input>
+                                <span class="size-separator"><el-icon><Close /></el-icon></span>
+                                <el-input v-model="formData.width" type="number" placeholder="宽" :min="0" style="text-align: center;" @keydown="preventNegative" :disabled="pageMode === 'view'"></el-input>
+                                <span class="size-separator"><el-icon><Close /></el-icon></span>
+                                <el-input v-model="formData.height" type="number" placeholder="高" :min="0" style="text-align: center;" @keydown="preventNegative" :disabled="pageMode === 'view'"></el-input>
+                                <span class="size-unit">cm</span>
+                            </div>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="产品重量">
+                            <el-input v-model="formData.weight" type="number" placeholder="请输入单件重量" :min="0" @keydown="preventNegative" :disabled="pageMode === 'view'">
+                                <template #append>KG</template>
+                            </el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <!-- 4. 仓储包材与预警 -->
+                <div class="section-header">
+                    仓储包材与预警
+                </div>
+                <el-form-item>
+                    <el-checkbox v-model="formData.needPackage" border style="border-radius: 6px;" :disabled="pageMode === 'view'">
+                        <el-icon style="margin-right: 6px; font-size: 16px;"><Box /></el-icon> 该产品入库需要额外包材处理
+                    </el-checkbox>
+                </el-form-item>
+                <el-collapse-transition>
+                    <div v-show="formData.needPackage" style="margin-bottom: 32px; background: #fafafa; padding: 16px; border-radius: 8px; border: 1px dashed #d1d5db;">
+                        <div style="margin-bottom: 12px; color: #4b5563; font-weight: 500; font-size: 14px;">各仓库包材方式配置：</div>
+                        <el-table :data="formData.packages" class="styled-table" style="width: 100%; max-width: 600px;">
+                            <el-table-column prop="warehouse" label="仓库名称" width="220"></el-table-column>
+                            <el-table-column label="包材方式">
+                                <template #default="scope">
+                                    <el-select v-model="scope.row.method" placeholder="请选择包材方式" style="width: 100%;" :disabled="pageMode === 'view'">
+                                        <el-option label="方式1 (常规纸箱)" value="方式1"></el-option>
+                                        <el-option label="方式2 (木架加固)" value="方式2"></el-option>
+                                        <el-option label="方式3 (气泡膜缠绕)" value="方式3"></el-option>
+                                    </el-select>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </el-collapse-transition>
+
+                <div style="margin-bottom: 12px; color: #4b5563; font-weight: 500; font-size: 14px;">库存与库龄预警阈值设置：</div>
+                <el-table :data="formData.warnings" class="styled-table" style="width: 100%;">
+                    <el-table-column prop="warehouse" label="仓库名称" width="220"></el-table-column>
+                    <el-table-column label="库存预警数量 (件)">
+                        <template #default="scope"><el-input-number v-model="scope.row.invWarning" :min="0" style="width: 100%;" controls-position="right" placeholder="输入数量" :disabled="pageMode === 'view'"></el-input-number></template>
+                    </el-table-column>
+                    <el-table-column label="库龄预警天数 (天)">
+                        <template #default="scope"><el-input-number v-model="scope.row.ageWarning" :min="0" style="width: 100%;" controls-position="right" placeholder="输入天数" :disabled="pageMode === 'view'"></el-input-number></template>
+                    </el-table-column>
+                </el-table>
+
+                <!-- 5. 产品条码 -->
+                <div class="section-header">
+                    产品条码
+                </div>
+                <el-row :gutter="24">
+                    <el-col :span="12">
+                        <el-form-item label="产品条码 (EAN/UPC)" prop="ean"><el-input v-model="formData.ean" placeholder="如有标准条码请填入" :disabled="pageMode === 'view'"><template #prefix><el-icon><FullScreen /></el-icon></template></el-input></el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="其他条码" prop="otherBarcode"><el-input v-model="formData.otherBarcode" placeholder="支持内部编码或其他体系" :disabled="pageMode === 'view'"></el-input></el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+
+            <template #footer>
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <el-button @click="dialogVisible = false">{{ pageMode === 'view' ? '关闭' : '取消' }}</el-button>
+                    <template v-if="pageMode === 'add'">
+                        <el-button type="primary" @click="handleSubmit">提交</el-button>
+                    </template>
+                    <template v-else-if="pageMode === 'edit'">
+                        <el-button type="primary" @click="handleSubmit">提交</el-button>
+                    </template>
+                </div>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('待审核');
+                const searchForm = reactive({ sku: '', cnName: '', enName: '' });
+                const allData = ref([
+                    { 
+                        image: 'https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png', 
+                        sku: 'TIANXIE-010', 
+                        cnName: '天蝎手串', 
+                        enName: 'TIANXIE', 
+                        property: '普货', 
+                        volume: '12cm x 23cm x 1...', 
+                        weight: '2 kg', 
+                        material: '塑料', 
+                        model: 'ASD', 
+                        usage: '装饰', 
+                        status: '已通过' 
+                    },
+                    { 
+                        image: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg', 
+                        sku: 'SHIZI-020', 
+                        cnName: '狮子项链', 
+                        enName: 'SHIZI', 
+                        property: '带电', 
+                        volume: '10cm x 15cm x 5cm', 
+                        weight: '0.5 kg', 
+                        material: '金属', 
+                        model: 'ZXCV', 
+                        usage: '穿戴', 
+                        status: '待审核' 
+                    },
+                    { 
+                        image: 'https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png', 
+                        sku: 'BAIYANG-030', 
+                        cnName: '白羊座马克杯', 
+                        enName: 'Mug', 
+                        property: '易碎', 
+                        volume: '8cm x 8cm x 10cm', 
+                        weight: '0.3 kg', 
+                        material: '陶瓷', 
+                        model: 'CUP-1', 
+                        usage: '日用', 
+                        status: '已拒绝' 
+                    },
+                    { 
+                        image: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg', 
+                        sku: 'JINNIU-040', 
+                        cnName: '金牛座毛绒玩具', 
+                        enName: 'Plush Toy', 
+                        property: '普货', 
+                        volume: '20cm x 20cm x 30cm', 
+                        weight: '0.8 kg', 
+                        material: '毛绒', 
+                        model: 'TOY-2', 
+                        usage: '玩具', 
+                        status: '待审核' 
+                    },
+                    { 
+                        image: 'https://shadow.elemecdn.com/app/element/hamburger.9cf7b091-55e9-11e9-a976-7f4d0b07eef6.png', 
+                        sku: 'SHUANGZI-050', 
+                        cnName: '双子座蓝牙耳机', 
+                        enName: 'Earphones', 
+                        property: '带电', 
+                        volume: '5cm x 5cm x 2cm', 
+                        weight: '0.1 kg', 
+                        material: '塑料', 
+                        model: 'EP-3', 
+                        usage: '数码', 
+                        status: '已通过' 
+                    }
+                ]);
+
+                const filteredTableData = computed(() => {
+                    let data = allData.value;
+                    if (searchForm.sku) {
+                        data = data.filter(item => item.sku.includes(searchForm.sku));
+                    }
+                    if (searchForm.cnName) {
+                        data = data.filter(item => item.cnName.includes(searchForm.cnName));
+                    }
+                    if (searchForm.enName) {
+                        data = data.filter(item => item.enName.includes(searchForm.enName));
+                    }
+                    if (activeTab.value === '全部') {
+                        return data;
+                    }
+                    return data.filter(item => item.status === activeTab.value);
+                });
+
+                const total = computed(() => filteredTableData.value.length);
+
+                const handleTabClick = () => { ElMessage.success('切换标签'); };
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => { searchForm.sku = ''; searchForm.cnName = ''; searchForm.enName = ''; };
+
+                // ======== 弹窗表单相关逻辑 ========
+                const dialogVisible = ref(false);
+                const dialogTitle = ref('新增SKU');
+                const formRef = ref(null);
+                const pageMode = ref('add'); // add | edit | audit
+                
+                const attrOptions = [
+                    '普货', '内置电池 (可拆)', '内置电池 (不可拆)', 
+                    '纯电池', '带磁', '危险品', '液体', 
+                    '粉末', '膏体', '木制品', '纺织品'
+                ];
+
+                const formData = ref({
+                    sku: '', imageUrl: '', cnName: '', enName: '', hsCode: '', salesLink: '', attributes: ['普货'],
+                    material: '', brand: '', model: '', usage: '', length: undefined, width: undefined, height: undefined, weight: '',
+                    prices: [{ currency: 'USD', price: undefined, isDefault: true }],
+                    defaultCurrency: 'USD',
+                    needPackage: false,
+                    packages: [
+                        { warehouse: '墨链仓库1', method: '方式1' },
+                        { warehouse: '墨链仓库2', method: '方式2' },
+                        { warehouse: '墨链仓库3', method: '方式3' }
+                    ],
+                    warnings: [
+                        { warehouse: '墨链仓库1', invWarning: undefined, ageWarning: undefined },
+                        { warehouse: '墨链仓库2', invWarning: undefined, ageWarning: undefined }
+                    ],
+                    ean: '', otherBarcode: ''
+                });
+
+                const rules = {
+                    sku: [{ required: true, message: '请输入商品SKU', trigger: 'blur' }],
+                    imageUrl: [{ required: true, message: '请上传产品图片', trigger: 'change' }],
+                    cnName: [{ required: true, message: '请输入申报中文名', trigger: 'blur' }],
+                    enName: [{ required: true, message: '请输入申报英文名', trigger: 'blur' }],
+                    hsCode: [{ required: true, message: '请输入海关编码', trigger: 'blur' }],
+                    attributes: [{ type: 'array', required: true, message: '请至少选择一个产品属性', trigger: 'change' }],
+                    material: [{ required: true, message: '请输入材质', trigger: 'blur' }],
+                    brand: [{ required: true, message: '请输入品牌', trigger: 'blur' }],
+                    model: [{ required: true, message: '请输入型号', trigger: 'blur' }],
+                    usage: [{ required: true, message: '请输入用途', trigger: 'blur' }]
+                };
+
+                const resetForm = () => {
+                    if(formRef.value) formRef.value.resetFields();
+                    formData.value = {
+                        sku: '', imageUrl: '', cnName: '', enName: '', hsCode: '', salesLink: '', attributes: ['普货'],
+                        material: '', brand: '', model: '', usage: '', length: undefined, width: undefined, height: undefined, weight: '',
+                        prices: [{ currency: 'USD', price: undefined, isDefault: true }],
+                        defaultCurrency: 'USD',
+                        needPackage: false,
+                        packages: [
+                            { warehouse: '墨链仓库1', method: '方式1' },
+                            { warehouse: '墨链仓库2', method: '方式2' },
+                            { warehouse: '墨链仓库3', method: '方式3' }
+                        ],
+                        warnings: [
+                            { warehouse: '墨链仓库1', invWarning: undefined, ageWarning: undefined },
+                            { warehouse: '墨链仓库2', invWarning: undefined, ageWarning: undefined }
+                        ],
+                        ean: '', otherBarcode: ''
+                    };
+                };
+
+                const handleAdd = () => { 
+                    resetForm();
+                    pageMode.value = 'add';
+                    dialogTitle.value = '新增商品 SKU';
+                    dialogVisible.value = true; 
+                };
+                
+                const handleEdit = (row) => { 
+                    resetForm();
+                    pageMode.value = 'edit';
+                    dialogTitle.value = '编辑商品 SKU';
+                    formData.value.sku = row.sku;
+                    formData.value.cnName = row.cnName;
+                    formData.value.enName = row.enName;
+                    dialogVisible.value = true;
+                };
+
+                const handleView = (row) => { 
+                    resetForm();
+                    pageMode.value = 'view';
+                    dialogTitle.value = '查看商品 SKU';
+                    formData.value.sku = row.sku;
+                    formData.value.cnName = row.cnName;
+                    formData.value.enName = row.enName;
+                    dialogVisible.value = true;
+                };
+
+                const preventNegative = (e) => {
+                    if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                        e.preventDefault();
+                    }
+                };
+
+                const handleSubmit = async () => {
+                    if (!formRef.value) return;
+                    await formRef.value.validate((valid) => {
+                        if (valid) {
+                            ElMessage.success(pageMode.value === 'add' ? '商品 SKU 信息保存成功！' : '商品 SKU 信息提交成功！');
+                            dialogVisible.value = false;
+                        } else {
+                            ElMessage.warning('请检查并完善必填项信息');
+                        }
+                    });
+                };
+
+                const allCurrencyOptions = [
+                    { label: 'USD (美元)', value: 'USD' },
+                    { label: 'EUR (欧元)', value: 'EUR' },
+                    { label: 'CNY (人民币)', value: 'CNY' },
+                    { label: 'GBP (英镑)', value: 'GBP' }
+                ];
+
+                const availableCurrencies = (currentCurrency) => {
+                    const usedCurrencies = formData.value.prices.map(item => item.currency);
+                    return allCurrencyOptions.filter(option => 
+                        option.value === currentCurrency || !usedCurrencies.includes(option.value)
+                    );
+                };
+
+                const addPrice = () => {
+                    const currentCurrencies = formData.value.prices.map(item => item.currency);
+                    const nextCurrencyObj = allCurrencyOptions.find(c => !currentCurrencies.includes(c.value));
+                    if (nextCurrencyObj) {
+                        formData.value.prices.push({ currency: nextCurrencyObj.value, price: undefined, isDefault: false });
+                    } else {
+                        ElMessage.warning('已添加所有支持的币种');
+                    }
+                };
+
+                const handleCurrencyChange = (val, index) => {};
+                const removePrice = (index) => {
+                    const removedCurrency = formData.value.prices[index].currency;
+                    formData.value.prices.splice(index, 1);
+                    if (formData.value.defaultCurrency === removedCurrency) {
+                        formData.value.defaultCurrency = 'USD'; // 退回默认的美元
+                    }
+                };
+
+                return { 
+                    activeTab, searchForm, filteredTableData, total, handleTabClick, handleSearch, resetSearch, 
+                    handleAdd, handleEdit, handleView,
+                    // 弹窗相关
+                    dialogVisible, dialogTitle, formRef, formData, rules, attrOptions, pageMode,
+                    preventNegative, handleSubmit,
+                    availableCurrencies, addPrice, handleCurrencyChange, removePrice
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        } else {
+            console.warn('ElementPlusIconsVue 未加载成功，可能导致图标无法显示。');
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

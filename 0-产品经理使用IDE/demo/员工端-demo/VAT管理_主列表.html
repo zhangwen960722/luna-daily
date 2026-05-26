@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VAT管理 - 主列表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: sans-serif; }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .search-item { display: flex; align-items: center; }
+        .search-item label { margin-right: 8px; color: var(--el-text-color-regular); font-size: 14px; }
+        .table-container { flex: 1; overflow: hidden; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索与新增区域独立卡片 -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px; padding-bottom: 0;">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.customerName" placeholder="用户名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.vatNo" placeholder="VAT号" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-input v-model="searchForm.eoriNo" placeholder="EORI号" clearable style="width: 200px;"></el-input>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card" style="height: calc(100vh - 106px);">
+            <!-- Tab 页签 -->
+            <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+                <el-tab-pane label="待审核" name="待审核"></el-tab-pane>
+                <el-tab-pane label="已通过" name="已通过"></el-tab-pane>
+                <el-tab-pane label="已拒绝" name="已拒绝"></el-tab-pane>
+                <el-tab-pane label="全部" name="全部"></el-tab-pane>
+            </el-tabs>
+
+            <!-- 表格 -->
+            <div class="table-container">
+                <el-table :data="tableData" border height="100%" style="width: 100%">
+                    <!-- <el-table-column prop="userAccount" label="用户" min-width="120"></el-table-column> -->
+                    <el-table-column prop="vatNo" label="VAT号" min-width="150"></el-table-column>
+                    <el-table-column prop="eoriNo" label="EORI号" min-width="150"></el-table-column>
+                    <el-table-column prop="legalPerson" label="法人姓名" min-width="120"></el-table-column>
+                    <el-table-column prop="country" label="注册国家" min-width="100"></el-table-column>
+                    <el-table-column prop="companyName" label="公司名称" min-width="180" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="customerName" label="用户名称" min-width="180" show-overflow-tooltip></el-table-column>
+                    <el-table-column prop="status" label="审核状态" min-width="100">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="100" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button v-if="scope.row.status === '待审核'" link type="warning" size="small" @click="handleAudit(scope.row)">审核</el-button>
+                            <el-button v-else link type="primary" size="small" @click="handleView(scope.row)">查看</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="total"></el-pagination>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('待审核');
+                const searchForm = reactive({ customerName: '', vatNo: '', eoriNo: '' });
+                const allData = ref([
+                    { customerName: '深圳市大卖科技有限公司', vatNo: 'GB286484751', eoriNo: 'GB286484750001', legalPerson: '张三', country: 'GB-英国', companyName: 'Guangzhou Qushi...', status: '待审核' },
+                    { customerName: '义乌市星光进出口有限公司', vatNo: 'DE123456789', eoriNo: 'DE123456789000', legalPerson: '李四', country: 'DE-德国', companyName: 'Shenzhen Technology Co.', status: '已通过' },
+                    { customerName: '广州小卖贸易有限责任公司', vatNo: 'FR987654321', eoriNo: 'FR987654321000', legalPerson: '王五', country: 'FR-法国', companyName: 'Beijing Trade Ltd.', status: '已拒绝' },
+                    { customerName: '杭州中卖物流有限公司', vatNo: 'IT555555555', eoriNo: 'IT555555555000', legalPerson: '赵六', country: 'IT-意大利', companyName: 'Roma Fashion SRL', status: '待审核' }
+                ]);
+
+                const tableData = computed(() => {
+                    let data = allData.value;
+                    if (searchForm.customerName) {
+                        data = data.filter(item => item.customerName.includes(searchForm.customerName));
+                    }
+                    if (activeTab.value === '全部') return data;
+                    return data.filter(item => item.status === activeTab.value);
+                });
+
+                const total = computed(() => tableData.value.length);
+
+                const handleTabClick = () => { ElMessage.success('切换标签'); };
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => { searchForm.customerName = ''; searchForm.vatNo = ''; searchForm.eoriNo = ''; };
+                const handleAdd = () => { window.location.href = 'VAT资料新增-优化版.html'; };
+                const handleView = (row) => { window.location.href = `VAT资料新增-优化版.html?vatNo=${row.vatNo}&mode=edit`; };
+                const handleAudit = (row) => { window.location.href = `VAT资料新增-优化版.html?vatNo=${row.vatNo}&mode=audit`; };
+
+                return { activeTab, searchForm, tableData, total, handleTabClick, handleSearch, resetSearch, handleAdd, handleView, handleAudit };
+            }
+        });
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

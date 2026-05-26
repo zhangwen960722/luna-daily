@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作台 - 飞点跨境货主端</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 20px;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            background-color: #f0f2f5;
+        }
+        .dashboard-header {
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background-color: #fff;
+            border-radius: 4px;
+            padding: 20px;
+            box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            color: #2DA44E;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-title {
+            color: #909399;
+            font-size: 14px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 20px 0 15px 0;
+            color: #303133;
+        }
+        .action-card {
+            background-color: #fff;
+            border-radius: 4px;
+            padding: 20px;
+            box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 80px;
+        }
+        .action-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px 0 rgba(0,0,0,0.15);
+            color: #2DA44E;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="dashboard-header">
+            <h2>欢迎回来，{{ currentUsername }}！</h2>
+            <p style="color: #606266; font-size: 14px;">这里是您的专属物流工作台。</p>
+        </div>
+
+        <el-row :gutter="20">
+            <el-col :span="6">
+                <div class="stat-card">
+                    <div class="stat-title">待发货订单</div>
+                    <div class="stat-value">12</div>
+                </div>
+            </el-col>
+            <el-col :span="6">
+                <div class="stat-card">
+                    <div class="stat-title">运输中订单</div>
+                    <div class="stat-value">5</div>
+                </div>
+            </el-col>
+            <el-col :span="6">
+                <div class="stat-card">
+                    <div class="stat-title">待付账单</div>
+                    <div class="stat-value">2</div>
+                </div>
+            </el-col>
+            <el-col :span="6">
+                <div class="stat-card">
+                    <div class="stat-title">本月发货量(KG)</div>
+                    <div class="stat-value">1,250</div>
+                </div>
+            </el-col>
+        </el-row>
+
+        <div class="section-title">快捷入口</div>
+        <el-row :gutter="20" style="flex-wrap: wrap;">
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('查价订舱.html')">
+                    <span style="font-weight: bold;">查价订舱</span>
+                </div>
+            </el-col>
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('我的订单.html')">
+                    <span style="font-weight: bold;">我的订单</span>
+                </div>
+            </el-col>
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('账单管理.html')">
+                    <span style="font-weight: bold;">账单管理</span>
+                </div>
+            </el-col>
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('商品管理.html')">
+                    <span style="font-weight: bold;">商品管理</span>
+                </div>
+            </el-col>
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('收货地址管理.html')">
+                    <span style="font-weight: bold;">收货地址管理</span>
+                </div>
+            </el-col>
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('角色管理.html')">
+                    <span style="font-weight: bold;">角色管理</span>
+                </div>
+            </el-col>
+            <el-col :span="4" style="margin-bottom: 20px;">
+                <div class="action-card" @click="navigate('子账号管理.html')">
+                    <span style="font-weight: bold;">子账号管理</span>
+                </div>
+            </el-col>
+        </el-row>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        const app = createApp({
+            setup() {
+                const currentUsername = ref(localStorage.getItem('shipper_username') || '客户企业名称');
+
+                const navigate = (url) => {
+                    // 通知父级 iframe 导航
+                    window.parent.postMessage({ type: 'navigate', url: url }, '*');
+                };
+
+                return {
+                    currentUsername,
+                    navigate
+                };
+            }
+        });
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

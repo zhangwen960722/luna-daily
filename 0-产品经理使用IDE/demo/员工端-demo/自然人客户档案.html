@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户档案表（个人入驻） - 优化版</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #2C974B;
+            --el-color-danger: #F53F3F;
+            --el-border-color: #DCDFE6;
+            --el-bg-color: #F5F7FA;
+            --el-text-color-primary: #303133;
+            --el-text-color-regular: #606266;
+            --el-border-radius-base: 4px;
+        }
+        
+        body {
+            font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+            background-color: var(--el-bg-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .demo-container {
+            width: 1100px;
+            background-color: #fff;
+            padding: 0;
+            border-radius: var(--el-border-radius-base);
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+
+        .dialog-title {
+            font-size: 18px;
+            color: var(--el-text-color-primary);
+            font-weight: 600;
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--el-border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #FAFAFA;
+            border-top-left-radius: 4px;
+            border-top-right-radius: 4px;
+        }
+
+        .form-content {
+            padding: 24px;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+
+        .form-actions {
+            padding: 16px 24px;
+            text-align: right;
+            border-top: 1px solid var(--el-border-color);
+            background-color: #fff;
+            border-bottom-left-radius: 4px;
+            border-bottom-right-radius: 4px;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        .el-input, .el-select, .el-cascader {
+            width: 100%;
+        }
+        
+        /* 模块化卡片样式 */
+        .form-card {
+            background-color: #fff;
+            border: 1px solid #ebeef5;
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+            transition: box-shadow 0.3s;
+        }
+
+        .form-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-color: #dcdfe6;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--el-text-color-primary);
+            margin-top: 0;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #ebeef5;
+        }
+        
+        .section-title-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title-left::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: var(--el-color-primary);
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        /* 覆盖 label 字体避免冲突 */
+        .el-form-item__label {
+            font-weight: 500;
+        }
+
+        /* OCR上传组件区域 */
+        .ocr-upload-area {
+            background-color: #f8f9fb;
+            border: 1px dashed var(--el-color-primary);
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .ocr-upload-content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 12px;
+        }
+
+        .idcard-uploader .el-upload {
+            border: 1px dashed var(--el-border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            width: 240px;
+            height: 150px;
+            transition: var(--el-transition-duration-fast);
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .idcard-uploader .el-upload:hover {
+            border-color: var(--el-color-primary);
+        }
+
+        .idcard-icon-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            color: #8c939d;
+        }
+
+        .idcard-icon-container .el-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        
+        .ocr-tip {
+            font-size: 13px;
+            color: #909399;
+            margin-top: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 动态表格统一样式 */
+        .dynamic-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .dynamic-table th, .dynamic-table td {
+            border: 1px solid var(--el-border-color);
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .dynamic-table th {
+            background-color: #FAFAFA;
+            color: var(--el-text-color-regular);
+            font-weight: 500;
+            padding: 10px 12px;
+        }
+
+        .dynamic-table .el-form-item {
+            margin-bottom: 0;
+        }
+
+        /* 单选框在表格中的居中 */
+        .table-radio-cell {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+        
+        .table-radio-cell .el-radio {
+            margin-right: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="demo-container">
+            <div class="dialog-title">
+                <span>客户档案表 (个人入驻)</span>
+                <el-icon style="cursor: pointer; color: #909399;"><Close /></el-icon>
+            </div>
+            
+            <div class="form-content">
+                <el-form 
+                    ref="formRef"
+                    :model="formData" 
+                    :rules="rules"
+                    label-position="top" 
+                    size="default"
+                >
+                    <!-- 基础认证信息 -->
+                    <div class="form-card">
+                        <div class="section-title">
+                            <div class="section-title-left">基础认证信息</div>
+                        </div>
+
+                        <!-- 个人身份认证区域：将身份证上传和文字信息放在一起 -->
+                        <div class="ocr-upload-area">
+                            <div class="ocr-upload-content">
+                                <el-upload class="idcard-uploader" action="#" :show-file-list="false" :auto-upload="false" :on-change="handleIdCardFrontChange">
+                                    <img v-if="formData.idCardFrontUrl" :src="formData.idCardFrontUrl" class="avatar" />
+                                    <div v-else class="idcard-icon-container">
+                                        <el-icon><Plus /></el-icon>
+                                        <span>点击上传身份证人像面</span>
+                                    </div>
+                                </el-upload>
+                                <el-upload class="idcard-uploader" action="#" :show-file-list="false" :auto-upload="false" :on-change="handleIdCardBackChange">
+                                    <img v-if="formData.idCardBackUrl" :src="formData.idCardBackUrl" class="avatar" />
+                                    <div v-else class="idcard-icon-container">
+                                        <el-icon><Plus /></el-icon>
+                                        <span>点击上传身份证国徽面</span>
+                                    </div>
+                                </el-upload>
+                            </div>
+                            <div class="ocr-tip">
+                                <el-icon color="#E6A23C"><Warning /></el-icon>
+                                <span>请上传身份证件照片（支持jpg、png，单张不大于2MB）。上传后系统将自动识别姓名和身份证号。</span>
+                            </div>
+                        </div>
+
+                        <el-row :gutter="24">
+                            <el-col :span="8">
+                                <el-form-item label="所属地" prop="personalRegionType">
+                                    <el-select v-model="formData.personalRegionType" placeholder="请选择所属地" style="width: 100%;">
+                                        <el-option label="中国大陆" value="中国大陆"></el-option>
+                                        <el-option label="中国香港" value="中国香港"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="个人姓名全称" prop="fullName">
+                                    <el-input v-model="formData.fullName" placeholder="可通过上方文件上传方式自动识别"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="身份证号" prop="idCardNo">
+                                    <el-input v-model="formData.idCardNo" placeholder="可通过上方文件上传方式自动识别"></el-input>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
+                        <el-row :gutter="24">
+                            <el-col :span="8">
+                                <el-form-item label="个人联系地区" prop="personalRegion">
+                                    <el-cascader
+                                        v-model="formData.personalRegion"
+                                        :options="regionOptions"
+                                        placeholder="省 / 市 / 区"
+                                    ></el-cascader>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="16">
+                                <el-form-item label="个人详细地址" prop="personalDetailAddress">
+                                    <el-input v-model="formData.personalDetailAddress" placeholder="请填写详细街道门牌号"></el-input>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                    </div>
+
+                    <!-- 取货地址管理（动态列表） -->
+                    <div class="form-card">
+                        <div class="section-title">
+                            <div class="section-title-left">取货地址</div>
+                            <el-button type="primary" plain size="small" @click="addPickupAddress" :icon="Plus">添加取货地址</el-button>
+                        </div>
+
+                        <table class="dynamic-table">
+                            <thead>
+                                <tr>
+                                    <th width="20%"><span style="color: red;">*</span> 省份</th>
+                                    <th width="20%"><span style="color: red;">*</span> 城市</th>
+                                    <th width="50%"><span style="color: red;">*</span> 详细地址</th>
+                                    <th width="10%" style="text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(addr, index) in formData.pickupAddresses" :key="index">
+                                    <td>
+                                        <el-form-item :prop="'pickupAddresses.' + index + '.province'" :rules="[{required: true, message: '请选择省份', trigger: 'change'}]">
+                                            <el-select v-model="addr.province" placeholder="省份">
+                                                <el-option label="广东省" value="GD"></el-option>
+                                                <el-option label="浙江省" value="ZJ"></el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'pickupAddresses.' + index + '.city'" :rules="[{required: true, message: '请选择城市', trigger: 'change'}]">
+                                            <el-select v-model="addr.city" placeholder="城市">
+                                                <el-option label="深圳市" value="SZ"></el-option>
+                                                <el-option label="广州市" value="GZ"></el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'pickupAddresses.' + index + '.detail'" :rules="[{required: true, message: '请填写详细地址', trigger: 'blur'}]">
+                                            <el-input v-model="addr.detail" placeholder="请填写收货地址的详细街道门牌号"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <el-button type="danger" link @click="removePickupAddress(index)" :disabled="formData.pickupAddresses.length === 1">
+                                            <el-icon><Delete /></el-icon>
+                                        </el-button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 联系人信息（动态角色 + 权限指派） -->
+                    <div class="form-card">
+                        <div class="section-title">
+                            <div class="section-title-left">联系人与权限配置</div>
+                        </div>
+
+                        <div style="margin-bottom: 12px; font-size: 13px; color: #E6A23C;">
+                            <el-icon><Warning /></el-icon> 请在列表中勾选指定哪位联系人作为<b>【合同对接人】</b>和<b>【账号接收邮箱】</b>。
+                        </div>
+
+                        <table class="dynamic-table">
+                            <thead>
+                                <tr>
+                                    <th width="15%"><span style="color: red;">*</span> 角色标签</th>
+                                    <th width="15%"><span style="color: red;">*</span> 姓名</th>
+                                    <th width="20%"><span style="color: red;">*</span> 联系电话</th>
+                                    <th width="20%"><span style="color: red;">*</span> 邮箱地址</th>
+                                    <th width="15%" style="text-align: center;">合同对接人</th>
+                                    <th width="15%" style="text-align: center;">接收系统账号</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(contact, index) in formData.contacts" :key="contact.id">
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.role'" :rules="[{required: true, message: '请填写角色', trigger: 'blur'}]">
+                                            <el-input v-model="contact.role" readonly></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.name'" :rules="[{required: true, message: '请填写姓名', trigger: 'blur'}]">
+                                            <el-input v-model="contact.name" placeholder="负责人全称"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.phone'" :rules="[{required: true, message: '请填写电话', trigger: 'blur'}]">
+                                            <el-input v-model="contact.phone" placeholder="联系电话"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <td>
+                                        <el-form-item :prop="'contacts.' + index + '.email'" :rules="[{required: true, message: '请填写邮箱', trigger: 'blur'}, {type: 'email', message: '格式不正确', trigger: 'blur'}]">
+                                            <el-input v-model="contact.email" placeholder="正确的邮箱地址"></el-input>
+                                        </el-form-item>
+                                    </td>
+                                    <!-- 合同对接人单选 -->
+                                    <td class="table-radio-cell">
+                                        <el-radio v-model="formData.contractContactId" :value="contact.id">
+                                            <span style="display:none"></span>
+                                        </el-radio>
+                                    </td>
+                                    <!-- 账号接收邮箱单选 -->
+                                    <td class="table-radio-cell">
+                                        <el-radio v-model="formData.accountEmailContactId" :value="contact.id">
+                                            <span style="display:none"></span>
+                                        </el-radio>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 业务与渠道 -->
+                    <div class="form-card">
+                        <div class="section-title">
+                            <div class="section-title-left">业务与渠道</div>
+                        </div>
+                        <el-row :gutter="24">
+                            <el-col :span="8">
+                                <el-form-item label="添加渠道" prop="channel">
+                                    <el-select v-model="formData.channel" placeholder="请选择">
+                                        <el-option label="探迹" value="tanji"></el-option>
+                                        <el-option label="朋友推荐" value="friend"></el-option>
+                                        <el-option label="展会" value="exhibition"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="业务国" prop="businessCountry">
+                                    <el-select v-model="formData.businessCountry" placeholder="请选择">
+                                        <el-option label="美国" value="US"></el-option>
+                                        <el-option label="英国" value="UK"></el-option>
+                                        <el-option label="德国" value="DE"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="8">
+                                <el-form-item label="主要经营平台" prop="mainPlatform">
+                                    <el-select v-model="formData.mainPlatform" multiple placeholder="请选择">
+                                        <el-option label="Amazon" value="amazon"></el-option>
+                                        <el-option label="eBay" value="ebay"></el-option>
+                                        <el-option label="Walmart" value="walmart"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                        
+                        <el-form-item label="客户备注" prop="remarks" style="margin-top: 16px;">
+                            <el-input 
+                                type="textarea" 
+                                v-model="formData.remarks" 
+                                :rows="4" 
+                                placeholder="请输入客户备注信息..."
+                            ></el-input>
+                        </el-form-item>
+                    </div>
+
+                </el-form>
+            </div>
+            
+            <div class="form-actions">
+                <el-button>取消</el-button>
+                <el-button type="primary" @click="handleSubmit">入驻</el-button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, markRaw } = Vue;
+        const { ElMessage } = ElementPlus;
+        const { Close, Plus, Delete, Warning } = ElementPlusIconsVue;
+
+        const app = createApp({
+            setup() {
+                const formRef = ref(null);
+                
+                // 省市区模拟数据
+                const regionOptions = [
+                    {
+                        value: 'guangdong', label: '广东省',
+                        children: [
+                            {
+                                value: 'shenzhen', label: '深圳市',
+                                children: [{ value: 'nanshan', label: '南山区' }, { value: 'baoan', label: '宝安区' }]
+                            }
+                        ]
+                    }
+                ];
+
+                let contactIdCounter = 4;
+                
+                const formData = reactive({
+                    // OCR 相关
+                    idCardFrontUrl: '',
+                    idCardBackUrl: '',
+                    
+                    personalRegionType: '中国大陆',
+                    fullName: '',
+                    idCardNo: '',
+                    personalRegion: [],
+                    personalDetailAddress: '',
+                    
+                    // 取货地址
+                    pickupAddresses: [
+                        { province: 'GD', city: 'SZ', detail: '' }
+                    ],
+                    
+                    // 联系人列表
+                    contacts: [
+                        { id: 1, role: '公司负责人', name: '', phone: '', email: '' },
+                        { id: 2, role: '物流联系人', name: '', phone: '', email: '' },
+                        { id: 3, role: '财务负责人', name: '', phone: '', email: '' }
+                    ],
+                    
+                    // 指派逻辑核心
+                    contractContactId: 1,
+                    accountEmailContactId: 1,
+                    
+                    channel: '',
+                    businessCountry: '',
+                    mainPlatform: [], // 改为数组以支持多选
+                    
+                    remarks: ''
+                });
+
+                const rules = reactive({
+                    personalRegionType: [{ required: true, message: '请选择所属地', trigger: 'change' }],
+                    fullName: [{ required: true, message: '请输入个人姓名全称', trigger: 'blur' }],
+                    idCardNo: [{ required: true, message: '请输入身份证号', trigger: 'blur' }],
+                    personalRegion: [{ required: true, message: '请选择省市区', trigger: 'change' }],
+                    personalDetailAddress: [{ required: true, message: '请输入详细地址', trigger: 'blur' }],
+                    channel: [{ required: true, message: '请选择添加渠道', trigger: 'change' }],
+                    businessCountry: [{ required: true, message: '请选择业务国', trigger: 'change' }],
+                    mainPlatform: [{ required: true, message: '请选择主要经营平台', trigger: 'change' }]
+                });
+
+                // 取货地址操作
+                const addPickupAddress = () => {
+                    formData.pickupAddresses.push({ province: '', city: '', detail: '' });
+                };
+                const removePickupAddress = (index) => {
+                    if (formData.pickupAddresses.length > 1) {
+                        formData.pickupAddresses.splice(index, 1);
+                    }
+                };
+
+                // 联系人操作
+                const addContact = () => {
+                    formData.contacts.push({ 
+                        id: contactIdCounter++, 
+                        role: '', 
+                        name: '', 
+                        phone: '', 
+                        email: '' 
+                    });
+                };
+                const removeContact = (index) => {
+                    if (formData.contacts.length > 1) {
+                        const removedId = formData.contacts[index].id;
+                        formData.contacts.splice(index, 1);
+                        
+                        if (formData.contractContactId === removedId) {
+                            formData.contractContactId = formData.contacts[0].id;
+                        }
+                        if (formData.accountEmailContactId === removedId) {
+                            formData.accountEmailContactId = formData.contacts[0].id;
+                        }
+                    }
+                };
+
+                const handleSubmit = async () => {
+                    if (!formRef.value) return;
+                    await formRef.value.validate((valid) => {
+                        if (valid) {
+                            const contractPerson = formData.contacts.find(c => c.id === formData.contractContactId);
+                            const accountPerson = formData.contacts.find(c => c.id === formData.accountEmailContactId);
+                            
+                            console.log('合同对接人:', contractPerson.name);
+                            console.log('系统账号接收邮箱:', accountPerson.email);
+                            
+                            ElMessage.success('个人客户入驻信息提交成功！');
+                        } else {
+                            ElMessage.warning('请检查必填项是否填写完整');
+                        }
+                    });
+                };
+
+                const handleIdCardFrontChange = (file) => {
+                    formData.idCardFrontUrl = URL.createObjectURL(file.raw);
+                    ElMessage.success('身份证人像面上传成功，已自动识别信息');
+                    // 模拟OCR自动识别填入
+                    if (!formData.fullName) formData.fullName = '张三';
+                    if (!formData.idCardNo) formData.idCardNo = '440301199001011234';
+                };
+
+                const handleIdCardBackChange = (file) => {
+                    formData.idCardBackUrl = URL.createObjectURL(file.raw);
+                    ElMessage.success('身份证国徽面上传成功');
+                };
+
+                return {
+                    formRef,
+                    formData,
+                    rules,
+                    regionOptions,
+                    addPickupAddress,
+                    removePickupAddress,
+                    addContact,
+                    removeContact,
+                    handleSubmit,
+                    handleIdCardFrontChange,
+                    handleIdCardBackChange,
+                    Plus: markRaw(Plus),
+                    Warning: markRaw(Warning)
+                };
+            }
+        });
+
+        // 注册图标
+        app.component('Close', Close);
+        app.component('Plus', Plus);
+        app.component('Delete', Delete);
+        app.component('Warning', Warning);
+        
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

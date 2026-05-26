@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平台仓库列表 - 主列表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: sans-serif; }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .search-item { display: flex; align-items: center; }
+        .search-item label { margin-right: 8px; color: var(--el-text-color-regular); font-size: 14px; }
+        .table-container { flex: 1; overflow: hidden; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索与新增区域独立卡片 -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px; padding-bottom: 0;">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.warehouseCode" placeholder="仓库代码" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <el-select v-model="searchForm.countryCode" placeholder="国家代码" clearable style="width: 200px;">
+                        <el-option label="US-美国" value="US"></el-option>
+                        <el-option label="CN-中国" value="CN"></el-option>
+                        <el-option label="GB-英国" value="GB"></el-option>
+                        <el-option label="DE-德国" value="DE"></el-option>
+                    </el-select>
+                </div>
+                <div class="search-item">
+                    <el-select v-model="searchForm.confirmStatus" placeholder="确认状态" clearable style="width: 200px;">
+                        <el-option label="已确认" value="是"></el-option>
+                        <el-option label="未确认" value="否"></el-option>
+                    </el-select>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+                <div style="margin-left: auto;">
+                    <el-button type="success" @click="handleConfirmData">
+                        <el-icon style="margin-right: 4px;"><Check /></el-icon>确认数据
+                    </el-button>
+                    <el-button type="primary" @click="handleAdd">
+                        <el-icon style="margin-right: 4px;"><Plus /></el-icon>新增仓库
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card" style="height: calc(100vh - 106px);">
+            <!-- Tab 页签 -->
+            <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+                <el-tab-pane label="FBA仓库列表" name="FBA仓库列表"></el-tab-pane>
+                <el-tab-pane label="其他平台仓库列表" name="其他平台仓库列表"></el-tab-pane>
+            </el-tabs>
+
+            <!-- 表格 -->
+            <div class="table-container">
+                <el-table :data="filteredTableData" border height="100%" style="width: 100%" @selection-change="handleSelectionChange">
+                    <el-table-column type="selection" width="55" align="center"></el-table-column>
+                    <el-table-column prop="platform" label="仓库所属平台" min-width="120" v-if="activeTab === '其他平台仓库列表'"></el-table-column>
+                    <el-table-column prop="warehouseCode" label="仓库代码" min-width="120"></el-table-column>
+                    <el-table-column prop="countryCode" label="国家代码" min-width="100"></el-table-column>
+                    <el-table-column prop="dataSource" label="数据来源" min-width="120"></el-table-column>
+                    <el-table-column prop="confirmStatus" label="确认状态" min-width="100">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.confirmStatus === '是' ? 'success' : 'warning'">
+                                {{ scope.row.confirmStatus === '是' ? '已确认' : '未确认' }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="updateTime" label="更新时间" min-width="160"></el-table-column>
+                    <el-table-column prop="creator" label="操作人" min-width="120"></el-table-column>
+                    <el-table-column label="操作" width="160" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                            <el-button link type="success" size="small" @click="handleAddAddress(scope.row)">增加地址</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="total"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 新增/编辑 平台仓库弹窗 -->
+        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="800px" destroy-on-close>
+            <el-form :model="form" :rules="rules" ref="formRef" label-position="top">
+                <div style="font-weight: bold; margin-bottom: 16px; border-left: 3px solid #2DA44E; padding-left: 8px;">基础信息</div>
+                <el-row :gutter="24">
+                    <el-col :span="12">
+                        <el-form-item label="仓库所属平台" prop="platform">
+                            <el-input v-model="form.platform" :disabled="activeTab === 'FBA仓库列表'" :placeholder="activeTab === 'FBA仓库列表' ? '只读，默认FBA' : '请输入仓库所属平台'"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="仓库代码" prop="warehouseCode">
+                            <el-input v-model="form.warehouseCode" placeholder="请输入仓库代码"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <div style="font-weight: bold; margin: 24px 0 16px; border-left: 3px solid #2DA44E; padding-left: 8px;">地址信息（支持多个）</div>
+                
+                <div v-for="(address, index) in form.addresses" :key="index" style="background: #f8f9fb; padding: 16px; border-radius: 4px; margin-bottom: 16px; position: relative;">
+                    <div style="margin-bottom: 16px; font-weight: bold; color: #606266; display: flex; justify-content: space-between;">
+                        <span style="background: #e4e7ed; padding: 2px 8px; border-radius: 10px; font-size: 12px;">地址 {{ index + 1 }}</span>
+                        <el-button link type="danger" @click="removeAddress(index)" v-if="form.addresses.length > 1"><el-icon><Delete /></el-icon> 删除</el-button>
+                    </div>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="国家代码" :prop="'addresses.' + index + '.countryCode'" :rules="{ required: true, message: '请选择国家', trigger: 'change' }">
+                                <el-select v-model="address.countryCode" placeholder="请选择国家" style="width: 100%;">
+                                    <el-option label="US-美国" value="US"></el-option>
+                                    <el-option label="GB-英国" value="GB"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="州/省" :prop="'addresses.' + index + '.province'" :rules="{ required: true, message: '请选择州/省', trigger: 'change' }">
+                                <el-select v-model="address.province" placeholder="请选择州/省" style="width: 100%;">
+                                    <el-option label="California" value="CA"></el-option>
+                                    <el-option label="Texas" value="TX"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="城市" :prop="'addresses.' + index + '.city'" :rules="{ required: true, message: '请输入城市', trigger: 'blur' }">
+                                <el-input v-model="address.city" placeholder="请输入城市"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="16">
+                            <el-form-item label="详细地址" :prop="'addresses.' + index + '.detail'" :rules="{ required: true, message: '请输入详细地址', trigger: 'blur' }">
+                                <el-input v-model="address.detail" placeholder="请输入街道、门牌号等详细地址"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="邮编" :prop="'addresses.' + index + '.zipCode'" :rules="{ required: true, message: '请输入邮编', trigger: 'blur' }">
+                                <el-input v-model="address.zipCode" placeholder="请输入邮编"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="地址简称">
+                                <el-input v-model="address.addressAbbr" readonly placeholder="自动生成" style="background-color: #f5f7fa; border-radius: 4px;"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+
+                <el-button style="width: 100%; border-style: dashed; margin-bottom: 24px;" @click="addAddress">
+                    <el-icon><Plus /></el-icon> 添加新地址
+                </el-button>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="success" @click="submitForm">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+        <!-- 增加地址弹窗 -->
+        <el-dialog v-model="addAddressDialogVisible" title="增加地址" width="800px" destroy-on-close>
+            <el-form :model="addAddressForm" :rules="addAddressRules" ref="addAddressFormRef" label-position="top">
+                <div style="background: #f8f9fb; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="国家代码" prop="countryCode">
+                                <el-select v-model="addAddressForm.countryCode" placeholder="请选择国家" style="width: 100%;">
+                                    <el-option label="US-美国" value="US"></el-option>
+                                    <el-option label="GB-英国" value="GB"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="州/省" prop="province">
+                                <el-select v-model="addAddressForm.province" placeholder="请选择州/省" style="width: 100%;">
+                                    <el-option label="California" value="CA"></el-option>
+                                    <el-option label="Texas" value="TX"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="城市" prop="city">
+                                <el-input v-model="addAddressForm.city" placeholder="请输入城市"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="16">
+                            <el-form-item label="详细地址" prop="detail">
+                                <el-input v-model="addAddressForm.detail" placeholder="请输入街道、门牌号等详细地址"></el-input>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="8">
+                            <el-form-item label="邮编" prop="zipCode">
+                                <el-input v-model="addAddressForm.zipCode" placeholder="请输入邮编"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="地址简称">
+                                <el-input v-model="addAddressForm.addressAbbr" readonly placeholder="自动生成" style="background-color: #f5f7fa; border-radius: 4px;"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="addAddressDialogVisible = false">取消</el-button>
+                    <el-button type="success" @click="submitAddAddressForm">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, watch } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('FBA仓库列表');
+                const searchForm = reactive({ warehouseCode: '', countryCode: '', confirmStatus: '' });
+                const tableData = ref([
+                    { platform: 'FBA', warehouseCode: 'BWI1', countryCode: 'US', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-25 14:30:00', creator: '系统管理员' },
+                    { platform: 'FBA', warehouseCode: 'MEM1s', countryCode: 'US', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-26 10:00:00', creator: '张三' },
+                    { platform: 'FBA', warehouseCode: 'BHX4', countryCode: 'GB', dataSource: '系统同步', confirmStatus: '否', updateTime: '2023-10-24 09:15:00', creator: '李四' },
+                    { platform: 'WALMART', warehouseCode: 'IND2', countryCode: 'US', province: 'IN', city: 'Plainfield', detail: '9360 All Points Parkway', zipCode: '46168', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-25 11:20:00', creator: '王五' }
+                ]);
+
+                const filteredTableData = computed(() => {
+                    if (activeTab.value === 'FBA仓库列表') {
+                        return tableData.value.filter(item => item.platform === 'FBA');
+                    } else {
+                        return tableData.value.filter(item => item.platform !== 'FBA');
+                    }
+                });
+
+                const total = computed(() => filteredTableData.value.length);
+
+                // 弹窗数据
+                const dialogVisible = ref(false);
+                const dialogType = ref('add'); // 'add' or 'edit'
+                const dialogTitle = computed(() => {
+                    const platformName = activeTab.value === 'FBA仓库列表' ? 'FBA' : '其他';
+                    return dialogType.value === 'add' ? `新增${platformName}平台仓库` : `编辑${platformName}平台仓库`;
+                });
+                const formRef = ref(null);
+                const form = reactive({
+                    platform: 'FBA',
+                    warehouseCode: '',
+                    addresses: [{
+                        countryCode: '',
+                        province: '',
+                        city: '',
+                        detail: '',
+                        zipCode: '',
+                        addressAbbr: ''
+                    }]
+                });
+
+                // 监听仓库代码和邮编，实时生成地址简称
+                watch(
+                    () => [form.warehouseCode, form.addresses],
+                    () => {
+                        form.addresses.forEach(address => {
+                            const code = form.warehouseCode || '';
+                            const zip = address.zipCode || '';
+                            const newVal = (code || zip) ? `${code}-${zip}` : '';
+                            if (address.addressAbbr !== newVal) {
+                                address.addressAbbr = newVal;
+                            }
+                        });
+                    },
+                    { deep: true, immediate: true }
+                );
+
+                const rules = {
+                    platform: [{ required: true, message: '请输入仓库所属平台', trigger: 'blur' }],
+                    warehouseCode: [{ required: true, message: '请输入仓库代码', trigger: 'blur' }]
+                };
+
+                const addAddress = () => {
+                    form.addresses.push({
+                        countryCode: '',
+                        province: '',
+                        city: '',
+                        detail: '',
+                        zipCode: '',
+                        addressAbbr: ''
+                    });
+                };
+
+                const removeAddress = (index) => {
+                    form.addresses.splice(index, 1);
+                };
+
+                const submitForm = async () => {
+                    if (!formRef.value) return;
+                    await formRef.value.validate((valid) => {
+                        if (valid) {
+                            const platformName = activeTab.value === 'FBA仓库列表' ? 'FBA' : '其他';
+                            ElMessage.success(dialogType.value === 'add' ? `${platformName}仓库新增成功` : `${platformName}仓库编辑成功`);
+                            dialogVisible.value = false;
+                            // Reset form (simplified)
+                            form.warehouseCode = '';
+                            form.addresses = [{ countryCode: '', province: '', city: '', detail: '', zipCode: '', addressAbbr: '' }];
+                        } else {
+                            ElMessage.warning('请完善必填信息');
+                        }
+                    });
+                };
+
+                const handleTabClick = () => { ElMessage.success('切换标签：' + activeTab.value); };
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => { searchForm.warehouseCode = ''; searchForm.countryCode = ''; searchForm.confirmStatus = ''; };
+
+                const handleAdd = () => {
+                    dialogType.value = 'add';
+                    form.platform = activeTab.value === 'FBA仓库列表' ? 'FBA' : '';
+                    form.warehouseCode = '';
+                    form.addresses = [{ countryCode: '', province: '', city: '', detail: '', zipCode: '', addressAbbr: '' }];
+                    dialogVisible.value = true;
+                };
+                const handleEdit = (row) => {
+                    dialogType.value = 'edit';
+                    form.platform = row.platform;
+                    form.warehouseCode = row.warehouseCode;
+                    // 模拟回显地址数据，实际中应从接口获取
+                    form.addresses = [{
+                        countryCode: row.countryCode || '',
+                        province: row.province || '',
+                        city: row.city || '',
+                        detail: row.detail || '',
+                        zipCode: row.zipCode || '',
+                        addressAbbr: (row.warehouseCode && row.zipCode) ? `${row.warehouseCode}-${row.zipCode}` : ''
+                    }];
+                    dialogVisible.value = true;
+                };
+
+                const addAddressDialogVisible = ref(false);
+                const currentAddAddressRow = ref(null);
+                const addAddressFormRef = ref(null);
+                const addAddressForm = reactive({
+                    countryCode: '',
+                    province: '',
+                    city: '',
+                    detail: '',
+                    zipCode: '',
+                    addressAbbr: ''
+                });
+
+                const addAddressRules = {
+                    countryCode: [{ required: true, message: '请选择国家', trigger: 'change' }],
+                    province: [{ required: true, message: '请选择州/省', trigger: 'change' }],
+                    city: [{ required: true, message: '请输入城市', trigger: 'blur' }],
+                    detail: [{ required: true, message: '请输入详细地址', trigger: 'blur' }],
+                    zipCode: [{ required: true, message: '请输入邮编', trigger: 'blur' }]
+                };
+
+                watch(
+                    () => addAddressForm.zipCode,
+                    (newZip) => {
+                        if (currentAddAddressRow.value) {
+                            const code = currentAddAddressRow.value.warehouseCode || '';
+                            addAddressForm.addressAbbr = (code || newZip) ? `${code}-${newZip}` : '';
+                        }
+                    }
+                );
+
+                const handleAddAddress = (row) => {
+                    currentAddAddressRow.value = row;
+                    Object.assign(addAddressForm, {
+                        countryCode: '',
+                        province: '',
+                        city: '',
+                        detail: '',
+                        zipCode: '',
+                        addressAbbr: ''
+                    });
+                    addAddressDialogVisible.value = true;
+                };
+
+                const submitAddAddressForm = async () => {
+                    if (!addAddressFormRef.value) return;
+                    await addAddressFormRef.value.validate((valid) => {
+                        if (valid) {
+                            ElMessage.success('地址增加成功');
+                            addAddressDialogVisible.value = false;
+                        } else {
+                            ElMessage.warning('请完善必填信息');
+                        }
+                    });
+                };
+
+                // 表格勾选
+                const selectedRows = ref([]);
+                const handleSelectionChange = (val) => {
+                    selectedRows.value = val;
+                };
+
+                // 确认数据逻辑
+                const handleConfirmData = () => {
+                    if (selectedRows.value.length === 0) {
+                        ElMessage.warning('请先勾选需要确认的数据');
+                        return;
+                    }
+
+                    // 检查是否包含已确认的数据
+                    const hasConfirmed = selectedRows.value.some(row => row.confirmStatus === '是');
+                    if (hasConfirmed) {
+                        ElMessage.warning('只能勾选“未确认”状态的数据进行确认操作');
+                        return;
+                    }
+
+                    ElMessageBox.confirm(
+                        `确定要确认选中的 ${selectedRows.value.length} 条仓库数据吗？`,
+                        '确认提示',
+                        {
+                            confirmButtonText: '确定',
+                            cancelButtonText: '取消',
+                            type: 'warning',
+                        }
+                    ).then(() => {
+                        // 执行状态变更
+                        selectedRows.value.forEach(row => {
+                            row.confirmStatus = '是';
+                        });
+                        ElMessage.success('数据确认成功');
+                        // Element Plus table selection won't clear automatically upon data update in this setup
+                        // In a real app, calling an API would refresh the list
+                    }).catch(() => {});
+                };
+
+                return { 
+                    activeTab, searchForm, tableData, filteredTableData, total, 
+                    dialogVisible, dialogType, dialogTitle, form, rules, formRef,
+                    addAddress, removeAddress, submitForm,
+                    handleTabClick, handleSearch, resetSearch, handleAdd, handleEdit,
+                    addAddressDialogVisible, addAddressForm, addAddressRules, addAddressFormRef, handleAddAddress, submitAddAddressForm,
+                    handleSelectionChange, handleConfirmData
+                };
+            }
+        });
+        
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

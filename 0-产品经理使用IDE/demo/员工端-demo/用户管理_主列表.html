@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 主列表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: sans-serif; box-sizing: border-box; height: 100vh; }
+        #app { height: 100%; display: flex; flex-direction: column; gap: 16px; }
+        .search-card { background-color: #fff; border-radius: 4px; padding: 16px; }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; flex: 1; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+        .search-area { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+        .search-item { display: flex; align-items: center; }
+        .search-item label { margin-right: 8px; color: var(--el-text-color-regular); font-size: 14px; }
+        .table-container { flex: 1; overflow: hidden; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .section-title { font-size: 16px; font-weight: bold; margin-bottom: 16px; display: flex; align-items: center; }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 16px; background-color: var(--el-color-primary); margin-right: 8px; border-radius: 2px; }
+        .file-list { margin-top: 16px; }
+        .file-item { display: flex; align-items: center; background: #F5F7FA; padding: 8px 12px; border-radius: 4px; border: 1px solid #E4E7ED; margin-bottom: 8px; }
+        .file-item-icon { margin-right: 8px; font-size: 16px; }
+        .file-item-name { flex: 1; font-size: 14px; color: #606266; }
+        .file-item-actions { display: flex; gap: 12px; color: #909399; cursor: pointer; }
+
+        /* 无障碍表单布局 (响应式标签间距) */
+        .a11y-form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .a11y-form-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px; /* 桌面端 8px 间距 */
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.2;
+        }
+        .a11y-form-label.is-required::before {
+            content: '*';
+            color: var(--el-color-danger, #f56c6c);
+            margin-right: 4px;
+        }
+        @media screen and (max-width: 768px) {
+            .a11y-form-label {
+                margin-bottom: 12px; /* 移动端 12px 间距 */
+            }
+        }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 查询条件 -->
+        <div class="search-card">
+            <div class="search-area">
+                <div class="search-item">
+                    <el-input v-model="searchForm.customerName" placeholder="客户名称" clearable style="width: 250px;"></el-input>
+                </div>
+                <div>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+                <div style="margin-left: auto;">
+                    <el-button type="success" @click="handleAdd">新增账号</el-button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <!-- Tab 页签 -->
+            <el-tabs v-model="activeTab" @tab-click="handleTabClick">
+                <el-tab-pane label="待签约" name="待签约"></el-tab-pane>
+                <el-tab-pane label="待开户" name="待开户"></el-tab-pane>
+                <el-tab-pane label="待审核" name="待审核"></el-tab-pane>
+                <el-tab-pane label="已拒绝" name="已拒绝"></el-tab-pane>
+                <el-tab-pane label="正常" name="正常"></el-tab-pane>
+                <el-tab-pane label="已冻结" name="已冻结"></el-tab-pane>
+            </el-tabs>
+
+            <!-- 表格 -->
+            <div class="table-container">
+                <el-table :data="tableData" border height="100%" style="width: 100%">
+                    <el-table-column prop="customerName" label="用户名称" min-width="150"></el-table-column>
+                    <el-table-column prop="customerAccount" label="账户" min-width="150"></el-table-column>
+                    <el-table-column prop="customerStatus" label="账户状态" min-width="100">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.customerStatus === '正常' ? 'success' : (scope.row.customerStatus === '已冻结' ? 'danger' : 'warning')">
+                                {{ scope.row.customerStatus }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="contractStatus" label="合同状态" min-width="100">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.contractStatus === '已签约' ? 'success' : (scope.row.contractStatus === '已过期' ? 'danger' : 'info')" effect="plain">
+                                {{ scope.row.contractStatus }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="contractStartDate" label="合同开始日期" min-width="120" v-if="activeTab === '正常'"></el-table-column>
+                    <el-table-column prop="contractEndDate" label="合同结束日期" min-width="120" v-if="activeTab === '正常'">
+                        <template #default="scope">
+                            <span :style="{ color: scope.row.contractStatus === '已过期' ? '#F56C6C' : 'inherit' }">
+                                {{ scope.row.contractEndDate }}
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column v-if="!['待签约', '待开户', '待审核', '已拒绝'].includes(activeTab)" prop="registerTime" label="注册时间" min-width="160">
+                        <template #default="scope">
+                            <span>
+                                {{ scope.row.registerTime }}
+                            </span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="180" fixed="right" align="center">
+                        <template #default="scope">
+                            <!-- 待签约 -->
+                            <template v-if="activeTab === '待签约'">
+                                <el-button v-if="scope.row.contractStatus === '未签约'" link type="primary" size="small" @click="handleSign(scope.row)">签约</el-button>
+                                <el-button v-if="scope.row.contractStatus !== '签约中'" link type="danger" size="small" @click="handleDelete(scope.row)">删除</el-button>
+                            </template>
+
+                            <!-- 待开户 -->
+                            <template v-else-if="activeTab === '待开户'">
+                                <el-button link type="primary" size="small" @click="handleOpenAccount(scope.row)">开户</el-button>
+                            </template>
+
+                            <!-- 待审核 -->
+                            <template v-else-if="activeTab === '待审核'">
+                                <el-button link type="primary" size="small" @click="handleAudit(scope.row)">审核</el-button>
+                            </template>
+
+                            <!-- 已拒绝 -->
+                            <template v-else-if="activeTab === '已拒绝'">
+                                <el-button link type="primary" size="small" @click="handleOpenAccount(scope.row, true)">开户</el-button>
+                            </template>
+
+                            <!-- 正常 -->
+                            <template v-else-if="activeTab === '正常'">
+                                <el-button link type="primary" size="small" @click="handleOpenAccount(scope.row, true, 'view')">查看开户申请</el-button>
+                                <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                                <el-button link type="danger" size="small" @click="toggleStatus(scope.row)">冻结</el-button>
+                                <el-button v-if="['未签约', '已过期'].includes(scope.row.contractStatus)" link type="primary" size="small" @click="handleSign(scope.row)">签约</el-button>
+                            </template>
+
+                            <!-- 已冻结 -->
+                            <template v-else-if="activeTab === '已冻结'">
+                                <el-button link type="primary" size="small" @click="handleOpenAccount(scope.row, true, 'view')">查看开户申请</el-button>
+                                <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                                <el-button link type="success" size="small" @click="toggleStatus(scope.row)">启用</el-button>
+                            </template>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <!-- 分页 -->
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="total"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 新增账号弹窗 -->
+        <el-dialog v-model="dialogVisible" title="账号新增" width="500px">
+            <el-form :model="addForm" :rules="addRules" ref="addFormRef" @submit.prevent>
+                <div class="a11y-form-group">
+                    <label for="add-user-type" class="a11y-form-label is-required">用户类型</label>
+                    <el-form-item prop="userType" style="margin-bottom: 0;">
+                        <el-select id="add-user-type" v-model="addForm.userType" placeholder="请选择" style="width: 100%;">
+                            <el-option label="客户" value="customer"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="add-user-name" class="a11y-form-label is-required">用户名称</label>
+                    <el-form-item prop="userName" style="margin-bottom: 0;">
+                        <el-select id="add-user-name" v-model="addForm.userName" placeholder="请选择" style="width: 100%;" @change="handleUserNameChange">
+                            <el-option label="深圳市大卖科技有限公司" value="K10001"></el-option>
+                            <el-option label="广州小卖贸易有限责任公司" value="K10002"></el-option>
+                            <el-option label="杭州中卖物流有限公司" value="K10003"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="add-user-email" class="a11y-form-label is-required">账号接收邮箱</label>
+                    <el-form-item prop="email" style="margin-bottom: 0;">
+                        <el-input id="add-user-email" v-model="addForm.email" placeholder="选择用户后自动带出" readonly></el-input>
+                    </el-form-item>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="add-business-types" class="a11y-form-label is-required">开通业务</label>
+                    <el-form-item prop="businessTypes" style="margin-bottom: 0;">
+                        <el-select id="add-business-types" v-model="addForm.businessTypes" multiple placeholder="选择用户后自动带出" style="width: 100%;" disabled>
+                            <el-option label="TMS" value="TMS"></el-option>
+                            <el-option label="WMS" value="WMS"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitAdd(addFormRef)">开通账号</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 编辑账号弹窗 -->
+        <el-dialog v-model="editDialogVisible" title="编辑账号" width="500px">
+            <el-form :model="editForm" :rules="editRules" ref="editFormRef" @submit.prevent>
+                <div class="a11y-form-group">
+                    <label for="edit-user-name" class="a11y-form-label">用户名称</label>
+                    <el-input id="edit-user-name" v-model="editForm.userName" disabled placeholder="用户名称"></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-account" class="a11y-form-label">账户</label>
+                    <el-input id="edit-account" v-model="editForm.account" disabled placeholder="账户"></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-business-types" class="a11y-form-label is-required">开通业务</label>
+                    <el-form-item prop="businessTypes" style="margin-bottom: 0;">
+                        <el-select id="edit-business-types" v-model="editForm.businessTypes" multiple placeholder="请选择开通业务" style="width: 100%;">
+                            <el-option label="TMS" value="TMS"></el-option>
+                            <el-option label="WMS" value="WMS"></el-option>
+                        </el-select>
+                    </el-form-item>
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="editDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitEdit(editFormRef)">保存</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 开户申请/审核/查看弹窗 -->
+        <el-dialog v-model="openAccountDialogVisible" :title="openAccountDialogTitle" width="800px" destroy-on-close>
+            <div class="section-title">申请详情</div>
+            <el-form :model="openAccountForm" :disabled="openAccountDialogMode !== 'edit'" @submit.prevent>
+                <div class="a11y-form-group">
+                    <label for="open-company-name" class="a11y-form-label is-required">客户全称</label>
+                    <el-input id="open-company-name" v-model="openAccountForm.companyName" disabled placeholder="获取营业执照内的公司抬头名称/身份证自然人全称，字段不可修改。"></el-input>
+                </div>
+
+                <div class="a11y-form-group">
+                    <label for="open-is-peer" class="a11y-form-label is-required">是否同行</label>
+                    <el-select id="open-is-peer" v-model="openAccountForm.isPeer" placeholder="请选择" style="width: 100%;">
+                        <el-option label="是" value="是"></el-option>
+                        <el-option label="否" value="否"></el-option>
+                    </el-select>
+                </div>
+
+                <div class="a11y-form-group">
+                    <label for="open-business-types" class="a11y-form-label is-required">开通业务</label>
+                    <el-select id="open-business-types" v-model="openAccountForm.businessTypes" multiple placeholder="请选择开通业务" style="width: 100%;">
+                        <el-option label="TMS" value="TMS"></el-option>
+                        <el-option label="WMS" value="WMS"></el-option>
+                    </el-select>
+                </div>
+                
+                <div class="a11y-form-group">
+                    <label for="open-company-scale" class="a11y-form-label is-required">公司规模</label>
+                    <el-input id="open-company-scale" type="textarea" v-model="openAccountForm.companyScale" :rows="3" placeholder="注册资本：500万人民币；社保参保人数：109人。"></el-input>
+                </div>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-company-type" class="a11y-form-label is-required">公司类型</label>
+                            <el-select id="open-company-type" v-model="openAccountForm.companyType" placeholder="请选择" style="width: 100%;">
+                                <el-option label="初创企业（注册资金低于10万）" value="初创企业"></el-option>
+                                <el-option label="关联公司（注册资金低于10万）" value="关联公司"></el-option>
+                                <el-option label="注册资金大于等于10万" value="注册资金大于等于10万"></el-option>
+                                <el-option label="个人" value="个人"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-cs-rep" class="a11y-form-label is-required">客服代表</label>
+                            <el-select id="open-cs-rep" v-model="openAccountForm.csRepresentative" placeholder="获取员工列表" style="width: 100%;">
+                                <el-option label="张客服" value="张客服"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-sales-source" class="a11y-form-label">销售来源</label>
+                            <el-input id="open-sales-source" v-model="openAccountForm.salesSource"></el-input>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-main-countries" class="a11y-form-label is-required">主营国家</label>
+                            <el-select id="open-main-countries" v-model="openAccountForm.mainCountries" multiple placeholder="请选择主营国家" style="width: 100%;">
+                                <el-option label="美国" value="美国"></el-option>
+                                <el-option label="英国" value="英国"></el-option>
+                                <el-option label="德国" value="德国"></el-option>
+                                <el-option label="法国" value="法国"></el-option>
+                                <el-option label="加拿大" value="加拿大"></el-option>
+                                <el-option label="日本" value="日本"></el-option>
+                                <el-option label="澳大利亚" value="澳大利亚"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-common-channels" class="a11y-form-label is-required">客户常发渠道</label>
+                            <el-input id="open-common-channels" v-model="openAccountForm.commonChannels"></el-input>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-shipping-volume" class="a11y-form-label is-required">发货量</label>
+                            <el-input id="open-shipping-volume" v-model="openAccountForm.shippingVolume"></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-shipping-products" class="a11y-form-label is-required">发货产品</label>
+                            <el-input id="open-shipping-products" v-model="openAccountForm.shippingProducts"></el-input>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-price-sensitivity" class="a11y-form-label is-required">价格敏感度</label>
+                            <el-select id="open-price-sensitivity" v-model="openAccountForm.priceSensitivity" placeholder="请选择" style="width: 100%;">
+                                <el-option label="高" value="高"></el-option>
+                                <el-option label="中" value="中"></el-option>
+                                <el-option label="低" value="低"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-current-logistics" class="a11y-form-label is-required">目前客户合作物流商</label>
+                            <el-input id="open-current-logistics" v-model="openAccountForm.currentLogistics"></el-input>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-has-visited" class="a11y-form-label is-required">是否有上门拜访面聊过</label>
+                            <el-select id="open-has-visited" v-model="openAccountForm.hasVisited" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="open-acquaintance-method" class="a11y-form-label is-required">客户结识方式</label>
+                            <el-select id="open-acquaintance-method" v-model="openAccountForm.acquaintanceMethod" placeholder="请选择" style="width: 100%;">
+                                <el-option label="探迹" value="探迹"></el-option>
+                                <el-option label="转介绍" value="转介绍"></el-option>
+                                <el-option label="展会" value="展会"></el-option>
+                                <el-option label="电销" value="电销"></el-option>
+                                <el-option label="公众号推广" value="公众号推广"></el-option>
+                                <el-option label="陌拜" value="陌拜"></el-option>
+                                <el-option label="老板拉群" value="老板拉群"></el-option>
+                                <el-option label="活动" value="活动"></el-option>
+                                <el-option label="其他" value="其他"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <div class="a11y-form-group">
+                    <label for="open-remark" class="a11y-form-label">备注</label>
+                    <el-input id="open-remark" type="textarea" v-model="openAccountForm.remark" :rows="3"></el-input>
+                </div>
+            </el-form>
+
+            <div class="section-title" style="margin-top: 24px;">附件</div>
+            <div style="padding-left: 180px;">
+                <el-upload action="#" :auto-upload="false" multiple :limit="10">
+                    <el-button size="small"><el-icon><Upload /></el-icon> 上传文件</el-button>
+                    <template #tip>
+                        <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                            限制上传10个文件，最大附件2MB/个
+                        </div>
+                    </template>
+                </el-upload>
+                <div class="file-list">
+                    <div class="file-item">
+                        <el-icon class="file-item-icon" style="color: #F56C6C;"><Document /></el-icon>
+                        <span class="file-item-name">客户档案表.pdf</span>
+                        <div class="file-item-actions">
+                            <el-icon><View /></el-icon>
+                            <el-icon><Download /></el-icon>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <el-icon class="file-item-icon" style="color: #F56C6C;"><Document /></el-icon>
+                        <span class="file-item-name">天眼查风险信息.pdf</span>
+                        <div class="file-item-actions">
+                            <el-icon><View /></el-icon>
+                            <el-icon><Download /></el-icon>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <el-icon class="file-item-icon" style="color: #E6A23C;"><Picture /></el-icon>
+                        <span class="file-item-name">营业执照.jpg</span>
+                        <div class="file-item-actions">
+                            <el-icon><View /></el-icon>
+                            <el-icon><Download /></el-icon>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <el-icon class="file-item-icon" style="color: #E6A23C;"><Picture /></el-icon>
+                        <span class="file-item-name">身份证正面.jpg</span>
+                        <div class="file-item-actions">
+                            <el-icon><View /></el-icon>
+                            <el-icon><Download /></el-icon>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <el-icon class="file-item-icon" style="color: #E6A23C;"><Picture /></el-icon>
+                        <span class="file-item-name">身份证反面.jpg</span>
+                        <div class="file-item-actions">
+                            <el-icon><View /></el-icon>
+                            <el-icon><Download /></el-icon>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <el-icon class="file-item-icon" style="color: #F56C6C;"><Document /></el-icon>
+                        <span class="file-item-name">飞点服务合同协议.pdf</span>
+                        <div class="file-item-actions">
+                            <el-icon><View /></el-icon>
+                            <el-icon><Download /></el-icon>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template #footer>
+                <span class="dialog-footer">
+                    <template v-if="openAccountDialogMode === 'edit'">
+                        <el-button @click="openAccountDialogVisible = false">取消</el-button>
+                        <el-button type="primary" @click="submitOpenAccount">提交</el-button>
+                    </template>
+                    <template v-else-if="openAccountDialogMode === 'audit'">
+                        <el-button type="danger" @click="auditOpenAccount(false)">拒绝</el-button>
+                        <el-button type="primary" @click="auditOpenAccount(true)">通过</el-button>
+                    </template>
+                    <template v-else-if="openAccountDialogMode === 'view'">
+                        <el-button @click="openAccountDialogVisible = false">关闭</el-button>
+                    </template>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 合同签约弹窗 -->
+        <el-dialog v-model="signDialogVisible" title="合同签约" width="550px" destroy-on-close>
+            <el-form :model="signForm" @submit.prevent>
+                <div class="a11y-form-group">
+                    <label for="sign-is-simple" class="a11y-form-label is-required">是否简易合同</label>
+                    <el-select id="sign-is-simple" v-model="signForm.isSimple" placeholder="请选择" style="width: 100%;">
+                        <el-option label="是" value="是"></el-option>
+                        <el-option label="否" value="否"></el-option>
+                    </el-select>
+                </div>
+                
+                <div class="a11y-form-group">
+                    <label for="sign-is-standard" class="a11y-form-label is-required">是否标准合同</label>
+                    <el-select id="sign-is-standard" v-model="signForm.isStandard" placeholder="请选择" style="width: 100%;">
+                        <el-option label="是" value="是"></el-option>
+                        <el-option label="否" value="否"></el-option>
+                    </el-select>
+                </div>
+
+                <div class="a11y-form-group">
+                    <label for="sign-company-title" class="a11y-form-label is-required">我司合同抬头</label>
+                    <el-select id="sign-company-title" v-model="signForm.companyTitle" placeholder="请选择" style="width: 100%;">
+                        <el-option label="广东省飞点跨境供应链有限公司" value="广东省飞点跨境供应链有限公司"></el-option>
+                    </el-select>
+                </div>
+
+                <!-- 非简易合同 && 标准合同 -->
+                <template v-if="signForm.isSimple === '否' && signForm.isStandard === '是'">
+                    <div class="a11y-form-group">
+                        <label for="sign-payment-term" class="a11y-form-label is-required">账期</label>
+                        <el-select id="sign-payment-term" v-model="signForm.paymentTerm" placeholder="请选择" style="width: 100%;">
+                            <el-option label="月结" value="月结"></el-option>
+                            <el-option label="周结" value="周结"></el-option>
+                        </el-select>
+                    </div>
+                    
+                    <div class="a11y-form-group">
+                        <label for="sign-contract-years" class="a11y-form-label is-required">合同有效期限</label>
+                        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                            <el-select id="sign-contract-years" v-model="signForm.contractYears" placeholder="请选择" style="flex: 1;">
+                                <el-option label="1" value="1"></el-option>
+                                <el-option label="2" value="2"></el-option>
+                                <el-option label="3" value="3"></el-option>
+                            </el-select>
+                            <span>年</span>
+                        </div>
+                    </div>
+
+                    <div class="a11y-form-group">
+                        <label for="sign-start-date" class="a11y-form-label">合同开始日期</label>
+                        <el-date-picker id="sign-start-date" v-model="signForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                    </div>
+                    
+                    <div class="a11y-form-group">
+                        <label for="sign-end-date" class="a11y-form-label">合同结束日期</label>
+                        <el-date-picker id="sign-end-date" v-model="signForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                    </div>
+                </template>
+
+                <!-- 非简易合同 && 非标准合同 -->
+                <template v-else-if="signForm.isSimple === '否' && signForm.isStandard === '否'">
+                    <div class="a11y-form-group">
+                        <label for="sign-modify-content" class="a11y-form-label is-required">合同修改内容</label>
+                        <el-input 
+                            id="sign-modify-content"
+                            type="textarea" 
+                            v-model="signForm.modifyContent" 
+                            :rows="4" 
+                            placeholder="写明修改内容（如账期、赔付等）+单箱货值是多少&#10;+若单箱超过3K/箱，保险如何承担等">
+                        </el-input>
+                    </div>
+                    
+                    <div class="a11y-form-group">
+                        <label class="a11y-form-label">附件</label>
+                        <div style="width: 100%; padding-left: 20px;">
+                            <el-upload
+                                class="upload-demo"
+                                action="#"
+                                :limit="1"
+                                :auto-upload="false"
+                            >
+                                <el-button size="small"><el-icon><Upload /></el-icon> 上传文件</el-button>
+                                <template #tip>
+                                    <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                                        限制上传1个文件，最大附件2MB/个
+                                    </div>
+                                </template>
+                            </el-upload>
+                            
+                            <div style="margin-top: 16px; display: flex; align-items: center; background: #F5F7FA; padding: 8px 12px; border-radius: 4px; border: 1px solid #E4E7ED;">
+                                <el-icon style="color: #F56C6C; margin-right: 8px; font-size: 16px;"><Document /></el-icon>
+                                <span style="flex: 1; font-size: 14px; color: #606266;">客户档案表.pdf</span>
+                                <div style="display: flex; gap: 12px; color: #909399; cursor: pointer;">
+                                    <el-icon><View /></el-icon>
+                                    <el-icon><Download /></el-icon>
+                                    <el-icon><Delete /></el-icon>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- 简易合同 && 标准合同 -->
+                <template v-else-if="signForm.isSimple === '是' && signForm.isStandard === '是'">
+                    <div class="a11y-form-group">
+                        <label for="sign-payment-term-2" class="a11y-form-label is-required">账期</label>
+                        <el-select id="sign-payment-term-2" v-model="signForm.paymentTerm" placeholder="请选择" style="width: 100%;">
+                            <el-option label="月结" value="月结"></el-option>
+                            <el-option label="周结" value="周结"></el-option>
+                        </el-select>
+                    </div>
+                    
+                    <div class="a11y-form-group">
+                        <label for="sign-contract-years-2" class="a11y-form-label is-required">合同有效期限</label>
+                        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                            <el-select id="sign-contract-years-2" v-model="signForm.contractYears" placeholder="请选择" style="flex: 1;">
+                                <el-option label="1" value="1"></el-option>
+                                <el-option label="2" value="2"></el-option>
+                                <el-option label="3" value="3"></el-option>
+                            </el-select>
+                            <span>年</span>
+                        </div>
+                    </div>
+
+                    <div class="a11y-form-group">
+                        <label for="sign-date" class="a11y-form-label is-required">签订日期</label>
+                        <el-date-picker id="sign-date" v-model="signForm.signDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                    </div>
+                </template>
+
+                <!-- 简易合同 && 非标准合同 -->
+                <template v-else-if="signForm.isSimple === '是' && signForm.isStandard === '否'">
+                    <div class="a11y-form-group">
+                        <label for="sign-contract-years-3" class="a11y-form-label is-required">合同有效期限</label>
+                        <div style="display: flex; align-items: center; gap: 8px; width: 100%;">
+                            <el-select id="sign-contract-years-3" v-model="signForm.contractYears" placeholder="请选择" style="flex: 1;">
+                                <el-option label="1" value="1"></el-option>
+                                <el-option label="2" value="2"></el-option>
+                                <el-option label="3" value="3"></el-option>
+                            </el-select>
+                            <span>年</span>
+                        </div>
+                    </div>
+
+                    <div class="a11y-form-group">
+                        <label for="sign-date-2" class="a11y-form-label is-required">签订日期</label>
+                        <el-date-picker id="sign-date-2" v-model="signForm.signDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                    </div>
+
+                    <div class="a11y-form-group">
+                        <label for="sign-modify-content-2" class="a11y-form-label is-required">合同修改内容</label>
+                        <el-input 
+                            id="sign-modify-content-2"
+                            type="textarea" 
+                            v-model="signForm.modifyContent" 
+                            :rows="4" 
+                            placeholder="写明修改内容（如账期、赔付等）+单箱货值是多少&#10;+若单箱超过3K/箱，保险如何承担等">
+                        </el-input>
+                    </div>
+                    
+                    <div class="a11y-form-group">
+                        <label class="a11y-form-label">附件</label>
+                        <div style="width: 100%; padding-left: 20px;">
+                            <el-upload
+                                class="upload-demo"
+                                action="#"
+                                :limit="1"
+                                :auto-upload="false"
+                            >
+                                <el-button size="small"><el-icon><Upload /></el-icon> 上传文件</el-button>
+                                <template #tip>
+                                    <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                                        限制上传1个文件，最大附件2MB/个
+                                    </div>
+                                </template>
+                            </el-upload>
+                            
+                            <div style="margin-top: 16px; display: flex; align-items: center; background: #F5F7FA; padding: 8px 12px; border-radius: 4px; border: 1px solid #E4E7ED;">
+                                <el-icon style="color: #F56C6C; margin-right: 8px; font-size: 16px;"><Document /></el-icon>
+                                <span style="flex: 1; font-size: 14px; color: #606266;">客户档案表.pdf</span>
+                                <div style="display: flex; gap: 12px; color: #909399; cursor: pointer;">
+                                    <el-icon><View /></el-icon>
+                                    <el-icon><Download /></el-icon>
+                                    <el-icon><Delete /></el-icon>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button type="primary" @click="confirmSign">确 定</el-button>
+                    <el-button @click="signDialogVisible = false">取 消</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 合同签约弹窗 (针对中国香港特殊客户) -->
+        <el-dialog v-model="hkSignDialogVisible" title="合同签约" width="550px" destroy-on-close>
+            <el-form :model="hkSignForm" :rules="hkSignRules" ref="hkSignFormRef" label-position="top">
+                <el-row :gutter="24">
+                    <el-col :span="12">
+                        <el-form-item label="合同开始日期" prop="startDate">
+                            <el-date-picker v-model="hkSignForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="合同结束日期" prop="endDate">
+                            <el-date-picker v-model="hkSignForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="服务合同协议" prop="files">
+                    <el-upload
+                        class="upload-demo"
+                        action="#"
+                        :limit="1"
+                        :auto-upload="false"
+                        :on-change="handleHkFileChange"
+                        :on-remove="handleHkFileRemove"
+                    >
+                        <el-button type="primary" size="small"><el-icon><Upload /></el-icon> 点击上传</el-button>
+                        <template #tip>
+                            <div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">
+                                只能上传 pdf/jpg/png 文件
+                            </div>
+                        </template>
+                    </el-upload>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="hkSignDialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="confirmHkSign">保 存</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('正常');
+                const searchForm = reactive({ customerName: '' });
+                
+                const allData = ref([
+                    // 待签约
+                    { customerName: '待签科技A', customerAccount: 'sign-01', customerStatus: '待签约', contractStatus: '未签约', registerTime: '2026/3/10 09:30:00' },
+                    { customerName: '待签科技B', customerAccount: 'sign-02', customerStatus: '待签约', contractStatus: '签约中', registerTime: '2026/3/11 09:30:00' },
+                    { customerName: '香港演示实业-中国香港', customerAccount: 'hk-sign-01', customerStatus: '待签约', contractStatus: '未签约', registerTime: '2026/3/12 10:00:00' },
+
+                    // 待开户 (合同状态：已签约)
+                    { customerName: '测试科技-已签A', customerAccount: 'acc-01', customerStatus: '待开户', contractStatus: '已签约', registerTime: '2026/3/10 09:30:00' },
+                    { customerName: '测试科技-已签B', customerAccount: 'acc-02', customerStatus: '待开户', contractStatus: '已签约', registerTime: '2026/3/11 09:30:00' },
+
+                    // 待审核
+                    { customerName: '审核客户A', customerAccount: 'audit-01', customerStatus: '待审核', contractStatus: '已签约', registerTime: '2026/3/15 10:00:00' },
+                    { customerName: '审核客户B', customerAccount: 'audit-02', customerStatus: '待审核', contractStatus: '已签约', registerTime: '2026/3/16 11:00:00' },
+
+                    // 已拒绝
+                    { customerName: '拒绝客户A', customerAccount: 'reject-01', customerStatus: '已拒绝', contractStatus: '已签约', registerTime: '2026/3/17 14:00:00' },
+                    { customerName: '拒绝客户B', customerAccount: 'reject-02', customerStatus: '已拒绝', contractStatus: '已签约', registerTime: '2026/3/18 15:00:00' },
+
+                    // 正常 (合同状态：已签约、已过期、未签约)
+                    { customerName: '深圳市大卖科技有限公司', customerAccount: 'K10001_admin', customerStatus: '正常', contractStatus: '已签约', registerTime: '2023/02/15 10:00:00', contractStartDate: '2023-02-15', contractEndDate: '2027-02-14' },
+                    { customerName: '义乌市星光进出口有限公司', customerAccount: 'K10004_admin', customerStatus: '正常', contractStatus: '签约中', registerTime: '2024/01/10 11:20:00', contractStartDate: '-', contractEndDate: '-' },
+                    { customerName: '北京跨境易达电商服务有限公司', customerAccount: 'K10005_admin', customerStatus: '正常', contractStatus: '已过期', registerTime: '2022/11/11 10:00:00', contractStartDate: '2022-11-11', contractEndDate: '2023-11-10' },
+
+                    // 已冻结
+                    { customerName: '广州小卖贸易有限责任公司', customerAccount: 'K10002_admin', customerStatus: '已冻结', contractStatus: '未签约', registerTime: '2023/05/20 14:30:00' },
+                    { customerName: '杭州中卖物流有限公司', customerAccount: 'K10003_admin', customerStatus: '已冻结', contractStatus: '未签约', registerTime: '2023/08/10 09:00:00' }
+                ]);
+
+                const syncStatusToLocal = () => {
+                    const statusMap = JSON.parse(localStorage.getItem('globalCustomerStatus') || '{}');
+                    
+                    // 为了演示，如果香港案例的状态不是“待签约”，则强制重置它
+                    if (statusMap['香港演示实业-中国香港'] && statusMap['香港演示实业-中国香港'] !== '待签约') {
+                        statusMap['香港演示实业-中国香港'] = '待签约';
+                    }
+
+                    // 动态更新已过期状态
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    allData.value.forEach(item => {
+                        // 动态判断合同是否过期
+                        if (item.contractEndDate && item.contractEndDate !== '-') {
+                            const endDate = new Date(item.contractEndDate);
+                            if (today > endDate) {
+                                item.contractStatus = '已过期';
+                            }
+                        }
+
+                        // 只同步 正常/已冻结 的客户，或者是处于非初始状态的数据
+                        if (['正常', '已冻结'].includes(item.customerStatus) || statusMap[item.customerName]) {
+                            if (statusMap[item.customerName]) {
+                                item.customerStatus = statusMap[item.customerName];
+                                // 如果重置回待签约，也同步把合同状态重置回未签约
+                                if (item.customerName === '香港演示实业-中国香港' && item.customerStatus === '待签约') {
+                                    item.contractStatus = '未签约';
+                                }
+                            } else {
+                                statusMap[item.customerName] = item.customerStatus;
+                            }
+                        }
+                    });
+                    localStorage.setItem('globalCustomerStatus', JSON.stringify(statusMap));
+                };
+                syncStatusToLocal();
+
+                const tableData = computed(() => {
+                    return allData.value.filter(item => item.customerStatus === activeTab.value);
+                });
+
+                const total = computed(() => tableData.value.length);
+
+                // 辅助判断是否已过期的方法
+                const isExpired = (endDateStr) => {
+                    if (!endDateStr || endDateStr === '-') return false;
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const endDate = new Date(endDateStr);
+                    return today > endDate;
+                };
+
+                const handleTabClick = () => { /* 切换通过 computed 自动完成 */ };
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => { searchForm.customerName = ''; };
+                
+                const dialogVisible = ref(false);
+                const addFormRef = ref(null);
+                const addForm = reactive({
+                    userType: 'customer',
+                    userName: '',
+                    email: '',
+                    businessTypes: []
+                });
+                const addRules = {
+                    userType: [{ required: true, message: '请选择用户类型', trigger: 'change' }],
+                    userName: [{ required: true, message: '请选择用户名称', trigger: 'change' }],
+                    email: [
+                        { required: true, message: '请输入账号接收邮箱', trigger: 'blur' },
+                        { type: 'email', message: '请输入正确的邮箱格式', trigger: ['blur', 'change'] }
+                    ],
+                    businessTypes: [{ required: true, message: '请选择开通业务', trigger: 'change', type: 'array' }]
+                };
+
+                const editDialogVisible = ref(false);
+                const editFormRef = ref(null);
+                const editForm = reactive({
+                    userName: '',
+                    account: '',
+                    businessTypes: []
+                });
+                const editRules = {
+                    businessTypes: [{ required: true, message: '请选择开通业务', trigger: 'change', type: 'array' }]
+                };
+
+                // 模拟客户数据映射表（包含标记为系统账号接收人的邮箱和开通业务）
+                const customerMap = {
+                    'K10001': { name: '深圳市大卖科技有限公司', defaultEmail: 'liyl@example.com', businessTypes: ['TMS', 'WMS'] }, // 李运来
+                    'K10002': { name: '广州小卖贸易有限责任公司', defaultEmail: 'xiaomai@example.com', businessTypes: ['TMS'] },
+                    'K10003': { name: '杭州中卖物流有限公司', defaultEmail: 'zhongmai@example.com', businessTypes: ['WMS'] }
+                };
+
+                const handleUserNameChange = (val) => {
+                    if (customerMap[val]) {
+                        addForm.email = customerMap[val].defaultEmail;
+                        addForm.businessTypes = customerMap[val].businessTypes;
+                        // 触发一次表单校验，消除因为程序赋值而产生的未输入错误提示
+                        if (addFormRef.value) {
+                            addFormRef.value.validateField('email');
+                            addFormRef.value.validateField('businessTypes');
+                        }
+                    } else {
+                        addForm.email = '';
+                        addForm.businessTypes = [];
+                    }
+                };
+
+                const handleAdd = () => { 
+                    dialogVisible.value = true;
+                    // 打开弹窗时清空表单，而不是默认带出
+                    addForm.userName = '';
+                    addForm.email = '';
+                    addForm.businessTypes = [];
+                    if (addFormRef.value) {
+                        // 使用 nextTick 确保弹窗 DOM 渲染完成后再清除验证状态
+                        Vue.nextTick(() => {
+                            addFormRef.value.clearValidate();
+                        });
+                    }
+                };
+
+                const submitAdd = (formEl) => {
+                    if (!formEl) return;
+                    formEl.validate((valid) => {
+                        if (valid) {
+                            ElMessage.success('账号开通成功');
+                            dialogVisible.value = false;
+                        }
+                    });
+                };
+
+                const submitEdit = (formEl) => {
+                    if (!formEl) return;
+                    formEl.validate((valid) => {
+                        if (valid) {
+                            ElMessage.success('账号编辑成功');
+                            editDialogVisible.value = false;
+                        }
+                    });
+                };
+
+                const handleEdit = (row) => { 
+                    // 跳转到编辑客户界面，并带上当前客户名称
+                    const targetUrl = `客户管理.html?action=edit&customerName=${encodeURIComponent(row.customerName)}`;
+                    
+                    // 通知外层框架进行页面跳转
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'navigate', url: targetUrl }, '*');
+                    } else {
+                        window.location.href = targetUrl;
+                    }
+                };
+                
+                const handleAudit = (row) => { 
+                    handleOpenAccount(row, true, 'audit');
+                };
+                
+                const handleDelete = (row) => {
+                    ElMessageBox.confirm(`确认要删除客户 [${row.customerName}] 吗？`, '提示', { type: 'warning' }).then(() => {
+                        ElMessage.success('删除成功');
+                    }).catch(() => {});
+                };
+
+                const toggleStatus = (row) => { 
+                    const isFrozen = row.customerStatus === '已冻结';
+                    const action = isFrozen ? '启用' : '冻结';
+                    const confirmMsg = isFrozen ? `确定要启用【${row.customerName}】关联的【${row.customerAccount}】吗？` : `确定要冻结 [${row.customerName}] 关联的 [${row.customerAccount}] 吗？`;
+                    
+                    ElMessageBox.confirm(confirmMsg, '提示', { type: 'warning' }).then(() => {
+                        row.customerStatus = isFrozen ? '正常' : '已冻结';
+                        const statusMap = JSON.parse(localStorage.getItem('globalCustomerStatus') || '{}');
+                        statusMap[row.customerName] = row.customerStatus;
+                        localStorage.setItem('globalCustomerStatus', JSON.stringify(statusMap));
+                        ElMessage.success(`客户及关联账户已${action}`);
+                    }).catch(() => {});
+                };
+
+                // 开户申请相关
+                const openAccountDialogVisible = ref(false);
+                const openAccountDialogMode = ref('edit'); // edit: 开户申请, audit: 审核, view: 查看
+                const currentOpenAccountRow = ref(null); // 增加用于流转状态的引用
+                const openAccountDialogTitle = computed(() => {
+                    if (openAccountDialogMode.value === 'audit') return '开户审核';
+                    if (openAccountDialogMode.value === 'view') return '查看开户申请';
+                    return '开户申请';
+                });
+                const openAccountForm = reactive({
+                    companyName: '测试公司名称',
+                    isPeer: '',
+                    businessTypes: [],
+                    companyScale: '',
+                    companyType: '初创企业',
+                    csRepresentative: '张客服',
+                    salesSource: '',
+                    mainCountries: [],
+                    commonChannels: '',
+                    shippingVolume: '',
+                    shippingProducts: '',
+                    priceSensitivity: '高',
+                    currentLogistics: '',
+                    hasVisited: '是',
+                    acquaintanceMethod: '探迹',
+                    remark: ''
+                });
+
+                const handleOpenAccount = (row, isRetry = false, mode = 'edit') => {
+                    openAccountDialogMode.value = mode;
+                    currentOpenAccountRow.value = row; // 保存当前操作行
+                    if (isRetry) {
+                        // 模拟带出首次填写的开户申请内容
+                        openAccountForm.companyName = row.customerName || '测试公司名称';
+                        openAccountForm.isPeer = '否';
+                        openAccountForm.businessTypes = ['TMS'];
+                        openAccountForm.companyScale = '注册资本：1000万人民币；社保参保人数：50人。';
+                        openAccountForm.companyType = '注册资金大于等于10万';
+                        openAccountForm.csRepresentative = '张客服';
+                        openAccountForm.salesSource = '官网留资';
+                        openAccountForm.mainCountries = ['美国', '英国'];
+                        openAccountForm.commonChannels = '空运, 海运';
+                        openAccountForm.shippingVolume = '500kg/月';
+                        openAccountForm.shippingProducts = '普货, 带电';
+                        openAccountForm.priceSensitivity = '中';
+                        openAccountForm.currentLogistics = '递四方';
+                        openAccountForm.hasVisited = '否';
+                        openAccountForm.acquaintanceMethod = '展会';
+                        openAccountForm.remark = '之前因资料不全被拒，现已补充。';
+                    } else {
+                        // 默认空状态
+                        openAccountForm.companyName = row.customerName || '测试公司名称';
+                        openAccountForm.isPeer = '';
+                        openAccountForm.businessTypes = [];
+                        openAccountForm.companyScale = '';
+                        openAccountForm.companyType = '初创企业';
+                        openAccountForm.csRepresentative = '张客服';
+                        openAccountForm.salesSource = '';
+                        openAccountForm.mainCountries = [];
+                        openAccountForm.commonChannels = '';
+                        openAccountForm.shippingVolume = '';
+                        openAccountForm.shippingProducts = '';
+                        openAccountForm.priceSensitivity = '高';
+                        openAccountForm.currentLogistics = '';
+                        openAccountForm.hasVisited = '是';
+                        openAccountForm.acquaintanceMethod = '探迹';
+                        openAccountForm.remark = '';
+                    }
+                    openAccountDialogVisible.value = true;
+                };
+
+                const submitOpenAccount = () => {
+                    if (!openAccountForm.isPeer) {
+                        ElMessage.warning('请选择是否同行');
+                        return;
+                    }
+                    if (!openAccountForm.businessTypes || openAccountForm.businessTypes.length === 0) {
+                        ElMessage.warning('请选择开通业务');
+                        return;
+                    }
+                    if (!openAccountForm.mainCountries || openAccountForm.mainCountries.length === 0) {
+                        ElMessage.warning('请选择主营国家');
+                        return;
+                    }
+                    if (currentOpenAccountRow.value) {
+                        currentOpenAccountRow.value.customerStatus = '待审核';
+                    }
+                    ElMessage.success('开户申请已提交，等待审核');
+                    openAccountDialogVisible.value = false;
+                };
+
+                const auditOpenAccount = (isPass) => {
+                    if (currentOpenAccountRow.value) {
+                        if (isPass) {
+                            currentOpenAccountRow.value.customerStatus = '正常';
+                            // 模拟补充正常的必备字段
+                            if (!currentOpenAccountRow.value.contractStartDate) {
+                                currentOpenAccountRow.value.contractStartDate = '2026-05-20';
+                                currentOpenAccountRow.value.contractEndDate = '2027-05-19';
+                            }
+                            ElMessage.success('审核已通过，账户已转为正常状态');
+                        } else {
+                            currentOpenAccountRow.value.customerStatus = '已拒绝';
+                            ElMessage.warning('审核已拒绝');
+                        }
+                    }
+                    openAccountDialogVisible.value = false;
+                };
+
+                // 签约相关
+                const signDialogVisible = ref(false);
+                const currentSignRow = ref(null);
+                const signForm = reactive({
+                    isSimple: '否',
+                    isStandard: '是',
+                    companyTitle: '广东省飞点跨境供应链有限公司',
+                    paymentTerm: '月结',
+                    contractYears: '1',
+                    startDate: '',
+                    endDate: '',
+                    signDate: '',
+                    modifyContent: ''
+                });
+
+                const handleSign = (row) => {
+                    currentSignRow.value = row;
+                    if (row.customerName && row.customerName.includes('-中国香港')) {
+                        // 重置 HK 表单状态
+                        hkSignForm.startDate = '';
+                        hkSignForm.endDate = '';
+                        hkSignForm.files = [];
+                        hkSignDialogVisible.value = true;
+                        if (hkSignFormRef.value) {
+                            Vue.nextTick(() => {
+                                hkSignFormRef.value.clearValidate();
+                            });
+                        }
+                    } else {
+                        // 重置普通表单状态
+                        signForm.isSimple = '否';
+                        signForm.isStandard = '是';
+                        signForm.companyTitle = '广东省飞点跨境供应链有限公司';
+                        signForm.paymentTerm = '月结';
+                        signForm.contractYears = '1';
+                        signForm.startDate = '';
+                        signForm.endDate = '';
+                        signForm.signDate = '';
+                        signForm.modifyContent = '';
+                        signDialogVisible.value = true;
+                    }
+                };
+
+                const confirmSign = () => {
+                    // 表单简单校验
+                    if (signForm.isSimple === '是' && !signForm.signDate) {
+                        ElMessage.error('请选择签订日期');
+                        return;
+                    }
+                    
+                    if (currentSignRow.value) {
+                        currentSignRow.value.contractStatus = '已签约';
+                        if (currentSignRow.value.customerStatus === '待签约') {
+                            currentSignRow.value.customerStatus = '待开户';
+                        }
+                    }
+                    signDialogVisible.value = false;
+                    ElMessage.success('合同签约成功，已流转至待开户！');
+                };
+
+                // HK 签约弹窗相关状态
+                const hkSignDialogVisible = ref(false);
+                const hkSignFormRef = ref(null);
+                const hkSignForm = reactive({
+                    startDate: '',
+                    endDate: '',
+                    files: []
+                });
+                const validateHkEndDate = (rule, value, callback) => {
+                    if (!value) {
+                        callback(new Error('必填'));
+                    } else if (hkSignForm.startDate && new Date(value) < new Date(hkSignForm.startDate)) {
+                        callback(new Error('合同结束日期不可早于开始日期'));
+                    } else {
+                        callback();
+                    }
+                };
+                const hkSignRules = reactive({
+                    startDate: [{ required: true, message: '必填', trigger: 'change' }],
+                    endDate: [{ required: true, validator: validateHkEndDate, trigger: 'change' }],
+                    files: [{ required: true, type: 'array', min: 1, message: '必须上传服务合同协议', trigger: 'change' }]
+                });
+
+                const handleHkFileChange = (file, fileList) => {
+                    hkSignForm.files = fileList;
+                    if (hkSignFormRef.value) {
+                        hkSignFormRef.value.validateField('files');
+                    }
+                };
+                const handleHkFileRemove = (file, fileList) => {
+                    hkSignForm.files = fileList;
+                };
+
+                const confirmHkSign = () => {
+                    if (!hkSignFormRef.value) return;
+                    hkSignFormRef.value.validate((valid) => {
+                        if (valid) {
+                            if (currentSignRow.value) {
+                                currentSignRow.value.contractStatus = '已签约';
+                                if (currentSignRow.value.customerStatus === '待签约') {
+                                    currentSignRow.value.customerStatus = '待开户';
+                                }
+                            }
+                            hkSignDialogVisible.value = false;
+                            ElMessage.success('合同签约成功，已流转至待开户！');
+                        }
+                    });
+                };
+
+                return { 
+                    activeTab, searchForm, tableData, total, 
+                    handleTabClick, handleSearch, resetSearch, handleAdd, handleEdit, toggleStatus,
+                    handleAudit, handleDelete, isExpired,
+                    dialogVisible, addFormRef, addForm, addRules, submitAdd, handleUserNameChange,
+                    editDialogVisible, editFormRef, editForm, editRules, submitEdit,
+                    openAccountDialogVisible, openAccountDialogMode, openAccountDialogTitle, openAccountForm, handleOpenAccount, submitOpenAccount, auditOpenAccount,
+                    signDialogVisible, signForm, handleSign, confirmSign,
+                    hkSignDialogVisible, hkSignForm, hkSignRules, hkSignFormRef, handleHkFileChange, handleHkFileRemove, confirmHkSign
+                };
+            }
+        });
+        
+        // 注册所有 Element Plus 图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

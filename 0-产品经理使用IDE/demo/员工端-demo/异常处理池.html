@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>异常处理池 - TMS 物流管理系统</title>
+  <!-- 引入 Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- 引入 Element Plus 样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+  <!-- 引入 Element Plus 组件库 -->
+  <script src="https://unpkg.com/element-plus"></script>
+  <!-- 引入 Element Plus 图标 -->
+  <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+  <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f0f2f5;
+      font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    }
+    #app {
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+    .layout-aside {
+      width: 220px;
+      background-color: #fff;
+      border-right: 1px solid #dcdfe6;
+      height: 100%;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.02);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+    }
+    .layout-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 20px;
+    }
+    
+    /* 顶部标题区 */
+    .page-header {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .page-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #303133;
+      margin: 0;
+    }
+    
+    /* 内容区滚动 */
+    .content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    /* 模块卡片样式 */
+    .section-card {
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: none;
+      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    }
+    .section-card .el-card__header {
+      padding: 15px 20px;
+      background-color: #fff;
+      border-bottom: 1px solid #ebeef5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #303133;
+      display: flex;
+      align-items: center;
+    }
+    .card-title .el-icon {
+      margin-right: 8px;
+      color: #F56C6C; /* 异常警示色 */
+      font-size: 18px;
+    }
+    .card-title-desc {
+      font-size: 12px;
+      color: #909399;
+      font-weight: normal;
+      margin-left: 12px;
+    }
+    .section-card .el-card__body {
+      padding: 20px;
+    }
+    
+    /* 表格高亮标黄样式 (对应原型截图) */
+    .highlight-bg {
+      background-color: #fdf6ec !important; /* 浅黄色背景 */
+      color: #E6A23C;
+      font-weight: bold;
+    }
+    
+    /* 自定义 Tabs 样式 */
+    .custom-tabs .el-tabs__header {
+      margin-bottom: 0;
+    }
+    .custom-tabs .el-tabs__nav-wrap::after {
+      height: 1px;
+    }
+    .custom-tabs .el-tabs__item {
+      font-size: 15px;
+      padding: 0 24px;
+      height: 50px;
+      line-height: 50px;
+    }
+    .custom-tabs .el-tabs__item.is-active {
+      font-weight: bold;
+    }
+    .tab-desc {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background-color: #f8f9fb;
+      color: #606266;
+      font-size: 13px;
+      border-bottom: 1px solid #ebeef5;
+    }
+    .tab-desc .el-icon {
+      font-size: 16px;
+      margin-right: 8px;
+      color: #F56C6C;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 右侧内容区 -->
+    <div class="layout-main">
+      <div class="page-header">
+        <h2 class="page-title">异常处理池</h2>
+        <div>
+          <el-button type="primary" plain @click="refreshAll"><el-icon><Refresh /></el-icon> 一键刷新</el-button>
+        </div>
+      </div>
+      
+      <div class="content-scroll">
+        <el-card class="section-card" style="height: 100%; display: flex; flex-direction: column;">
+          <el-tabs v-model="activeTab" class="custom-tabs" @tab-click="handleTabClick">
+            <!-- 1. 预计送仓时间block -->
+            <el-tab-pane name="tab1">
+              <template #label>
+                <div style="display: flex; align-items: center;">
+                  <span>预计送仓时间block</span>
+                  <el-badge :value="tableData1.length" class="item" type="danger" style="margin-left: 8px;"></el-badge>
+                </div>
+              </template>
+              <div class="tab-desc">
+                <el-icon><CircleCloseFilled /></el-icon>
+                <span>业务手工更新预计送仓时间段后，该数据需要在该待处理池移除。</span>
+              </div>
+              <el-table :data="tableData1" border stripe style="width: 100%" height="calc(100vh - 250px)" :header-cell-style="{ background: '#f5f7fa', color: '#606266' }">
+                <el-table-column prop="waybillNo" label="运单号" width="120" fixed="left"></el-table-column>
+                <el-table-column prop="channel" label="渠道" width="120"></el-table-column>
+                <el-table-column prop="warehouseCode" label="仓库代码" width="100"></el-table-column>
+                <el-table-column prop="fbaNo" label="FBA号" width="120"></el-table-column>
+                <el-table-column prop="blNo" label="提单号" width="140"></el-table-column>
+                <el-table-column prop="user" label="用户" width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="sailTime" label="开船时间" width="120"></el-table-column>
+                <el-table-column prop="amazonEstTime" label="亚马逊当前预计送仓时间" width="200"></el-table-column>
+                <el-table-column prop="feishuActualTime" label="飞书表格实际送仓时间" width="180"></el-table-column>
+                <el-table-column prop="estBlockRange" label="预计送仓被block时间段" width="220" align="center">
+                  <template #default="scope">
+                    <span style="color: #F56C6C; font-weight: bold;">{{ scope.row.estBlockRange }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="errorLog" label="错误日志" min-width="150" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="createTime" label="创建时间" width="120" align="center"></el-table-column>
+                <el-table-column label="操作" width="160" fixed="right" align="center">
+                  <template #default="scope">
+                    <el-button type="primary" link @click="openUpdateDialog(scope.row, 'est_block', 1)">更新预计送仓时间</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+            <!-- 2. 预计送仓时间被更新预警 -->
+            <el-tab-pane name="tab2">
+              <template #label>
+                <div style="display: flex; align-items: center;">
+                  <span>预计送仓时间被更新预警</span>
+                  <el-badge :value="tableData2.length" class="item" type="warning" style="margin-left: 8px;"></el-badge>
+                </div>
+              </template>
+              <div class="tab-desc">
+                <el-icon style="color: #E6A23C;"><WarningFilled /></el-icon>
+                <span>客户手工修改了预计送仓时间，需人工介入核实或添加备注。</span>
+              </div>
+              <el-table :data="tableData2" border stripe style="width: 100%" height="calc(100vh - 250px)" :header-cell-style="{ background: '#f5f7fa', color: '#606266' }">
+                <el-table-column prop="waybillNo" label="运单号" width="120" fixed="left"></el-table-column>
+                <el-table-column prop="channel" label="渠道" width="120"></el-table-column>
+                <el-table-column prop="warehouseCode" label="仓库代码" width="100"></el-table-column>
+                <el-table-column prop="fbaNo" label="FBA号" width="120"></el-table-column>
+                <el-table-column prop="blNo" label="提单号" width="140"></el-table-column>
+                <el-table-column prop="user" label="用户" width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="amazonEstTime" label="亚马逊当前预计送仓时间" width="200"></el-table-column>
+                <el-table-column prop="customerUpdateEstTime" label="客户手工更新预计送仓时间" width="220" align="center">
+                  <template #default="scope">
+                    <span style="color: #E6A23C; font-weight: bold;">{{ scope.row.customerUpdateEstTime }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="createTime" label="创建时间" width="120" align="center"></el-table-column>
+                <el-table-column prop="remark" label="备注" min-width="250">
+                  <template #default="scope">
+                    <div v-if="scope.row.remark" style="background-color: #fdf6ec; padding: 4px 8px; border-radius: 4px; color: #E6A23C; font-size: 13px;">
+                      {{ scope.row.remark }}
+                    </div>
+                    <span v-else style="color: #909399;">-</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="120" fixed="right" align="center">
+                  <template #default="scope">
+                    <el-button type="warning" link @click="openRemarkDialog(scope.row, 2)">增加备注</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+            <!-- 3. 预计送仓时间临期预警 -->
+            <el-tab-pane name="tab3">
+              <template #label>
+                <div style="display: flex; align-items: center;">
+                  <span>预计送仓时间临期预警</span>
+                  <el-badge :value="tableData3.length" class="item" type="danger" style="margin-left: 8px;"></el-badge>
+                </div>
+              </template>
+              <div class="tab-desc">
+                <el-icon><Timer /></el-icon>
+                <span>业务手工更新实际送仓时间段后，该数据需要在该待处理池移除。</span>
+              </div>
+              <el-table :data="tableData3" border stripe style="width: 100%" height="calc(100vh - 250px)" :header-cell-style="{ background: '#f5f7fa', color: '#606266' }">
+                <el-table-column prop="waybillNo" label="运单号" width="120" fixed="left"></el-table-column>
+                <el-table-column prop="channel" label="渠道" width="120"></el-table-column>
+                <el-table-column prop="warehouseCode" label="仓库代码" width="100"></el-table-column>
+                <el-table-column prop="fbaNo" label="FBA号" width="120"></el-table-column>
+                <el-table-column prop="blNo" label="提单号" width="140"></el-table-column>
+                <el-table-column prop="user" label="用户" width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="amazonEstTime" label="亚马逊当前预计送仓时间" min-width="200" align="center">
+                   <template #default="scope">
+                    <span style="color: #F56C6C;">{{ scope.row.amazonEstTime }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="createTime" label="创建时间" width="120" align="center"></el-table-column>
+                <el-table-column label="操作" width="160" fixed="right" align="center">
+                  <template #default="scope">
+                    <el-button type="primary" link @click="openUpdateDialog(scope.row, 'actual_timeout', 3)">更新实际送仓时间</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+            <!-- 4. 其他异常 -->
+            <el-tab-pane name="tab4">
+              <template #label>
+                <div style="display: flex; align-items: center;">
+                  <span>其他异常</span>
+                  <el-badge :value="tableData4.length" class="item" type="warning" style="margin-left: 8px;"></el-badge>
+                </div>
+              </template>
+              <div class="tab-desc">
+                <el-icon style="color: #E6A23C;"><WarningFilled /></el-icon>
+                <span>客户手工修改或外部数据导致异常，需人工介入核实或添加备注。</span>
+              </div>
+              <el-table :data="tableData4" border stripe style="width: 100%" height="calc(100vh - 250px)" :header-cell-style="{ background: '#f5f7fa', color: '#606266' }">
+                <el-table-column prop="waybillNo" label="运单号" width="120" fixed="left"></el-table-column>
+                <el-table-column prop="channel" label="渠道" width="120"></el-table-column>
+                <el-table-column prop="warehouseCode" label="仓库代码" width="100"></el-table-column>
+                <el-table-column prop="fbaNo" label="FBA号" width="120"></el-table-column>
+                <el-table-column prop="blNo" label="提单号" width="140"></el-table-column>
+                <el-table-column prop="user" label="用户" width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="amazonEstTime" label="亚马逊当前预计送仓时间" width="200"></el-table-column>
+                <el-table-column prop="actualFailUpdateRange" label="实际送仓更新失败时间段" width="220" align="center">
+                  <template #default="scope">
+                    <span style="color: #F56C6C; font-weight: bold;">{{ scope.row.actualFailUpdateRange }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="feishuActualTime" label="飞书表格实际送仓时间" width="180" align="center">
+                  <template #default="scope">
+                    <span style="color: #2DA44E; font-weight: bold;">{{ scope.row.feishuActualTime }}</span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="createTime" label="创建时间" width="120" align="center"></el-table-column>
+                <el-table-column prop="errorLog" label="错误日志" min-width="150" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="remark" label="备注" min-width="250">
+                  <template #default="scope">
+                    <div v-if="scope.row.remark" style="background-color: #fdf6ec; padding: 4px 8px; border-radius: 4px; color: #E6A23C; font-size: 13px;">
+                      {{ scope.row.remark }}
+                    </div>
+                    <span v-else style="color: #909399;">-</span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="120" fixed="right" align="center">
+                  <template #default="scope">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                      <el-button type="warning" link @click="openRemarkDialog(scope.row, 4)">增加备注</el-button>
+                      <el-button type="primary" link @click="openUpdateDialog(scope.row, 'actual_timeout', 4)">更新预计送仓时间</el-button>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-tab-pane>
+
+          </el-tabs>
+        </el-card>
+      </div>
+    </div> <!-- layout-main end -->
+
+    <!-- 通用时间更新弹窗 -->
+    <el-dialog :title="dialogTitle" v-model="dialogVisible" width="450px">
+      <el-form label-position="top">
+        <el-form-item label="当前运单号">
+          <el-input v-model="currentRow.waybillNo" disabled></el-input>
+        </el-form-item>
+        <el-form-item :label="dialogTitle.includes('实际') ? '新实际送仓时间段' : '新预计送仓时间段'" required>
+          <el-date-picker
+            v-model="newTimeRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            style="width: 100%;">
+          </el-date-picker>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitUpdate">确认更新并移出池子</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 备注添加弹窗 -->
+    <el-dialog title="增加备注" v-model="remarkDialogVisible" width="450px">
+      <el-form label-position="top">
+        <el-form-item label="备注内容" required>
+          <el-input type="textarea" :rows="3" v-model="newRemark" placeholder="请输入备注内容，例如：已通知客户请勿随意修改..."></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="remarkDialogVisible = false">取消</el-button>
+        <el-button type="warning" @click="submitRemark">保存备注</el-button>
+      </template>
+    </el-dialog>
+
+  </div>
+
+  <script>
+    const { createApp, ref, reactive, onMounted } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    const app = createApp({
+      setup() {
+        // 模拟数据 1: 预计送仓时间block
+        const tableData1 = ref([
+          { id: 1, waybillNo: 'FD0001', channel: '美森360', warehouseCode: 'ABE8', fbaNo: 'FBA199PDZZGH', blNo: 'EGLV149602460913', user: 'jyzy', sailTime: '2026/4/3', amazonEstTime: '4.12-4.18', feishuActualTime: '2026/4/20', estBlockRange: '4.19-4.25', errorLog: '亚马逊接口返回 BLOCKED', createTime: '2026/4/3' },
+          { id: 2, waybillNo: 'FD0002', channel: '以星快船', warehouseCode: 'ONT8', fbaNo: 'FBA199ABCDEF', blNo: 'ZIMU123456789012', user: 'test_user1', sailTime: '2026/4/5', amazonEstTime: '4.15-4.20', feishuActualTime: '2026/4/22', estBlockRange: '4.21-4.28', errorLog: '送仓时间被仓库拒绝', createTime: '2026/4/4' },
+          { id: 3, waybillNo: 'FD0003', channel: '长荣快船', warehouseCode: 'GYR2', fbaNo: 'FBA199XYZUVW', blNo: 'EMCU987654321098', user: 'amazon_seller', sailTime: '2026/4/6', amazonEstTime: '4.18-4.24', feishuActualTime: '2026/4/25', estBlockRange: '4.25-5.01', errorLog: '亚马逊接口返回 BLOCKED', createTime: '2026/4/5' }
+        ]);
+
+        // 模拟数据 2: 预计送仓时间被更新预警
+        const tableData2 = ref([
+          { id: 101, waybillNo: 'FD0001', channel: '美森360', warehouseCode: 'ABE8', fbaNo: 'FBA199PDZZGH', blNo: 'EGLV149602460913', user: 'jyzy', amazonEstTime: '4.19-4.25', customerUpdateEstTime: '4.12-4.18', createTime: '2026/4/6', remark: '已通知客户请勿随意修改预计送仓时间' },
+          { id: 102, waybillNo: 'FD0004', channel: '美森正班', warehouseCode: 'LGB8', fbaNo: 'FBA200QWERTY', blNo: 'MATS111222333444', user: 'global_trade', amazonEstTime: '4.22-4.28', customerUpdateEstTime: '4.15-4.20', createTime: '2026/4/8', remark: '客户称货已备好，要求提前送仓' },
+          { id: 103, waybillNo: 'FD0005', channel: '以星快船', warehouseCode: 'ONT8', fbaNo: 'FBA200ASDFGH', blNo: 'ZIMU555666777888', user: 'fast_ship', amazonEstTime: '4.25-4.30', customerUpdateEstTime: '4.28-5.05', createTime: '2026/4/9', remark: '' }
+        ]);
+
+        // 模拟数据 3: 预计送仓时间临期预警
+        const tableData3 = ref([
+          { id: 201, waybillNo: 'FD0001', channel: '美森360', warehouseCode: 'ABE8', fbaNo: 'FBA199PDZZGH', blNo: 'EGLV149602460913', user: 'jyzy', amazonEstTime: '4.12-4.18', createTime: '2026/4/10' },
+          { id: 202, waybillNo: 'FD0006', channel: '长荣快船', warehouseCode: 'GYR3', fbaNo: 'FBA201ZXCVBN', blNo: 'EMCU123123123123', user: 'prime_seller', amazonEstTime: '4.14-4.19', createTime: '2026/4/11' },
+          { id: 203, waybillNo: 'FD0007', channel: '美森加班', warehouseCode: 'SMF3', fbaNo: 'FBA201UIOPLK', blNo: 'MATS999888777666', user: 'best_choice', amazonEstTime: '4.15-4.20', createTime: '2026/4/12' }
+        ]);
+
+        // 模拟数据 4: 其他异常
+        const tableData4 = ref([
+          { id: 301, waybillNo: 'FD0001', channel: '美森360', warehouseCode: 'ABE8', fbaNo: 'FBA199PDZZGH', blNo: 'EGLV149602460913', user: 'jyzy', amazonEstTime: '4.12-4.18', actualFailUpdateRange: '', feishuActualTime: '2026/4/20', createTime: '2026/4/16', errorLog: 'EXPIRED_DELIVERY_WINDOW', remark: '已通知客户请勿随意修改预计送仓时间' },
+          { id: 302, waybillNo: 'FD003', channel: '美森432', warehouseCode: 'ABE8', fbaNo: 'FBA199PDZZGXX', blNo: 'EGLV149602460914', user: 'jyzy', amazonEstTime: '4.12-4.18', actualFailUpdateRange: '', feishuActualTime: '', createTime: '2026/4/16', errorLog: '无法通过渠道、仓点，匹配到预计送达天数，请手工更新', remark: '' },
+          { id: 303, waybillNo: 'FD0008', channel: '以星快船', warehouseCode: 'ONT8', fbaNo: 'FBA202POIUYT', blNo: 'ZIMU444555666777', user: 'ocean_star', amazonEstTime: '4.18-4.23', actualFailUpdateRange: '4.25-4.30', feishuActualTime: '2026/4/26', createTime: '2026/4/18', errorLog: 'INVALID_TRACKING_ID', remark: '运单号无效，请核对' }
+        ]);
+
+        // 当前激活的 Tab
+        const activeTab = ref('tab1');
+
+        const handleTabClick = (tab) => {
+          // console.log(tab.props.name);
+        };
+
+        const refreshAll = () => {
+          ElMessage.success('数据已刷新');
+        };
+
+        // --- 时间更新弹窗逻辑 ---
+        const dialogVisible = ref(false);
+        const dialogTitle = ref('');
+        const currentRow = ref({});
+        const newTimeRange = ref([]);
+        let currentTableIndex = null; // 记录当前操作的表格
+
+        const openUpdateDialog = (row, type, tableIndex) => {
+          currentRow.value = row;
+          currentTableIndex = tableIndex;
+          newTimeRange.value = [];
+          if (type === 'est_block') {
+            dialogTitle.value = '更新预计送仓时间';
+          } else {
+            dialogTitle.value = '更新实际送仓时间';
+          }
+          dialogVisible.value = true;
+        };
+
+        const submitUpdate = () => {
+          if (!newTimeRange.value || newTimeRange.value.length === 0) {
+            ElMessage.warning('请选择新的时间段');
+            return;
+          }
+          // 模拟从对应的表格中移除数据
+          if (currentTableIndex === 1) {
+            tableData1.value = tableData1.value.filter(item => item.id !== currentRow.value.id);
+          } else if (currentTableIndex === 3) {
+            tableData3.value = tableData3.value.filter(item => item.id !== currentRow.value.id);
+          }
+          
+          ElMessage.success('更新成功，已移出异常池！');
+          dialogVisible.value = false;
+        };
+
+        // --- 备注弹窗逻辑 ---
+        const remarkDialogVisible = ref(false);
+        const newRemark = ref('');
+
+        const openRemarkDialog = (row, tableIndex) => {
+          currentRow.value = row;
+          currentTableIndex = tableIndex;
+          newRemark.value = row.remark || '';
+          remarkDialogVisible.value = true;
+        };
+
+        const submitRemark = () => {
+          if (!newRemark.value.trim()) {
+            ElMessage.warning('备注内容不能为空');
+            return;
+          }
+          
+          let targetTable = null;
+          if (currentTableIndex === 2) {
+            targetTable = tableData2;
+          } else if (currentTableIndex === 4) {
+            targetTable = tableData4;
+          }
+
+          if (targetTable) {
+            const index = targetTable.value.findIndex(item => item.id === currentRow.value.id);
+            if (index !== -1) {
+              targetTable.value[index].remark = newRemark.value;
+            }
+          }
+
+          ElMessage.success('备注添加成功');
+          remarkDialogVisible.value = false;
+        };
+
+        return {
+          tableData1, tableData2, tableData3, tableData4, refreshAll,
+          activeTab, handleTabClick,
+          dialogVisible, dialogTitle, currentRow, newTimeRange, openUpdateDialog, submitUpdate,
+          remarkDialogVisible, newRemark, openRemarkDialog, submitRemark
+        };
+      }
+    });
+
+    for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+      app.component(key, component);
+    }
+    app.use(ElementPlus);
+    app.mount('#app');
+  </script>
+</body>
+</html>

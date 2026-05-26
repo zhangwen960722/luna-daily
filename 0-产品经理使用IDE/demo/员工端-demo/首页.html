@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页 - 数据看板</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body { 
+            margin: 0; 
+            padding: 16px; 
+            background-color: #F5F7FA; 
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+        }
+        .stat-card { 
+            margin-bottom: 16px; 
+            border: none;
+        }
+        .stat-title { 
+            font-size: 14px; 
+            color: #909399; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-value { 
+            font-size: 28px; 
+            font-weight: bold; 
+            color: #303133; 
+            margin: 10px 0; 
+        }
+        .stat-trend { 
+            font-size: 12px; 
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #EBEEF5;
+        }
+        .trend-up { color: #67C23A; font-weight: bold; }
+        .trend-down { color: #F56C6C; font-weight: bold; }
+        .chart-container { 
+            height: 350px; 
+            width: 100%; 
+            background: #fff; 
+            box-sizing: border-box; 
+        }
+        .el-card__header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #EBEEF5;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部核心数据 -->
+        <el-row :gutter="16">
+            <el-col :span="6">
+                <el-card shadow="hover" class="stat-card">
+                    <div class="stat-title">
+                        <span>今日新增订单 (票)</span>
+                        <el-tag size="small" type="success" effect="light">日</el-tag>
+                    </div>
+                    <div class="stat-value">1,284</div>
+                    <div class="stat-trend">较昨日 <span class="trend-up">+12.5% ↑</span></div>
+                </el-card>
+            </el-col>
+            <el-col :span="6">
+                <el-card shadow="hover" class="stat-card">
+                    <div class="stat-title">
+                        <span>待处理异常 (件)</span>
+                        <el-tag size="small" type="danger" effect="light">急</el-tag>
+                    </div>
+                    <div class="stat-value" style="color: #F56C6C;">23</div>
+                    <div class="stat-trend">较昨日 <span class="trend-down">-5.2% ↓</span></div>
+                </el-card>
+            </el-col>
+            <el-col :span="6">
+                <el-card shadow="hover" class="stat-card">
+                    <div class="stat-title">
+                        <span>本月活跃客户 (家)</span>
+                        <el-tag size="small" type="primary" effect="light">月</el-tag>
+                    </div>
+                    <div class="stat-value">856</div>
+                    <div class="stat-trend">较上月 <span class="trend-up">+3.1% ↑</span></div>
+                </el-card>
+            </el-col>
+            <el-col :span="6">
+                <el-card shadow="hover" class="stat-card">
+                    <div class="stat-title">
+                        <span>本月预计营收 (万元)</span>
+                        <el-tag size="small" type="warning" effect="light">月</el-tag>
+                    </div>
+                    <div class="stat-value">342.50</div>
+                    <div class="stat-trend">较上月 <span class="trend-up">+8.4% ↑</span></div>
+                </el-card>
+            </el-col>
+        </el-row>
+
+        <!-- 图表区域 -->
+        <el-row :gutter="16" style="margin-top: 4px;">
+            <el-col :span="16">
+                <el-card shadow="hover" style="border: none;">
+                    <template #header>
+                        <div style="font-weight: bold; color: #303133;">近30天运量趋势</div>
+                    </template>
+                    <div id="lineChart" class="chart-container"></div>
+                </el-card>
+            </el-col>
+            <el-col :span="8">
+                <el-card shadow="hover" style="border: none;">
+                    <template #header>
+                        <div style="font-weight: bold; color: #303133;">运输方式订单占比</div>
+                    </template>
+                    <div id="pieChart" class="chart-container"></div>
+                </el-card>
+            </el-col>
+        </el-row>
+    </div>
+
+    <script>
+        const { createApp, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                onMounted(() => {
+                    // 初始化折线图 (近30天发货量趋势)
+                    const lineChart = echarts.init(document.getElementById('lineChart'));
+                    const lineOption = {
+                        tooltip: { 
+                            trigger: 'axis',
+                            axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } }
+                        },
+                        legend: { data: ['海运(TEU)', '空运(吨)', '铁运(TEU)'] },
+                        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+                        xAxis: [
+                            { 
+                                type: 'category', 
+                                boundaryGap: false, 
+                                data: ['04-28', '04-29', '04-30', '05-01', '05-02', '05-03', '05-04'] 
+                            }
+                        ],
+                        yAxis: [ { type: 'value' } ],
+                        series: [
+                            {
+                                name: '海运(TEU)',
+                                type: 'line',
+                                smooth: true,
+                                areaStyle: { opacity: 0.1 },
+                                emphasis: { focus: 'series' },
+                                data: [120, 132, 101, 134, 90, 230, 210]
+                            },
+                            {
+                                name: '空运(吨)',
+                                type: 'line',
+                                smooth: true,
+                                areaStyle: { opacity: 0.1 },
+                                emphasis: { focus: 'series' },
+                                data: [22, 18, 19, 23, 29, 33, 31]
+                            },
+                            {
+                                name: '铁运(TEU)',
+                                type: 'line',
+                                smooth: true,
+                                areaStyle: { opacity: 0.1 },
+                                emphasis: { focus: 'series' },
+                                data: [15, 23, 20, 15, 19, 33, 41]
+                            }
+                        ],
+                        color: ['#2DA44E', '#67C23A', '#E6A23C']
+                    };
+                    lineChart.setOption(lineOption);
+
+                    // 初始化饼图 (运输方式占比)
+                    const pieChart = echarts.init(document.getElementById('pieChart'));
+                    const pieOption = {
+                        tooltip: { trigger: 'item' },
+                        legend: { top: 'bottom' },
+                        series: [
+                            {
+                                name: '订单占比',
+                                type: 'pie',
+                                radius: ['40%', '70%'],
+                                center: ['50%', '45%'],
+                                avoidLabelOverlap: false,
+                                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                                label: { show: false, position: 'center' },
+                                emphasis: { 
+                                    label: { show: true, fontSize: '18', fontWeight: 'bold' } 
+                                },
+                                labelLine: { show: false },
+                                data: [
+                                    { value: 1048, name: '海运' },
+                                    { value: 735, name: '空运' },
+                                    { value: 580, name: '卡派' },
+                                    { value: 484, name: '铁运' }
+                                ]
+                            }
+                        ],
+                        color: ['#2DA44E', '#67C23A', '#909399', '#E6A23C']
+                    };
+                    pieChart.setOption(pieOption);
+                    
+                    // 监听窗口大小变化以自适应图表
+                    window.addEventListener('resize', () => {
+                        lineChart.resize();
+                        pieChart.resize();
+                    });
+                });
+
+                return {};
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>

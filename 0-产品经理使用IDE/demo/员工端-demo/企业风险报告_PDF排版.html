@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业风险信息报告</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        :root {
+            --primary-color: #d9363e; /* 风险报告采用偏警示的红色基调 */
+            --border-color: #e8e8e8;
+            --bg-light: #fff1f0; /* 极浅的红底色 */
+            --text-main: #333;
+            --text-secondary: #666;
+            --text-light: #999;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f2f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text-main);
+            -webkit-print-color-adjust: exact;
+        }
+
+        .action-bar {
+            width: 800px;
+            margin: 0 auto 16px;
+            text-align: right;
+        }
+        
+        .btn-print {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(217, 54, 62, 0.2);
+            transition: opacity 0.2s;
+        }
+        
+        .btn-print:hover {
+            opacity: 0.8;
+        }
+
+        /* A4 纸张容器 */
+        .a4-page {
+            width: 800px;
+            min-height: 1131px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 48px 56px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        /* 页眉页脚 */
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 12px;
+            margin-bottom: 32px;
+        }
+        
+        .report-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .report-title svg {
+            width: 28px;
+            height: 28px;
+            fill: currentColor;
+        }
+        
+        .report-meta {
+            font-size: 12px;
+            color: var(--text-light);
+            text-align: right;
+        }
+
+        .company-header {
+            margin-bottom: 32px;
+            text-align: center;
+            padding: 24px;
+            background-color: var(--bg-light);
+            border-radius: 8px;
+            border: 1px solid #ffa39e;
+        }
+
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 8px;
+        }
+
+        .total-risk {
+            font-size: 14px;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        /* 风险分类区块 */
+        .risk-category {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+        }
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        .category-count {
+            background-color: #f0f0f0;
+            color: #666;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* 风险列表项 */
+        .risk-list-item {
+            margin-bottom: 24px;
+            padding-left: 16px;
+            border-left: 3px solid #ccc;
+        }
+
+        .risk-list-item.high { border-left-color: #cf1322; }
+        .risk-list-item.warning { border-left-color: #faad14; }
+        .risk-list-item.info { border-left-color: #1890ff; }
+
+        .item-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .item-tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .tag-high { background-color: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
+        .tag-warning { background-color: #fffbe6; color: #faad14; border: 1px solid #ffe58f; }
+        .tag-info { background-color: #e6f7ff; color: #1890ff; border: 1px solid #91d5ff; }
+
+        .item-type-name {
+            font-size: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .item-count {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* 详情表格 */
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 8px;
+        }
+        
+        .detail-table th, .detail-table td {
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            text-align: left;
+        }
+        
+        .detail-table th {
+            background-color: #fafafa;
+            color: var(--text-secondary);
+            font-weight: normal;
+        }
+        
+        .detail-table td {
+            color: var(--text-main);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+            font-size: 14px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border: 1px dashed #e8e8e8;
+        }
+
+        @media print {
+            body { background-color: white; padding: 0; }
+            .a4-page { width: 100%; box-shadow: none; padding: 0; min-height: auto; }
+            .no-print { display: none !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            @page { size: A4 portrait; margin: 1.5cm; }
+            .risk-category { page-break-inside: avoid; }
+            .detail-table { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="action-bar no-print">
+            <button class="btn-print" @click="printPDF">保存风险报告为 PDF</button>
+        </div>
+
+        <div class="a4-page">
+            
+            <div class="report-header">
+                <div class="report-title">
+                    <svg viewBox="0 0 1024 1024"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z"/><path d="M464 688a48 48 0 1 0 96 0 48 48 0 1 0-96 0zm24-392h-48c-4.4 0-8 3.6-8 8v240c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8V304c0-4.4-3.6-8-8-8z"/></svg>
+                    企业风险全景洞察报告
+                </div>
+                <div class="report-meta">
+                    查询主体：{{ queryCompanyName }}<br>
+                    生成时间：{{ currentDate }}
+                </div>
+            </div>
+
+            <div class="company-header">
+                <div class="company-name">{{ queryCompanyName }}</div>
+                <div class="total-risk">
+                    系统共扫描出相关风险信息 <strong>{{ apiData.count || 0 }}</strong> 条
+                </div>
+            </div>
+
+            <template v-if="apiData.riskList && apiData.riskList.length > 0">
+                <!-- 遍历外层的分类 (预警提醒, 自身风险, 周边风险, 历史风险) -->
+                <div class="risk-category" v-for="(category, catIndex) in apiData.riskList" :key="catIndex">
+                    
+                    <div class="category-header">
+                        <div class="category-title">{{ category.name }}</div>
+                        <div class="category-count">共 {{ category.count || 0 }} 条</div>
+                    </div>
+
+                    <!-- 遍历分类下的具体风险类型列表 -->
+                    <template v-if="category.list && category.list.length > 0">
+                        <div class="risk-list-item" 
+                             :class="getRiskLevelClass(item.tag)"
+                             v-for="(item, itemIndex) in category.list" :key="itemIndex">
+                            
+                            <div class="item-header">
+                                <span class="item-tag" :class="getRiskTagClass(item.tag)">{{ item.tag }}</span>
+                                <span class="item-type-name">{{ getRiskTypeName(item.type) }}</span>
+                                <span class="item-count">({{ item.total }} 条)</span>
+                            </div>
+
+                            <!-- 风险详情列表 -->
+                            <table class="detail-table" v-if="item.list && item.list.length > 0">
+                                <thead>
+                                    <tr>
+                                        <th width="8%">序号</th>
+                                        <th width="25%">关联公司</th>
+                                        <th width="40%">标题 / 案由</th>
+                                        <th width="27%">描述详情</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(detail, dIndex) in item.list" :key="dIndex">
+                                        <td>{{ dIndex + 1 }}</td>
+                                        <td>
+                                            <div v-if="detail.companyName">{{ detail.companyName }}</div>
+                                            <div v-else style="color: #999;">[自身信息]</div>
+                                        </td>
+                                        <td>
+                                            <strong>{{ detail.title || '-' }}</strong>
+                                        </td>
+                                        <td>
+                                            {{ detail.desc || '-' }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div v-else style="font-size: 13px; color: #999; margin-top: 8px;">(暂无详细记录)</div>
+
+                        </div>
+                    </template>
+                    <div v-else class="empty-state">
+                        未发现该类别的风险信息
+                    </div>
+
+                </div>
+            </template>
+            <div v-else class="empty-state" style="padding: 100px 0;">
+                <svg viewBox="0 0 1024 1024" style="width: 48px; height: 48px; fill: #d9d9d9; margin-bottom: 16px;"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm193.5 301.7l-210.6 292a31.8 31.8 0 0 1-51.7 4.8L318.4 484.6a31.9 31.9 0 0 1 5.9-46.7 31.9 31.9 0 0 1 45.4 6.9l95.5 125.7 186.2-258.1a31.8 31.8 0 0 1 44.8-5.9 31.8 31.8 0 0 1 9.3 60.2z"/></svg>
+                <div>太棒了，未查询到任何企业风险记录</div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue;
+
+        const app = createApp({
+            setup() {
+                const queryCompanyName = ref("北京小米科技有限责任公司");
+                const currentDate = ref(new Date().toLocaleDateString('zh-CN', {
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }));
+
+                // 风险类型字典 (映射自截图中的 type 字段枚举)
+                const riskTypeMap = {
+                    1: "严重违法", 3: "失信被执行人", 5: "被执行人", 6: "行政处罚", 7: "经营异常",
+                    8: "裁判文书", 9: "股权出质", 10: "动产抵押", 11: "欠税公告", 13: "开庭公告",
+                    14: "法院公告", 15: "法人变更", 20: "出资情况变更", 21: "股权冻结", 27: "立案信息",
+                    41: "对外担保", 71: "失信被执行人(历史)", 72: "被执行人(历史)", 102: "裁判文书(历史)"
+                };
+
+                const getRiskTypeName = (typeCode) => {
+                    return riskTypeMap[typeCode] || `未分类风险 (Code: ${typeCode})`;
+                };
+
+                const getRiskLevelClass = (tag) => {
+                    if (tag === '高风险') return 'high';
+                    if (tag === '警示') return 'warning';
+                    return 'info';
+                };
+
+                const getRiskTagClass = (tag) => {
+                    if (tag === '高风险') return 'tag-high';
+                    if (tag === '警示') return 'tag-warning';
+                    return 'tag-info';
+                };
+
+                // 模拟 API 返回的嵌套风险数据结构
+                const apiData = ref({
+                    "count": 20,
+                    "riskList": [
+                        {
+                            "name": "自身风险",
+                            "count": 4,
+                            "list": [
+                                {
+                                    "tag": "高风险",
+                                    "type": 5, // 被执行人
+                                    "total": 1,
+                                    "list": [
+                                        { "id": 1001, "companyName": "", "title": "被执行人信息", "desc": "执行标的：1500000元，案号：(2023)京0108执1234号，立案日期：2023-08-15" }
+                                    ]
+                                },
+                                {
+                                    "tag": "警示",
+                                    "type": 8, // 裁判文书
+                                    "total": 3,
+                                    "list": [
+                                        { "id": 1002, "companyName": "", "title": "张三与北京小米科技有限责任公司劳动争议一审民事判决书", "desc": "案件类型：民事案件，身份：被告" },
+                                        { "id": 1003, "companyName": "", "title": "李四诉北京小米科技有限责任公司网络购物合同纠纷", "desc": "案件类型：民事案件，身份：被告" },
+                                        { "id": 1004, "companyName": "", "title": "北京小米科技有限责任公司诉王五侵害商标权纠纷", "desc": "案件类型：民事案件，身份：原告" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "周边风险",
+                            "count": 8,
+                            "list": [
+                                {
+                                    "tag": "高风险",
+                                    "type": 7, // 经营异常
+                                    "total": 2,
+                                    "list": [
+                                        { "id": 2001, "companyId": 8881, "companyName": "小米科技(武汉)有限公司", "title": "列入经营异常名录信息", "desc": "列入原因：通过登记的住所或者经营场所无法联系" },
+                                        { "id": 2002, "companyId": 8882, "companyName": "小米通讯技术有限公司", "title": "列入经营异常名录信息", "desc": "列入原因：未按规定提交年度报告" }
+                                    ]
+                                },
+                                {
+                                    "tag": "警示",
+                                    "type": 9, // 股权出质
+                                    "total": 6,
+                                    "list": [
+                                        { "id": 2003, "companyId": 8883, "companyName": "北京金山软件有限公司", "title": "股权出质登记信息", "desc": "出质股权数额：5000万元，质权人：招商银行北京分行" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "预警提醒",
+                            "count": 3,
+                            "list": [
+                                {
+                                    "tag": "提示信息",
+                                    "type": 15, // 法人变更
+                                    "total": 1,
+                                    "list": [
+                                        { "id": 3001, "companyName": "", "title": "法定代表人变更", "desc": "变更前：雷军，变更后：卢伟冰" }
+                                    ]
+                                },
+                                {
+                                    "tag": "提示信息",
+                                    "type": 20, // 出资变更
+                                    "total": 2,
+                                    "list": [
+                                        { "id": 3002, "companyName": "", "title": "注册资本变更", "desc": "注册资本由 100000万元 变更为 185000万元" }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "历史风险",
+                            "count": 5,
+                            "list": [
+                                {
+                                    "tag": "警示",
+                                    "type": 71, // 失信被执行人(历史)
+                                    "total": 1,
+                                    "list": [
+                                        { "id": 4001, "companyName": "", "title": "失信被执行人信息(已移出)", "desc": "执行法院：北京市海淀区人民法院，发布时间：2019-05-12，移出时间：2019-08-20" }
+                                    ]
+                                },
+                                {
+                                    "tag": "警示",
+                                    "type": 102, // 裁判文书(历史)
+                                    "total": 4,
+                                    "list": [
+                                        { "id": 4002, "companyName": "", "title": "(历史)北京小米科技有限责任公司与张某某劳动争议纠纷", "desc": "案件类型：民事案件，身份：被告，裁判日期：2018-11-05" }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                });
+
+                const printPDF = () => {
+                    window.print();
+                };
+
+                return {
+                    queryCompanyName,
+                    currentDate,
+                    apiData,
+                    getRiskTypeName,
+                    getRiskLevelClass,
+                    getRiskTagClass,
+                    printPDF
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运价维护 - 主列表</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            height: 100%;
+        }
+        #app {
+            padding: 20px;
+            box-sizing: border-box;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 统一卡片样式 */
+        .content-card {
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,21,41,.08);
+        }
+
+        /* 搜索区域 */
+        .search-area {
+            padding: 20px 20px 0;
+        }
+
+        /* 表格区域 */
+        .table-area {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .table-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #303133;
+            display: flex;
+            align-items: center;
+        }
+
+        .table-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background-color: #2DA44E;
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+
+        .el-table th.el-table__cell {
+            background-color: #FAFAFA !important;
+            color: #303133;
+            font-weight: 500;
+        }
+
+        /* 状态标签圆点 */
+        .status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .status-active .status-dot { background-color: #67C23A; }
+        .status-pending .status-dot { background-color: #E6A23C; }
+        .status-expired .status-dot { background-color: #909399; }
+
+        /* 运价维护弹窗样式 */
+        .price-maintenance-dialog .el-dialog__body {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 70vh;
+        }
+
+        .dialog-layout {
+            display: flex;
+            height: 100%;
+        }
+
+        .dialog-left {
+            width: 40%;
+            padding: 20px;
+            border-right: 1px solid #ebeef5;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+
+        .dialog-right {
+            width: 60%;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            color: #303133;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #ebeef5;
+            padding-bottom: 10px;
+        }
+
+        .cost-item-row {
+            background: #fff;
+            border: 1px solid #ebeef5;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .cost-item-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .price-card {
+            background: #fff;
+            border: 1px solid #e4e7ed;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .price-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .price-item {
+            background: #f8f9fb;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .price-label {
+            font-size: 12px;
+            color: #909399;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索区域 -->
+        <div class="content-card search-area">
+            <el-form :inline="true" :model="searchForm">
+                <el-form-item>
+                    <el-select v-model="searchForm.serviceCombination" placeholder="服务组合" clearable style="width: 200px">
+                        <el-option label="美森限时达 (全段)" value="c1"></el-option>
+                        <el-option label="以星快船 (港到港)" value="c2"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-select v-model="searchForm.status" placeholder="生效状态" clearable style="width: 150px">
+                        <el-option label="生效中" value="active"></el-option>
+                        <el-option label="待生效" value="pending"></el-option>
+                        <el-option label="已失效" value="expired"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item>
+                    <el-date-picker
+                        v-model="searchForm.dateRange"
+                        type="daterange"
+                        range-separator="至"
+                        start-placeholder="生效开始日期"
+                        end-placeholder="生效结束日期"
+                        value-format="YYYY-MM-DD"
+                        style="width: 280px"
+                    ></el-date-picker>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="handleSearch">
+                        <el-icon><Search /></el-icon> 查询
+                    </el-button>
+                    <el-button @click="resetSearch">重置</el-button>
+                </el-form-item>
+            </el-form>
+        </div>
+
+        <!-- 表格区域 -->
+        <div class="content-card table-area">
+            <div class="table-header">
+                <div class="table-title">运价维护列表</div>
+                <div>
+                    <el-button type="primary" @click="openMaintainDialog()">
+                        <el-icon><EditPen /></el-icon> 发布新运价
+                    </el-button>
+                </div>
+            </div>
+
+            <el-table :data="tableData" border style="width: 100%" height="100%">
+                <el-table-column prop="serviceName" label="服务组合" min-width="180" fixed="left">
+                    <template #default="scope">
+                        <span style="font-weight: bold;">{{ scope.row.serviceName }}</span>
+                    </template>
+                </el-table-column>
+                
+                <el-table-column label="生效时间" min-width="280">
+                    <template #default="scope">
+                        <el-icon><Calendar /></el-icon>
+                        <span style="margin-left: 4px">{{ scope.row.effectiveStart }} 至 {{ scope.row.effectiveEnd }}</span>
+                    </template>
+                </el-table-column>
+
+                <el-table-column label="状态" width="100" align="center">
+                    <template #default="scope">
+                        <span :class="'status-' + scope.row.status">
+                            <i class="status-dot"></i>
+                            {{ getStatusText(scope.row.status) }}
+                        </span>
+                    </template>
+                </el-table-column>
+
+                <el-table-column label="成本底价总计" min-width="150" align="right">
+                    <template #default="scope">
+                        <span style="color: #F56C6C; font-weight: bold;">{{ scope.row.totalCost }} RMB/KG</span>
+                    </template>
+                </el-table-column>
+
+                <el-table-column label="公布价 (部分展示)" min-width="250">
+                    <template #default="scope">
+                        <div style="font-size: 13px;">
+                            <div><span style="color: #909399">普通客户(V1):</span> {{ scope.row.publishPriceV1 }} RMB/KG</div>
+                            <div><span style="color: #909399">大客户(V2):</span> {{ scope.row.publishPriceV2 }} RMB/KG</div>
+                        </div>
+                    </template>
+                </el-table-column>
+
+                <el-table-column prop="creator" label="维护人" width="120"></el-table-column>
+                <el-table-column prop="updateTime" label="维护时间" width="160"></el-table-column>
+
+                <el-table-column label="操作" width="150" fixed="right" align="center">
+                    <template #default="scope">
+                        <el-button link type="primary" size="small" @click="viewDetails(scope.row)">
+                            详情
+                        </el-button>
+                        <el-button link type="primary" size="small" @click="openMaintainDialog(scope.row)" v-if="scope.row.status !== 'expired'">
+                            修改
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                <el-pagination background layout="prev, pager, next, total" :total="100"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 运价维护弹窗 -->
+        <el-dialog 
+            title="发布/修改运价" 
+            v-model="maintainDialogVisible" 
+            width="85%" 
+            top="5vh"
+            custom-class="price-maintenance-dialog"
+            :close-on-click-modal="false"
+            destroy-on-close>
+            
+            <div class="dialog-layout">
+                <!-- 左侧：成本项填报 -->
+                <div class="dialog-left">
+                    <div class="section-title">
+                        <el-icon style="margin-right: 8px;"><Money /></el-icon> 第一步：全量成本项确认
+                    </div>
+                    
+                    <el-form label-position="top">
+                        <el-form-item label="目标服务组合" required>
+                            <el-select v-model="maintainForm.serviceCombination" style="width: 100%" @change="loadCostItems">
+                                <el-option label="美森限时达 (全段)" value="c1"></el-option>
+                                <el-option label="以星快船 (港到港)" value="c2"></el-option>
+                            </el-select>
+                        </el-form-item>
+
+                        <div v-if="maintainForm.serviceCombination">
+                            <div class="cost-item-row" v-for="(item, index) in maintainForm.costItems" :key="index">
+                                <div class="cost-item-header">
+                                    <span>{{ item.segmentName }} - {{ item.name }}</span>
+                                    <el-tag size="small" type="info">{{ item.unit }}</el-tag>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <el-input v-model="item.price" type="number" style="flex: 1">
+                                        <template #prepend>{{ item.currency }}</template>
+                                    </el-input>
+                                </div>
+                                <div style="font-size: 12px; color: #909399; margin-top: 6px;">
+                                    上期值: {{ item.currency }} {{ item.lastPrice }}
+                                </div>
+                            </div>
+                        </div>
+                    </el-form>
+                </div>
+
+                <!-- 右侧：公布价测算与微调 -->
+                <div class="dialog-right">
+                    <div class="section-title">
+                        <el-icon style="margin-right: 8px;"><DataLine /></el-icon> 第二步：公布价测算与排期
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <el-form :inline="true">
+                            <el-form-item label="生效时间段" required>
+                                <el-date-picker
+                                    v-model="maintainForm.dateRange"
+                                    type="datetimerange"
+                                    range-separator="至"
+                                    start-placeholder="开始时间"
+                                    end-placeholder="结束时间"
+                                    value-format="YYYY-MM-DD HH:mm:ss"
+                                    style="width: 380px"
+                                ></el-date-picker>
+                            </el-form-item>
+                            <el-form-item>
+                                <el-button type="primary" @click="calculatePrices">测算公布价</el-button>
+                            </el-form-item>
+                        </el-form>
+                    </div>
+
+                    <div v-if="calculatedResults">
+                        <div style="margin-bottom: 16px; padding: 12px; background: #fdf6ec; border-radius: 4px; color: #E6A23C; font-size: 14px;">
+                            <el-icon><Warning /></el-icon> 测算完成。系统已根据【成本底价】叠加各等级【利润策略】算出建议价，您可在此基础上进行手动微调。
+                        </div>
+
+                        <!-- 成本底价展示 -->
+                        <div class="price-card" style="border-left: 4px solid #F56C6C;">
+                            <div class="price-card-header">
+                                <span>核算成本底价总计</span>
+                                <span style="color: #F56C6C; font-size: 18px;">{{ calculatedResults.baseCost }} RMB/KG</span>
+                            </div>
+                        </div>
+
+                        <!-- 各等级公布价展示与微调 -->
+                        <div class="price-card" style="border-left: 4px solid #2DA44E;">
+                            <div class="price-card-header">
+                                <span>各等级公布价 (RMB/KG)</span>
+                            </div>
+                            <div class="price-grid">
+                                <div class="price-item" v-for="(price, level) in calculatedResults.publishPrices" :key="level">
+                                    <div class="price-label">{{ getLevelName(level) }} 建议价: {{ price.suggested }}</div>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 14px;">最终价:</span>
+                                        <el-input-number v-model="price.final" :precision="2" :step="0.1" size="small" style="width: 130px;"></el-input-number>
+                                    </div>
+                                    <div style="font-size: 12px; color: #67C23A; margin-top: 4px;">
+                                        预计毛利: {{ (price.final - calculatedResults.baseCost).toFixed(2) }} ({{ ((price.final - calculatedResults.baseCost) / price.final * 100).toFixed(1) }}%)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <el-empty v-else description="请先在左侧确认成本项，并点击【测算公布价】"></el-empty>
+
+                </div>
+            </div>
+
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="maintainDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitMaintenance" :disabled="!calculatedResults">确认发布</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                // 搜索表单
+                const searchForm = reactive({
+                    serviceCombination: '',
+                    status: '',
+                    dateRange: []
+                });
+
+                // 模拟当前日期用于状态判断
+                const currentDate = '2026-05-11 12:00:00';
+
+                // 列表数据
+                const tableData = ref([
+                    {
+                        id: 1,
+                        serviceName: '美森限时达 (全段)',
+                        effectiveStart: '2026-05-10 00:00:00',
+                        effectiveEnd: '2026-05-16 23:59:59',
+                        status: 'active', // active, pending, expired
+                        totalCost: 11.25,
+                        publishPriceV1: 15.50,
+                        publishPriceV2: 14.80,
+                        creator: '张三',
+                        updateTime: '2026-05-08 15:30:22'
+                    },
+                    {
+                        id: 2,
+                        serviceName: '美森限时达 (全段)',
+                        effectiveStart: '2026-05-17 00:00:00',
+                        effectiveEnd: '2026-05-23 23:59:59',
+                        status: 'pending',
+                        totalCost: 11.50,
+                        publishPriceV1: 16.00,
+                        publishPriceV2: 15.20,
+                        creator: '张三',
+                        updateTime: '2026-05-10 10:15:00'
+                    },
+                    {
+                        id: 3,
+                        serviceName: '以星快船 (港到港)',
+                        effectiveStart: '2026-05-01 00:00:00',
+                        effectiveEnd: '2026-05-07 23:59:59',
+                        status: 'expired',
+                        totalCost: 8.20,
+                        publishPriceV1: 11.50,
+                        publishPriceV2: 10.80,
+                        creator: '李四',
+                        updateTime: '2026-04-28 09:20:11'
+                    }
+                ]);
+
+                const getStatusText = (status) => {
+                    const map = {
+                        'active': '生效中',
+                        'pending': '待生效',
+                        'expired': '已失效'
+                    };
+                    return map[status] || status;
+                };
+
+                const getLevelName = (level) => {
+                    const map = {
+                        'v1': '普通客户(V1)',
+                        'v2': '大客户(V2)',
+                        'v3': '核心VIP(V3)',
+                        'v4': '战略合作(V4)'
+                    };
+                    return map[level] || level;
+                };
+
+                const handleSearch = () => {
+                    ElMessage.success('执行查询操作');
+                };
+
+                const resetSearch = () => {
+                    searchForm.serviceCombination = '';
+                    searchForm.status = '';
+                    searchForm.dateRange = [];
+                };
+
+                // 维护弹窗逻辑
+                const maintainDialogVisible = ref(false);
+                const calculatedResults = ref(null);
+                
+                const maintainForm = reactive({
+                    serviceCombination: '',
+                    dateRange: [],
+                    costItems: []
+                });
+
+                const openMaintainDialog = (row) => {
+                    maintainDialogVisible.value = true;
+                    calculatedResults.value = null;
+                    
+                    if (row) {
+                        // 编辑模式
+                        maintainForm.serviceCombination = row.serviceName.includes('美森') ? 'c1' : 'c2';
+                        maintainForm.dateRange = [row.effectiveStart, row.effectiveEnd];
+                        loadCostItems(); // 实际应加载该运价单的历史明细
+                    } else {
+                        // 新增模式
+                        maintainForm.serviceCombination = '';
+                        maintainForm.dateRange = [];
+                        maintainForm.costItems = [];
+                    }
+                };
+
+                // 模拟加载成本项（带出上期旧值）
+                const loadCostItems = () => {
+                    if (maintainForm.serviceCombination === 'c1') {
+                        maintainForm.costItems = [
+                            { segmentName: '揽货段', name: '国内拖车费', currency: 'RMB', price: 300, lastPrice: 300, unit: 'TICKET' },
+                            { segmentName: '干线运输段', name: '海运费', currency: 'USD', price: 10500, lastPrice: 10200, unit: 'CONTAINER' },
+                            { segmentName: '干线运输段', name: '订舱费', currency: 'RMB', price: 500, lastPrice: 500, unit: 'TICKET' },
+                            { segmentName: '派送段', name: '尾程派送', currency: 'USD', price: 30, lastPrice: 30, unit: 'CBM' }
+                        ];
+                    } else {
+                        maintainForm.costItems = [];
+                    }
+                    calculatedResults.value = null; // 重新选择服务或加载数据后清空测算结果
+                };
+
+                // 模拟测算逻辑
+                const calculatePrices = () => {
+                    if (!maintainForm.dateRange || maintainForm.dateRange.length !== 2) {
+                        ElMessage.warning('请先选择生效时间段');
+                        return;
+                    }
+                    
+                    const loading = ElementPlus.ElLoading.service({
+                        target: '.dialog-right',
+                        text: '正在根据成本项和利润策略进行测算...'
+                    });
+
+                    setTimeout(() => {
+                        // 模拟测算结果：底价
+                        const baseCost = 11.52;
+                        
+                        // 模拟系统算出的建议价，并将建议价作为初始的最终价(允许微调)
+                        calculatedResults.value = {
+                            baseCost: baseCost,
+                            publishPrices: {
+                                'v1': { suggested: 15.86, final: 15.90 },
+                                'v2': { suggested: 14.86, final: 14.90 },
+                                'v3': { suggested: 13.86, final: 13.90 },
+                                'v4': { suggested: 12.86, final: 12.90 }
+                            }
+                        };
+                        loading.close();
+                        ElMessage.success('测算完成');
+                    }, 800);
+                };
+
+                const submitMaintenance = () => {
+                    ElMessageBox.confirm(`确定发布该运价吗？生效时间：${maintainForm.dateRange[0]}`, '发布确认', {
+                        confirmButtonText: '确定发布',
+                        type: 'warning'
+                    }).then(() => {
+                        ElMessage.success('运价发布成功！');
+                        maintainDialogVisible.value = false;
+                    }).catch(() => {});
+                };
+
+                const viewDetails = (row) => {
+                    ElMessage.info('查看详情：' + row.serviceName);
+                };
+
+                return {
+                    searchForm,
+                    tableData,
+                    getStatusText,
+                    getLevelName,
+                    handleSearch,
+                    resetSearch,
+                    maintainDialogVisible,
+                    maintainForm,
+                    calculatedResults,
+                    openMaintainDialog,
+                    loadCostItems,
+                    calculatePrices,
+                    submitMaintenance,
+                    viewDetails
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

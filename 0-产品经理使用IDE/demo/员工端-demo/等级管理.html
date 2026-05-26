@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>等级管理 - 主列表</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-bg-color: #F5F7FA;
+        }
+        body {
+            margin: 0;
+            padding: 16px;
+            background-color: var(--el-bg-color);
+            font-family: sans-serif;
+            box-sizing: border-box;
+            height: 100vh;
+        }
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .content-card {
+            background-color: #fff;
+            border-radius: 4px;
+            padding: 16px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .table-container {
+            flex: 1;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .el-table th.el-table__cell {
+            background-color: #FAFAFA;
+            color: #303133;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="content-card">
+            <!-- 顶部操作栏 -->
+            <div class="header-actions">
+                <!-- Tab 页签 -->
+                <el-tabs v-model="activeTab" style="flex: 1;" @tab-click="handleTabClick">
+                    <el-tab-pane label="客户等级" name="客户等级"></el-tab-pane>
+                    <el-tab-pane label="供应商等级" name="供应商等级"></el-tab-pane>
+                </el-tabs>
+                <!-- 新增按钮 -->
+                <div style="margin-bottom: 14px;">
+                    <el-button type="primary" @click="handleAdd">新增级别</el-button>
+                </div>
+            </div>
+
+            <!-- 表格 -->
+            <div class="table-container">
+                <el-table :data="tableData" border height="100%" style="width: 100%">
+                    <el-table-column prop="levelCode" label="级别代码" min-width="150"></el-table-column>
+                    <el-table-column prop="operator" label="操作人" min-width="150"></el-table-column>
+                    <el-table-column prop="status" label="状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'" effect="plain">
+                                {{ scope.row.status }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="160" fixed="right" align="center">
+                        <template #default="scope">
+                            <el-button 
+                                link 
+                                type="primary" 
+                                size="small" 
+                                @click="handleEdit(scope.row)">
+                                编辑
+                            </el-button>
+                            <el-button 
+                                link 
+                                :type="scope.row.status === '正常' ? 'danger' : 'success'" 
+                                size="small" 
+                                @click="toggleStatus(scope.row)">
+                                {{ scope.row.status === '正常' ? '冻结' : '启用' }}
+                            </el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+        </div>
+
+        <!-- 新增/编辑级别弹窗 (模拟) -->
+        <el-dialog v-model="dialogVisible" :title="dialogType === 'add' ? '新增级别' : '编辑级别'" width="400px" destroy-on-close>
+            <el-form :model="addForm" label-width="100px">
+                <el-form-item label="级别代码：" required>
+                    <el-input v-model="addForm.levelCode" placeholder="请输入级别代码 (如 SS, S, A等)"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="dialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="submitAdd">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeTab = ref('客户等级');
+                
+                // 模拟数据源
+                const customerData = ref([
+                    { levelCode: 'SS', operator: '张三', status: '正常' },
+                    { levelCode: 'S', operator: '张三', status: '正常' },
+                    { levelCode: 'A', operator: '张三', status: '正常' },
+                    { levelCode: 'B', operator: '张三', status: '正常' },
+                    { levelCode: 'C', operator: '张三', status: '正常' },
+                    { levelCode: 'D', operator: '张三', status: '正常' },
+                    { levelCode: 'E', operator: '张三', status: '正常' },
+                    { levelCode: 'F', operator: '张三', status: '正常' },
+                    { levelCode: 'G', operator: '张三', status: '已冻结' }
+                ]);
+
+                const supplierData = ref([
+                    { levelCode: 'SS', operator: '张三', status: '正常' },
+                    { levelCode: 'S', operator: '张三', status: '正常' },
+                    { levelCode: 'A', operator: '张三', status: '正常' },
+                    { levelCode: 'B', operator: '张三', status: '正常' },
+                    { levelCode: 'C', operator: '张三', status: '正常' },
+                    { levelCode: 'D', operator: '张三', status: '正常' },
+                    { levelCode: 'E', operator: '张三', status: '正常' },
+                    { levelCode: 'F', operator: '张三', status: '正常' },
+                    { levelCode: 'G', operator: '张三', status: '已冻结' }
+                ]);
+
+                // 根据当前 tab 动态切换表格数据
+                const tableData = computed(() => {
+                    return activeTab.value === '客户等级' ? customerData.value : supplierData.value;
+                });
+
+                const handleTabClick = () => {
+                    // Tab 切换自动通过 computed 响应数据，此处可做一些重置操作等
+                };
+
+                // 状态切换（冻结/启用）
+                const toggleStatus = (row) => {
+                    const action = row.status === '正常' ? '冻结' : '启用';
+                    ElMessageBox.confirm(`确定要${action}级别代码为 [${row.levelCode}] 的记录吗？`, '提示', {
+                        type: 'warning',
+                    }).then(() => {
+                        row.status = row.status === '正常' ? '已冻结' : '正常';
+                        ElMessage.success(`${action}成功`);
+                    }).catch(() => {});
+                };
+
+                // 新增/编辑级别逻辑
+                const dialogVisible = ref(false);
+                const dialogType = ref('add');
+                const addForm = reactive({
+                    levelCode: ''
+                });
+
+                const handleAdd = () => {
+                    dialogType.value = 'add';
+                    addForm.levelCode = '';
+                    dialogVisible.value = true;
+                };
+
+                const handleEdit = (row) => {
+                    dialogType.value = 'edit';
+                    addForm.levelCode = row.levelCode;
+                    dialogVisible.value = true;
+                };
+
+                const submitAdd = () => {
+                    if (!addForm.levelCode.trim()) {
+                        ElMessage.warning('请输入级别代码');
+                        return;
+                    }
+                    
+                    if (dialogType.value === 'add') {
+                        const newData = {
+                            levelCode: addForm.levelCode,
+                            operator: 'Admin', // 模拟当前操作人
+                            status: '正常' // 新增默认正常
+                        };
+
+                        if (activeTab.value === '客户等级') {
+                            customerData.value.unshift(newData);
+                        } else {
+                            supplierData.value.unshift(newData);
+                        }
+                        ElMessage.success('新增级别成功');
+                    } else {
+                        ElMessage.success('编辑级别成功');
+                    }
+
+                    dialogVisible.value = false;
+                };
+
+                return {
+                    activeTab,
+                    tableData,
+                    handleTabClick,
+                    toggleStatus,
+                    dialogVisible,
+                    dialogType,
+                    addForm,
+                    handleAdd,
+                    handleEdit,
+                    submitAdd
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞点跨境供应链系统 - 员工端</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            overflow: hidden;
+        }
+        #app {
+            height: 100vh;
+        }
+        .el-container {
+            height: 100%;
+        }
+        
+        /* 侧边栏样式 */
+        .el-aside {
+            background-color: #304156;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            transition: width 0.3s;
+            box-shadow: 2px 0 6px rgba(0,21,41,.35);
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .sidebar-logo-container {
+            height: 60px;
+            line-height: 60px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #2b3643;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .el-scrollbar {
+            flex: 1;
+        }
+        .sidebar-toggle-container {
+            height: 40px;
+            line-height: 40px;
+            width: 100%;
+            background-color: #2b3643;
+            color: #bfcbd9;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.3s;
+            border-top: 1px solid #1f2d3d;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar-toggle-container:hover {
+            background-color: #263445;
+            color: #2DA44E;
+        }
+        .sidebar-toggle-icon {
+            font-size: 18px;
+        }
+        .el-menu {
+            border-right: none;
+            background-color: transparent;
+        }
+        .el-menu-item, .el-sub-menu__title {
+            color: #bfcbd9 !important;
+        }
+        .el-menu-item:hover, .el-sub-menu__title:hover {
+            background-color: #263445 !important;
+        }
+        .el-menu-item.is-active {
+            color: #2DA44E !important;
+            background-color: #263445 !important;
+        }
+        .el-menu-item i, .el-sub-menu__title i {
+            color: #bfcbd9;
+        }
+        
+        /* 顶部导航样式 */
+        .el-header {
+            background-color: #fff;
+            border-bottom: 1px solid #d8dce5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 1px 4px rgba(0,21,41,.08);
+            z-index: 999;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        /* 主体内容区样式 */
+        .el-main {
+            background-color: #f0f2f5;
+            padding: 0;
+            position: relative;
+            overflow: hidden; /* 由 iframe 内部去滚动 */
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        
+        /* 标签页导航（模拟） */
+        .tags-view-container {
+            height: 34px;
+            width: 100%;
+            background: #fff;
+            border-bottom: 1px solid #d8dce5;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, .12), 0 0 3px 0 rgba(0, 0, 0, .04);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+            z-index: 998;
+            position: relative;
+        }
+        .tags-view-item {
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+            height: 26px;
+            line-height: 26px;
+            border: 1px solid #d8dce5;
+            color: #495060;
+            background: #fff;
+            padding: 0 8px;
+            font-size: 12px;
+            margin-left: 5px;
+            border-radius: 2px;
+        }
+        .tags-view-item.active {
+            background-color: #42b983;
+            color: #fff;
+            border-color: #42b983;
+        }
+        .tags-view-item.active::before {
+            content: '';
+            background: #fff;
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: relative;
+            margin-right: 4px;
+        }
+
+        /* 无障碍表单布局 (响应式标签间距) */
+        .a11y-form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 16px;
+        }
+        .a11y-form-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px; /* 桌面端 8px 间距 */
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.2;
+        }
+        @media screen and (max-width: 768px) {
+            .a11y-form-label {
+                margin-bottom: 12px; /* 移动端 12px 间距 */
+            }
+        }
+        /* 统一主列表搜索区按钮重构样式 (全局注入) */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-container>
+            <!-- 左侧菜单 -->
+            <el-aside :width="isCollapse ? '64px' : '240px'">
+                <div class="sidebar-logo-container">
+                    <el-icon style="margin-right: 12px; font-size: 24px; color: #2DA44E;"><Platform /></el-icon>
+                    <span v-show="!isCollapse">飞点跨境供应链</span>
+                </div>
+                <el-scrollbar>
+                    <el-menu
+                        :default-active="activeMenu"
+                        class="el-menu-vertical-demo"
+                        background-color="#304156"
+                        text-color="#bfcbd9"
+                        active-text-color="#2DA44E"
+                        :collapse="isCollapse"
+                        :collapse-transition="false"
+                        @select="handleSelect"
+                        :default-openeds="[]"
+                    >
+                        <el-menu-item index="首页.html">
+                            <el-icon><HomeFilled /></el-icon>
+                            <template #title><span>首页</span></template>
+                        </el-menu-item>
+                        <el-sub-menu index="5">
+                            <template #title>
+                                <el-icon><Setting /></el-icon>
+                                <span>系统设置</span>
+                            </template>
+                            <el-menu-item v-for="item in systemSettingsMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                        <el-sub-menu index="4">
+                            <template #title>
+                                <el-icon><User /></el-icon>
+                                <span>客商中心</span>
+                            </template>
+                            <el-menu-item v-for="item in merchantMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+
+                        <el-sub-menu index="1">
+                            <template #title>
+                                <el-icon><Document /></el-icon>
+                                <span>基础资料</span>
+                            </template>
+                            <el-menu-item v-for="item in menuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                        <el-sub-menu index="2">
+                            <template #title>
+                                <el-icon><Van /></el-icon>
+                                <span>头程管理</span>
+                            </template>
+                            <!-- 新增二级菜单：订单管理 -->
+                            <el-sub-menu index="2-0">
+                                <template #title>
+                                    <span>订单管理</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.orderManagement" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 原有二级菜单：服务管理 -->
+                            <el-sub-menu index="2-1">
+                                <template #title>
+                                    <span>服务管理</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.serviceManagement" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 新增二级菜单：超级运价 -->
+                            <el-sub-menu index="2-2">
+                                <template #title>
+                                    <span>超级运价</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.superFreight" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 新增二级菜单：事件管理 -->
+                            <el-sub-menu index="2-3">
+                                <template #title>
+                                    <span>事件管理</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.eventManagement" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 新增二级菜单：基础配置 -->
+                            <el-sub-menu index="2-4">
+                                <template #title>
+                                    <span>基础配置</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.basicConfiguration" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 保持同级的其他菜单 -->
+                            <el-menu-item v-for="item in headTransportMenuList.others" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                        <el-sub-menu index="6">
+                            <template #title>
+                                <el-icon><Box /></el-icon>
+                                <span>末端管理</span>
+                            </template>
+                            <el-menu-item index="仓库列表_主列表.html">
+                                <template #title><span>仓库列表</span></template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                        <el-sub-menu index="3">
+                            <template #title>
+                                <el-icon><Message /></el-icon>
+                                <span>邀请入驻</span>
+                            </template>
+                            <el-menu-item v-for="item in inviteMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                            <el-menu-item index="企业信息报告_PDF排版.html"><template #title>企业信息报告</template></el-menu-item>
+                            <el-menu-item index="企业风险报告_PDF排版.html"><template #title>企业风险报告</template></el-menu-item>
+                        </el-sub-menu>
+                    </el-menu>
+                </el-scrollbar>
+                <!-- 左下角折叠按钮 -->
+                <div class="sidebar-toggle-container" @click="toggleCollapse">
+                    <el-icon class="sidebar-toggle-icon"><Fold v-show="!isCollapse" /><Expand v-show="isCollapse" /></el-icon>
+                </div>
+            </el-aside>
+            
+            <!-- 右侧主体 -->
+            <el-container style="flex-direction: column;">
+                <!-- 顶部 Header -->
+                <el-header height="50px">
+                    <div class="header-left">
+                        <el-icon style="font-size: 20px; cursor: pointer; margin-right: 15px;" @click="toggleCollapse"><Fold v-show="!isCollapse" /><Expand v-show="isCollapse" /></el-icon>
+                        <el-breadcrumb separator="/">
+                            <el-breadcrumb-item>首页</el-breadcrumb-item>
+                            <el-breadcrumb-item>{{ currentTopMenuName }}</el-breadcrumb-item>
+                            <el-breadcrumb-item v-if="currentSecondMenuName">{{ currentSecondMenuName }}</el-breadcrumb-item>
+                            <el-breadcrumb-item style="font-weight: bold; color: #303133;">{{ currentMenuName }}</el-breadcrumb-item>
+                        </el-breadcrumb>
+                    </div>
+                    <div class="header-right">
+                        <el-button type="primary" size="small" @click="inviteDialogVisible = true">邀请客户入驻</el-button>
+                        <el-tooltip content="全屏" placement="bottom">
+                            <el-icon style="font-size: 18px; cursor: pointer;"><FullScreen /></el-icon>
+                        </el-tooltip>
+                        <el-dropdown>
+                            <span class="el-dropdown-link" style="cursor: pointer; display: flex; align-items: center; color: #5a5e66;">
+                                <img src="https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png" style="width: 30px; height: 30px; border-radius: 10px; margin-right: 8px;">
+                                Admin <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                            </span>
+                            <template #dropdown>
+                                <el-dropdown-menu>
+                                    <el-dropdown-item>个人中心</el-dropdown-item>
+                                    <el-dropdown-item>系统设置</el-dropdown-item>
+                                    <el-dropdown-item divided>退出登录</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </template>
+                        </el-dropdown>
+                    </div>
+                </el-header>
+                
+                <!-- 标签页导航 -->
+                <div class="tags-view-container">
+                    <span class="tags-view-item active">
+                        {{ currentMenuName }}
+                    </span>
+                </div>
+                
+                <!-- 页面内容 (Iframe 承载各独立页面) -->
+                <el-main>
+                    <iframe :src="currentIframeSrc" name="mainIframe" id="mainIframe"></iframe>
+                </el-main>
+            </el-container>
+        </el-container>
+
+        <!-- 邀请客户入驻弹窗 -->
+        <el-dialog v-model="inviteDialogVisible" title="邀请入驻" width="500px" destroy-on-close>
+            <el-tabs v-model="inviteTab" type="card">
+                <el-tab-pane label="通过链接邀请" name="link">
+                    <div style="padding: 10px 0;">
+                        <div class="a11y-form-group">
+                            <label for="invite-link-input" class="a11y-form-label">专属邀请链接</label>
+                            <el-input 
+                                id="invite-link-input"
+                                type="textarea" 
+                                v-model="inviteLink" 
+                                readonly 
+                                :rows="3" 
+                                style="font-size: 14px;">
+                            </el-input>
+                        </div>
+                        <div style="color: #909399; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center;">
+                            <el-icon style="margin-right: 4px;"><InfoFilled /></el-icon> 链接有效期：14天
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <el-button @click="inviteDialogVisible = false">返回</el-button>
+                            <el-button type="primary" @click="copyInviteLink">复制邀请链接</el-button>
+                        </div>
+                    </div>
+                </el-tab-pane>
+                <el-tab-pane label="通过邮箱邀请" name="email">
+                    <div style="padding: 10px 0;">
+                        <div class="a11y-form-group">
+                            <label for="invite-email-input" class="a11y-form-label">受邀者邮箱</label>
+                            <el-input 
+                                id="invite-email-input"
+                                type="textarea" 
+                                v-model="inviteEmails" 
+                                placeholder="支持输入多个邮箱，用逗号隔开。" 
+                                :rows="3" 
+                                style="font-size: 14px;">
+                            </el-input>
+                        </div>
+                        <div style="color: #909399; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center;">
+                            <el-icon style="margin-right: 4px;"><InfoFilled /></el-icon> 链接有效期：14天
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <el-button @click="inviteDialogVisible = false">返回</el-button>
+                            <el-button type="primary" @click="sendInviteEmail">发送邀请</el-button>
+                        </div>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, computed } = Vue;
+
+        const app = createApp({
+            setup() {
+                // 模拟当前登录用户的权限列表
+                const userPermissions = ['首页', '基础资料', '头程管理', '邀请入驻', '客商中心', '系统设置', '商品管理', '收货地址管理', '异常处理池', '运输服务', '服务组合', '海外仓库列表', '港口管理', 'VAT管理', '标识管理', '企业客户档案', '自然人客户档案', '客户管理', '供应商管理', '等级管理', '用户管理', '员工管理', '角色管理', '亚马逊物流事件', '费用类型', '物流事件'];
+
+                /**
+                 * 检查是否有权限
+                 * @param {string} permission - 权限名称
+                 * @returns {boolean} 是否有权限
+                 */
+                const hasPermission = (permission) => {
+                    if (!permission) return true;
+                    return userPermissions.includes(permission);
+                };
+
+                // 基础资料菜单列表
+                const menuList = [
+                    { index: '商品管理_主列表.html', name: '商品管理', permission: '商品管理' },
+                    { index: '收货地址管理_主列表.html', name: '收货地址管理', permission: '收货地址管理' }
+                ].filter(item => hasPermission(item.permission));
+
+                // 头程管理菜单列表 (按二级结构划分)
+                const headTransportMenuList = {
+                    orderManagement: [
+                        { index: '异常处理池.html', name: '异常处理池', permission: '异常处理池' }
+                    ].filter(item => hasPermission(item.permission)),
+                    serviceManagement: [
+                        { index: '运输服务_主列表.html', name: '运输服务', permission: '运输服务' },
+                        { index: '服务组合_主列表.html', name: '服务组合', permission: '服务组合' }
+                    ].filter(item => hasPermission(item.permission)),
+                    superFreight: [
+                        { index: 'super-freight/index.html', name: '服务渠道管理', permission: '服务渠道管理' },
+                        { index: 'super-freight/carrier-management.html', name: '航线 & 船期管理', permission: '航线管理' },
+                        { index: 'super-freight/cost-segment.html', name: '成本段 & 成本细项', permission: '成本段管理' },
+                        { index: 'super-freight/profit-strategy.html', name: '利润策略', permission: '利润策略管理' },
+                        { index: 'super-freight/additional-fee.html', name: '附加费 & 运费优惠', permission: '附加费规则' },
+                        { index: 'super-freight/pricing-workbench.html', name: '运价更新工作台', permission: '运价维护' },
+                        { index: 'super-freight/combination-list.html', name: '服务组合管理', permission: '服务组合' },
+                        { index: 'super-freight/pricing-query.html', name: '运价查询（销售视图）', permission: '运价查询' }
+                    ].filter(item => hasPermission(item.permission)),
+                    eventManagement: [
+                        { index: '物流事件_主列表.html', name: '物流事件', permission: '物流事件' },
+                        { index: '亚马逊物流事件_主列表.html', name: '亚马逊物流事件', permission: '亚马逊物流事件' }
+                    ].filter(item => hasPermission(item.permission)),
+                    basicConfiguration: [
+                        { index: '费用类型_主列表.html', name: '费用类型', permission: '费用类型' },
+                        { index: '海外仓库列表_主列表.html', name: '平台仓库列表', permission: '海外仓库列表' },
+                        { index: '港口管理_主列表.html', name: '港口管理', permission: '港口管理' },
+                        { index: 'VAT管理_主列表.html', name: 'VAT管理', permission: 'VAT管理' },
+                        { index: '标识管理.html', name: '标识管理', permission: '标识管理' }
+                    ].filter(item => hasPermission(item.permission)),
+                    others: [
+                        
+                    ].filter(item => hasPermission(item.permission))
+                };
+
+                // 邀请入驻菜单列表
+                const inviteMenuList = [
+                    { index: '企业客户档案.html', name: '企业客户档案', permission: '企业客户档案' },
+                    { index: '自然人客户档案.html', name: '自然人客户档案', permission: '自然人客户档案' }
+                ].filter(item => hasPermission(item.permission));
+
+                // 客商中心菜单列表
+                const merchantMenuList = [
+                    { index: '客户管理.html', name: '客户管理', permission: '客户管理' },
+                    { index: '供应商管理.html', name: '供应商管理', permission: '供应商管理' },
+                    { index: '等级管理.html', name: '等级管理', permission: '等级管理' }
+                ].filter(item => hasPermission(item.permission));
+
+                // 系统设置菜单列表
+                const systemSettingsMenuList = [
+                    { index: '用户管理_主列表.html', name: '用户管理', permission: '用户管理' },
+                    { index: '员工管理_主列表.html', name: '员工管理', permission: '员工管理' }, // 新增：员工管理
+                    { index: '角色管理_主列表.html', name: '角色管理', permission: '角色管理' }  // 新增：角色管理
+                ].filter(item => hasPermission(item.permission));
+
+                const isCollapse = ref(false);
+                const toggleCollapse = () => {
+                    isCollapse.value = !isCollapse.value;
+                };
+
+                const activeMenu = ref('首页.html');
+                const currentIframeSrc = ref('首页.html');
+
+                const currentMenuName = computed(() => {
+                    if (activeMenu.value === '首页.html') return '数据看板';
+                    let item = menuList.find(m => m.index === activeMenu.value);
+                    if (!item) {
+                        item = headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = headTransportMenuList.serviceManagement.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = headTransportMenuList.superFreight.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = headTransportMenuList.basicConfiguration.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = headTransportMenuList.others.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = inviteMenuList.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = merchantMenuList.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
+                        item = systemSettingsMenuList.find(m => m.index === activeMenu.value);
+                    }
+                    return item ? item.name : '';
+                });
+
+                const currentSecondMenuName = computed(() => {
+                    if (headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value)) {
+                        return '订单管理';
+                    }
+                    if (headTransportMenuList.serviceManagement.find(m => m.index === activeMenu.value)) {
+                        return '服务管理';
+                    }
+                    if (headTransportMenuList.superFreight.find(m => m.index === activeMenu.value)) {
+                        return '超级运价';
+                    }
+                    if (headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value)) {
+                        return '事件管理';
+                    }
+                    if (headTransportMenuList.basicConfiguration.find(m => m.index === activeMenu.value)) {
+                        return '基础配置';
+                    }
+                    return '';
+                });
+
+                const currentTopMenuName = computed(() => {
+                    if (activeMenu.value === '首页.html') return '首页';
+                    if (menuList.find(m => m.index === activeMenu.value)) {
+                        return '基础资料';
+                    }
+                    if (headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value) ||
+                        headTransportMenuList.serviceManagement.find(m => m.index === activeMenu.value) || 
+                        headTransportMenuList.superFreight.find(m => m.index === activeMenu.value) || 
+                        headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value) || 
+                        headTransportMenuList.basicConfiguration.find(m => m.index === activeMenu.value) || 
+                        headTransportMenuList.others.find(m => m.index === activeMenu.value)) {
+                        return '头程管理';
+                    }
+                    if (inviteMenuList.find(m => m.index === activeMenu.value)) {
+                        return '邀请入驻';
+                    }
+                    if (merchantMenuList.find(m => m.index === activeMenu.value)) {
+                        return '客商中心';
+                    }
+                    if (systemSettingsMenuList.find(m => m.index === activeMenu.value)) {
+                        return '系统设置';
+                    }
+                    return '基础资料';
+                });
+
+                const handleSelect = (index) => {
+                    activeMenu.value = index;
+                    currentIframeSrc.value = index;
+                };
+
+                // 邀请入驻弹窗逻辑
+                const inviteDialogVisible = ref(false);
+                const inviteTab = ref('link');
+                const inviteLink = ref('https://admin.system.com/register?invite_code=X8H9K2M4');
+                const inviteEmails = ref('');
+
+                const copyInviteLink = () => {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(inviteLink.value).then(() => {
+                            ElementPlus.ElMessage.success('邀请链接已复制');
+                        }).catch(() => {
+                            ElementPlus.ElMessage.success('复制成功（模拟）');
+                        });
+                    } else {
+                        ElementPlus.ElMessage.success('邀请链接已复制（模拟）');
+                    }
+                };
+
+                const sendInviteEmail = () => {
+                    if (!inviteEmails.value.trim()) {
+                        ElementPlus.ElMessage.warning('请输入至少一个邮箱地址');
+                        return;
+                    }
+                    ElementPlus.ElMessage.success('邀请已发送');
+                    inviteDialogVisible.value = false;
+                    inviteEmails.value = '';
+                };
+
+                    // 监听 iframe 内部发送的消息，实现跨页面路由切换及标签页控制
+                    window.addEventListener('message', (event) => {
+                        if (event.data && event.data.type === 'navigate') {
+                            const targetUrl = event.data.url;
+                            if (targetUrl) {
+                                // 查找目标菜单名称
+                                let targetName = targetUrl;
+                                const allMenus = [
+                                    ...menuList, 
+                                    ...headTransportMenuList.orderManagement,
+                                    ...headTransportMenuList.serviceManagement,
+                                    ...headTransportMenuList.superFreight,
+                                    ...headTransportMenuList.eventManagement,
+                                    ...headTransportMenuList.basicConfiguration,
+                                    ...headTransportMenuList.others,
+                                    ...inviteMenuList, 
+                                    ...merchantMenuList, 
+                                    ...systemSettingsMenuList,
+                                    { index: '首页.html', name: '首页' },
+                                    { index: '仓库列表_主列表.html', name: '仓库列表' }
+                                ];
+                                
+                                // 去除参数部分进行匹配
+                                const baseUrl = targetUrl.split('?')[0];
+                                const matchMenu = allMenus.find(item => item.index === baseUrl);
+                                if (matchMenu) {
+                                    targetName = matchMenu.name;
+                                }
+                                
+                                // 调用 handleSelect 进行菜单和 iframe 更新
+                                handleSelect(baseUrl);
+                                // 为了保证参数被传递到 iframe，我们需要手动覆盖 iframe src
+                                setTimeout(() => {
+                                    currentIframeSrc.value = targetUrl;
+                                }, 0);
+                            }
+                        }
+                    });
+
+                    return {
+                    menuList,
+                    headTransportMenuList,
+                    inviteMenuList,
+                    merchantMenuList,
+                    systemSettingsMenuList,
+                    activeMenu,
+                    currentIframeSrc,
+                    currentMenuName,
+                    currentSecondMenuName,
+                    currentTopMenuName,
+                    handleSelect,
+                    isCollapse,
+                    toggleCollapse,
+                    inviteDialogVisible,
+                    inviteTab,
+                    inviteLink,
+                    inviteEmails,
+                    copyInviteLink,
+                    sendInviteEmail
+                };
+            }
+        });
+
+        // 注册所有 Element Plus 图标
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Optional: other init logic
+        });
+    </script>
+</body>
+</html>

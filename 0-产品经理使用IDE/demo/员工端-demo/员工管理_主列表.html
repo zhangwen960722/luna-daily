@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>员工管理</title>
+    <!-- 引入 Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- 引入 Element Plus 样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <!-- 引入 Element Plus 组件库 -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <!-- 引入 Element Plus 图标 -->
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <!-- 引入 SheetJS 导出Excel -->
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #f0f2f5;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+        }
+        #app {
+            padding: 20px;
+            box-sizing: border-box;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .search-card {
+            margin-bottom: 20px;
+        }
+        .table-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .table-card .el-card__body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 0;
+        }
+        .toolbar {
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .pagination-container {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* 无障碍表单布局 (响应式标签间距) */
+        .a11y-form-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+        .a11y-form-label {
+            font-size: 14px;
+            color: #606266;
+            margin-bottom: 8px; /* 桌面端 8px 间距 */
+            font-weight: 500;
+            text-align: left;
+            line-height: 1.2;
+        }
+        @media screen and (max-width: 768px) {
+            .a11y-form-label {
+                margin-bottom: 12px; /* 移动端 12px 间距 */
+            }
+        }
+
+        
+  
+        
+  
+        /* 统一主列表搜索按钮样式 */
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            opacity: 1 !important;
+            filter: none !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+    </style>
+
+
+
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索区域 -->
+        <el-card class="search-card" shadow="never">
+            <el-form :inline="true" :model="searchForm" ref="searchFormRef" @submit.prevent>
+                <el-form-item prop="username">
+                    <el-input v-model="searchForm.username" placeholder="用户名" clearable @keyup.enter="handleSearch"></el-input>
+                </el-form-item>
+                <el-form-item prop="email">
+                    <el-input v-model="searchForm.email" placeholder="邮箱" clearable @keyup.enter="handleSearch"></el-input>
+                </el-form-item>
+                <el-form-item prop="phone">
+                    <el-input v-model="searchForm.phone" placeholder="手机号" clearable @keyup.enter="handleSearch"></el-input>
+                </el-form-item>
+                <el-form-item prop="status">
+                    <el-select v-model="searchForm.status" placeholder="状态" clearable style="width: 120px;">
+                        <el-option label="启用" :value="1"></el-option>
+                        <el-option label="禁用" :value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="部门" prop="department" v-show="showAdvanced">
+                    <el-input v-model="searchForm.department" placeholder="请输入部门" clearable></el-input>
+                </el-form-item>
+                <el-form-item label="职位" prop="position" v-show="showAdvanced">
+                    <el-input v-model="searchForm.position" placeholder="请输入职位" clearable></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                    <el-button type="text" @click="showAdvanced = !showAdvanced">
+                        {{ showAdvanced ? '收起' : '高级筛选' }}
+                        <el-icon><ArrowUp v-if="showAdvanced" /><ArrowDown v-else /></el-icon>
+                    </el-button>
+                </el-form-item>
+            </el-form>
+        </el-card>
+
+        <!-- 列表区域 -->
+        <el-card class="table-card" shadow="never">
+            <div class="toolbar">
+                <div>
+                    <!-- 批量操作按钮已移除 -->
+                </div>
+                <div>
+                    <el-button type="primary" plain @click="handleSync" :icon="RefreshIcon">同步员工</el-button>
+                    <el-button type="info" plain @click="handleExport" :icon="DownloadIcon">导出 Excel</el-button>
+                </div>
+            </div>
+
+            <el-table 
+                v-loading="loading" 
+                :data="tableData" 
+                style="width: 100%; flex: 1;" 
+                border 
+                @sort-change="handleSortChange"
+                height="100%">
+                <el-table-column prop="username" label="用户名" min-width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="phone" label="联系电话" min-width="120"></el-table-column>
+                <el-table-column prop="tenant" label="租户" min-width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="department" label="部门" min-width="100"></el-table-column>
+                <el-table-column prop="branch" label="分公司" min-width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="position" label="职位" min-width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="timezone" label="时区" min-width="100"></el-table-column>
+                <el-table-column prop="language" label="语言" min-width="100"></el-table-column>
+                <el-table-column prop="createdAt" label="创建时间" min-width="160" sortable="custom"></el-table-column>
+                <el-table-column prop="status" label="状态" width="80" align="center">
+                    <template #default="scope">
+                        <el-tag :type="scope.row.status === 1 ? 'success' : 'info'" size="small">
+                            {{ scope.row.status === 1 ? '启用' : '禁用' }}
+                        </el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="160" fixed="right" align="center">
+                    <template #default="scope">
+                        <el-button link type="primary" size="small" @click="handleEdit(scope.row)">编辑</el-button>
+                        <el-button link type="primary" size="small" @click="handleAssignRole(scope.row)">分配角色</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+
+            <div class="pagination-container">
+                <el-pagination
+                    v-model:current-page="page"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50]"
+                    :background="true"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="total"
+                    @size-change="fetchData"
+                    @current-change="fetchData"
+                />
+            </div>
+        </el-card>
+
+        <!-- 编辑弹窗 -->
+        <el-dialog v-model="editDialogVisible" title="编辑员工" width="600px">
+            <div style="padding: 0 20px;">
+                <div class="a11y-form-group">
+                    <label for="edit-username" class="a11y-form-label">用户名</label>
+                    <el-input id="edit-username" v-model="editForm.username" disabled></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-email" class="a11y-form-label">邮箱</label>
+                    <el-input id="edit-email" v-model="editForm.email"></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-phone" class="a11y-form-label">联系电话</label>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        <el-select v-model="editForm.phoneCode" placeholder="区号" style="width: 120px;">
+                            <el-option label="+86 (中国)" value="+86"></el-option>
+                            <el-option label="+852 (香港)" value="+852"></el-option>
+                            <el-option label="+886 (台湾)" value="+886"></el-option>
+                            <el-option label="+1 (美国)" value="+1"></el-option>
+                        </el-select>
+                        <el-input id="edit-phone" v-model="editForm.phoneNumber" placeholder="请输入手机号" style="flex: 1;"></el-input>
+                    </div>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-department" class="a11y-form-label">部门</label>
+                    <el-select id="edit-department" v-model="editForm.department" placeholder="请选择部门" style="width: 100%;">
+                        <el-option label="研发部" value="研发部"></el-option>
+                        <el-option label="产品部" value="产品部"></el-option>
+                        <el-option label="设计部" value="设计部"></el-option>
+                        <el-option label="市场部" value="市场部"></el-option>
+                        <el-option label="销售部" value="销售部"></el-option>
+                        <el-option label="人事部" value="人事部"></el-option>
+                        <el-option label="财务部" value="财务部"></el-option>
+                        <el-option label="运维部" value="运维部"></el-option>
+                        <el-option label="客服部" value="客服部"></el-option>
+                    </el-select>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-tenant" class="a11y-form-label">租户</label>
+                    <el-select id="edit-tenant" v-model="editForm.tenant" placeholder="请选择租户" style="width: 100%;">
+                        <el-option label="飞点科技" value="飞点科技"></el-option>
+                        <el-option label="墨链科技" value="墨链科技"></el-option>
+                    </el-select>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="edit-branch" class="a11y-form-label">分公司</label>
+                    <el-select id="edit-branch" v-model="editForm.branch" placeholder="请选择分公司" style="width: 100%;">
+                        <el-option label="广州飞点供应链管理有限公司" value="广州飞点供应链管理有限公司"></el-option>
+                        <el-option label="广东省飞点跨境供应链有限公司" value="广东省飞点跨境供应链有限公司"></el-option>
+                        <el-option label="飞点跨境供应链（深圳）有限公司" value="飞点跨境供应链（深圳）有限公司"></el-option>
+                        <el-option label="广东墨链跨境供应链有限公司" value="广东墨链跨境供应链有限公司"></el-option>
+                    </el-select>
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="editDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="saveEdit">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 分配角色弹窗 -->
+        <el-dialog v-model="roleDialogVisible" title="分配角色" width="500px">
+            <div style="padding: 0 20px;">
+                <div class="a11y-form-group">
+                    <label for="role-username" class="a11y-form-label">员工姓名</label>
+                    <el-input id="role-username" v-model="currentAssignUser.username" disabled></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label for="role-department" class="a11y-form-label">所属部门</label>
+                    <el-input id="role-department" v-model="currentAssignUser.department" disabled></el-input>
+                </div>
+                <div class="a11y-form-group">
+                    <label id="role-select-label" class="a11y-form-label">选择角色</label>
+                    <el-checkbox-group v-model="selectedRoles" aria-labelledby="role-select-label">
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            <el-checkbox v-for="role in roleList" :key="role.id" :label="role.id" border style="margin-right: 0;">
+                                {{ role.name }}
+                            </el-checkbox>
+                        </div>
+                    </el-checkbox-group>
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="roleDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="saveRole">确定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, onMounted } = Vue;
+
+        const app = createApp({
+            setup() {
+                const SearchIcon = ElementPlusIconsVue.Search;
+                const RefreshIcon = ElementPlusIconsVue.Refresh;
+                const DownloadIcon = ElementPlusIconsVue.Download;
+                
+                const searchFormRef = ref(null);
+                const showAdvanced = ref(false);
+                const searchForm = reactive({
+                    username: '',
+                    email: '',
+                    phone: '',
+                    status: null,
+                    department: '',
+                    position: ''
+                });
+
+                const tableData = ref([]);
+                const total = ref(0);
+                const page = ref(1);
+                const pageSize = ref(20);
+                const loading = ref(false);
+                const sortField = ref('createdAt');
+                const sortOrder = ref('descending');
+
+                // 简单的防XSS函数
+                const sanitize = (str) => {
+                    if (typeof str !== 'string') return str;
+                    return str.replace(/[&<>'"]/g, 
+                        tag => ({
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            "'": '&#39;',
+                            '"': '&quot;'
+                        }[tag])
+                    );
+                };
+
+                /**
+                 * 模拟 API 请求获取数据
+                 */
+                const fetchData = async () => {
+                    loading.value = true;
+                    try {
+                        // 模拟请求带Token
+                        const headers = {
+                            'Authorization': 'Bearer MOCK_TOKEN_123456',
+                            'Content-Type': 'application/json'
+                        };
+                        
+                        // 由于直接双击打开HTML（file://协议）会有CORS跨域限制，这里为了方便演示，
+                        // 当fetch失败时，回退到使用内置的静态 mock 数据。
+                        let result;
+                        try {
+                            const response = await fetch('./mock_employees.json', { headers });
+                            result = await response.json();
+                        } catch (fetchError) {
+                            console.warn('Fetch failed (possibly due to CORS), using fallback data.', fetchError);
+                            // 静态的 mock 数据回退
+                            result = {
+                                code: 200,
+                                msg: "操作成功",
+                                data: [
+                                    {"id":"EMP10001","username":"zhangsan","name":"张三","email":"zhangsan@company.com","phone":"13800138001","tenant":"飞点科技","department":"研发部","branch":"飞点跨境供应链（深圳）有限公司","position":"前端工程师","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-01-10 09:00:00","updatedAt":"2024-05-15 14:30:00"},
+                                    {"id":"EMP10002","username":"lisi","name":"李四","email":"lisi@company.com","phone":"13900139002","tenant":"飞点科技","department":"研发部","branch":"飞点跨境供应链（深圳）有限公司","position":"后端工程师","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-01-11 10:15:00","updatedAt":"2024-05-10 09:20:00"},
+                                    {"id":"EMP10003","username":"wangwu","name":"王五","email":"wangwu@company.com","phone":"13700137003","tenant":"飞点科技","department":"产品部","branch":"飞点跨境供应链（深圳）有限公司","position":"产品经理","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-01-12 11:30:00","updatedAt":"2024-04-20 16:45:00"},
+                                    {"id":"EMP10004","username":"zhaoliu","name":"赵六","email":"zhaoliu@company.com","phone":"13600136004","tenant":"飞点科技","department":"设计部","branch":"广州飞点供应链管理有限公司","position":"UI设计师","timezone":"UTC+8","language":"zh-CN","status":0,"createdAt":"2024-01-15 14:00:00","updatedAt":"2024-06-01 10:10:00"},
+                                    {"id":"EMP10005","username":"sunqi","name":"孙七","email":"sunqi@company.com","phone":"13500135005","tenant":"飞点科技","department":"市场部","branch":"广东省飞点跨境供应链有限公司","position":"市场总监","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-02-01 09:30:00","updatedAt":"2024-05-25 11:20:00"},
+                                    {"id":"EMP10006","username":"zhouba","name":"周八","email":"zhouba@company.com","phone":"13400134006","tenant":"飞点科技","department":"销售部","branch":"广东墨链跨境供应链有限公司","position":"销售经理","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-02-05 10:45:00","updatedAt":"2024-06-05 15:30:00"},
+                                    {"id":"EMP10007","username":"wujiu","name":"吴九","email":"wujiu@company.com","phone":"13300133007","tenant":"飞点科技","department":"人事部","branch":"飞点跨境供应链（深圳）有限公司","position":"HRBP","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-02-10 13:20:00","updatedAt":"2024-05-18 09:40:00"},
+                                    {"id":"EMP10008","username":"zhengshi","name":"郑十","email":"zhengshi@company.com","phone":"13200132008","tenant":"飞点科技","department":"财务部","branch":"飞点跨境供应链（深圳）有限公司","position":"财务专员","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-02-15 15:10:00","updatedAt":"2024-05-22 14:15:00"},
+                                    {"id":"EMP10009","username":"chenyi","name":"陈一","email":"chenyi@company.com","phone":"13100131009","tenant":"飞点科技","department":"研发部","branch":"广东墨链跨境供应链有限公司","position":"测试工程师","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-03-01 09:05:00","updatedAt":"2024-06-10 10:25:00"},
+                                    {"id":"EMP10010","username":"weier","name":"卫二","email":"weier@company.com","phone":"13000130010","tenant":"飞点科技","department":"运维部","branch":"飞点跨境供应链（深圳）有限公司","position":"运维工程师","timezone":"UTC+8","language":"zh-CN","status":0,"createdAt":"2024-03-05 11:15:00","updatedAt":"2024-04-12 16:30:00"},
+                                    {"id":"EMP10011","username":"jiangsan","name":"蒋三","email":"jiangsan@company.com","phone":"18900189011","tenant":"飞点科技","department":"研发部","branch":"飞点跨境供应链（深圳）有限公司","position":"前端工程师","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-03-10 14:20:00","updatedAt":"2024-05-05 11:10:00"},
+                                    {"id":"EMP10012","username":"shensi","name":"沈四","email":"shensi@company.com","phone":"18800188012","tenant":"飞点科技","department":"产品部","branch":"广东省飞点跨境供应链有限公司","position":"产品助理","timezone":"UTC+8","language":"zh-CN","status":1,"createdAt":"2024-03-15 09:40:00","updatedAt":"2024-06-02 14:50:00"}
+                                ],
+                                total: 12
+                            };
+                        }
+                        
+                        if (result.code === 200) {
+                            let data = result.data;
+                            
+                            // 模拟前端筛选
+                            if (searchForm.username) {
+                                data = data.filter(item => item.username.includes(sanitize(searchForm.username)));
+                            }
+                            if (searchForm.email) {
+                                data = data.filter(item => item.email.includes(sanitize(searchForm.email)));
+                            }
+                            if (searchForm.phone) {
+                                data = data.filter(item => item.phone.includes(sanitize(searchForm.phone)));
+                            }
+                            if (searchForm.status !== null && searchForm.status !== '') {
+                                data = data.filter(item => item.status === searchForm.status);
+                            }
+                            if (searchForm.department) {
+                                data = data.filter(item => item.department.includes(sanitize(searchForm.department)));
+                            }
+                            if (searchForm.position) {
+                                data = data.filter(item => item.position.includes(sanitize(searchForm.position)));
+                            }
+
+                            // 模拟前端排序
+                            if (sortField.value) {
+                                data.sort((a, b) => {
+                                    let valA = a[sortField.value];
+                                    let valB = b[sortField.value];
+                                    if (valA < valB) return sortOrder.value === 'ascending' ? -1 : 1;
+                                    if (valA > valB) return sortOrder.value === 'ascending' ? 1 : -1;
+                                    return 0;
+                                });
+                            }
+
+                            total.value = data.length;
+                            
+                            // 模拟前端分页
+                            const start = (page.value - 1) * pageSize.value;
+                            const end = start + pageSize.value;
+                            tableData.value = data.slice(start, end);
+                        } else {
+                            ElementPlus.ElMessage.error(result.msg || '获取数据失败');
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        ElementPlus.ElMessage.error('网络请求异常');
+                    } finally {
+                        // 模拟网络延迟
+                        setTimeout(() => {
+                            loading.value = false;
+                        }, 200);
+                    }
+                };
+
+                const handleSearch = () => {
+                    page.value = 1;
+                    fetchData();
+                };
+
+                const resetSearch = () => {
+                    if (searchFormRef.value) {
+                        searchFormRef.value.resetFields();
+                    }
+                    handleSearch();
+                };
+
+                const handleSortChange = ({ prop, order }) => {
+                    sortField.value = prop;
+                    sortOrder.value = order;
+                    fetchData();
+                };
+
+                /**
+                 * 通用操作二次确认
+                 * @param {string} msg - 提示信息
+                 * @param {Function} action - 确认后执行的函数
+                 */
+                const confirmAction = (msg, action) => {
+                    ElementPlus.ElMessageBox.confirm(msg, '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        action();
+                    }).catch(() => {
+                        ElementPlus.ElMessage.info('已取消操作');
+                    });
+                };
+
+                const handleSync = () => {
+                    confirmAction('确定要从外部系统同步最新员工数据吗？', () => {
+                        loading.value = true;
+                        setTimeout(() => {
+                            loading.value = false;
+                            ElementPlus.ElMessage.success('员工数据同步成功');
+                            fetchData();
+                        }, 1000);
+                    });
+                };
+
+                // 分配角色功能
+                const roleDialogVisible = ref(false);
+                const currentAssignUser = ref({});
+                const selectedRoles = ref([]);
+                const roleList = ref([
+                    { id: 'role_super_admin', name: '超级管理员' },
+                    { id: 'role_sys_admin', name: '系统管理员' },
+                    { id: 'role_hr', name: '人事经理' },
+                    { id: 'role_finance', name: '财务专员' },
+                    { id: 'role_sales', name: '销售主管' },
+                    { id: 'role_staff', name: '普通员工' }
+                ]);
+
+                const handleAssignRole = (row) => {
+                    currentAssignUser.value = { ...row };
+                    // 模拟已有角色数据
+                    selectedRoles.value = row.roles || ['role_staff'];
+                    roleDialogVisible.value = true;
+                };
+
+                const saveRole = () => {
+                    confirmAction('确定保存角色分配吗？', () => {
+                        const target = tableData.value.find(item => item.id === currentAssignUser.value.id);
+                        if (target) {
+                            target.roles = [...selectedRoles.value];
+                        }
+                        roleDialogVisible.value = false;
+                        ElementPlus.ElMessage.success('角色分配成功');
+                    });
+                };
+
+                // 编辑功能
+                const editDialogVisible = ref(false);
+                const editForm = reactive({
+                    id: '',
+                    username: '',
+                    email: '',
+                    phoneCode: '+86',
+                    phoneNumber: '',
+                    department: '',
+                    tenant: '',
+                    branch: ''
+                });
+
+                const handleEdit = (row) => {
+                    Object.assign(editForm, row);
+                    
+                    // 拆分手机号和区号 (模拟逻辑：如果包含空格，则认为前面是区号)
+                    if (row.phone && row.phone.includes(' ')) {
+                        const parts = row.phone.split(' ');
+                        editForm.phoneCode = parts[0];
+                        editForm.phoneNumber = parts[1];
+                    } else {
+                        // 默认如果没有区号，默认为 +86
+                        editForm.phoneCode = '+86';
+                        editForm.phoneNumber = row.phone || '';
+                    }
+
+                    editDialogVisible.value = true;
+                };
+
+                const saveEdit = () => {
+                    confirmAction('确定保存修改吗？', () => {
+                        // 模拟保存
+                        const target = tableData.value.find(item => item.id === editForm.id);
+                        if (target) {
+                            Object.assign(target, editForm);
+                            // 将区号和手机号合并保存
+                            target.phone = `${editForm.phoneCode} ${editForm.phoneNumber}`;
+                        }
+                        editDialogVisible.value = false;
+                        ElementPlus.ElMessage.success('修改成功');
+                    });
+                };
+
+                // 导出功能
+                const handleExport = () => {
+                    confirmAction('确定要导出当前列表数据吗？', () => {
+                        const exportData = tableData.value.map(item => ({
+                            '用户名': item.username,
+                            '姓名': item.name,
+                            '邮箱': item.email,
+                            '联系电话': item.phone,
+                            '租户': item.tenant,
+                            '部门': item.department,
+                            '分公司': item.branch,
+                            '职位': item.position,
+                            '时区': item.timezone,
+                            '语言': item.language,
+                            '状态': item.status === 1 ? '启用' : '禁用',
+                            '创建时间': item.createdAt
+                        }));
+
+                        const ws = XLSX.utils.json_to_sheet(exportData);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "员工列表");
+                        XLSX.writeFile(wb, "员工管理_导出数据.xlsx");
+                        
+                        ElementPlus.ElMessage.success('导出成功');
+                    });
+                };
+
+                onMounted(() => {
+                    fetchData();
+                });
+
+                return {
+                    SearchIcon,
+                    RefreshIcon,
+                    DownloadIcon,
+                    searchFormRef,
+                    searchForm,
+                    showAdvanced,
+                    tableData,
+                    total,
+                    page,
+                    pageSize,
+                    loading,
+                    fetchData,
+                    handleSearch,
+                    resetSearch,
+                    handleSortChange,
+                    handleSync,
+                    handleAssignRole,
+                    handleExport,
+                    editDialogVisible,
+                    editForm,
+                    handleEdit,
+                    saveEdit,
+                    roleDialogVisible,
+                    currentAssignUser,
+                    selectedRoles,
+                    roleList,
+                    saveRole
+                };
+            }
+        });
+
+        // 注册图标
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
