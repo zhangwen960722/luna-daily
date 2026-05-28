@@ -366,6 +366,7 @@
                             <el-table-column prop="enterpriseAttribute" label="客户属地" min-width="100"></el-table-column>
                             <el-table-column prop="csRepresentative" label="客服代表" min-width="120"></el-table-column>
                             <el-table-column prop="salesRepresentative" label="销售代表" min-width="120"></el-table-column>
+                            <el-table-column prop="salesAssistant" label="销售助理" min-width="120"></el-table-column>
                             <el-table-column prop="customerLevel" label="客户等级" min-width="100"></el-table-column>
                             <el-table-column prop="signStatus" label="合同签署状态" min-width="120">
                                 <template #default="scope">
@@ -817,6 +818,14 @@
                                     </el-form-item>
                                 </el-col>
                                 <el-col :span="6">
+                                    <el-form-item label="销售助理" prop="salesAssistant">
+                                        <el-select v-model="editFormData.salesAssistant" multiple collapse-tags placeholder="请选择" style="width: 100%;">
+                                            <el-option label="王助理" value="王助理"></el-option>
+                                            <el-option label="陈助理" value="陈助理"></el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="6">
                                     <el-form-item label="销售来源" prop="salesSource">
                                         <el-input v-model="editFormData.salesSource" placeholder="请输入销售来源"></el-input>
                                     </el-form-item>
@@ -1068,14 +1077,19 @@
                                 <!-- 通信信息Tab -->
                                 <el-tab-pane label="通信信息">
                                     <el-row :gutter="24">
-                                        <el-col :span="12">
+                                        <el-col :span="8">
                                             <el-form-item label="工具类型">
                                                 <el-input v-model="editFormData.commType" disabled placeholder="默认：企业微信"></el-input>
                                             </el-form-item>
                                         </el-col>
-                                        <el-col :span="12">
+                                        <el-col :span="8">
                                             <el-form-item label="群聊ID" prop="groupId" :rules="{required: true, message: '必填', trigger: 'blur'}">
                                                 <el-input v-model="editFormData.groupId" placeholder="请输入群聊ID"></el-input>
+                                            </el-form-item>
+                                        </el-col>
+                                        <el-col :span="8">
+                                            <el-form-item label="机器人Key" prop="robotKey" :rules="{required: true, message: '必填', trigger: 'blur'}">
+                                                <el-input v-model="editFormData.robotKey" placeholder="请输入机器人Key"></el-input>
                                             </el-form-item>
                                         </el-col>
                                     </el-row>
@@ -1177,6 +1191,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '张客服',
                         salesRepresentative: '李销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'SS',
                         ratingScore: '98',
                         signStatus: '已签约',
@@ -1194,6 +1209,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '李客服',
                         salesRepresentative: '赵销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'B',
                         ratingScore: '80',
                         signStatus: '签约中',
@@ -1211,6 +1227,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '王客服',
                         salesRepresentative: '赵销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'A',
                         ratingScore: '85',
                         signStatus: '未签约',
@@ -1228,6 +1245,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '李客服',
                         salesRepresentative: '王销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'B',
                         ratingScore: '75',
                         signStatus: '未签约',
@@ -1245,6 +1263,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '张客服',
                         salesRepresentative: '王销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'A',
                         ratingScore: '88',
                         signStatus: '已过期',
@@ -1262,6 +1281,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '王客服',
                         salesRepresentative: '李销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'C',
                         ratingScore: '82',
                         signStatus: '未签约',
@@ -1279,6 +1299,7 @@
                         enterpriseAttribute: '中国香港',
                         csRepresentative: '张客服',
                         salesRepresentative: '王销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'B',
                         ratingScore: '85',
                         signStatus: '未签约',
@@ -1296,6 +1317,7 @@
                         enterpriseAttribute: '中国香港',
                         csRepresentative: '李客服',
                         salesRepresentative: '赵销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'A',
                         ratingScore: '92',
                         signStatus: '未签约',
@@ -1313,6 +1335,7 @@
                         enterpriseAttribute: '中国大陆',
                         csRepresentative: '张客服',
                         salesRepresentative: '李销售',
+                        salesAssistant: '王助理',
                         customerLevel: 'C',
                         ratingScore: '-',
                         signStatus: '未签约',
@@ -1586,6 +1609,7 @@
                                 signStatus: '新增', // 新增模式标记
                                 csRepresentative: '',
                                 salesRepresentative: '',
+                                salesAssistant: [],
                                 salesSource: '',
                                 businessTypes: [],
                                 billingCycle: '',
@@ -1613,7 +1637,8 @@
                                  contractContactId: null,
                             accountContactId: null,
                             commType: '企业微信',
-                            groupId: ''
+                            groupId: '',
+                            robotKey: ''
                         });
                         editDialogVisible.value = true;
                     } else if (command === 'import') {
@@ -1637,6 +1662,7 @@
                     signStatus: '',
                     csRepresentative: [],
                     salesRepresentative: '',
+                    salesAssistant: [],
                     salesSource: '',
                     businessTypes: [],
                     billingCycle: '',
@@ -1667,7 +1693,8 @@
                     contractContactId: 1, // 模拟默认选中“王霸天”作为对接人
                     accountContactId: 2,  // 模拟默认选中“李运来”作为账号接收人
                     commType: '企业微信',
-                    groupId: ''
+                    groupId: '',
+                    robotKey: ''
                 });
 
                 const validateCreditCode = (rule, value, callback) => {
@@ -1777,6 +1804,7 @@
                         signStatus: '未签约',
                         csRepresentative: [],
                         salesRepresentative: '',
+                        salesAssistant: [],
                         salesSource: '',
                         businessTypes: [],
                         billingCycle: '',
@@ -1825,6 +1853,7 @@
                     editFormData.signStatus = row.signStatus; // 保存当前签约状态
                     editFormData.csRepresentative = row.csRepresentative ? row.csRepresentative.split('、') : [];
                     editFormData.salesRepresentative = row.salesRepresentative;
+                    editFormData.salesAssistant = row.salesAssistant ? row.salesAssistant.split('、') : [];
                     editFormData.businessTypes = ['TMS']; // 模拟带出数据
                     editFormData.paymentTerm = row.paymentTerm;
                     editFormData.contractStartDate = row.contractStartDate && row.contractStartDate !== '-' ? row.contractStartDate : '';
@@ -1932,8 +1961,9 @@
                                 allData.value.unshift({
                                     customerCode: editFormData.customerCode,
                                     customerName: editFormData.customerName,
-                                    csRepresentative: editFormData.csRepresentative,
+                                    csRepresentative: editFormData.csRepresentative.join('、'),
                                     salesRepresentative: editFormData.salesRepresentative,
+                                    salesAssistant: editFormData.salesAssistant.join('、'),
                                     customerLevel: editFormData.customerLevel,
                                     ratingScore: '-',
                                     signStatus: '未签约',
@@ -1993,8 +2023,9 @@
                                 allData.value[index].contractEndDate = formatDate(editFormData.contractEndDate);
                                 allData.value[index].customerName = editFormData.customerName;
                                 allData.value[index].customerLevel = editFormData.customerLevel;
-                                allData.value[index].csRepresentative = editFormData.csRepresentative;
+                                allData.value[index].csRepresentative = Array.isArray(editFormData.csRepresentative) ? editFormData.csRepresentative.join('、') : editFormData.csRepresentative;
                                 allData.value[index].salesRepresentative = editFormData.salesRepresentative;
+                                allData.value[index].salesAssistant = Array.isArray(editFormData.salesAssistant) ? editFormData.salesAssistant.join('、') : editFormData.salesAssistant;
                             }
                             
                             ElMessage.success(`${dialogTitle.value}成功！`);

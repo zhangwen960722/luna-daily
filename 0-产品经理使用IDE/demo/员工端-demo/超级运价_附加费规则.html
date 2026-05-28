@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>附加费规则 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
+.top-nav{display:none}
+.top-nav .logo{font-weight:700;font-size:16px;color:var(--el-color-primary)}
+.top-nav .breadcrumb{font-size:13px;color:var(--text-secondary)}
+.top-nav .breadcrumb span{color:var(--text)}
+.page{padding:16px 20px;max-width:1400px;margin:0 auto}
+.page-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.page-hd-left h2{margin:0;font-size:18px;font-weight:600}
+.page-hd-left .subtitle{margin-top:4px;font-size:13px;color:var(--text-secondary)}
+.page-hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;margin-bottom:16px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.card-header h3{margin:0;font-size:15px;font-weight:600}
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
+.el-table td{font-size:13px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-secondary)}
+.empty-state p{margin:8px 0}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-nav">
+    <div><span class="logo">飞点 TMS</span><span class="breadcrumb"> / 头程管理 / <span>附加费规则</span></span></div>
+    <span style="font-size:12px;color:var(--text-secondary)">超级运价 v1.0</span>
+  </div>
+  <div class="page" style="padding: 0; margin: 0; max-width: none;">
+    
+      <div class="page-hd-right">
+        <el-button type="primary" @click="openAdd">新增规则</el-button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom: 0;">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;font-size:15px;font-weight:600">附加费规则</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <el-button type="primary" @click="openAdd">新增规则</el-button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <el-select v-model="ft" placeholder="规则类型" clearable style="width:110px">
+          <el-option label="字段匹配" value="field"></el-option>
+          <el-option label="公式阈值" value="formula"></el-option>
+          <el-option label="人工添加" value="manual"></el-option>
+        </el-select>
+        <el-select v-model="fs" placeholder="生效范围" clearable style="width:110px">
+          <el-option label="全局" value="global"></el-option>
+          <el-option label="指定渠道" value="channel"></el-option>
+        </el-select>
+        <el-select v-model="fd" placeholder="触发维度" clearable style="width:130px">
+          <el-option label="SKU属性" value="sku"></el-option>
+          <el-option label="地址类型" value="address"></el-option>
+          <el-option label="邮编" value="zip"></el-option>
+        </el-select>
+      </div>
+      <el-table :data="filteredRules" border stripe>
+        <el-table-column prop="name" label="规则名称" min-width="160"></el-table-column>
+        <el-table-column prop="type" label="类型" width="90"></el-table-column>
+        <el-table-column prop="action" label="动作" width="90"></el-table-column>
+        <el-table-column prop="node" label="触发节点" width="90"></el-table-column>
+        <el-table-column prop="cond" label="触发条件/公式" min-width="200"></el-table-column>
+        <el-table-column prop="pricing" label="计价" min-width="130"></el-table-column>
+        <el-table-column prop="feeLabel" label="费用类型" width="90"></el-table-column>
+        <el-table-column prop="direction" label="费用方向" width="90"></el-table-column>
+        <el-table-column prop="scope" label="生效范围" min-width="110"></el-table-column>
+        <el-table-column prop="status" label="状态" width="80"></el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="s"><el-button size="small" @click="openEdit(s.row, s.$index)">编辑</el-button></template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </div>
+  <el-dialog v-model="showDialog" :title="dialogTitle" width="700px" :close-on-click-modal="false">
+    <el-form :model="f" label-width="110px">
+      <el-form-item label="规则名称" required><el-input v-model="f.name" placeholder="如粉末品名加收"></el-input></el-form-item>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="规则类型" required><el-select v-model="f.type" @change="onTypeChange"><el-option label="字段匹配" value="field"></el-option><el-option label="公式阈值" value="formula"></el-option><el-option label="人工添加" value="manual"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="动作类型" required><el-select v-model="f.action"><el-option label="加收费用" value="charge"></el-option><el-option label="标识提醒" value="flag"></el-option><el-option label="阻止下单" value="block"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="触发节点" required><el-select v-model="f.node"><el-option label="运单创建" value="waybill"></el-option><el-option label="红外过机" value="ir"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="费用方向" required><el-radio-group v-model="f.dir"><el-radio label="r">应收(+)</el-radio><el-radio label="d">客户优惠(-)</el-radio></el-radio-group></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="可优惠级别" v-if="f.action==='charge'"><el-select v-model="f.dl"><el-option label="可全免" value="full"></el-option><el-option label="部分可优惠" value="partial"></el-option><el-option label="不可优惠" value="none"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="费用类型标签" required><el-input v-model="f.feeLabel" placeholder="如 出口费用"></el-input></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="币种" required v-if="f.action==='charge'"><el-select v-model="f.currency"><el-option label="RMB" value="rmb"></el-option><el-option label="USD" value="usd"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="状态" required><el-select v-model="f.status"><el-option label="生效中" value="active"></el-option><el-option label="已禁用" value="disabled"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <template v-if="f.type==='field'"><el-divider>触发条件</el-divider><el-form-item label="触发维度"><el-select v-model="f.dim"><el-option label="SKU属性" value="sku"></el-option><el-option label="地址类型" value="address"></el-option><el-option label="邮编" value="zip"></el-option><el-option label="尾程派送" value="lastMile"></el-option><el-option label="本地仓" value="warehouse"></el-option><el-option label="用户" value="user"></el-option><el-option label="用户等级" value="userLevel"></el-option></el-select></el-form-item></template>
+      <template v-if="f.type==='formula'"><el-divider>公式配置（多公式 OR 关系）</el-divider><el-form-item label="公式1"><el-input v-model="f.f1" placeholder="(长+宽)x2+高 > 300"></el-input></el-form-item><el-form-item label="公式2"><el-input v-model="f.f2" placeholder="长+宽x2+高x2 > 265"></el-input></el-form-item></template>
+      <template v-if="f.type==='manual'"><el-divider>人工输入字段</el-divider><el-form-item label="字段标签"><el-input v-model="f.ml" placeholder="如贴标张数"></el-input></el-form-item></template>
+      <el-divider>计价与范围</el-divider>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="计价单位" v-if="f.action==='charge'"><el-select v-model="f.pu"><el-option label="按票" value="ticket"></el-option><el-option label="按箱" value="box"></el-option><el-option label="按KG" value="kg"></el-option><el-option label="按CBM" value="cbm"></el-option><el-option label="按数量" value="unit"></el-option><el-option label="按申报价值%" value="declared"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="单价" v-if="f.action==='charge'"><el-input-number v-model="f.price" :min="0" :precision="2"></el-input-number></el-form-item></el-col>
+      </el-row>
+      <el-form-item label="生效范围" required><el-select v-model="f.scope"><el-option label="全局" value="global"></el-option><el-option label="指定渠道" value="channel"></el-option></el-select></el-form-item>
+      <el-form-item label="指定渠道" required v-if="f.scope==='channel'"><el-select v-model="f.scopeChannels" multiple filterable><el-option label="美森360" value="USMS360"></el-option><el-option label="美森432" value="USMS432"></el-option></el-select></el-form-item>
+    </el-form>
+    <template #footer><el-button @click="showDialog=false">取消</el-button><el-button type="primary" @click="save">保存</el-button></template>
+  </el-dialog>
+</div>
+<script>
+(function(){var typeLabel={field:'字段匹配',formula:'公式阈值',manual:'人工添加'},actionLabel={charge:'加收',flag:'标识提醒',block:'阻止下单'},nodeLabel={waybill:'运单创建',ir:'红外过机'},dirLabel={r:'应收(+)',d:'客户优惠(-)'},puLabel={ticket:'按票',box:'按箱',kg:'按KG',cbm:'按CBM',unit:'按数量',declared:'按申报价值%'},dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送',warehouse:'本地仓',user:'用户',userLevel:'用户等级'};var app=Vue.createApp({data:function(){return{showDialog:false,editMode:false,editIndex:-1,ft:'',fs:'',fd:'',rules:[{name:'粉末品名加收',type:'字段匹配',action:'加收',node:'运单创建',cond:'SKU属性=粉末 AND 尾程=卡派',pricing:'按KG 1.5元',feeLabel:'出口费用',direction:'应收(+)',scope:'指定:美森360',status:'生效中',_raw:{type:'field',action:'charge',node:'waybill',dir:'r',dl:'full',dim:'sku',f1:'',f2:'',ml:'',pu:'kg',price:1.5,scope:'channel',scopeChannels:['USMS360'],feeLabel:'出口费用',currency:'rmb',status:'active'}},{name:'超重超长加收',type:'公式阈值',action:'加收',node:'红外过机',cond:'(长+宽)x2+高>300 OR 长+宽x2+高x2>265',pricing:'按箱 200元',feeLabel:'出口费用',direction:'应收(+)',scope:'全局',status:'生效中',_raw:{type:'formula',action:'charge',node:'ir',dir:'r',dl:'partial',dim:'',f1:'(长+宽)x2+高>300',f2:'长+宽x2+高x2>265',ml:'',pu:'box',price:200,scope:'global',scopeChannels:[],feeLabel:'出口费用',currency:'rmb',status:'active'}},{name:'商业地址加收',type:'字段匹配',action:'加收',node:'运单创建',cond:'尾程=快递派 AND 地址类型=商业',pricing:'按票 50元',feeLabel:'派送费用',direction:'应收(+)',scope:'全局',status:'生效中',_raw:{type:'field',action:'charge',node:'waybill',dir:'r',dl:'full',dim:'address',f1:'',f2:'',ml:'',pu:'ticket',price:50,scope:'global',scopeChannels:[],feeLabel:'派送费用',currency:'rmb',status:'active'}},{name:'贴标费',type:'人工添加',action:'加收',node:'运单创建',cond:'人工勾选贴标+填张数',pricing:'按数量 2元',feeLabel:'增值服务',direction:'应收(+)',scope:'全局',status:'已禁用',_raw:{type:'manual',action:'charge',node:'waybill',dir:'r',dl:'full',dim:'',f1:'',f2:'',ml:'贴标张数',pu:'unit',price:2,scope:'global',scopeChannels:[],feeLabel:'增值服务',currency:'rmb',status:'disabled'}}],f:{name:'',type:'field',action:'charge',node:'waybill',dir:'r',dl:'full',dim:'',f1:'',f2:'',ml:'贴标张数',pu:'kg',price:0,scope:'global',scopeChannels:[],feeLabel:'',currency:'rmb',status:'active'}}},computed:{dialogTitle:function(){return this.editMode?'编辑附加费规则':'新增附加费规则'},filteredRules:function(){var self=this;return this.rules.filter(function(r){if(self.ft&&r.type!==typeLabel[self.ft])return false;if(self.fs){var isGlobal=r.scope==='全局';if(self.fs==='global'&&!isGlobal)return false;if(self.fs==='channel'&&isGlobal)return false}if(self.fd){var dims={sku:'SKU属性',address:'地址类型',zip:'邮编'},label=dims[self.fd];if(label&&r.cond.indexOf(label)===-1)return false}return true})}},methods:{openAdd:function(){this.editMode=false;this.editIndex=-1;this.f={name:'',type:'field',action:'charge',node:'waybill',dir:'r',dl:'full',dim:'',f1:'',f2:'',ml:'贴标张数',pu:'kg',price:0,scope:'global',scopeChannels:[],feeLabel:'',currency:'rmb',status:'active'};this.showDialog=true},openEdit:function(row,idx){this.editMode=true;this.editIndex=idx;var raw=row._raw;this.f={name:row.name,type:raw.type,action:raw.action,node:raw.node,dir:raw.dir,dl:raw.dl,dim:raw.dim,f1:raw.f1,f2:raw.f2,ml:raw.ml,pu:raw.pu,price:raw.price,scope:raw.scope,scopeChannels:raw.scopeChannels||[],feeLabel:raw.feeLabel||'',currency:raw.currency||'rmb',status:raw.status||'active'};this.showDialog=true},onTypeChange:function(){this.f.pu=this.f.type==='manual'?'unit':'kg'},buildCond:function(){if(this.f.type==='field')return(dimLabel[this.f.dim]||this.f.dim)+'=特定值';if(this.f.type==='formula'){var p=[];if(this.f.f1)p.push(this.f.f1);if(this.f.f2)p.push(this.f.f2);return p.join(' OR ')||'待填公式'}if(this.f.type==='manual')return'人工勾选'+(this.f.ml||'字段')+'+填数值';return''},save:function(){if(!this.f.name){ElementPlus.ElMessage.warning('请输入规则名称');return}if(!this.f.feeLabel){ElementPlus.ElMessage.warning('请输入费用类型标签');return}if(this.f.scope==='channel'&&this.f.scopeChannels.length===0){ElementPlus.ElMessage.warning('请选择指定渠道');return}var scopeDisplay=this.f.scope==='global'?'全局':'指定:'+this.f.scopeChannels.join(',');var row={name:this.f.name,type:typeLabel[this.f.type],action:actionLabel[this.f.action],node:nodeLabel[this.f.node],cond:this.buildCond(),pricing:this.f.action==='charge'?(puLabel[this.f.pu]+' '+this.f.price+'元'):'-',feeLabel:this.f.feeLabel,direction:dirLabel[this.f.dir],scope:scopeDisplay,status:this.f.status==='active'?'生效中':'已禁用',_raw:{type:this.f.type,action:this.f.action,node:this.f.node,dir:this.f.dir,dl:this.f.dl,dim:this.f.dim,f1:this.f.f1,f2:this.f.f2,ml:this.f.ml,pu:this.f.pu,price:this.f.price,scope:this.f.scope,scopeChannels:this.f.scopeChannels,feeLabel:this.f.feeLabel,currency:this.f.currency,status:this.f.status}};if(this.editMode){this.rules.splice(this.editIndex,1,row);ElementPlus.ElMessage.success('规则编辑成功')}else{this.rules.push(row);ElementPlus.ElMessage.success('规则新增成功')}this.showDialog=false}}});app.use(ElementPlus);app.mount('#app')})();
+</script>
+</body>
+</html>

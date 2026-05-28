@@ -203,9 +203,14 @@
                                 </el-select>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="etaDays" label="预估时效(天)" min-width="150">
+                        <el-table-column prop="etaDays" label="开船至送仓(天)" min-width="150">
                             <template #default="scope">
                                 <el-input-number v-model="scope.row.etaDays" :min="0" :precision="0" style="width: 100%;" controls-position="right"></el-input-number>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="containerToWhDays" label="提柜至送仓(天)" min-width="150">
+                            <template #default="scope">
+                                <el-input-number v-model="scope.row.containerToWhDays" :min="0" :precision="0" style="width: 100%;" controls-position="right"></el-input-number>
                             </template>
                         </el-table-column>
                         <el-table-column label="操作" width="80" align="center">
@@ -284,12 +289,12 @@
                 const tableData = ref([
                     { 
                         serviceName: '大陆UPS', transportMode: '空运', taxType: '包税, 不包税', serviceType: '散货', billingMethod: '重量KG', lastMileMethod: '快递派', needClaim: '是', status: '正常',
-                        etaData: [ { fbaCode: 'ONT8', etaDays: 5 } ],
+                        etaData: [ { fbaCode: 'ONT8', etaDays: 5, containerToWhDays: 2 } ],
                         claimData: [ { deliveryMethod: '快递派', warehouses: '', claimDays: 7 } ]
                     },
                     { 
                         serviceName: '美森360', transportMode: '海运', taxType: '包税, 不包税, 自主税号, 自税递延', serviceType: '散货, 整柜', billingMethod: '重量KG, 体积m³', lastMileMethod: '卡派, 快递派', needClaim: '是', status: '正常',
-                        etaData: [ { fbaCode: 'ABQ2', etaDays: 14 }, { fbaCode: 'AVP1', etaDays: 17 } ],
+                        etaData: [ { fbaCode: 'ABQ2', etaDays: 14, containerToWhDays: 5 }, { fbaCode: 'AVP1', etaDays: 17, containerToWhDays: 6 } ],
                         claimData: [
                             { deliveryMethod: '卡派', warehouses: 'ONT8,LAX9,LGB8', claimDays: 13 },
                             { deliveryMethod: '卡派', warehouses: 'SBD1,POC1,POC3', claimDays: 14 },
@@ -298,7 +303,7 @@
                     },
                     { 
                         serviceName: '美森432', transportMode: '海运', taxType: '包税, 不包税, 自主税号, 自税递延', serviceType: '散货, 整柜', billingMethod: '重量KG, 体积m³', lastMileMethod: '卡派, 快递派', needClaim: '是', status: '正常',
-                        etaData: [ { fbaCode: 'ABQ2', etaDays: 14 } ],
+                        etaData: [ { fbaCode: 'ABQ2', etaDays: 14, containerToWhDays: 5 } ],
                         claimData: [ { deliveryMethod: '快递派', warehouses: '', claimDays: 12 } ]
                     }
                 ]);
@@ -420,7 +425,7 @@
                 };
 
                 const handleAddEtaRow = () => {
-                    etaTableData.value.push({ fbaCode: '', etaDays: undefined });
+                    etaTableData.value.push({ fbaCode: '', etaDays: undefined, containerToWhDays: undefined });
                 };
 
                 const handleDeleteEtaRow = (index) => {
@@ -448,9 +453,9 @@
                     }
 
                     // 校验送仓预估时效
-                    const isEtaValid = etaTableData.value.every(item => item.fbaCode && item.etaDays !== undefined && item.etaDays !== null);
+                    const isEtaValid = etaTableData.value.every(item => item.fbaCode && item.etaDays !== undefined && item.etaDays !== null && item.containerToWhDays !== undefined && item.containerToWhDays !== null);
                     if (!isEtaValid) {
-                        ElMessage.warning('请完善【送仓预估时效】中的 FBA仓库代码 和 预估时效');
+                        ElMessage.warning('请完善【送仓预估时效】中的 FBA仓库代码、开船至送仓(天) 和 提柜至送仓(天)');
                         activeTimeTab.value = 'eta';
                         return;
                     }

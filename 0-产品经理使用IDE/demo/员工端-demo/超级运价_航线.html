@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>航线 & 船期 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
+.top-nav{display:none}
+.top-nav .logo{font-weight:700;font-size:16px;color:var(--el-color-primary)}
+.top-nav .breadcrumb{font-size:13px;color:var(--text-secondary)}
+.top-nav .breadcrumb span{color:var(--text)}
+.page{padding:16px 20px;max-width:1400px;margin:0 auto}
+.page-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.page-hd-left h2{margin:0;font-size:18px;font-weight:600}
+.page-hd-left .subtitle{margin-top:4px;font-size:13px;color:var(--text-secondary)}
+.page-hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;margin-bottom:16px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.card-header h3{margin:0;font-size:15px;font-weight:600}
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
+.el-table td{font-size:13px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-secondary)}
+.empty-state p{margin:8px 0}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="page" style="padding: 0; margin: 0; max-width: none;">
+    <div class="card" style="padding:0; margin-bottom: 0;">
+      <el-tabs v-model="activeTab" style="padding:0 20px">
+        <el-tab-pane label="航线管理" name="route">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0">
+            <h3 style="margin:0;font-size:15px;font-weight:600">航线列表</h3>
+            <el-button type="primary" @click="openAddRoute">新增航线</el-button>
+          </div>
+          <el-table :data="routes" border stripe>
+            <el-table-column prop="code" label="航线代码" min-width="130"></el-table-column>
+            <el-table-column prop="origin" label="出发港" min-width="160"></el-table-column>
+            <el-table-column prop="dest" label="目的港" min-width="160"></el-table-column>
+            <el-table-column prop="supplier" label="船司" min-width="120"></el-table-column>
+            <el-table-column prop="estDays" label="预计运输天数" min-width="110"></el-table-column>
+            <el-table-column label="关联渠道" min-width="200"><template #default="s"><el-tag v-for="c in s.row.channels" :key="c" size="small" style="margin-right:4px">{{c}}</el-tag></template></el-table-column>
+            <el-table-column label="操作" width="80" fixed="right"><template #default="s"><el-button size="small" @click="openEditRoute(s.row,s.$index)">编辑</el-button></template></el-table-column>
+          </el-table>
+        </el-tab-pane>
+        <el-tab-pane label="周船期批次" name="batch">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0">
+            <h3 style="margin:0;font-size:15px;font-weight:600">周船期批次</h3>
+            <el-button type="primary" @click="openAddBatch">新建批次</el-button>
+          </div>
+          <el-table :data="batches" border stripe>
+            <el-table-column prop="name" label="批次名称" min-width="180"></el-table-column>
+            <el-table-column prop="week" label="周次" min-width="100"></el-table-column>
+            <el-table-column prop="start" label="周起始" min-width="100"></el-table-column>
+            <el-table-column prop="end" label="周结束" min-width="100"></el-table-column>
+            <el-table-column prop="status" label="状态" min-width="100"><template #default="s"><el-tag v-if="s.row.status==='当前'" type="success">{{s.row.status}}</el-tag><el-tag v-else-if="s.row.status==='预告'" type="info">{{s.row.status}}</el-tag><el-tag v-else type="warning">{{s.row.status}}</el-tag></template></el-table-column>
+            <el-table-column label="操作" width="100" fixed="right"><template #default="s"><el-button size="small" @click="viewSailing(s.row)">查看船期</el-button></template></el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
+    </div>
+  </div>
+  <!-- Route & Batch dialogs unchanged -->
+  <el-dialog v-model="showRouteDialog" :title="editRouteMode?'编辑航线':'新增航线'" width="550px" :close-on-click-modal="false">
+    <el-form :model="routeForm" label-width="110px">
+      <el-form-item label="航线代码" required><el-input v-model="routeForm.code" placeholder="如 CLX"></el-input></el-form-item>
+      <el-form-item label="出发港" required><el-input v-model="routeForm.origin" placeholder="如 上海港(SHA)"></el-input></el-form-item>
+      <el-form-item label="目的港" required><el-input v-model="routeForm.dest" placeholder="如 长滩港(USLAX)"></el-input></el-form-item>
+      <el-form-item label="船司" required><el-input v-model="routeForm.supplier" placeholder="如 MATSON"></el-input></el-form-item>
+      <el-form-item label="预计运输天数" required><el-input-number v-model="routeForm.estDays" :min="1" :max="60"></el-input-number></el-form-item>
+      <el-form-item label="关联渠道"><el-select v-model="routeForm.channels" multiple filterable><el-option label="美森360" value="美森360"></el-option><el-option label="美森432" value="美森432"></el-option><el-option label="快船600" value="快船600"></el-option></el-select></el-form-item>
+    </el-form>
+    <template #footer><el-button @click="showRouteDialog=false">取消</el-button><el-button type="primary" @click="saveRoute">保存</el-button></template>
+  </el-dialog>
+  <el-dialog v-model="showBatchDialog" title="新建周批次" width="500px" :close-on-click-modal="false">
+    <el-form :model="batchForm" label-width="110px">
+      <el-form-item label="批次名称" required><el-input v-model="batchForm.name" placeholder="如 2026-W06（2/2-2/8）"></el-input></el-form-item>
+      <el-form-item label="周次" required><el-input v-model="batchForm.week" placeholder="如 2026-W06"></el-input></el-form-item>
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="周起始" required><el-date-picker v-model="batchForm.start" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col><el-col :span="12"><el-form-item label="周结束" required><el-date-picker v-model="batchForm.end" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col></el-row>
+    </el-form>
+    <template #footer><el-button @click="showBatchDialog=false">取消</el-button><el-button type="primary" @click="saveBatch">创建批次</el-button></template>
+  </el-dialog>
+  <el-dialog v-model="showSailingDialog" :title="sailingDialogTitle" width="900px" :close-on-click-modal="false">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span style="color:var(--text-secondary);font-size:13px">批次：{{ currentBatchName }}，共 {{ sailingList.length }} 条船期</span>
+      <el-button size="small" type="primary" @click="openAddSailing">新增船期</el-button>
+    </div>
+    <el-table :data="sailingList" border stripe>
+      <el-table-column prop="routeName" label="航线" min-width="180"></el-table-column>
+      <el-table-column label="截单时间（按本地仓）" min-width="220"><template #default="s2"><el-tag v-for="(d,wh) in s2.row.cutoffTimes" :key="wh" size="small" style="margin-right:4px;margin-bottom:2px">{{wh}}: {{d}}</el-tag></template></el-table-column>
+      <el-table-column prop="etd" label="ETD" min-width="90"></el-table-column>
+      <el-table-column prop="eta" label="ETA" min-width="90"></el-table-column>
+      <el-table-column prop="voyageDays" label="航程" min-width="70"></el-table-column>
+      <el-table-column prop="fastestPickup" label="最快提取" min-width="90"></el-table-column>
+      <el-table-column label="操作" width="80" fixed="right"><template #default="s2"><el-button size="small" @click="openEditSailing(s2.row,s2.$index)">编辑</el-button></template></el-table-column>
+    </el-table>
+    <template #footer><el-button @click="showSailingDialog=false">关闭</el-button></template>
+  </el-dialog>
+  <el-dialog v-model="showSailingFormDialog" :title="editSailingMode?'编辑船期':'新增船期'" width="600px" :close-on-click-modal="false">
+    <el-form :model="sailingForm" label-width="110px">
+      <el-form-item label="航线" required><el-select v-model="sailingForm.routeName"><el-option v-for="r in routes" :key="r.code" :label="r.code+' '+r.origin+'→'+r.dest" :value="r.code+' '+r.origin+'→'+r.dest+'('+r.supplier+')'"></el-option></el-select></el-form-item>
+      <el-form-item label="截单时间" required>
+        <div v-for="(p,i) in sailingForm.cutoffPairs" :key="i" style="display:flex;gap:8px;margin-bottom:6px">
+          <el-select v-model="p.wh" placeholder="选择本地仓" style="width:150px" filterable><el-option v-for="w in availableWarehouses(i)" :key="w" :label="w" :value="w"></el-option></el-select>
+          <el-date-picker v-model="p.date" type="date" format="M月D日" value-format="M月D日" placeholder="截单日期" style="flex:1"></el-date-picker>
+          <el-button size="small" type="danger" circle @click="removeCutoffPair(i)" :disabled="sailingForm.cutoffPairs.length<=1">✕</el-button>
+        </div>
+        <el-button size="small" text type="primary" @click="addCutoffPair">+ 添加仓库截单时间</el-button>
+      </el-form-item>
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="ETD" required><el-date-picker v-model="sailingForm.etd" type="date" format="M月D日" value-format="M月D日" style="width:100%"></el-date-picker></el-form-item></el-col><el-col :span="12"><el-form-item label="ETA" required><el-date-picker v-model="sailingForm.eta" type="date" format="M月D日" value-format="M月D日" style="width:100%"></el-date-picker></el-form-item></el-col></el-row>
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="航程" required><el-input-number v-model="sailingForm.voyageDays" :min="1" :max="60" style="width:100%"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="最快提取"><el-date-picker v-model="sailingForm.fastestPickup" type="date" format="M月D日" value-format="M月D日" style="width:100%"></el-date-picker></el-form-item></el-col></el-row>
+    </el-form>
+    <template #footer><el-button @click="showSailingFormDialog=false">取消</el-button><el-button type="primary" @click="saveSailing">保存</el-button></template>
+  </el-dialog>
+</div>
+<script>
+function parseChDate(str){if(!str)return null;var m=str.match(/(\d+)月(\d+)日/);if(m)return new Date(2026,parseInt(m[1])-1,parseInt(m[2]));return null}
+var LOCAL_WAREHOUSES=['广州仓','汕头仓','义乌仓','泉州仓','厦门仓','深圳仓'];
+(function(){var app=Vue.createApp({data:function(){return{activeTab:'route',showRouteDialog:false,editRouteMode:false,editRouteIndex:-1,showBatchDialog:false,showSailingDialog:false,showSailingFormDialog:false,editSailingMode:false,editSailingIndex:-1,currentBatchName:'',routes:[{code:'CLX',origin:'上海港(SHA)',dest:'长滩港(USLAX)',supplier:'MATSON',estDays:'11',channels:['美森360']},{code:'MAX',origin:'上海港(SHA)',dest:'长滩港(USLAX)',supplier:'MATSON',estDays:'11',channels:['美森432']},{code:'SEA/SEA3',origin:'盐田港(YTN)',dest:'长滩港(USLAX)',supplier:'COSCO',estDays:'17',channels:['快船600']}],batches:[{name:'2026-W05（1/26-2/1）',week:'2026-W05',start:'2026-01-26',end:'2026-02-01',status:'当前'},{name:'2026-W04（1/19-1/25）',week:'2026-W04',start:'2026-01-19',end:'2026-01-25',status:'已过期'},{name:'2026-W06（2/2-2/8）',week:'2026-W06',start:'2026-02-02',end:'2026-02-08',status:'预告'}],sailingData:{'2026-W05（1/26-2/1）':[{routeName:'CLX 上海→长滩(MATSON)',cutoffTimes:{'广州仓':'2月1日','汕头仓':'2月1日','义乌仓':'1月30日'},etd:'2月5日',eta:'2月16日',voyageDays:'11天',fastestPickup:'2月17日'},{routeName:'MAX 上海→长滩(MATSON)',cutoffTimes:{'广州仓':'2月2日','汕头仓':'2月2日'},etd:'2月6日',eta:'2月17日',voyageDays:'11天',fastestPickup:'2月18日'},{routeName:'SEA/SEA3 盐田→长滩(COSCO)',cutoffTimes:{'广州仓':'1月31日','汕头仓':'1月31日'},etd:'2月4日',eta:'2月15日',voyageDays:'11天',fastestPickup:'2月16日'}],'2026-W04（1/19-1/25）':[{routeName:'CLX 上海→长滩(MATSON)',cutoffTimes:{'广州仓':'1月25日','汕头仓':'1月25日'},etd:'1月29日',eta:'2月9日',voyageDays:'11天',fastestPickup:'2月10日'}],'2026-W06（2/2-2/8）':[]},routeForm:{code:'',origin:'',dest:'',supplier:'',estDays:11,channels:[]},batchForm:{name:'',week:'',start:'',end:''},sailingForm:{routeName:'',cutoffPairs:[{wh:'',date:null}],etd:null,eta:null,voyageDays:11,fastestPickup:null}}},computed:{sailingList:function(){return this.sailingData[this.currentBatchName]||[]},sailingDialogTitle:function(){return'船期详情 - '+this.currentBatchName}},methods:{openAddRoute:function(){this.editRouteMode=false;this.editRouteIndex=-1;this.routeForm={code:'',origin:'',dest:'',supplier:'',estDays:11,channels:[]};this.showRouteDialog=true},openEditRoute:function(row,idx){this.editRouteMode=true;this.editRouteIndex=idx;this.routeForm={code:row.code,origin:row.origin,dest:row.dest,supplier:row.supplier,estDays:parseInt(row.estDays),channels:row.channels.slice()};this.showRouteDialog=true},saveRoute:function(){if(!this.routeForm.code){ElementPlus.ElMessage.warning('请输入航线代码');return}if(!this.routeForm.origin){ElementPlus.ElMessage.warning('请输入出发港');return}if(!this.routeForm.dest){ElementPlus.ElMessage.warning('请输入目的港');return}if(!this.routeForm.supplier){ElementPlus.ElMessage.warning('请输入船司');return}var row={code:this.routeForm.code,origin:this.routeForm.origin,dest:this.routeForm.dest,supplier:this.routeForm.supplier,estDays:String(this.routeForm.estDays),channels:this.routeForm.channels};if(this.editRouteMode){this.routes.splice(this.editRouteIndex,1,row);ElementPlus.ElMessage.success('航线编辑成功')}else{this.routes.push(row);ElementPlus.ElMessage.success('航线新增成功')}this.showRouteDialog=false},openAddBatch:function(){this.batchForm={name:'',week:'',start:'',end:''};this.showBatchDialog=true},saveBatch:function(){if(!this.batchForm.name){ElementPlus.ElMessage.warning('请输入批次名称');return}if(!this.batchForm.week){ElementPlus.ElMessage.warning('请输入周次');return}if(!this.batchForm.start){ElementPlus.ElMessage.warning('请选择周起始');return}if(!this.batchForm.end){ElementPlus.ElMessage.warning('请选择周结束');return}var name=this.batchForm.name;this.batches.push({name:name,week:this.batchForm.week,start:this.batchForm.start,end:this.batchForm.end,status:'预告'});this.sailingData[name]=[];ElementPlus.ElMessage.success('批次创建成功');this.showBatchDialog=false},viewSailing:function(row){this.currentBatchName=row.name;if(!this.sailingData[this.currentBatchName])this.sailingData[this.currentBatchName]=[];this.showSailingDialog=true},availableWarehouses:function(ci){var used=[];this.sailingForm.cutoffPairs.forEach(function(p,i){if(i!==ci&&p.wh)used.push(p.wh)});return LOCAL_WAREHOUSES.filter(function(w){return used.indexOf(w)===-1})},addCutoffPair:function(){this.sailingForm.cutoffPairs.push({wh:'',date:null})},removeCutoffPair:function(i){this.sailingForm.cutoffPairs.splice(i,1)},openAddSailing:function(){this.editSailingMode=false;this.editSailingIndex=-1;this.sailingForm={routeName:'',cutoffPairs:[{wh:'',date:null}],etd:null,eta:null,voyageDays:11,fastestPickup:null};this.showSailingFormDialog=true},openEditSailing:function(row,idx){this.editSailingMode=true;this.editSailingIndex=idx;var pairs=[];for(var wh in row.cutoffTimes){if(row.cutoffTimes.hasOwnProperty(wh))pairs.push({wh:wh,date:parseChDate(row.cutoffTimes[wh])})}if(pairs.length===0)pairs.push({wh:'',date:null});this.sailingForm={routeName:row.routeName,cutoffPairs:pairs,etd:parseChDate(row.etd),eta:parseChDate(row.eta),voyageDays:parseInt(row.voyageDays)||11,fastestPickup:parseChDate(row.fastestPickup)};this.showSailingFormDialog=true},saveSailing:function(){if(!this.sailingForm.routeName){ElementPlus.ElMessage.warning('请选择航线');return}var ct={},he=false;this.sailingForm.cutoffPairs.forEach(function(p){if(!p.wh){he=true;return}if(!p.date){he=true;return}ct[p.wh]=p.date});if(he){ElementPlus.ElMessage.warning('请完善截单时间');return}if(!this.sailingForm.etd){ElementPlus.ElMessage.warning('请选择ETD');return}if(!this.sailingForm.eta){ElementPlus.ElMessage.warning('请选择ETA');return}var row={routeName:this.sailingForm.routeName,cutoffTimes:ct,etd:this.sailingForm.etd,eta:this.sailingForm.eta,voyageDays:String(this.sailingForm.voyageDays)+'天',fastestPickup:this.sailingForm.fastestPickup||''};if(this.editSailingMode){this.sailingData[this.currentBatchName].splice(this.editSailingIndex,1,row);ElementPlus.ElMessage.success('船期编辑成功')}else{this.sailingData[this.currentBatchName].push(row);ElementPlus.ElMessage.success('船期新增成功')}this.showSailingFormDialog=false}}});app.use(ElementPlus);app.mount('#app')})();
+</script>
+</body>
+</html>

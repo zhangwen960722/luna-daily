@@ -1,0 +1,119 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>成本管理 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
+.top-nav{display:none}
+.top-nav .logo{font-weight:700;font-size:16px;color:var(--el-color-primary)}
+.top-nav .breadcrumb{font-size:13px;color:var(--text-secondary)}
+.top-nav .breadcrumb span{color:var(--text)}
+.page{padding:16px 20px;max-width:1400px;margin:0 auto}
+.page-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.page-hd-left h2{margin:0;font-size:18px;font-weight:600}
+.page-hd-left .subtitle{margin-top:4px;font-size:13px;color:var(--text-secondary)}
+.page-hd-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;margin-bottom:16px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.card-header h3{margin:0;font-size:15px;font-weight:600}
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
+.el-table td{font-size:13px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-secondary)}
+.empty-state p{margin:8px 0}
+.seg-item{cursor:pointer;padding:10px 14px;border-radius:6px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;transition:all .15s;border:1px solid transparent}
+.seg-item:hover{background:#F0F9EB;border-color:#C8E6C9}
+.seg-item.active{background:#2DA44E;color:#fff;border-color:#2DA44E}
+.seg-item.active .seg-name{color:#fff}
+.seg-item.active .seg-count{background:rgba(255,255,255,.2)}
+.seg-name{font-size:14px;font-weight:500}
+.seg-count{font-size:11px;background:#F0F2F5;padding:2px 8px;border-radius:10px;font-weight:500}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top-nav">
+    <div><span class="logo">飞点 TMS</span><span class="breadcrumb"> / 头程管理 / <span>成本管理</span></span></div>
+    <span style="font-size:12px;color:var(--text-secondary)">超级运价 v1.0</span>
+  </div>
+  <div class="page" style="padding: 0; margin: 0; max-width: none;">
+    
+    </div>
+    <div style="display:flex;gap:16px;align-items:flex-start">
+      <div class="card" style="width:260px;flex-shrink:0">
+        <div class="card-header"><h3>成本段</h3><el-button size="small" type="primary" @click="openAddSeg">新增</el-button></div>
+        <div class="seg-item" :class="{active:selectedSeg===''}" @click="selectedSeg=''">
+          <span class="seg-name">全部</span><span class="seg-count">{{tmpls.length}}</span>
+        </div>
+        <div v-for="(s,i) in segs" :key="s.name" class="seg-item" :class="{active:selectedSeg===s.name}" @click="selectedSeg=s.name">
+          <div><span class="seg-name">{{s.name}}</span><span v-if="s.en==='否'" style="font-size:11px;color:#F53F3F;margin-left:4px">禁用</span></div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="seg-count">{{segItemCount(s.name)}}</span>
+            <el-button size="small" text circle @click.stop="openEditSeg(s,i)" style="font-size:14px;width:24px;height:24px">✎</el-button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="flex:1;min-width:0">
+        <div class="card-header">
+          <h3>成本项模板<span v-if="selectedSeg" style="color:#2DA44E;font-size:14px"> — {{selectedSeg}}</span><span v-else style="color:#909399;font-size:14px"> — 全部</span></h3>
+          <el-button type="primary" @click="openAddTmpl">新增成本项</el-button>
+        </div>
+        <div v-if="filteredTmpls.length===0" class="empty-state"><p>暂无成本项</p></div>
+        <el-table v-else :data="filteredTmpls" border stripe>
+          <el-table-column prop="seg" label="所属段" min-width="120" v-if="!selectedSeg"></el-table-column>
+          <el-table-column prop="name" label="项名称" min-width="130"></el-table-column>
+          <el-table-column prop="formula" label="公式" min-width="130"></el-table-column>
+          <el-table-column prop="dp" label="建议默认价" min-width="110"></el-table-column>
+          <el-table-column prop="cur" label="币种" width="70"></el-table-column>
+          <el-table-column label="操作" min-width="140"><template #default="s"><el-button size="small" @click="openEditTmpl(s.row,s.$index)">编辑</el-button><el-button size="small" @click="batchUpdate(s.row)">批量更新</el-button></template></el-table-column>
+        </el-table>
+      </div>
+    </div>
+  </div>
+  <el-dialog v-model="showSegDialog" :title="editSegMode?'编辑成本段':'新增成本段'" width="450px" :close-on-click-modal="false">
+    <el-form :model="segForm" label-width="100px">
+      <el-form-item label="段名称" required><el-input v-model="segForm.name" placeholder="如 揽收段"></el-input></el-form-item>
+      <el-form-item label="启用"><el-switch v-model="segForm.en"></el-switch></el-form-item>
+    </el-form>
+    <template #footer><el-button @click="showSegDialog=false">取消</el-button><el-button type="primary" @click="saveSeg">保存</el-button></template>
+  </el-dialog>
+  <el-dialog v-model="showBuDialog" title="批量更新建议默认价" width="700px" :close-on-click-modal="false">
+    <el-form label-width="110px">
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="成本项名称"><el-input :model-value="buRow?buRow.name:''" disabled></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="币种"><el-input :model-value="buRow?buRow.cur:''" disabled></el-input></el-form-item></el-col></el-row>
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="原建议默认价"><el-input :model-value="buRow?buRow.dp:''" disabled></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="新建议默认价" required><el-input-number v-model="buForm.newPrice" :min="0" :precision="2" style="width:100%"></el-input-number></el-form-item></el-col></el-row>
+    </el-form>
+    <el-divider>同步到关联服务组合</el-divider>
+    <div v-if="affectedCombos.length===0" class="empty-state"><p>暂无关联的服务组合</p></div>
+    <template v-else>
+      <div style="margin-bottom:8px"><el-checkbox v-model="buForm.selectAll" :indeterminate="isIndeterminate" @change="toggleAllCombos">全选（已选 {{selectedCount}} / {{affectedCombos.length}}）</el-checkbox></div>
+      <el-table :data="affectedCombos" border stripe size="small" max-height="280">
+        <el-table-column width="50"><template #default="s"><el-checkbox v-model="buForm.selectedCombos[s.row.code]"></el-checkbox></template></el-table-column>
+        <el-table-column prop="code" label="服务组合编码" min-width="260"></el-table-column>
+        <el-table-column prop="ch" label="渠道" width="80"></el-table-column>
+        <el-table-column prop="costPrice" label="当前成本价" min-width="100"></el-table-column>
+        <el-table-column label="更新后" min-width="100"><template #default><span style="color:#2DA44E;font-weight:bold">{{buForm.newPrice}}</span></template></el-table-column>
+      </el-table>
+    </template>
+    <template #footer><el-button @click="showBuDialog=false">取消</el-button><el-button type="primary" @click="confirmBatchUpdate" :disabled="selectedCount===0">确认更新（{{selectedCount}} 个组合）</el-button></template>
+  </el-dialog>
+  <el-dialog v-model="showTmplDialog" :title="editTmplMode?'编辑成本项模板':'新增成本项模板'" width="500px" :close-on-click-modal="false">
+    <el-form :model="tmplForm" label-width="110px">
+      <el-form-item label="所属成本段" required><el-select v-model="tmplForm.seg"><el-option v-for="s in segs" :key="s.name" :label="s.name" :value="s.name"></el-option></el-select></el-form-item>
+      <el-form-item label="项名称" required><el-input v-model="tmplForm.name" placeholder="如 海运费"></el-input></el-form-item>
+      <el-form-item label="公式" required><el-select v-model="tmplForm.formula"><el-option label="美元换汇计算" value="美元换汇计算"></el-option><el-option label="人民币直接计算" value="人民币直接计算"></el-option></el-select></el-form-item>
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="建议默认价" required><el-input-number v-model="tmplForm.dp" :min="0" :precision="2"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="币种" required><el-select v-model="tmplForm.cur"><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></el-form-item></el-col></el-row>
+    </el-form>
+    <template #footer><el-button @click="showTmplDialog=false">取消</el-button><el-button type="primary" @click="saveTmpl">保存</el-button></template>
+  </el-dialog>
+</div>
+<script>
+(function(){var app=Vue.createApp({data:function(){return{selectedSeg:'',showSegDialog:false,editSegMode:false,editSegIndex:-1,showTmplDialog:false,editTmplMode:false,editTmplIndex:-1,showBuDialog:false,buRow:null,buForm:{newPrice:0,selectAll:true,selectedCombos:{}},segs:[{name:'揽收段',en:'是'},{name:'干线运输段',en:'是'},{name:'关务段',en:'是'},{name:'仓储段',en:'是'},{name:'派送段',en:'是'}],tmpls:[{seg:'干线运输段',name:'海运费',formula:'美元换汇计算',dp:'5.0',cur:'USD'},{seg:'干线运输段',name:'报关费',formula:'人民币直接计算',dp:'250',cur:'RMB'},{seg:'关务段',name:'关税',formula:'人民币直接计算',dp:'300',cur:'RMB'},{seg:'派送段',name:'拆送价',formula:'人民币直接计算',dp:'0.6',cur:'RMB'},{seg:'派送段',name:'组合一口价',formula:'人民币直接计算',dp:'1.11',cur:'RMB'}],segForm:{name:'',en:true},tmplForm:{seg:'',name:'',formula:'美元换汇计算',dp:0,cur:'RMB'},comboAffectedMap:{'海运费':[{code:'USMS360-SEA-TRUCK-KG-TAX-LCL',ch:'美森360',costPrice:'5.0'},{code:'USMS360-SEA-TRUCK-CBM-TAX-LCL',ch:'美森360',costPrice:'5.0'},{code:'USMS432-SEA-TRUCK-KG-TAX-LCL',ch:'美森432',costPrice:'5.2'},{code:'USMS360-SEA-EXP-KG-TAX-LCL',ch:'美森360',costPrice:'5.0'}],'报关费':[{code:'USMS360-SEA-TRUCK-KG-TAX-LCL',ch:'美森360',costPrice:'250'},{code:'USMS360-SEA-TRUCK-CBM-TAX-LCL',ch:'美森360',costPrice:'250'}],'关税':[{code:'USMS360-SEA-TRUCK-KG-TAX-LCL',ch:'美森360',costPrice:'300'}],'拆送价':[{code:'USMS360-SEA-TRUCK-KG-TAX-LCL',ch:'美森360',costPrice:'0.6'},{code:'USMS432-SEA-TRUCK-KG-TAX-LCL',ch:'美森432',costPrice:'0.65'}],'组合一口价':[{code:'USMS360-SEA-TRUCK-KG-TAX-LCL',ch:'美森360',costPrice:'1.11'}]}}},computed:{filteredTmpls:function(){var self=this;if(!this.selectedSeg)return this.tmpls;return this.tmpls.filter(function(t){return t.seg===self.selectedSeg})},affectedCombos:function(){if(!this.buRow)return[];return this.comboAffectedMap[this.buRow.name]||[]},selectedCount:function(){var self=this;return this.affectedCombos.filter(function(c){return self.buForm.selectedCombos[c.code]}).length},isIndeterminate:function(){var c=this.selectedCount;return c>0&&c<this.affectedCombos.length}},methods:{segItemCount:function(sn){var self=this;return this.tmpls.filter(function(t){return t.seg===sn}).length},openAddSeg:function(){this.editSegMode=false;this.editSegIndex=-1;this.segForm={name:'',en:true};this.showSegDialog=true},openEditSeg:function(row,idx){this.editSegMode=true;this.editSegIndex=idx;this.segForm={name:row.name,en:row.en==='是'};this.showSegDialog=true},saveSeg:function(){if(!this.segForm.name){ElementPlus.ElMessage.warning('请输入段名称');return}var row={name:this.segForm.name,en:this.segForm.en?'是':'否'};if(this.editSegMode){var old=this.segs[this.editSegIndex].name;this.segs.splice(this.editSegIndex,1,row);if(this.selectedSeg===old)this.selectedSeg=row.name;this.tmpls.forEach(function(t){if(t.seg===old)t.seg=row.name});ElementPlus.ElMessage.success('成本段编辑成功')}else{this.segs.push(row);ElementPlus.ElMessage.success('成本段新增成功')}this.showSegDialog=false},openAddTmpl:function(){this.editTmplMode=false;this.editTmplIndex=-1;this.tmplForm={seg:this.selectedSeg||(this.segs.length?this.segs[0].name:''),name:'',formula:'美元换汇计算',dp:0,cur:'RMB'};this.showTmplDialog=true},openEditTmpl:function(row,idx){this.editTmplMode=true;this.editTmplIndex=idx;this.tmplForm={seg:row.seg,name:row.name,formula:row.formula,dp:parseFloat(row.dp),cur:row.cur};this.showTmplDialog=true},saveTmpl:function(){if(!this.tmplForm.name){ElementPlus.ElMessage.warning('请输入项名称');return}if(!this.tmplForm.seg){ElementPlus.ElMessage.warning('请选择所属成本段');return}var row={seg:this.tmplForm.seg,name:this.tmplForm.name,formula:this.tmplForm.formula,dp:String(this.tmplForm.dp),cur:this.tmplForm.cur};if(this.editTmplMode){this.tmpls.splice(this.editTmplIndex,1,row);ElementPlus.ElMessage.success('成本项编辑成功')}else{this.tmpls.push(row);ElementPlus.ElMessage.success('成本项新增成功')}this.showTmplDialog=false},batchUpdate:function(row){this.buRow=row;var self=this,combos=this.comboAffectedMap[row.name]||[],sel={};combos.forEach(function(c){sel[c.code]=true});this.buForm={newPrice:parseFloat(row.dp)+0.8,selectAll:true,selectedCombos:sel};this.showBuDialog=true},toggleAllCombos:function(val){var self=this;this.affectedCombos.forEach(function(c){self.buForm.selectedCombos[c.code]=val})},confirmBatchUpdate:function(){if(this.buForm.newPrice===null||this.buForm.newPrice<0){ElementPlus.ElMessage.warning('请输入新价格');return}if(this.selectedCount===0){ElementPlus.ElMessage.warning('请至少选择一个服务组合');return}this.buRow.dp=String(this.buForm.newPrice);var self=this,updated=[];this.affectedCombos.forEach(function(c){if(self.buForm.selectedCombos[c.code]){c.costPrice=String(self.buForm.newPrice);updated.push(c.code)}});ElementPlus.ElMessage.success(this.buRow.name+'建议默认价已更新，已同步'+updated.length+'个组合');this.showBuDialog=false}}});app.use(ElementPlus);app.mount('#app')})();
+</script>
+</body>
+</html>

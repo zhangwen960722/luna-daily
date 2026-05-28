@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>查价订舱 - 货主端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <style>
+        :root{--el-color-primary:#2DA44E}
+        *{box-sizing:border-box}
+        body{margin:0;padding:16px;background:#F5F7FA;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+        h3{margin:0 0 12px;font-size:16px}
+        .card{background:#fff;border-radius:4px;padding:16px;margin-bottom:16px}
+        .subtitle{color:#909399;font-size:13px;margin:0 0 14px}
+        .el-form--inline .el-form-item{margin-right:16px;margin-bottom:8px}
+        .el-table{font-size:13px}
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="card">
+        <h3>在线询价</h3>
+        <p class="subtitle">输入货物信息，系统自动匹配可承运渠道及报价。报价有效期为本周。</p>
+
+        <el-form :inline="true" :model="form" size="default">
+            <el-row :gutter="0">
+                <el-col :span="24">
+                    <el-form-item label="目的国" required><el-select v-model="form.destCountry" style="width:110px"><el-option label="美国" value="US"/><el-option label="英国" value="UK"/></el-select></el-form-item>
+                    <el-form-item label="目的仓点" required><el-select v-model="form.warehouse" filterable style="width:130px"><el-option label="ONT8" value="ONT8"/><el-option label="LAX9" value="LAX9"/><el-option label="LGB8" value="LGB8"/><el-option label="SBD1" value="SBD1"/></el-select></el-form-item>
+                    <el-form-item label="件数" required><el-input-number v-model="form.pieces" :min="1" style="width:90px"/></el-form-item>
+                    <el-form-item label="单件重量(kg)" required><el-input-number v-model="form.unitWeight" :min="0.1" :step="0.1" :precision="1" style="width:120px"/></el-form-item>
+                    <el-form-item label="尺寸(cm)" required>
+                        <el-input-number v-model="form.length" :min="1" placeholder="长" style="width:70px" controls-position="right"/>
+                        <span style="margin:0 4px;color:#999">×</span>
+                        <el-input-number v-model="form.width" :min="1" placeholder="宽" style="width:70px" controls-position="right"/>
+                        <span style="margin:0 4px;color:#999">×</span>
+                        <el-input-number v-model="form.height" :min="1" placeholder="高" style="width:70px" controls-position="right"/>
+                    </el-form-item>
+                </el-col>
+                <el-col :span="24" style="margin-top:4px">
+                    <el-form-item label="计费方式"><el-checkbox-group v-model="form.billingUnits"><el-checkbox label="KG" checked/><el-checkbox label="CBM"/></el-checkbox-group></el-form-item>
+                    <el-form-item label="运输方式"><el-select v-model="form.transportMode" clearable placeholder="不限" style="width:100px"><el-option label="海运" value="sea"/><el-option label="空运" value="air"/></el-select></el-form-item>
+                    <el-form-item label="包税方式"><el-select v-model="form.taxMethod" clearable placeholder="不限" style="width:100px"><el-option label="包税" value="包税"/><el-option label="不包税" value="不包税"/></el-select></el-form-item>
+                    <el-form-item label="交货地"><el-select v-model="form.pickupRegion" style="width:110px"><el-option label="珠三角" value="珠三角"/><el-option label="汕头" value="汕头"/><el-option label="义乌" value="义乌"/></el-select></el-form-item>
+                    <el-form-item><el-button type="primary" @click="search">查询报价</el-button></el-form-item>
+                </el-col>
+            </el-row>
+        </el-form>
+    </div>
+
+    <div class="card" v-if="searched">
+        <el-alert v-if="hasUnmatched" :title="'以下渠道暂无 '+form.warehouse+' 的报价记录：快船600、奥克兰744。如需询价请联系客服。'" type="info" show-icon :closable="false" style="margin-bottom:12px"/>
+
+        <el-table :data="results" border stripe style="width:100%">
+            <el-table-column prop="channel" label="渠道" width="120"/>
+            <el-table-column prop="billing" label="计价" width="60"/>
+            <el-table-column label="公布价" width="110"><template #default="s">{{s.row.price}}</template></el-table-column>
+            <el-table-column label="附加费" min-width="180"><template #default="s"><span v-for="(x,i) in s.row.surcharges" :key="i" style="margin-right:8px;font-size:12px">{{x}}</span></template></el-table-column>
+            <el-table-column label="最终报价" width="110"><template #default="s"><span style="font-weight:bold">{{s.row.finalPrice}}</span></template></el-table-column>
+            <el-table-column label="船期" width="170"><template #default="s">{{s.row.sailing}}</template></el-table-column>
+            <el-table-column label="最快提取" width="100"><template #default="s">{{s.row.pickup}}</template></el-table-column>
+        </el-table>
+        <p style="color:#909399;font-size:12px;margin-top:12px">*本报价为预估参考，不含成本底价和盈亏标识。实际结算以运单为准。</p>
+    </div>
+</div>
+<script>
+    const {createApp}=Vue;
+    const app=createApp({data(){return{searched:false,hasUnmatched:true,
+        form:{destCountry:'US',warehouse:'ONT8',pieces:3,unitWeight:60,length:60,width:60,height:60,billingUnits:['KG'],transportMode:null,taxMethod:null,pickupRegion:'珠三角'},
+        results:[]}},methods:{search(){this.searched=true;this.results=[
+            {channel:'美森360',billing:'KG',price:'10.0 元/KG',surcharges:['粉末+1.5/KG(优惠后1.0)'],finalPrice:'11.0 元/KG',sailing:'1/28→2/8 航程11天',pickup:'2/10'},
+            {channel:'美森432',billing:'KG',price:'9.7 元/KG',surcharges:['粉末+1.5/KG(优惠后1.0)'],finalPrice:'10.7 元/KG',sailing:'1/29→2/9 航程11天',pickup:'2/11'},
+            {channel:'EX456',billing:'KG',price:'5.6 元/KG',surcharges:['粉末+1.5/KG(优惠后1.0)'],finalPrice:'6.6 元/KG',sailing:'1/28→2/11 航程14天',pickup:'2/14'}
+        ]}}});app.use(ElementPlus);app.mount('#app');
+</script>
+</body>
+</html>
