@@ -2,339 +2,769 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>服务渠道 - 超级运价</title>
 <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
 <script src="https://unpkg.com/element-plus"></script>
 <style>
-:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399}
-*{box-sizing:border-box}
-body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
-.top-nav{display:none}
-.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;margin-bottom:16px}
-.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
-.card-header h3{margin:0;font-size:15px;font-weight:600}
-.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
-.el-table td{font-size:13px}
-.empty-state{text-align:center;padding:48px 20px;color:var(--text-secondary)}
-.empty-state p{margin:8px 0}
+:root{--el-color-primary:#2DA44E;--el-bg-color:#F5F7FA;--el-text-color-regular:#606266;--el-text-color-primary:#303133}
+body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--el-text-color-primary);font-size:14px;line-height:1.5}
+.content-card{background:#fff;border-radius:4px;padding:16px;box-sizing:border-box}
+.search-area{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:0}
+.table-container{flex:1;overflow:hidden}
+.pagination-area{margin-top:16px;display:flex;justify-content:flex-end}
+.el-table th.el-table__cell{background-color:#FAFAFA;color:#303133;font-weight:500}
+.el-table td.el-table__cell{font-size:13px}
+.btn-search-primary{background-color:#2DA44E!important;border-color:#2DA44E!important;color:#FFFFFF!important}
+.btn-search-primary:hover,.btn-search-primary:focus,.btn-search-primary:active{background-color:#2DA44E!important;border-color:#2DA44E!important;color:#FFFFFF!important;opacity:1!important}
+.btn-search-reset{background-color:#FFFFFF!important;border-color:#DCDFE6!important;color:#000000!important}
+.btn-search-reset:hover,.btn-search-reset:focus,.btn-search-reset:active{background-color:#E6F2FF!important;border-color:#DCDFE6!important;color:#000000!important}
+.empty-state{text-align:center;padding:48px 20px;color:var(--el-text-color-regular)}
+.section-divider{height:8px;background:#F0F2F5;margin:16px -20px}
 </style>
 </head>
 <body>
 <div id="app">
-<div class="page" style="padding:0;margin:0;max-width:none">
-<div class="card" style="margin-bottom:0">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-<h3 style="margin:0">服务渠道</h3>
-<el-button type="primary" @click="openAdd">新增渠道</el-button>
-</div>
-<el-table :data="channels" border stripe>
-<el-table-column prop="name" label="渠道名称" min-width="120"></el-table-column>
-<el-table-column prop="transportMode" label="运输方式" min-width="80"></el-table-column>
-<el-table-column prop="lastMile" label="尾程派送" min-width="100"></el-table-column>
-<el-table-column prop="taxMethods" label="包税方式" min-width="160"></el-table-column>
-<el-table-column prop="billingUnits" label="计费方式" min-width="100"></el-table-column>
-<el-table-column prop="serviceType" label="服务类型" min-width="80"></el-table-column>
-<el-table-column prop="needClaim" label="时效理赔" min-width="80"></el-table-column>
-<el-table-column prop="status" label="状态" min-width="80">
-<template #default="s"><el-tag v-if="s.row.status==='正常'" type="success" size="small">正常</el-tag><el-tag v-else type="warning" size="small">已冻结</el-tag></template>
-</el-table-column>
-<el-table-column label="操作" min-width="200" fixed="right">
-<template #default="s">
-<el-button size="small" @click="openEdit(s.row,s.$index)">编辑</el-button>
-<el-button size="small" @click="openChannelCost(s.row)">成本项</el-button>
-<el-button v-if="s.row.status==='正常'" size="small" type="warning" @click="toggleStatus(s.$index)">冻结</el-button>
-<el-button v-else size="small" type="success" @click="toggleStatus(s.$index)">启用</el-button>
-</template>
-</el-table-column>
-</el-table>
-</div>
+
+<div class="content-card" style="height:auto;margin-bottom:16px;padding:16px">
+  <div class="search-area">
+    <el-input v-model="searchForm.name" placeholder="服务渠道" clearable style="width:200px"></el-input>
+    <el-select v-model="searchForm.transportMode" placeholder="运输方式" clearable style="width:200px">
+      <el-option label="海运" value="海运"></el-option><el-option label="空运" value="空运"></el-option>
+      <el-option label="洲际火车" value="洲际火车"></el-option><el-option label="洲际卡车" value="洲际卡车"></el-option>
+    </el-select>
+    <el-button class="btn-search-primary" @click="handleSearch">🔍 查询</el-button>
+    <el-button class="btn-search-reset" @click="resetSearch">🔄 重置</el-button>
+    <div style="margin-left:auto"><el-button type="success" @click="openAdd">新增服务</el-button></div>
+  </div>
 </div>
 
-<!-- 新增渠道 -->
-<el-dialog v-model="showDialog" :title="'新增服务渠道'" width="650px" :close-on-click-modal="false">
-<el-form :model="form" label-width="110px">
-<el-row :gutter="16"><el-col :span="12"><el-form-item label="渠道名称" required><el-input v-model="form.name" placeholder="如美森360"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="运输方式" required><el-select v-model="form.transportMode"><el-option label="海运" value="sea"></el-option><el-option label="空运" value="air"></el-option></el-select></el-form-item></el-col></el-row>
-<el-row :gutter="16"><el-col :span="12"><el-form-item label="起运国" required><el-select v-model="form.originCountry"><el-option label="中国" value="CN"></el-option></el-select></el-form-item></el-col><el-col :span="12"><el-form-item label="目的国" required><el-select v-model="form.destCountries" multiple><el-option label="美国" value="US"></el-option><el-option label="英国" value="UK"></el-option></el-select></el-form-item></el-col></el-row>
-<el-form-item label="尾程派送方式" required><el-checkbox-group v-model="form.lastMileMethods"><el-checkbox label="卡派"></el-checkbox><el-checkbox label="快递派"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="包税方式" required><el-checkbox-group v-model="form.taxMethods"><el-checkbox label="包税"></el-checkbox><el-checkbox label="不包税"></el-checkbox><el-checkbox label="自主税号"></el-checkbox><el-checkbox label="自税递延"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="计费方式" required><el-checkbox-group v-model="form.billingUnits"><el-checkbox label="KG"></el-checkbox><el-checkbox label="CBM"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="服务类型" required><el-checkbox-group v-model="form.serviceTypes"><el-checkbox label="散货"></el-checkbox><el-checkbox label="整柜"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="时效理赔" required><el-switch v-model="form.needClaim"></el-switch></el-form-item>
-</el-form>
-<div style="background:#F0F9EB;border:1px solid #C8E6C9;border-radius:6px;padding:12px 16px;font-size:13px;color:#2DA44E;margin-bottom:16px">当前服务渠道将生成 <strong>{{ comboCount }}</strong> 个服务组合</div>
-<template #footer><el-button @click="showDialog=false">取消</el-button><el-button type="primary" @click="save">保存</el-button><el-button type="success" @click="saveAndGenerate">保存并生成服务组合</el-button></template>
-</el-dialog>
-
-<!-- 编辑渠道（基本信息+时效+重量段） -->
-<el-dialog v-model="showEditDialog" :title="'编辑服务渠道 - '+editChName" width="850px" :close-on-click-modal="false">
-<el-tabs v-model="editTab">
-<el-tab-pane label="基本信息" name="basic">
-<el-form :model="editForm" label-width="110px">
-<el-row :gutter="16"><el-col :span="12"><el-form-item label="渠道名称" required><el-input v-model="editForm.name"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="运输方式" required><el-select v-model="editForm.transportMode"><el-option label="海运" value="sea"></el-option><el-option label="空运" value="air"></el-option></el-select></el-form-item></el-col></el-row>
-<el-row :gutter="16"><el-col :span="12"><el-form-item label="起运国" required><el-select v-model="editForm.originCountry"><el-option label="中国" value="CN"></el-option></el-select></el-form-item></el-col><el-col :span="12"><el-form-item label="目的国" required><el-select v-model="editForm.destCountries" multiple><el-option label="美国" value="US"></el-option><el-option label="英国" value="UK"></el-option></el-select></el-form-item></el-col></el-row>
-<el-form-item label="尾程派送方式" required><el-checkbox-group v-model="editForm.lastMileMethods"><el-checkbox label="卡派"></el-checkbox><el-checkbox label="快递派"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="包税方式" required><el-checkbox-group v-model="editForm.taxMethods"><el-checkbox label="包税"></el-checkbox><el-checkbox label="不包税"></el-checkbox><el-checkbox label="自主税号"></el-checkbox><el-checkbox label="自税递延"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="计费方式" required><el-checkbox-group v-model="editForm.billingUnits"><el-checkbox label="KG"></el-checkbox><el-checkbox label="CBM"></el-checkbox></el-checkbox-group></el-form-item>
-<el-form-item label="服务类型" required><el-checkbox-group v-model="editForm.serviceTypes"><el-checkbox label="散货"></el-checkbox><el-checkbox label="整柜"></el-checkbox></el-checkbox-group></el-form-item>
-<el-row :gutter="16"><el-col :span="12"><el-form-item label="时效理赔" required><el-switch v-model="editForm.needClaim"></el-switch></el-form-item></el-col><el-col :span="12"><el-form-item label="状态"><el-radio-group v-model="editForm.status"><el-radio label="正常">正常</el-radio><el-radio label="已冻结">已冻结</el-radio></el-radio-group></el-form-item></el-col></el-row>
-<el-divider content-position="left">FBA 运单同步</el-divider>
-<el-form-item label="FBA运单同步"><el-switch v-model="editFbaSync"></el-switch><span style="margin-left:8px;font-size:12px;color:#909399">{{editFbaSync?'开启 — 向亚马逊推送 DW':'关闭'}}</span></el-form-item>
-<template v-if="editFbaSync">
-<el-form-item label="亚马逊服务等级" required><el-select v-model="editTransit.serviceLevel"><el-option label="标准" value="standard"></el-option><el-option label="加急" value="expedited"></el-option><el-option label="快速" value="express"></el-option></el-select></el-form-item>
-<el-row :gutter="16"><el-col :span="12"><el-form-item label="运输最小天数" required><el-input-number v-model="editTransit.minDays" :min="1" :max="60" style="width:100%"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="运输最大天数" required><el-input-number v-model="editTransit.maxDays" :min="1" :max="60" style="width:100%"></el-input-number></el-form-item></el-col></el-row>
-</template>
-<el-form-item><el-button type="primary" @click="saveEditBasic">保存基本信息</el-button></el-form-item>
-</el-form>
-</el-tab-pane>
-
-<el-tab-pane label="送仓预估时效" name="warehouse">
-<div style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">分两阶段滚动更新 DW：运单创建时用"开船至送仓"，提柜后用"提柜至送仓"修正</div>
-<div style="margin-bottom:8px;display:flex;gap:12px;font-size:12px"><span style="color:#E6A23C">第一阶段：DW = 开船日 + 开船至送仓</span><span style="color:#2DA44E">第二阶段：DW = 提柜日 + 提柜至送仓</span></div>
-<div style="margin-bottom:8px"><el-button size="small" type="primary" @click="openAddWarehouse">新增仓库时效</el-button></div>
-<el-table :data="editWarehouseList" border stripe size="small">
-<el-table-column prop="fbaCode" label="FBA仓库代码" min-width="130"></el-table-column>
-<el-table-column prop="estimatedDays" label="开船至送仓（天）" min-width="140"></el-table-column>
-<el-table-column prop="cabinetDays" label="提柜至送仓（天）" min-width="140"></el-table-column>
-<el-table-column label="操作" width="80"><template #default="s2"><el-button size="small" @click="openEditWarehouse(s2.row,s2.$index)">编辑</el-button></template></el-table-column>
-</el-table>
-<div v-if="editWarehouseList.length===0" class="empty-state"><p>暂无送仓时效配置</p></div>
-</el-tab-pane>
-
-<el-tab-pane label="理赔承诺时效" name="claim">
-<div v-if="!editForm.needClaim" class="empty-state"><p style="font-size:16px;font-weight:600">该渠道未开启「时效理赔」</p><p style="color:#909399">请先在基本信息中开启后再配置</p></div>
-<template v-else>
-<div style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">按派送方式+FBA仓库配置理赔时效，实际送达&gt;承诺时效→触发理赔判定</div>
-<div style="margin-bottom:8px"><el-button size="small" type="primary" @click="openAddClaim">新增理赔规则</el-button></div>
-<el-table :data="editClaimList" border stripe size="small">
-<el-table-column prop="deliveryMethod" label="派送方式" width="90"></el-table-column>
-<el-table-column label="FBA仓库代码" min-width="200"><template #default="s2"><el-tag v-for="c in s2.row.fbaCodes" :key="c" size="small" style="margin-right:4px">{{c}}</el-tag><span v-if="!s2.row.fbaCodes||s2.row.fbaCodes.length===0" style="color:#909399">全美</span></template></el-table-column>
-<el-table-column prop="claimDays" label="理赔时效（工作日）" min-width="140"></el-table-column>
-<el-table-column label="操作" width="80"><template #default="s2"><el-button size="small" @click="openEditClaim(s2.row,s2.$index)">编辑</el-button></template></el-table-column>
-</el-table>
-<div v-if="editClaimList.length===0" class="empty-state"><p>暂无理赔承诺配置</p></div>
-</template>
-</el-tab-pane>
-
-<el-tab-pane label="重量段" name="weight">
-<div style="color:var(--text-secondary);font-size:13px;margin-bottom:8px">定义计费重量段区间，用于运价行匹配</div>
-<div style="margin-bottom:8px"><el-button size="small" type="primary" @click="openAddWeight">新增重量段</el-button></div>
-<el-table :data="editWeightList" border stripe size="small">
-<el-table-column prop="unit" label="计价单位" width="80"></el-table-column>
-<el-table-column prop="min" label="起始值" min-width="100"></el-table-column>
-<el-table-column prop="max" label="结束值" min-width="100"><template #default="s3"><span v-if="s3.row.max===null" style="color:#909399">+∞</span><span v-else>{{s3.row.max}}</span></template></el-table-column>
-<el-table-column prop="label" label="段名称" min-width="120"></el-table-column>
-<el-table-column label="操作" width="80"><template #default="s3"><el-button size="small" @click="openEditWeight(s3.row,s3.$index)">编辑</el-button></template></el-table-column>
-</el-table>
-<div v-if="editWeightList.length===0" class="empty-state"><p>暂无重量段</p></div>
-</el-tab-pane>
-</el-tabs>
-<template #footer><el-button @click="showEditDialog=false">关闭</el-button></template>
-</el-dialog>
-
-<!-- Sub-dialogs: cost items, warehouse form, claim form, weight form -->
-<el-dialog v-model="showChCostDialog" :title="chCostChannel+' - 渠道成本项'" width="720px" :close-on-click-modal="false">
-<div style="margin-bottom:12px"><span style="font-size:13px;color:var(--text-secondary)">默认关联全局全部成本项。关闭不需要的项，或覆盖渠道默认单价。已关联 </span><span style="font-size:13px;color:#2DA44E;font-weight:600">{{ chCostEnabledCount }}</span><span style="font-size:13px;color:var(--text-secondary)"> / {{ chCostList.length }} 项</span></div>
-<template v-for="seg in chCostSegments">
-<div :key="seg" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;padding:8px 12px;background:#F5F7FA;border-radius:4px"><span style="font-weight:600;font-size:13px">{{ seg }}</span><div style="display:flex;gap:4px"><el-button size="small" text @click="toggleChCostSegment(seg,true)">全选</el-button><el-button size="small" text @click="toggleChCostSegment(seg,false)">全不选</el-button></div></div>
-<div v-for="item in chCostList" :key="item.seg+item.name" v-if="item.seg===seg" style="display:flex;align-items:center;gap:12px;padding:8px 12px 8px 20px;border-bottom:1px solid #F2F3F5">
-<el-switch v-model="item.enabled" size="small" @change="toggleChCostItem(item)"></el-switch>
-<span style="flex:0 0 90px;font-size:13px;font-weight:500">{{ item.name }}</span>
-<span style="font-size:12px;color:var(--text-secondary)">模板 {{ item.dp }} {{ item.cur }}</span>
-<span style="color:#C0C4CC;font-size:12px">→</span>
-<el-input-number v-if="item.enabled" v-model="item.price" :min="0" :precision="2" size="small" controls-position="right" style="width:130px"></el-input-number>
-<span v-else style="font-size:12px;color:#C0C4CC">已禁用</span>
+<div class="content-card" style="height:calc(100vh - 106px);display:flex;flex-direction:column">
+  <el-tabs v-model="activeTab"><el-tab-pane label="全段服务" name="全段服务"></el-tab-pane><el-tab-pane label="分段服务" name="分段服务" disabled></el-tab-pane></el-tabs>
+  <div class="table-container">
+    <el-table :data="filteredChannels" border height="100%" style="width:100%">
+      <el-table-column prop="name" label="服务渠道" min-width="120"></el-table-column>
+      <el-table-column prop="transportMode" label="运输方式" min-width="100"></el-table-column>
+      <el-table-column prop="taxMethods" label="包税方式" min-width="140"></el-table-column>
+      <el-table-column prop="serviceType" label="服务类型" min-width="100"></el-table-column>
+      <el-table-column prop="billingUnits" label="计费方式" min-width="100"></el-table-column>
+      <el-table-column prop="lastMile" label="尾程派送方式" min-width="120"></el-table-column>
+      <el-table-column label="状态" min-width="80">
+        <template #default="s"><el-tag :type="s.row.status==='正常'?'success':'danger'">{{s.row.status}}</el-tag></template>
+      </el-table-column>
+      <el-table-column label="操作" width="200" fixed="right" align="center">
+        <template #default="s">
+          <el-button link type="primary" size="small" @click="openEdit(s.row,s.$index)">编辑</el-button>
+          <el-button link type="primary" size="small" @click="openChannelCost(s.row)">成本项</el-button>
+          <el-button link :type="s.row.status==='正常'?'danger':'success'" size="small" @click="toggleStatus(s.row,s.$index)">{{s.row.status==='正常'?'冻结':'启用'}}</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+  <div class="pagination-area"><el-pagination background layout="total,prev,pager,next" :total="filteredChannels.length"></el-pagination></div>
 </div>
-</template>
-<div v-if="chCostList.length===0" class="empty-state"><p>暂无成本项模板</p></div>
-<template #footer><el-button @click="showChCostDialog=false">关闭</el-button></template>
+
+<!-- ====== 新增/编辑弹窗 ====== -->
+<el-dialog v-model="showDialog" :title="editMode?'编辑服务渠道 - '+editForm.name:'新增服务渠道'" width="850px" top="5vh" :close-on-click-modal="false" destroy-on-close>
+  <div style="max-height:75vh;overflow-y:auto;overflow-x:hidden;padding-right:8px">
+    <div style="font-weight:600;margin-bottom:16px;font-size:15px">基本信息</div>
+    <el-form :model="editForm" label-width="120px">
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="渠道名称" required><el-input v-model="editForm.name" placeholder="如美森360"></el-input></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="运输方式" required><el-select v-model="editForm.transportMode" style="width:100%"><el-option label="海运" value="海运"></el-option><el-option label="空运" value="空运"></el-option><el-option label="洲际火车" value="洲际火车"></el-option><el-option label="洲际卡车" value="洲际卡车"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="起运国" required><el-select v-model="editForm.originCountry" style="width:100%"><el-option label="中国" value="CN"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="目的国" required><el-select v-model="editForm.destCountries" multiple style="width:100%"><el-option label="美国" value="US"></el-option><el-option label="英国" value="UK"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="尾程派送方式" required><el-select v-model="editForm.lastMileMethods" multiple collapse-tags collapse-tags-tooltip style="width:100%" @change="onLastMileChange"><el-option label="卡派" value="卡派"></el-option><el-option label="快递派" value="快递派"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="包税方式" required><el-select v-model="editForm.taxMethods" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option label="包税" value="包税"></el-option><el-option label="不包税" value="不包税"></el-option><el-option label="自主税号" value="自主税号"></el-option><el-option label="自税递延" value="自税递延"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="计费方式" required><el-select v-model="editForm.billingUnits" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option label="重量KG" value="KG"></el-option><el-option label="体积m³" value="m³"></el-option></el-select></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="服务类型" required><el-select v-model="editForm.serviceTypes" multiple collapse-tags collapse-tags-tooltip style="width:100%"><el-option label="散货" value="散货"></el-option><el-option label="整柜" value="整柜"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <el-row :gutter="16">
+        <el-col :span="12"><el-form-item label="时效理赔" required><el-switch :model-value="editForm.needClaim" @change="onNeedClaimChange"></el-switch></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="FBA运单同步" required><el-switch :model-value="fbaSync==='是'" @change="onFbaSyncChange"></el-switch><span style="margin-left:8px;font-size:12px;color:#909399">{{fbaSync==='是'?'开启 — 向亚马逊推送DW':'关闭'}}</span></el-form-item></el-col>
+      </el-row>
+    </el-form>
+
+    <div class="section-divider"></div>
+
+    <div class="section-divider"></div>
+
+    <el-tabs v-model="activeTimeTab">
+      <!-- 预估运输时效 -->
+      <el-tab-pane label="预估运输时效" name="transit" :disabled="fbaSync==='否'">
+        <template v-if="fbaSync==='是'">
+          <el-form :model="transitForm" label-width="120px" style="margin-top:8px">
+            <el-form-item label="亚马逊服务等级" required><el-select v-model="transitForm.amazonLevel" style="width:100%"><el-option label="标准" value="标准"></el-option><el-option label="加急" value="加急"></el-option><el-option label="快速" value="快速"></el-option></el-select></el-form-item>
+            <el-row :gutter="16"><el-col :span="12"><el-form-item label="运输最小天数" required><el-input-number v-model="transitForm.minDays" :min="1" :max="60" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="运输最大天数" required><el-input-number v-model="transitForm.maxDays" :min="1" :max="60" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col></el-row>
+          </el-form>
+        </template>
+        <div v-else class="empty-state"><p>未开启 FBA 运单同步，无法配置预估运输时效</p></div>
+      </el-tab-pane>
+
+      <!-- 送仓预估时效 -->
+      <el-tab-pane label="送仓预估时效" name="warehouse" :disabled="fbaSync==='否'">
+        <template v-if="fbaSync==='是'">
+          <div style="color:var(--el-text-color-regular);font-size:13px;margin-bottom:8px">分两阶段滚动更新 DW：运单创建时用"开船至送仓"，提柜后用"提柜至送仓"修正。提柜至送仓 ≤ 开船至送仓</div>
+          <div style="margin-bottom:12px;display:flex;gap:16px;font-size:12px"><span style="color:#E6A23C">第一阶段：DW = 开船日 + 开船至送仓</span><span style="color:#2DA44E">第二阶段：DW = 提柜日 + 提柜至送仓</span></div>
+          <div style="margin-bottom:12px"><el-button type="primary" size="small" @click="addWarehouseRow">新增一条</el-button></div>
+          <el-table :data="warehouseList" border style="width:100%" max-height="360">
+            <el-table-column label="FBA仓库代码" min-width="150"><template #default="s2"><el-select v-model="s2.row.fbaCode" placeholder="请选择FBA仓库" filterable style="width:100%"><el-option v-for="w in fbaWarehouseList" :key="w.code" :label="w.code" :value="w.code"></el-option></el-select></template></el-table-column>
+            <el-table-column label="开船至送仓(天)" min-width="150"><template #default="s2"><el-input-number v-model="s2.row.sailDays" :min="0" style="width:100%" controls-position="right"></el-input-number></template></el-table-column>
+            <el-table-column label="提柜至送仓(天)" min-width="150"><template #default="s2"><el-input-number v-model="s2.row.cabinetDays" :min="0" style="width:100%" controls-position="right"></el-input-number></template></el-table-column>
+            <el-table-column label="操作" width="80" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWarehouseRow(s2.$index)">删除</el-button></template></el-table-column>
+          </el-table>
+        </template>
+        <div v-else class="empty-state"><p>未开启 FBA 运单同步，无法配置送仓预估时效</p></div>
+      </el-tab-pane>
+
+      <!-- 理赔承诺时效 -->
+      <el-tab-pane label="理赔承诺时效" name="claim" :disabled="!editForm.needClaim">
+        <template v-if="editForm.needClaim">
+          <div style="margin-bottom:12px"><el-button type="primary" size="small" @click="addClaimRow">新增一条</el-button></div>
+          <el-table :data="claimList" border style="width:100%" max-height="360">
+            <el-table-column label="派送方式" width="120"><template #default="s2"><el-select v-model="s2.row.deliveryMethod" placeholder="请选择"><el-option v-for="m in availableLastMileMethods" :key="m" :label="m" :value="m"></el-option></el-select></template></el-table-column>
+            <el-table-column label="FBA仓库代码" min-width="200"><template #header><span :style="hasCardDelivery?'color:var(--el-color-danger)':''">FBA仓库代码{{hasCardDelivery?' *':''}}</span></template><template #default="s2"><div style="display:flex;align-items:center;width:100%"><span v-if="s2.row.deliveryMethod==='卡派'" style="color:var(--el-color-danger);margin-right:4px">*</span><el-select v-model="s2.row.fbaCodes" multiple collapse-tags :placeholder="s2.row.deliveryMethod==='快递派'?'非必填':'卡派必填'" filterable style="flex:1"><el-option v-for="w in fbaWarehouseList" :key="w.code" :label="w.code" :value="w.code"></el-option></el-select></div></template></el-table-column>
+            <el-table-column label="理赔时效(工作日)" width="150"><template #header><span style="color:var(--el-color-danger)">* 理赔时效(工作日)</span></template><template #default="s2"><el-input-number v-model="s2.row.claimDays" :min="0" style="width:100%" controls-position="right"></el-input-number></template></el-table-column>
+            <el-table-column label="操作" width="80" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeClaimRow(s2.$index)">删除</el-button></template></el-table-column>
+          </el-table>
+        </template>
+        <div v-else class="empty-state"><p>该渠道未开启「时效理赔」，无法配置理赔承诺时效</p></div>
+      </el-tab-pane>
+
+      <!-- 成本折算基准 -->
+      <el-tab-pane label="成本折算基准" name="loadingStandard">
+        <div style="font-size:12px;color:#909399;margin-bottom:12px">头程成本项按头程行折算，派送仓点成本按匹配尾程方式的派送行折算。渠道创建时自动生成，可修改。变更后触发全量重算。</div>
+        <el-table :data="loadingStandards" border style="width:100%" size="small">
+          <el-table-column label="运输方式" width="80">
+            <template #default="s"><span style="font-size:12px">{{transportModeLabel(s.row.transportMode)}}</span></template>
+          </el-table-column>
+          <el-table-column label="尾程方式" width="80">
+            <template #default="s"><span style="font-size:12px">{{s.row.lastMile||'—'}}</span></template>
+          </el-table-column>
+          <el-table-column label="基准类型" width="70">
+            <template #default="s"><el-tag :type="s.row.type==='头程'?'':'warning'" size="small">{{s.row.type}}</el-tag></template>
+          </el-table-column>
+          <el-table-column label="KG基准" min-width="160">
+            <template #default="s"><el-input-number v-model="s.row.kgStandard" :min="1" size="small" controls-position="right" style="width:100%" @change="onStandardChange"></el-input-number></template>
+          </el-table-column>
+          <el-table-column label="m³基准" min-width="160">
+            <template #default="s"><el-input-number v-model="s.row.cbmStandard" :min="0.1" :precision="2" size="small" controls-position="right" style="width:100%" @change="onStandardChange"></el-input-number></template>
+          </el-table-column>
+        </el-table>
+      </el-tab-pane>
+
+      <!-- 重量段 -->
+      <el-tab-pane label="重量段" name="weight">
+        <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <el-button type="primary" size="small" @click="addWeightRow">新增一条</el-button>
+          <span style="font-size:11px;color:#909399">拖拽 ☰ 调整排序，控制运价匹配时的优先级</span>
+        </div>
+        <el-table :data="weightList" border style="width:100%" max-height="360" row-key="__idx">
+          <el-table-column label="" width="36" align="center" fixed="left">
+            <template #default="s2">
+              <span draggable="true"
+                @dragstart="onWeightDragStart($event, s2.$index)"
+                @dragover.prevent="onWeightDragOver($event, s2.$index)"
+                @drop="onWeightDrop($event, s2.$index)"
+                @dragend="onWeightDragEnd"
+                style="cursor:grab;font-size:14px;user-select:none"
+                :style="dragWeightIdx===s2.$index?'color:#2DA44E':''">☰</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="计价单位" width="100"><template #default="s2"><el-select v-model="s2.row.unit"><el-option label="KG" value="KG"></el-option><el-option label="m³" value="m³"></el-option></el-select></template></el-table-column>
+          <el-table-column label="起始值" min-width="120"><template #default="s2"><el-input-number v-model="s2.row.min" :min="0" :precision="0" :step="1" style="width:100%" controls-position="right" @change="validateWeightRow(s2.row)"></el-input-number></template></el-table-column>
+          <el-table-column label="结束值" min-width="120"><template #default="s2"><div style="display:flex;align-items:center;gap:4px"><el-input-number v-model="s2.row.max" :min="0" :precision="0" :step="1" style="flex:1" controls-position="right" @change="validateWeightRow(s2.row)"></el-input-number><span v-if="s2.row.max===null" style="font-size:12px;color:#909399;white-space:nowrap">无上限</span></div><div v-if="s2.row._err" style="font-size:11px;color:#F56C6C;margin-top:2px">{{s2.row._err}}</div></template></el-table-column>
+          <el-table-column label="段名称" min-width="130"><template #default="s2"><el-input v-model="s2.row.label" placeholder="如 101KG+"></el-input></template></el-table-column>
+          <el-table-column label="操作" width="80" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWeightRow(s2.$index)">删除</el-button></template></el-table-column>
+        </el-table>
+      </el-tab-pane>
+    </el-tabs>
+  </div>
+  <template #footer>
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+      <div v-if="!editMode" style="font-size:13px;color:#2DA44E;background:#F0F9EB;border:1px solid #C8E6C9;border-radius:4px;padding:6px 12px">当前将生成 <strong>{{comboCount}}</strong> 个服务组合</div>
+      <div v-else></div>
+      <span><el-button @click="showDialog=false">取消</el-button><el-button type="primary" @click="saveService(false)">保存</el-button><el-button v-if="!editMode" type="success" @click="saveService(true)">保存并生成服务组合</el-button></span>
+    </div>
+  </template>
 </el-dialog>
 
-<el-dialog v-model="showWarehouseFormDialog" :title="editWarehouseMode?'编辑送仓预估时效':'新增送仓预估时效'" width="480px" :close-on-click-modal="false">
-<el-form :model="warehouseForm" label-width="140px">
-<el-form-item label="FBA仓库代码" required><el-select v-model="warehouseForm.fbaCode" filterable><el-option label="ONT8" value="ONT8"></el-option><el-option label="LAX9" value="LAX9"></el-option><el-option label="LGB8" value="LGB8"></el-option><el-option label="SBD1" value="SBD1"></el-option><el-option label="POC1" value="POC1"></el-option><el-option label="POC3" value="POC3"></el-option></el-select></el-form-item>
-<el-form-item label="开船至送仓（天）" required><el-input-number v-model="warehouseForm.estimatedDays" :min="1" :max="60" style="width:100%"></el-input-number></el-form-item>
-<el-form-item label="提柜至送仓（天）" required><el-input-number v-model="warehouseForm.cabinetDays" :min="1" :max="60" style="width:100%"></el-input-number></el-form-item>
-</el-form>
-<template #footer><el-button @click="showWarehouseFormDialog=false">取消</el-button><el-button type="primary" @click="saveWarehouse">保存</el-button></template>
+<!-- ====== 渠道成本项弹窗 ====== -->
+<el-dialog v-model="showChCostDialog" :title="chCostChannel+' - 渠道成本项'" width="1050px" :close-on-click-modal="false" destroy-on-close>
+  <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:13px;color:var(--el-text-color-regular)">已启用 <strong style="color:#2DA44E">{{chCostEnabledCount}}</strong> / {{chCostList.length}} 项</span>
+    <div style="display:flex;gap:4px">
+      <el-button size="small" @click="toggleAllChCost(true)">全部启用</el-button>
+      <el-button size="small" @click="toggleAllChCost(false)">全部禁用</el-button>
+      <el-button size="small" type="primary" @click="syncChCostToCombos">同步到组合</el-button>
+    </div>
+  </div>
+  <!-- 全量成本项表格，按段分组 -->
+  <el-table :data="chCostList" border size="small" max-height="420" style="width:100%" :row-class-name="chCostRowClass" ref="chCostTable" @selection-change="onChCostSelectionChange">
+    <el-table-column type="selection" width="45" :selectable="function(r){return r.enabled!==false}"></el-table-column>
+    <el-table-column prop="seg" label="所属段" width="120"></el-table-column>
+    <el-table-column label="启用" width="55" align="center">
+      <template #default="s2"><el-switch v-model="s2.row.enabled" size="small" @change="toggleChCostItem(s2.row)"></el-switch></template>
+    </el-table-column>
+    <el-table-column prop="name" label="成本项" min-width="110"></el-table-column>
+    <el-table-column label="交货地" width="180" v-if="hasPickupItems">
+      <template #default="s2">
+        <div v-if="s2.row.seg==='揽收段'" style="display:flex;align-items:center;gap:4px">
+          <el-select v-model="s2.row.pickup_region" size="small" placeholder="选择交货地" :disabled="!s2.row.enabled" style="flex:1"><el-option v-for="r in pickupRegions" :key="r" :label="r" :value="r" :disabled="isPickupUsed(s2.row.name,r)"></el-option></el-select>
+          <el-button v-if="s2.row.enabled" size="small" @click="dupPickupRow(s2.row)" style="font-size:11px;white-space:nowrap;flex-shrink:0">＋交货地</el-button>
+        </div>
+        <span v-else style="font-size:12px;color:#C0C4CC">—</span>
+      </template>
+    </el-table-column>
+    <el-table-column label="模板默认价" width="120" align="right">
+      <template #default="s2"><span style="font-size:12px;color:#909399">{{s2.row.dp}} {{s2.row.cur}}</span></template>
+    </el-table-column>
+    <el-table-column label="渠道覆盖价" min-width="150">
+      <template #default="s2">
+        <el-input-number v-if="s2.row.enabled" v-model="s2.row.price" :min="0" :precision="2" size="small" controls-position="right" style="width:130px" @change="_costDirty=true"></el-input-number>
+        <span v-else style="font-size:12px;color:#C0C4CC">已禁用</span>
+      </template>
+    </el-table-column>
+  </el-table>
+
+  <!-- 派送段：仓点子表 -->
+  <div style="margin-top:12px;padding:8px 0;border-top:1px solid #E4E7ED">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:4px">
+        <el-switch v-model="chCostWhEnabled" size="small" @change="toggleChCostWh" :disabled="!editForm.lastMileMethods.includes('卡派')||(editForm.lastMileMethods.includes('卡派')&&editForm.lastMileMethods.includes('快递派'))"></el-switch>
+        <span style="font-weight:600;font-size:13px;margin-left:4px">派送段 · 仓点成本</span>
+        <span style="font-size:12px;color:#909399">三个报价来源取 MAX 计入成本底价</span>
+      </div>
+      <div style="display:flex;gap:4px"><el-button v-if="chCostWhEnabled" type="primary" size="small" @click="addWhRow">新增仓点</el-button><el-button v-if="chCostWhEnabled" size="small" @click="syncChWhToCombos">同步到组合</el-button></div>
+    </div>
+    <el-table v-if="chCostWhEnabled" :data="chCostWhList" border size="small" max-height="280">
+      <el-table-column label="仓库代码" min-width="150"><template #default="s2"><el-select v-model="s2.row.fba" multiple collapse-tags placeholder="请选择仓库代码" filterable size="small" style="width:100%"><el-option v-for="w in fbaWarehouseList" :key="w.code" :label="w.code" :value="w.code"></el-option></el-select></template></el-table-column>
+      <el-table-column label="拆送价" min-width="120"><template #header><span style="color:#E6A23C">* 拆送价</span></template><template #default="s2"><el-input-number v-model="s2.row.拆送价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
+      <el-table-column label="组合一口价" min-width="140"><template #default="s2"><el-input-number v-model="s2.row.组合一口价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
+      <el-table-column label="整柜直送价" min-width="140"><template #default="s2"><el-input-number v-model="s2.row.整柜直送价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
+      <el-table-column label="币种" width="85"><template #default="s2"><el-select v-model="s2.row.cur" size="small"><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template></el-table-column>
+      <el-table-column label="操作" width="70" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWhRow(s2.$index)">删除</el-button></template></el-table-column>
+    </el-table>
+  </div>
+
+  <!-- 快递派：费率子表 -->
+  <div style="margin-top:8px;padding:8px 0;border-top:1px solid #E4E7ED">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:4px">
+        <el-switch v-model="chCostExpEnabled" size="small" @change="toggleChCostExp" :disabled="!editForm.lastMileMethods.includes('快递派')||(editForm.lastMileMethods.includes('卡派')&&editForm.lastMileMethods.includes('快递派'))"></el-switch>
+        <span style="font-weight:600;font-size:13px;margin-left:4px">派送段 · 快递派单价</span>
+        <span style="font-size:12px;color:#909399">重量段 × 邮编前缀 → 固定单价，逗号拼接前缀，直接累加到成本底价</span>
+      </div>
+      <div style="display:flex;gap:4px"><el-button v-if="chCostExpEnabled" type="primary" size="small" @click="addExpRow">新增费率行</el-button><el-button v-if="chCostExpEnabled" size="small" @click="syncChExpToCombos">同步到组合</el-button></div>
+    </div>
+    <el-table v-if="chCostExpEnabled" :data="chCostExpList" border size="small" max-height="220">
+      <el-table-column label="重量段" min-width="120">
+        <template #default="s2"><el-select v-model="s2.row.weightTier" placeholder="选择" size="small" style="width:100%"><el-option v-for="t in expWeightTiers" :key="t" :label="t" :value="t"></el-option></el-select></template>
+      </el-table-column>
+      <el-table-column label="邮编前缀" min-width="130">
+        <template #default="s2"><el-input v-model="s2.row.zipPrefixes" placeholder="如 8,9 表示 8xxxx+9xxxx" size="small" style="width:100%"></el-input></template>
+      </el-table-column>
+      <el-table-column label="单价" min-width="120">
+        <template #default="s2"><el-input-number v-model="s2.row.price" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template>
+      </el-table-column>
+      <el-table-column label="币种" width="85">
+        <template #default="s2"><el-select v-model="s2.row.cur" size="small"><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template>
+      </el-table-column>
+      <el-table-column label="操作" width="70" align="center">
+        <template #default="s2"><el-button link type="danger" size="small" @click="removeExpRow(s2.$index)">删除</el-button></template>
+      </el-table-column>
+    </el-table>
+  </div>
+  <template #footer><span style="display:flex;justify-content:space-between;width:100%"><span></span><span><el-button @click="closeChCostDialog">关闭</el-button><el-button type="primary" @click="saveChannelCost">保存</el-button></span></span></template>
 </el-dialog>
 
-<el-dialog v-model="showClaimFormDialog" :title="editClaimMode?'编辑理赔承诺时效':'新增理赔承诺时效'" width="500px" :close-on-click-modal="false">
-<el-form :model="claimForm" label-width="140px">
-<el-form-item label="派送方式" required><el-select v-model="claimForm.deliveryMethod" @change="onClaimMethodChange"><el-option v-if="editChLastMile.indexOf('卡派')!==-1" label="卡派" value="卡派"></el-option><el-option v-if="editChLastMile.indexOf('快递派')!==-1" label="快递派" value="快递派"></el-option></el-select></el-form-item>
-<el-form-item label="FBA仓库代码" :required="claimForm.deliveryMethod==='卡派'"><el-select v-model="claimForm.fbaCodes" multiple filterable><el-option label="ONT8" value="ONT8"></el-option><el-option label="LAX9" value="LAX9"></el-option><el-option label="LGB8" value="LGB8"></el-option><el-option label="SBD1" value="SBD1"></el-option></el-select><span style="font-size:12px;color:#909399">{{claimForm.deliveryMethod==='快递派'?'快递派可不选':'卡派必须指定仓库'}}</span></el-form-item>
-<el-form-item label="理赔时效（工作日）" required><el-input-number v-model="claimForm.claimDays" :min="1" :max="90" style="width:100%"></el-input-number></el-form-item>
-</el-form>
-<template #footer><el-button @click="showClaimFormDialog=false">取消</el-button><el-button type="primary" @click="saveClaim">保存</el-button></template>
-</el-dialog>
-
-<el-dialog v-model="showWeightFormDialog" :title="editWeightMode?'编辑重量段':'新增重量段'" width="450px" :close-on-click-modal="false">
-<el-form :model="weightForm" label-width="110px">
-<el-form-item label="计价单位" required><el-select v-model="weightForm.unit"><el-option label="KG" value="KG"></el-option><el-option label="CBM" value="CBM"></el-option></el-select></el-form-item>
-<el-form-item label="起始值" required><el-input-number v-model="weightForm.min" :min="0" :precision="2" style="width:100%"></el-input-number></el-form-item>
-<el-form-item label="结束值"><el-input-number v-model="weightForm.max" :min="0" :precision="2" style="width:100%"></el-input-number><span style="font-size:12px;color:#909399">留空表示无上限（+∞）</span></el-form-item>
-<el-form-item label="段名称" required><el-input v-model="weightForm.label" placeholder="如 101KG+"></el-input></el-form-item>
-</el-form>
-<template #footer><el-button @click="showWeightFormDialog=false">取消</el-button><el-button type="primary" @click="saveWeight">保存</el-button></template>
+<!-- 同步到组合弹窗 -->
+<el-dialog v-model="showSyncDialog" :title="'同步到组合 — '+syncTypeLabel" width="700px" :close-on-click-modal="false">
+  <div style="margin-bottom:4px;font-size:12px;color:var(--el-text-color-secondary)">以下为你在渠道成本项表格中勾选的项，可在此调整</div>
+  <div style="margin-bottom:8px"><el-checkbox v-model="syncItemSelectAll" @change="toggleSyncItemsAll">全选成本项（已选 {{syncSelectedItemCount}} / {{syncItems.length}}）</el-checkbox></div>
+  <el-table :data="syncItems" border size="small" max-height="200" @selection-change="onSyncItemSelectionChange" ref="syncItemTable">
+    <el-table-column type="selection" width="45" :selectable="function(r){return r.enabled}"></el-table-column>
+    <el-table-column prop="name" label="成本项" min-width="140"></el-table-column>
+    <el-table-column prop="dp" label="单价" width="80"></el-table-column>
+    <el-table-column prop="cur" label="币种" width="60"></el-table-column>
+    <el-table-column label="状态" width="70"><template #default="s"><el-tag :type="s.row.enabled?'success':'info'" size="small">{{s.row.enabled?'启用':'禁用'}}</el-tag></template></el-table-column>
+  </el-table>
+  <div style="margin:14px 0 12px;font-size:13px;font-weight:600">同步到以下组合</div>
+  <div style="margin-bottom:8px"><el-checkbox v-model="syncCombosSelectAll" @change="toggleSyncCombosAll">全选组合（已选 {{syncSelectedComboCount}} / {{syncCombos.length}}）</el-checkbox></div>
+  <el-table :data="syncCombos" border size="small" max-height="200" @selection-change="onSyncComboSelectionChange" ref="syncComboTable">
+    <el-table-column type="selection" width="45"></el-table-column>
+    <el-table-column prop="code" label="服务组合" min-width="280"></el-table-column>
+  </el-table>
+  <div style="margin-top:12px;padding:8px 12px;background:#FFF7E6;border:1px solid #FFD666;border-radius:4px;font-size:12px;color:#D48806">⚠ 同步仅更新组合中<strong>已有</strong>成本项的价格，不会新增或删除组合的成本项。禁用的成本项不可选择。</div>
+  <div style="margin-top:8px"><el-checkbox v-model="syncAutoRecalc" size="small">同步后自动更新当周运价表的成本底价（推荐）</el-checkbox></div>
+  <template #footer><span style="font-size:12px;color:var(--el-text-color-secondary)">将更新 {{syncSelectedItemCount}} 项 × {{syncSelectedComboCount}} 组合 = {{syncSelectedItemCount * syncSelectedComboCount}} 条记录</span><div><el-button @click="showSyncDialog=false">取消</el-button><el-button type="primary" @click="confirmSync" :disabled="syncSelectedItemCount===0||syncSelectedComboCount===0">确认同步</el-button></div></template>
 </el-dialog>
 </div>
 
 <script>
-(function () {
-  var app = Vue.createApp({
-    data: function () {
-      return {
-        showDialog: false, showEditDialog: false, editTab: 'basic', editChName: '', editChIdx: -1,
-        showChCostDialog: false, chCostChannel: '',
-        showWarehouseFormDialog: false, editWarehouseMode: false, editWarehouseIndex: -1,
-        showClaimFormDialog: false, editClaimMode: false, editClaimIndex: -1,
-        showWeightFormDialog: false, editWeightMode: false, editWeightIndex: -1,
-        channels: [
-          { name: '美森360', transportMode: '海运', lastMile: '卡派', taxMethods: '包税/不包税', billingUnits: 'KG/CBM', serviceType: '散货/整柜', needClaim: '是', status: '正常' },
-          { name: '美森432', transportMode: '海运', lastMile: '卡派', taxMethods: '包税/不包税', billingUnits: 'KG/CBM', serviceType: '散货/整柜', needClaim: '是', status: '正常' }
-        ],
-        form: { name: '', originCountry: 'CN', destCountries: [], transportMode: 'sea', lastMileMethods: [], taxMethods: [], billingUnits: [], serviceTypes: [], needClaim: true, channelType: 'full' },
-        editForm: { name: '', originCountry: 'CN', destCountries: [], transportMode: 'sea', lastMileMethods: [], taxMethods: [], billingUnits: [], serviceTypes: [], needClaim: true, status: '正常' },
-        editFbaSync: false, editTransit: { serviceLevel: 'standard', minDays: null, maxDays: null },
-        transitData: { '美森360': { fbaSync: true, serviceLevel: 'standard', minDays: 12, maxDays: 15 }, '美森432': { fbaSync: false, serviceLevel: '', minDays: null, maxDays: null } },
-        warehouseData: { '美森360': [{ fbaCode: 'ONT8', estimatedDays: 18, cabinetDays: 5 }, { fbaCode: 'LAX9', estimatedDays: 16, cabinetDays: 4 }, { fbaCode: 'LGB8', estimatedDays: 17, cabinetDays: 5 }], '美森432': [{ fbaCode: 'ONT8', estimatedDays: 20, cabinetDays: 6 }] },
-        claimData: { '美森360': [{ deliveryMethod: '卡派', fbaCodes: ['ONT8', 'LAX9', 'LGB8'], claimDays: 3 }, { deliveryMethod: '快递派', fbaCodes: [], claimDays: 5 }], '美森432': [{ deliveryMethod: '卡派', fbaCodes: ['ONT8'], claimDays: 3 }] },
-        weightData: { '美森360': [{ unit: 'KG', min: 101, max: null, label: '101KG+' }, { unit: 'KG', min: 8, max: 100.9, label: '8KG+' }, { unit: 'CBM', min: 2, max: null, label: '2CBM+' }, { unit: 'CBM', min: 0.5, max: 1.99, label: '0.5CBM+' }], '美森432': [{ unit: 'KG', min: 101, max: null, label: '101KG+' }, { unit: 'CBM', min: 2, max: null, label: '2CBM+' }] },
-        warehouseForm: { fbaCode: '', estimatedDays: 15, cabinetDays: 5 },
-        claimForm: { deliveryMethod: '卡派', fbaCodes: [], claimDays: 3 },
-        weightForm: { unit: 'KG', min: 0, max: null, label: '' },
-        globalCostTmpls: [{ seg: '揽收段', name: '提货费', dp: '2.0', cur: 'RMB' }, { seg: '干线运输段', name: '海运费', dp: '5.0', cur: 'USD' }, { seg: '干线运输段', name: '报关费', dp: '250', cur: 'RMB' }, { seg: '关务段', name: '关税', dp: '300', cur: 'RMB' }, { seg: '派送段', name: '拆送价', dp: '0.6', cur: 'RMB' }, { seg: '派送段', name: '组合一口价', dp: '1.11', cur: 'RMB' }],
-        chCostData: { '美森360': [{ seg: '干线运输段', name: '海运费', dp: '5.0', cur: 'USD', price: 5.0, enabled: true }, { seg: '干线运输段', name: '报关费', dp: '250', cur: 'RMB', price: 250, enabled: true }, { seg: '关务段', name: '关税', dp: '300', cur: 'RMB', price: 300, enabled: true }, { seg: '派送段', name: '拆送价', dp: '0.6', cur: 'RMB', price: 0.6, enabled: true }, { seg: '派送段', name: '组合一口价', dp: '1.11', cur: 'RMB', price: 1.11, enabled: true }], '美森432': [{ seg: '干线运输段', name: '海运费', dp: '5.0', cur: 'USD', price: 5.2, enabled: true }, { seg: '干线运输段', name: '报关费', dp: '250', cur: 'RMB', price: 250, enabled: true }] }
-      };
-    },
-    computed: {
-      comboCount: function () { var a = this.form.lastMileMethods.length || 1; var b = this.form.billingUnits.length || 1; var c = this.form.taxMethods.length || 1; var d = this.form.serviceTypes.length || 1; return a * b * c * d; },
-      chCostList: function () { return this.chCostData[this.chCostChannel] || []; },
-      chCostEnabledCount: function () { var list = this.chCostData[this.chCostChannel] || []; return list.filter(function (x) { return x.enabled; }).length; },
-      chCostSegments: function () { var list = this.chCostData[this.chCostChannel] || []; var segs = []; list.forEach(function (x) { if (segs.indexOf(x.seg) === -1) segs.push(x.seg); }); return segs; },
-      editWarehouseList: function () { return this.warehouseData[this.editChName] || []; },
-      editClaimList: function () { return this.claimData[this.editChName] || []; },
-      editWeightList: function () { return this.weightData[this.editChName] || []; },
-      editChLastMile: function () { return this.editForm.lastMileMethods; }
-    },
-    methods: {
-      // 新增
-      openAdd: function () { this.form = { name: '', originCountry: 'CN', destCountries: [], transportMode: 'sea', lastMileMethods: [], taxMethods: [], billingUnits: [], serviceTypes: [], needClaim: true, channelType: 'full' }; this.showDialog = true; },
-      rowFromForm: function (f) { return { name: f.name, transportMode: f.transportMode === 'sea' ? '海运' : '空运', lastMile: f.lastMileMethods.join('/'), taxMethods: f.taxMethods.join('/'), billingUnits: f.billingUnits.join('/'), serviceType: f.serviceTypes.join('/'), needClaim: f.needClaim ? '是' : '否', status: '正常' }; },
-      save: function () {
-        var self = this;
-        if (!this.form.name) { ElementPlus.ElMessage.warning('请输入渠道名称'); return; }
-        if (!this.form.originCountry) { ElementPlus.ElMessage.warning('请选择起运国'); return; }
-        if (!this.form.destCountries.length) { ElementPlus.ElMessage.warning('请选择目的国'); return; }
-        if (!this.form.transportMode) { ElementPlus.ElMessage.warning('请选择运输方式'); return; }
-        if (!this.form.lastMileMethods.length) { ElementPlus.ElMessage.warning('请选择尾程派送方式'); return; }
-        if (!this.form.taxMethods.length) { ElementPlus.ElMessage.warning('请选择包税方式'); return; }
-        if (!this.form.billingUnits.length) { ElementPlus.ElMessage.warning('请选择计费方式'); return; }
-        if (!this.form.serviceTypes.length) { ElementPlus.ElMessage.warning('请选择服务类型'); return; }
-        var row = this.rowFromForm(this.form);
-        this.channels.push(row);
-        this.transitData[row.name] = { fbaSync: false, serviceLevel: '', minDays: null, maxDays: null };
-        this.warehouseData[row.name] = []; this.claimData[row.name] = []; this.weightData[row.name] = [];
-        this.chCostData[row.name] = JSON.parse(JSON.stringify(this.globalCostTmpls));
-        this.chCostData[row.name].forEach(function (c) { c.price = parseFloat(c.dp); c.enabled = true; });
-        ElementPlus.ElMessage.success('新增成功'); this.showDialog = false;
-      },
-      saveAndGenerate: function () {
-        if (!this.form.name) { ElementPlus.ElMessage.warning('请输入渠道名称'); return; }
-        if (!this.form.originCountry) { ElementPlus.ElMessage.warning('请选择起运国'); return; }
-        if (!this.form.destCountries.length) { ElementPlus.ElMessage.warning('请选择目的国'); return; }
-        if (!this.form.transportMode) { ElementPlus.ElMessage.warning('请选择运输方式'); return; }
-        if (!this.form.lastMileMethods.length) { ElementPlus.ElMessage.warning('请选择尾程派送方式'); return; }
-        if (!this.form.taxMethods.length) { ElementPlus.ElMessage.warning('请选择包税方式'); return; }
-        if (!this.form.billingUnits.length) { ElementPlus.ElMessage.warning('请选择计费方式'); return; }
-        if (!this.form.serviceTypes.length) { ElementPlus.ElMessage.warning('请选择服务类型'); return; }
-        var row = this.rowFromForm(this.form); this.channels.push(row);
-        this.transitData[row.name] = { fbaSync: false, serviceLevel: '', minDays: null, maxDays: null };
-        this.warehouseData[row.name] = []; this.claimData[row.name] = []; this.weightData[row.name] = [];
-        this.chCostData[row.name] = JSON.parse(JSON.stringify(this.globalCostTmpls));
-        this.chCostData[row.name].forEach(function (c) { c.price = parseFloat(c.dp); c.enabled = true; });
-        ElementPlus.ElMessage.success('保存成功，正在生成服务组合...'); this.showDialog = false;
-      },
-      // 编辑
-      openEdit: function (row, idx) {
-        this.editChIdx = idx; this.editChName = row.name; this.editTab = 'basic';
-        this.editForm = { name: row.name, originCountry: 'CN', destCountries: ['US'], transportMode: row.transportMode === '海运' ? 'sea' : 'air', lastMileMethods: row.lastMile.split('/'), taxMethods: row.taxMethods.split('/'), billingUnits: row.billingUnits.split('/'), serviceTypes: row.serviceType.split('/'), needClaim: row.needClaim === '是', status: row.status };
-        var t = this.transitData[row.name] || { fbaSync: false, serviceLevel: '', minDays: null, maxDays: null };
-        this.editFbaSync = t.fbaSync; this.editTransit = { serviceLevel: t.serviceLevel || 'standard', minDays: t.minDays, maxDays: t.maxDays };
-        if (!this.warehouseData[row.name]) this.warehouseData[row.name] = [];
-        if (!this.claimData[row.name]) this.claimData[row.name] = [];
-        if (!this.weightData[row.name]) this.weightData[row.name] = [];
-        if (!this.chCostData[row.name]) { var self = this; this.chCostData[row.name] = JSON.parse(JSON.stringify(this.globalCostTmpls)); this.chCostData[row.name].forEach(function (c) { c.price = parseFloat(c.dp); c.enabled = true; }); }
-        this.showEditDialog = true;
-      },
-      saveEditBasic: function () {
-        if (!this.editForm.name) { ElementPlus.ElMessage.warning('请输入渠道名称'); return; }
-        if (!this.editForm.lastMileMethods.length) { ElementPlus.ElMessage.warning('请选择尾程派送方式'); return; }
-        var row = this.rowFromForm(this.editForm); var oldName = this.editChName; var oldNeedClaim = this.channels[this.editChIdx].needClaim;
-        row.status = this.editForm.status;
-        this.channels.splice(this.editChIdx, 1, row);
-        if (oldName !== row.name) {
-          if (this.transitData[oldName]) { this.transitData[row.name] = this.transitData[oldName]; delete this.transitData[oldName]; }
-          if (this.warehouseData[oldName]) { this.warehouseData[row.name] = this.warehouseData[oldName]; delete this.warehouseData[oldName]; }
-          if (this.claimData[oldName]) { this.claimData[row.name] = this.claimData[oldName]; delete this.claimData[oldName]; }
-          if (this.weightData[oldName]) { this.weightData[row.name] = this.weightData[oldName]; delete this.weightData[oldName]; }
-          if (this.chCostData[oldName]) { this.chCostData[row.name] = this.chCostData[oldName]; delete this.chCostData[oldName]; }
-          this.editChName = row.name;
+(function(){
+var app = Vue.createApp({
+  data: function(){
+    return {
+      activeTab: '全段服务',
+      searchForm: { name:'', transportMode:'' },
+      showDialog: false, editMode: false, editIdx: -1,
+      activeTimeTab: 'transit', fbaSync: '是',
+      editForm: { name:'', originCountry:'CN', destCountries:[], transportMode:'海运', lastMileMethods:[], taxMethods:[], billingUnits:[], serviceTypes:[], needClaim:false, _combosGenerated:false },
+      loadingStandards: [
+        {type:'头程', transportMode:10, lastMile:'', kgStandard:12525, cbmStandard:75.0},
+        {type:'派送', transportMode:10, lastMile:'卡派', kgStandard:350, cbmStandard:1.8}
+      ],
+      transitForm: { amazonLevel:'标准', minDays:null, maxDays:null },
+      warehouseList: [], claimList: [], weightList: [],
+      availableLastMileMethods: [],
+      showChCostDialog: false, chCostChannel: '', _costDirty: false, dragWeightIdx: -1,
+      showSyncDialog: false, syncType: '', syncItems: [], syncItemSelectAll: true, syncCombos: [], syncCombosSelectAll: true, syncAutoRecalc: true, chCostSelected: [],
+
+      channels: [
+        { name:'美森360', transportMode:'海运', lastMile:'卡派/快递派', taxMethods:'包税/不包税/自主税号/自税递延', billingUnits:'重量KG/体积m³', serviceType:'散货/整柜', needClaim:'是', status:'正常',
+          _raw:{ originCountry:'CN', destCountries:['US'], transportMode:'海运', lastMileMethods:['卡派','快递派'], taxMethods:['包税','不包税','自主税号','自税递延'], billingUnits:['KG','m³'], serviceTypes:['散货','整柜'], _loadingStandards:[{type:'头程',transportMode:10,lastMile:'',kgStandard:12525,cbmStandard:75},{type:'派送',transportMode:10,lastMile:'卡派',kgStandard:350,cbmStandard:1.8}], needClaim:true, _combosGenerated:true },
+          _fbaSync:'是', _transit:{ amazonLevel:'标准', minDays:12, maxDays:15 },
+          _warehouse:[{fbaCode:'ONT8',sailDays:18,cabinetDays:5},{fbaCode:'LAX9',sailDays:16,cabinetDays:4},{fbaCode:'LGB8',sailDays:17,cabinetDays:5}],
+          _claim:[{deliveryMethod:'卡派',fbaCodes:['ONT8','LAX9','LGB8'],claimDays:3},{deliveryMethod:'快递派',fbaCodes:[],claimDays:5}],
+          _weight:[{unit:'KG',min:101,max:null,label:'101KG+'},{unit:'KG',min:8,max:100,label:'8KG+'},{unit:'m³',min:2,max:null,label:'2m³+'}]
+        },
+        { name:'美森432', transportMode:'海运', lastMile:'卡派/快递派', taxMethods:'包税/不包税/自主税号/自税递延', billingUnits:'重量KG/体积m³', serviceType:'散货/整柜', needClaim:'是', status:'正常',
+          _raw:{ originCountry:'CN', destCountries:['US'], transportMode:'海运', lastMileMethods:['卡派','快递派'], taxMethods:['包税','不包税','自主税号','自税递延'], billingUnits:['KG','m³'], serviceTypes:['散货','整柜'], _loadingStandards:[{type:'头程',transportMode:10,lastMile:'',kgStandard:12000,cbmStandard:72},{type:'派送',transportMode:10,lastMile:'卡派',kgStandard:350,cbmStandard:1.8}], needClaim:true, _combosGenerated:true },
+          _fbaSync:'是', _transit:{ amazonLevel:'标准', minDays:14, maxDays:18 },
+          _warehouse:[{fbaCode:'ONT8',sailDays:20,cabinetDays:6}],
+          _claim:[{deliveryMethod:'卡派',fbaCodes:['ONT8'],claimDays:3}],
+          _weight:[{unit:'KG',min:101,max:null,label:'101KG+'},{unit:'m³',min:2,max:null,label:'2m³+'}]
         }
-        if (oldNeedClaim === '是' && row.needClaim === '否') { this.claimData[row.name] = []; }
-        this.transitData[row.name] = { fbaSync: this.editFbaSync, serviceLevel: this.editFbaSync ? this.editTransit.serviceLevel : '', minDays: this.editFbaSync ? this.editTransit.minDays : null, maxDays: this.editFbaSync ? this.editTransit.maxDays : null };
-        ElementPlus.ElMessage.success('基本信息已保存');
-      },
-      // 送仓
-      openAddWarehouse: function () { this.editWarehouseMode = false; this.editWarehouseIndex = -1; this.warehouseForm = { fbaCode: '', estimatedDays: 15, cabinetDays: 5 }; this.showWarehouseFormDialog = true; },
-      openEditWarehouse: function (row, idx) { this.editWarehouseMode = true; this.editWarehouseIndex = idx; this.warehouseForm = { fbaCode: row.fbaCode, estimatedDays: row.estimatedDays, cabinetDays: row.cabinetDays }; this.showWarehouseFormDialog = true; },
-      saveWarehouse: function () {
-        if (!this.warehouseForm.fbaCode) { ElementPlus.ElMessage.warning('请选择FBA仓库代码'); return; }
-        if (this.warehouseForm.cabinetDays > this.warehouseForm.estimatedDays) { ElementPlus.ElMessage.warning('提柜至送仓天数不可超过开船至送仓'); return; }
-        var row = { fbaCode: this.warehouseForm.fbaCode, estimatedDays: this.warehouseForm.estimatedDays, cabinetDays: this.warehouseForm.cabinetDays };
-        if (this.editWarehouseMode) { this.warehouseData[this.editChName].splice(this.editWarehouseIndex, 1, row); ElementPlus.ElMessage.success('送仓预估时效已更新'); }
-        else { this.warehouseData[this.editChName].push(row); ElementPlus.ElMessage.success('送仓预估时效已新增'); }
-        this.showWarehouseFormDialog = false;
-      },
-      // 理赔
-      openAddClaim: function () { this.editClaimMode = false; this.editClaimIndex = -1; var def = '卡派'; if (this.editChLastMile.indexOf('卡派') === -1 && this.editChLastMile.length > 0) def = this.editChLastMile[0]; this.claimForm = { deliveryMethod: def, fbaCodes: [], claimDays: 3 }; this.showClaimFormDialog = true; },
-      openEditClaim: function (row, idx) { this.editClaimMode = true; this.editClaimIndex = idx; this.claimForm = { deliveryMethod: row.deliveryMethod, fbaCodes: row.fbaCodes ? row.fbaCodes.slice() : [], claimDays: row.claimDays }; this.showClaimFormDialog = true; },
-      onClaimMethodChange: function () { if (this.claimForm.deliveryMethod === '快递派') this.claimForm.fbaCodes = []; },
-      saveClaim: function () {
-        if (!this.claimForm.deliveryMethod) { ElementPlus.ElMessage.warning('请选择派送方式'); return; }
-        if (this.claimForm.deliveryMethod === '卡派' && this.claimForm.fbaCodes.length === 0) { ElementPlus.ElMessage.warning('卡派必须指定 FBA 仓库'); return; }
-        var row = { deliveryMethod: this.claimForm.deliveryMethod, fbaCodes: this.claimForm.fbaCodes.slice(), claimDays: this.claimForm.claimDays };
-        var self = this;
-        if (this.editClaimMode) {
-          for (var ci = 0; ci < this.claimData[this.editChName].length; ci++) { if (ci !== this.editClaimIndex) { var exist = this.claimData[this.editChName][ci]; var dup = exist.fbaCodes.filter(function (c) { return row.fbaCodes.indexOf(c) !== -1; }); if (dup.length > 0) { ElementPlus.ElMessage.warning('FBA仓库 ' + dup.join(',') + ' 已在另一条理赔规则中存在'); return; } } }
-          this.claimData[this.editChName].splice(this.editClaimIndex, 1, row); ElementPlus.ElMessage.success('理赔承诺时效已更新');
-        } else {
-          for (var j = 0; j < this.claimData[this.editChName].length; j++) { var e = this.claimData[this.editChName][j]; var d = e.fbaCodes.filter(function (c) { return row.fbaCodes.indexOf(c) !== -1; }); if (d.length > 0) { ElementPlus.ElMessage.warning('FBA仓库 ' + d.join(',') + ' 已在另一条理赔规则中存在'); return; } }
-          this.claimData[this.editChName].push(row); ElementPlus.ElMessage.success('理赔承诺时效已新增');
-        }
-        this.showClaimFormDialog = false;
-      },
-      // 重量段
-      openAddWeight: function () { this.editWeightMode = false; this.editWeightIndex = -1; this.weightForm = { unit: 'KG', min: 0, max: null, label: '' }; this.showWeightFormDialog = true; },
-      openEditWeight: function (row, idx) { this.editWeightMode = true; this.editWeightIndex = idx; this.weightForm = { unit: row.unit, min: row.min, max: row.max, label: row.label }; this.showWeightFormDialog = true; },
-      saveWeight: function () {
-        if (this.weightForm.min === null || this.weightForm.min < 0) { ElementPlus.ElMessage.warning('请输入起始值'); return; }
-        if (!this.weightForm.label) { ElementPlus.ElMessage.warning('请输入段名称'); return; }
-        var row = { unit: this.weightForm.unit, min: this.weightForm.min, max: this.weightForm.max, label: this.weightForm.label };
-        if (this.editWeightMode) { this.weightData[this.editChName].splice(this.editWeightIndex, 1, row); ElementPlus.ElMessage.success('重量段已更新'); }
-        else { this.weightData[this.editChName].push(row); ElementPlus.ElMessage.success('重量段已新增'); }
-        this.showWeightFormDialog = false;
-      },
-      // 成本项
-      openChannelCost: function (row) { this.chCostChannel = row.name; if (!this.chCostData[this.chCostChannel]) { var self = this; this.chCostData[this.chCostChannel] = JSON.parse(JSON.stringify(this.globalCostTmpls)); this.chCostData[this.chCostChannel].forEach(function (c) { c.price = parseFloat(c.dp); c.enabled = true; }); } this.showChCostDialog = true; },
-      toggleChCostItem: function (row) { ElementPlus.ElMessage.success(row.name + (row.enabled ? ' 已关联' : ' 已取消关联')); },
-      toggleChCostSegment: function (seg, on) { var self = this; var list = this.chCostData[this.chCostChannel] || []; list.forEach(function (x) { if (x.seg === seg) { x.enabled = on; if (on) x.price = parseFloat(x.dp); } }); ElementPlus.ElMessage.success(seg + ' 已' + (on ? '全选' : '全不选')); },
-      // 状态
-      toggleStatus: function (idx) { var ch = this.channels[idx]; ch.status = ch.status === '正常' ? '已冻结' : '正常'; ElementPlus.ElMessage.success(ch.name + ' 已' + (ch.status === '正常' ? '启用' : '冻结')); }
+      ],
+      fbaWarehouseList: [{code:'ONT8'},{code:'LGB8'},{code:'LAX9'},{code:'SBD1'},{code:'POC1'},{code:'POC3'},{code:'ABQ2'},{code:'AVP1'}],
+      globalCostTmpls: [
+        {seg:'揽收段',name:'装柜费',dp:'500',cur:'RMB',pickup_region:''},
+        {seg:'揽收段',name:'拖车费',dp:'1950',cur:'RMB',pickup_region:''},
+        {seg:'干线运输段',name:'海运费',dp:'5.0',cur:'USD'},
+        {seg:'干线运输段',name:'港杂费',dp:'250',cur:'RMB'},
+        {seg:'关务段',name:'国内报关费',dp:'2800',cur:'RMB'},{seg:'关务段',name:'国外清关费',dp:'1500',cur:'USD'},{seg:'关务段',name:'税金',dp:'1800',cur:'USD'},
+        {seg:'仓储段',name:'国内存储费',dp:'15',cur:'RMB'},
+        {seg:'仓储段',name:'国外存储费',dp:'2.0',cur:'USD'},
+        {seg:'仓储段',name:'库内操作费',dp:'5.0',cur:'RMB'},
+        {seg:'派送段',name:'目的港提还柜费',dp:'350',cur:'USD'}
+      ],
+      chCostData: {},
+      chCostExpData: {},
+      pickupRegions: ['珠三角','汕头','义乌','广州','中山'],
+      expWeightTiers: ['0.5KG+','1KG+','3KG+','5KG+','10KG+','21KG+','2m³+'],
+            chCostWhData: {
+        '美森360': { enabled:true, warehouses:[
+          {fba:["ONT8","LAX9","LGB8"],拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'},
+          {fba:"SBD1",拆送价:35,组合一口价:1980,整柜直送价:1430,cur:'USD'}
+        ]},
+        '美森432': { enabled:true, warehouses:[
+          {fba:"ONT8",拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'},
+          {fba:"LAX9",拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'}
+        ]}
+      }
+    };
+  },
+  computed: {
+    filteredChannels: function(){
+      var self = this;
+      return this.channels.filter(function(c){
+        if(self.searchForm.name && c.name.indexOf(self.searchForm.name)===-1) return false;
+        if(self.searchForm.transportMode && c.transportMode!==self.searchForm.transportMode) return false;
+        return true;
+      });
+    },
+    comboCount: function(){
+      var a = this.editForm.lastMileMethods.length || 1;
+      var b = this.editForm.billingUnits.length || 1;
+      var c = this.editForm.taxMethods.length || 1;
+      var d = this.editForm.serviceTypes.length || 1;
+      return a * b * c * d;
+    },
+    hasCardDelivery: function(){
+      return this.claimList.some(function(item){ return item.deliveryMethod==='卡派'; });
+    },
+    chCostList: function(){
+      return (this.chCostData[this.chCostChannel]||[]).filter(function(x){return x&&x.seg;});
+    },
+    chCostEnabledCount: function(){
+      return (this.chCostData[this.chCostChannel]||[]).filter(function(x){return x&&x.enabled;}).length;
+    },
+    chCostSegments: function(){
+      var list = this.chCostData[this.chCostChannel]||[], segs = [];
+      list.forEach(function(x){ if(x&&x.seg&&segs.indexOf(x.seg)===-1) segs.push(x.seg); });
+      return segs;
+    },
+    chCostWhList: function(){
+      var d = this.chCostWhData[this.chCostChannel];
+      return d ? d.warehouses : [];
+    },
+    chCostWhEnabled: {
+      get: function(){ var d=this.chCostWhData[this.chCostChannel]; return d?d.enabled:false; },
+      set: function(v){ var d=this.chCostWhData[this.chCostChannel]; if(d) d.enabled=v; }
+    },
+    syncTypeLabel: function(){var m={cost:'成本项',wh:'仓点成本',exp:'快递派单价'};return m[this.syncType]||''},
+    syncSelectedItemCount: function(){return this.syncItems.filter(function(c){return c._sel}).length},
+    syncSelectedComboCount: function(){return this.syncCombos.filter(function(c){return c._sel}).length},
+        hasPickupItems: function(){
+      return (this.chCostData[this.chCostChannel]||[]).some(function(x){return x&&x.seg==='揽收段';});
+    },
+    chCostExpList: function(){
+      var d=this.chCostExpData[this.chCostChannel];
+      return d?d.rates:[];
+    },
+    chCostExpEnabled: {
+      get: function(){ var d=this.chCostExpData[this.chCostChannel]; return d?d.enabled:false; },
+      set: function(v){ var d=this.chCostExpData[this.chCostChannel]; if(!d) this.chCostExpData[this.chCostChannel]={enabled:v,rates:[]}; else d.enabled=v; }
     }
-  });
-  app.use(ElementPlus);
-  app.mount('#app');
+  },
+  methods: {
+    handleSearch: function(){ ElementPlus.ElMessage.success('查询完成'); },
+    resetSearch: function(){ this.searchForm={name:'',transportMode:''}; ElementPlus.ElMessage.success('已重置'); },
+    handleTabClick: function(){},
+
+    toggleStatus: function(row, idx){
+      var self = this;
+      var action = row.status==='正常'?'冻结':'启用';
+      var msg = action==='冻结'
+        ? '确定要冻结服务渠道【'+row.name+'】吗？<br><span style="color:#F56C6C;font-size:12px">冻结后，其项下关联的所有服务组合也将同步变更为"已冻结"。</span>'
+        : '确定要启用服务渠道【'+row.name+'】吗？';
+      ElementPlus.ElMessageBox.confirm(msg, '状态变更提示', {confirmButtonText:'确定',cancelButtonText:'取消',type:'warning',dangerouslyUseHTMLString:true})
+        .then(function(){ row.status = row.status==='正常'?'已冻结':'正常'; ElementPlus.ElMessage.success('已成功'+action+'该服务渠道'); })
+        .catch(function(){});
+    },
+
+    openAdd: function(){
+      this.editMode = false; this.editIdx = -1; this.activeTimeTab = 'transit'; this.fbaSync = '是'; this._stdChanged = false;
+      this.editForm = { name:'', originCountry:'CN', destCountries:[], transportMode:'海运', lastMileMethods:[], taxMethods:[], billingUnits:[], serviceTypes:[], needClaim:false, _combosGenerated:false };
+      this.loadingStandards = [
+        {type:'头程', transportMode:10, lastMile:'', kgStandard:12525, cbmStandard:75.0},
+        {type:'派送', transportMode:10, lastMile:'卡派', kgStandard:350, cbmStandard:1.8}
+      ];
+      this.transitForm = { amazonLevel:'标准', minDays:null, maxDays:null };
+      this.warehouseList = []; this.claimList = []; this.weightList = []; this.availableLastMileMethods = [];
+      this.showDialog = true;
+    },
+
+    openEdit: function(row, idx){
+      this.editMode = true; this.editIdx = idx; this.activeTimeTab = 'transit'; this._stdChanged = false;
+      var r = row._raw;
+      this.fbaSync = row._fbaSync || '是';
+      this.editForm = {
+        name: row.name, originCountry: r.originCountry||'CN', destCountries: (r.destCountries||['US']).slice(),
+        transportMode: r.transportMode||'海运', lastMileMethods: (r.lastMileMethods||[]).slice(), _combosGenerated:!!r._combosGenerated,
+        taxMethods: (r.taxMethods||[]).slice(), billingUnits: (r.billingUnits||[]).slice(),
+        serviceTypes: (r.serviceTypes||[]).slice(),
+        needClaim: r.needClaim||false
+      };
+      this.availableLastMileMethods = this.editForm.lastMileMethods.slice();this._prevLastMileMethods=this.editForm.lastMileMethods.slice();
+      var t = row._transit || {amazonLevel:'标准',minDays:null,maxDays:null};
+      this.transitForm = { amazonLevel: t.amazonLevel||'标准', minDays: t.minDays, maxDays: t.maxDays };
+      this.warehouseList = JSON.parse(JSON.stringify(row._warehouse||[]));
+      this.claimList = JSON.parse(JSON.stringify(row._claim||[]));
+      var ls = r._loadingStandards || [{type:'头程',transportMode:10,lastMile:'',kgStandard:12525,cbmStandard:75},{type:'派送',transportMode:10,lastMile:'卡派',kgStandard:350,cbmStandard:1.8}];
+      this.loadingStandards = ls.map(function(s){ return {type:s.type, transportMode:s.transportMode||10, lastMile:s.lastMile||'', kgStandard:s.kgStandard, cbmStandard:s.cbmStandard}; });
+      this.weightList = JSON.parse(JSON.stringify(row._weight||[]));
+      this.showDialog = true;
+    },
+
+    onLastMileChange: function(val){var cn=this.editForm.name||this._editingChannelName;this._prevLastMileMethods=val.slice();this.availableLastMileMethods=val;if(val.includes('卡派')&&val.includes('快递派')){if(!this.chCostWhData[cn]||!this.chCostWhData[cn].enabled){if(!this.chCostWhData[cn])this.chCostWhData[cn]={enabled:true,warehouses:[]};else this.chCostWhData[cn].enabled=true}if(!this.chCostExpData[cn]||!this.chCostExpData[cn].enabled){if(!this.chCostExpData[cn])this.chCostExpData[cn]={enabled:true,rates:[]};else this.chCostExpData[cn].enabled=true}}},
+    onNeedClaimChange: function(val){
+      if(val){ this.editForm.needClaim = true; return }
+      var self = this;
+      ElementPlus.ElMessageBox.confirm('关闭「时效理赔」将自动清空已配置的理赔承诺时效数据。确定关闭？','确认关闭',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){
+        self.editForm.needClaim = false; self.claimList = []; ElementPlus.ElMessage.warning('已关闭时效理赔，理赔承诺时效数据已清空');
+      })
+    },
+    onFbaSyncChange: function(val){
+      if(val){ this.fbaSync = '是'; return }
+      var self = this;
+      ElementPlus.ElMessageBox.confirm('关闭「FBA运单同步」将自动清空已配置的预估运输时效和送仓预估时效数据。确定关闭？','确认关闭',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){
+        self.fbaSync = '否'; self.transitForm = {amazonLevel:'',minDays:null,maxDays:null}; self.warehouseList = []; ElementPlus.ElMessage.warning('已关闭FBA运单同步，相关时效数据已清空');
+      })
+    },
+
+    addWarehouseRow: function(){ this.warehouseList.push({fbaCode:'',sailDays:null,cabinetDays:null}); },
+    removeWarehouseRow: function(i){ this.warehouseList.splice(i,1); },
+    addClaimRow: function(){ var def=this.availableLastMileMethods.length>0?this.availableLastMileMethods[0]:'卡派'; this.claimList.push({deliveryMethod:def,fbaCodes:[],claimDays:null}); },
+    removeClaimRow: function(i){ this.claimList.splice(i,1); },
+    addWeightRow: function(){ this.weightList.push({unit:'KG',min:0,max:null,label:''}); },
+    removeWeightRow: function(i){ this.weightList.splice(i,1); },
+    onWeightDragStart: function(e, idx){ this.dragWeightIdx = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); },
+    onWeightDragOver: function(e, idx){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; },
+    onWeightDrop: function(e, idx){
+      e.preventDefault();
+      if(this.dragWeightIdx===-1||this.dragWeightIdx===idx) return;
+      var item = this.weightList.splice(this.dragWeightIdx, 1)[0];
+      this.weightList.splice(idx, 0, item);
+      this.dragWeightIdx = -1;
+    },
+    onWeightDragEnd: function(){ this.dragWeightIdx = -1; },
+    validateWeightRow: function(row){
+      if(row.max!==null && row.min!==null && row.max < row.min){
+        row._err = '结束值不能小于起始值';
+      } else {
+        row._err = '';
+      }
+    },
+
+    saveService: function(isGenerate){
+      var self = this;
+      if(isGenerate){var dims=[];if(this.editForm.transportMode)dims.push('运输方式:'+this.editForm.transportMode);if(this.editForm.lastMileMethods.length)dims.push('尾程派送:'+this.editForm.lastMileMethods.join('/'));if(this.editForm.taxMethods.length)dims.push('包税方式:'+this.editForm.taxMethods.join('/'));if(this.editForm.billingUnits.length)dims.push('计费方式:'+this.editForm.billingUnits.join('/'));if(this.editForm.serviceTypes.length)dims.push('服务类型:'+this.editForm.serviceTypes.join('/'));var _dims=[1,this.editForm.lastMileMethods.length||1,this.editForm.taxMethods.length||1,this.editForm.billingUnits.length||1,this.editForm.serviceTypes.length||1];var comboCount=_dims[0]*_dims[1]*_dims[2]*_dims[3]*_dims[4];ElementPlus.ElMessageBox.confirm('即将基于当前维度生成 '+comboCount+' 个服务组合。\n\n'+dims.join('\n')+'\n\n生成后以上维度将永久锁定，不可变更。确定生成？','确认生成服务组合',{confirmButtonText:'确定生成',cancelButtonText:'取消',type:'warning'}).then(function(){self._doSave(isGenerate)}).catch(function(){});return}
+      this._doSave(isGenerate);
+    },
+    _doSave: function(isGenerate){
+      var self = this;
+      if(this.editMode&&this._channelHasCombos(this.editForm.name)){var oldSig=this._getChannelComboSig(this.editForm.name);var changed=!oldSig||oldSig!==this._makeDimSig();if(changed){ElementPlus.ElMessageBox.alert('该渠道已有关联服务组合，运输方式/尾程派送/包税方式/计费方式/服务类型不可变更。如需调整维度请新建渠道','不可变更',{confirmButtonText:'已知晓',type:'warning'});return}}
+      if(!this.editForm.name){ ElementPlus.ElMessage.warning('请输入渠道名称'); return; }
+      if(!this.editForm.transportMode){ ElementPlus.ElMessage.warning('请选择运输方式'); return; }
+      if(this.editForm.lastMileMethods.length===0){ ElementPlus.ElMessage.warning('请选择尾程派送方式'); return; }
+      if(this.editForm.taxMethods.length===0){ ElementPlus.ElMessage.warning('请选择包税方式'); return; }
+      if(this.editForm.billingUnits.length===0){ ElementPlus.ElMessage.warning('请选择计费方式'); return; }
+      if(this.editForm.serviceTypes.length===0){ ElementPlus.ElMessage.warning('请选择服务类型'); return; }
+      var headRow = this.loadingStandards.find(function(s){return s.type==='头程'});
+      var tailRow = this.loadingStandards.find(function(s){return s.type==='派送'});
+      if(!headRow||!headRow.kgStandard||headRow.kgStandard<1){ ElementPlus.ElMessage.warning('头程KG基准必须大于0'); return; }
+      if(!headRow||!headRow.cbmStandard||headRow.cbmStandard<0.1){ ElementPlus.ElMessage.warning('头程m³基准必须大于0'); return; }
+      if(!tailRow||!tailRow.kgStandard||tailRow.kgStandard<1){ ElementPlus.ElMessage.warning('派送KG基准必须大于0'); return; }
+      if(!tailRow||!tailRow.cbmStandard||tailRow.cbmStandard<0.1){ ElementPlus.ElMessage.warning('派送m³基准必须大于0'); return; }
+      var lms=this.editForm.lastMileMethods;var hasBoth=lms.includes('卡派')&&lms.includes('快递派');
+      if(lms.includes('卡派')){var whD=this.chCostWhData[this.editForm.name||this._editingChannelName];if(hasBoth&&(!whD||!whD.enabled)){ElementPlus.ElMessage.warning('同时关联卡派和快递派时，仓点成本不可禁用');return}if(this.editMode&&whD&&whD.enabled&&(!whD.warehouses||!whD.warehouses.length)){ElementPlus.ElMessage.warning('仓点成本已开启但未添加任何仓点，请至少添加一个仓点');return}}
+      if(lms.includes('快递派')){var expD=this.chCostExpData[this.editForm.name||this._editingChannelName];if(hasBoth&&(!expD||!expD.enabled)){ElementPlus.ElMessage.warning('同时关联卡派和快递派时，快递派单价不可禁用');return}if(this.editMode&&expD&&expD.enabled&&(!expD.rates||!expD.rates.length)){ElementPlus.ElMessage.warning('快递派单价已开启但未添加任何费率行，请至少添加一条费率行');return}}
+
+      var wtErr = this.weightList.find(function(w){ return w.max!==null && w.min!==null && w.max < w.min; });
+      if(wtErr){ ElementPlus.ElMessage.warning('重量段「'+wtErr.label+'」结束值不能小于起始值'); this.activeTimeTab='weight'; return; }
+
+      if(this.fbaSync==='是'){
+        if(!this.transitForm.amazonLevel||this.transitForm.minDays===null||this.transitForm.maxDays===null){ ElementPlus.ElMessage.warning('请完善 FBA运单同步 的必填信息'); this.activeTimeTab='transit'; return; }
+        var whValid = this.warehouseList.every(function(item){ return item.fbaCode && item.sailDays!==null && item.cabinetDays!==null; });
+        if(!whValid){ ElementPlus.ElMessage.warning('请完善【送仓预估时效】中的必填项'); this.activeTimeTab='warehouse'; return; }
+        var codes = this.warehouseList.map(function(item){ return item.fbaCode; });
+        if(new Set(codes).size !== codes.length){ ElementPlus.ElMessage.warning('【送仓预估时效】中存在重复的FBA仓库代码'); this.activeTimeTab='warehouse'; return; }
+        if(this.warehouseList.some(function(item){ return item.cabinetDays > item.sailDays; })){ ElementPlus.ElMessage.warning('提柜至送仓天数不可超过开船至送仓天数'); this.activeTimeTab='warehouse'; return; }
+      }
+
+      if(this.editForm.needClaim){
+        var clValid = this.claimList.every(function(item){
+          if(!item.deliveryMethod||item.claimDays===null) return false;
+          if(item.deliveryMethod==='卡派'&&(!item.fbaCodes||item.fbaCodes.length===0)) return false;
+          return true;
+        });
+        if(!clValid){ ElementPlus.ElMessage.warning('请完善【理赔承诺时效】中的必填信息'); this.activeTimeTab='claim'; return; }
+        var allCW=[], dupCW=false;
+        this.claimList.forEach(function(item){ (item.fbaCodes||[]).forEach(function(w){ if(allCW.indexOf(w)!==-1) dupCW=true; allCW.push(w); }); });
+        if(dupCW){ ElementPlus.ElMessage.warning('【理赔承诺时效】不同行不能选择相同的FBA仓库代码'); this.activeTimeTab='claim'; return; }
+      }
+
+      var row = {
+        name: this.editForm.name, transportMode: this.editForm.transportMode,
+        lastMile: this.editForm.lastMileMethods.join('/'), taxMethods: this.editForm.taxMethods.join('/'),
+        billingUnits: this.editForm.billingUnits.join('/'), serviceType: this.editForm.serviceTypes.join('/'),
+        needClaim: this.editForm.needClaim?'是':'否', status: this.editMode ? this.channels[this.editIdx].status : '正常',
+        _raw: {
+          originCountry: this.editForm.originCountry, destCountries: this.editForm.destCountries.slice(),
+          transportMode: this.editForm.transportMode, lastMileMethods: this.editForm.lastMileMethods.slice(),
+          taxMethods: this.editForm.taxMethods.slice(), billingUnits: this.editForm.billingUnits.slice(),
+          serviceTypes: this.editForm.serviceTypes.slice(),
+          _loadingStandards: this.loadingStandards.map(function(s){return {type:s.type,transportMode:s.transportMode,lastMile:s.lastMile,kgStandard:s.kgStandard,cbmStandard:s.cbmStandard}}),
+          needClaim: this.editForm.needClaim,
+          _combosGenerated: this.editForm._combosGenerated || isGenerate
+        },
+        _fbaSync: this.fbaSync,
+        _transit: { amazonLevel: this.transitForm.amazonLevel, minDays: this.transitForm.minDays, maxDays: this.transitForm.maxDays },
+        _warehouse: JSON.parse(JSON.stringify(this.warehouseList)),
+        _claim: JSON.parse(JSON.stringify(this.claimList)),
+        _weight: JSON.parse(JSON.stringify(this.weightList))
+      };
+
+      var self = this;
+      var doSave = function(){ self.showDialog = false;
+        if(self.editMode){
+          var oldName = self.channels[self.editIdx].name;
+          self.channels.splice(self.editIdx, 1, row);
+          if(oldName !== row.name){
+            if(self.chCostData[oldName]){ self.chCostData[row.name]=self.chCostData[oldName]; delete self.chCostData[oldName]; }
+            if(self.chCostWhData[oldName]){ self.chCostWhData[row.name]=self.chCostWhData[oldName]; delete self.chCostWhData[oldName]; }
+            if(self.chCostExpData[oldName]){ self.chCostExpData[row.name]=self.chCostExpData[oldName]; delete self.chCostExpData[oldName]; }
+          }
+          ElementPlus.ElMessageBox.alert('保存 '+row.name+' 成功','保存成功',{confirmButtonText:'已知晓'});
+        } else {
+          self.channels.unshift(row);
+          if(!self.chCostData[row.name]){
+            self.chCostData[row.name] = JSON.parse(JSON.stringify(self.globalCostTmpls));
+            self.chCostData[row.name].forEach(function(c){ c.price=parseFloat(c.dp); c.enabled=true; });
+          }
+          if(!self.chCostWhData[row.name]){
+            self.chCostWhData[row.name] = { enabled:true, warehouses:[
+              {fba:"ONT8",拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'},
+              {fba:"LAX9",拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'},
+              {fba:"LGB8",拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'}
+            ]};
+          }
+          var nLms=row._raw&&row._raw.lastMileMethods?row._raw.lastMileMethods:[];
+          if(!self.chCostExpData[row.name]&&nLms.includes('快递派')){
+            self.chCostExpData[row.name] = { enabled:true, rates:[
+              {weightTier:'0.5KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
+              {weightTier:'1KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
+              {weightTier:'3KG+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
+            ]};
+          }
+          ElementPlus.ElMessageBox.alert(isGenerate?'保存成功，正在生成服务组合...':'新增 '+row.name+' 成功','保存成功',{confirmButtonText:'已知晓'});if(isGenerate){self._addChannelCombos(row.name);self._setChannelComboSig(row.name,self._makeDimSig());}
+        }
+      };
+      if(this._stdChanged && this.editMode){
+        ElementPlus.ElMessageBox.confirm('折算基准已变更，保存后将自动重算当周运价表成本底价。确定保存？','基准变更确认',{confirmButtonText:'确定保存',cancelButtonText:'取消',type:'warning'}).then(function(){
+          ElementPlus.ElMessageBox.alert('已保存，当周运价表成本底价已触发重算','保存成功',{confirmButtonText:'已知晓'}).then(function(){doSave()});
+        }).catch(function(){});
+      } else { doSave(); }
+    },
+    _makeDimSig: function(){var f=this.editForm;return[f.transportMode,f.lastMileMethods.slice().sort().join(','),f.taxMethods.slice().sort().join(','),f.billingUnits.slice().sort().join(','),f.serviceTypes.slice().sort().join(',')].join('|');},
+    _getChannelComboSig: function(name){try{var d=localStorage.getItem('sf_ch_combo_sigs');if(!d)return null;var m=JSON.parse(d);return m[name]||null}catch(e){return null}},
+    _setChannelComboSig: function(name,sig){try{var d=localStorage.getItem('sf_ch_combo_sigs');var m=d?JSON.parse(d):{};m[name]=sig;localStorage.setItem('sf_ch_combo_sigs',JSON.stringify(m))}catch(e){}},
+    _channelHasCombos: function(name){try{var d=localStorage.getItem('sf_ch_has_combos');if(!d)return false;return JSON.parse(d).indexOf(name)!==-1}catch(e){return false}},
+    _addChannelCombos: function(name){try{var d=localStorage.getItem('sf_ch_has_combos');var arr=d?JSON.parse(d):[];if(arr.indexOf(name)===-1){arr.push(name);localStorage.setItem('sf_ch_has_combos',JSON.stringify(arr))}}catch(e){}},
+
+    openChannelCost: function(row){
+      this.chCostChannel = row.name;
+      if(!this.chCostData[this.chCostChannel]){
+        this.chCostData[this.chCostChannel] = JSON.parse(JSON.stringify(this.globalCostTmpls));
+        this.chCostData[this.chCostChannel].forEach(function(c){ if(c){ c.price=parseFloat(c.dp); c.enabled=true; } });
+      }
+      if(!this.chCostWhData[this.chCostChannel]){
+        this.chCostWhData[this.chCostChannel] = { enabled:true, warehouses:[
+          {fba:["ONT8","LAX9","LGB8"],拆送价:30,组合一口价:1980,整柜直送价:1430,cur:'USD'}
+        ]};
+      }
+      var lms=row._raw&&row._raw.lastMileMethods?row._raw.lastMileMethods:[];
+      if(!this.chCostExpData[this.chCostChannel]&&lms.includes('快递派')){
+        this.chCostExpData[this.chCostChannel] = { enabled:true, rates:[
+          {weightTier:'0.5KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
+          {weightTier:'1KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
+          {weightTier:'3KG+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
+        ]};
+      }
+      this.showChCostDialog = true;this._costDirty=false;
+    },
+    closeChCostDialog: function(){var self=this;if(this._costDirty){ElementPlus.ElMessageBox.confirm('有未保存的变更，确定关闭？','确认关闭',{confirmButtonText:'确定关闭',cancelButtonText:'取消',type:'warning'}).then(function(){self.showChCostDialog=false}).catch(function(){})}else{this.showChCostDialog=false}},
+    saveChannelCost: function(){var whD=this.chCostWhData[this.chCostChannel];var expD=this.chCostExpData[this.chCostChannel];var lms=this.editForm.lastMileMethods;if(lms.includes('卡派')&&whD&&whD.enabled){if(!whD.warehouses||!whD.warehouses.length){ElementPlus.ElMessage.warning('仓点成本已开启，请至少添加一个仓点');return}for(var i=0;i<whD.warehouses.length;i++){var w=whD.warehouses[i];if(w.拆送价===null&&w.组合一口价===null&&w.整柜直送价===null){ElementPlus.ElMessage.warning('仓点成本第'+(i+1)+'行：拆送价/组合一口价/整柜直送价至少填一个');return}}var allWh=[];var dupWh=false;whD.warehouses.forEach(function(w){(w.fba||[]).forEach(function(c){if(allWh.indexOf(c)!==-1)dupWh=true;allWh.push(c)})});if(dupWh){ElementPlus.ElMessage.warning('仓点成本存在重复的仓库代码（同一仓库不可出现在多行）');return}}if(lms.includes('快递派')&&expD&&expD.enabled){if(!expD.rates||!expD.rates.length){ElementPlus.ElMessage.warning('快递派单价已开启，请至少添加一条费率行');return}for(var j=0;j<expD.rates.length;j++){var r=expD.rates[j];if(!r.weightTier||!r.zipPrefixes||r.price===null){ElementPlus.ElMessage.warning('快递派单价第'+(j+1)+'行：重量段/邮编前缀/单价必填');return}}var expKeys=expD.rates.map(function(x){return x.weightTier+'|'+x.zipPrefixes});if(new Set(expKeys).size!==expKeys.length){ElementPlus.ElMessage.warning('快递派单价存在重复的(重量段+邮编前缀)组合');return}}this._costDirty=false;ElementPlus.ElMessageBox.alert('成本项已保存','保存成功',{confirmButtonText:'已知晓'})},
+
+    toggleAllChCost: function(on){
+      var self = this;this._costDirty=true;
+      (this.chCostData[this.chCostChannel]||[]).forEach(function(x){ if(x){ x.enabled=on; if(on) x.price=parseFloat(x.dp); } });
+    },
+    toggleChCostItem: function(item){
+      this._costDirty=true;
+      if(item.enabled) ElementPlus.ElMessage.success(item.name+' 已关联');
+      else ElementPlus.ElMessage.warning(item.name+' 已解除关联');
+    },
+    isPickupUsed: function(tmplName, region){
+      var list = this.chCostData[this.chCostChannel];
+      if(!list) return false;
+      return list.some(function(x){return x&&x.seg==='揽收段'&&x.name===tmplName&&x.pickup_region===region});
+    },
+    dupPickupRow: function(row){
+      this._costDirty = true;
+      var list = this.chCostData[this.chCostChannel];
+      if(!list) return;
+      var used = list.filter(function(x){return x&&x.seg==='揽收段'&&x.name===row.name;}).map(function(x){return x.pickup_region});
+      var avail = this.pickupRegions.filter(function(r){return used.indexOf(r)===-1});
+      if(avail.length===0){ElementPlus.ElMessage.warning(row.name+' 已覆盖全部交货地');return}
+      var idx = list.indexOf(row);
+      list.splice(idx+1, 0, {seg:row.seg,name:row.name,dp:row.dp,cur:row.cur,price:parseFloat(row.dp),enabled:true,pickup_region:avail[0]});
+      ElementPlus.ElMessage.success(row.name+' 已添加交货地 '+avail[0]);
+    },
+    addWhRow: function(){
+      this._costDirty=true;
+      if(!this.chCostWhData[this.chCostChannel]) this.chCostWhData[this.chCostChannel] = {enabled:true,warehouses:[]};
+      this.chCostWhData[this.chCostChannel].warehouses.push({fba:[],拆送价:null,组合一口价:null,整柜直送价:null,cur:'USD'});
+    },
+    removeWhRow: function(i){ this._costDirty=true;var d=this.chCostWhData[this.chCostChannel]; if(d) d.warehouses.splice(i,1); },
+    chCostRowClass: function(arg){ return arg.row._segChanged ? 'seg-first-row' : ''; },
+    transportModeLabel: function(v){var m={10:'海运',20:'空运',30:'洲际火车',40:'洲际卡车'};return m[v]||'—';},
+    _stdChanged: false,
+    onStandardChange: function(){this._stdChanged=true},
+    toggleChCostWh: function(val){
+      this._costDirty=true;
+      if(!val&&this.editForm.lastMileMethods.includes('卡派')&&this.editForm.lastMileMethods.includes('快递派')){ElementPlus.ElMessage.warning('同时关联卡派和快递派时，仓点成本不可禁用');return}
+      var d = this.chCostWhData[this.chCostChannel];
+      if(!d) this.chCostWhData[this.chCostChannel] = {enabled:val, warehouses:[]};
+      else d.enabled = val;
+      ElementPlus.ElMessage.success(val?'卡派仓点成本已开启':'卡派仓点成本已关闭');
+    },
+    toggleChCostExp: function(val){
+      this._costDirty=true;
+      if(!val&&this.editForm.lastMileMethods.includes('卡派')&&this.editForm.lastMileMethods.includes('快递派')){ElementPlus.ElMessage.warning('同时关联卡派和快递派时，快递派单价不可禁用');return}
+      var d=this.chCostExpData[this.chCostChannel];
+      if(!val){ if(d) d.enabled=false; ElementPlus.ElMessage.warning('快递派单价已关闭'); }
+      else { if(!d) this.chCostExpData[this.chCostChannel]={enabled:true,rates:[]}; else d.enabled=true; ElementPlus.ElMessage.success('快递派单价已开启'); }
+    },
+    addExpRow: function(){
+      this._costDirty=true;
+      var d=this.chCostExpData[this.chCostChannel];
+      if(!d) this.chCostExpData[this.chCostChannel]={enabled:true,rates:[]};
+      this.chCostExpData[this.chCostChannel].rates.push({weightTier:'1KG+',zipPrefixes:'',price:null,cur:'RMB'});
+    },
+    removeExpRow: function(i){ this._costDirty=true;var d=this.chCostExpData[this.chCostChannel]; if(d&&d.rates) d.rates.splice(i,1); },
+    syncChCostToCombos: function(){
+      if(this.chCostSelected.length===0){ElementPlus.ElMessage.warning('请先在表格中勾选要同步的成本项');return}
+      this.openSyncDialog('cost');
+    },
+    onChCostSelectionChange: function(rows){this.chCostSelected=rows},
+    syncChWhToCombos: function(){this.openSyncDialog('wh')},
+    syncChExpToCombos: function(){this.openSyncDialog('exp')},
+    openSyncDialog: function(type){
+      this.syncType = type;
+      var self = this;
+      var ch = this.channels.find(function(c){return c.name===self.chCostChannel});
+      if(!ch) return;
+      var r = ch._raw, combos = [];
+      var lms = r.lastMileMethods||[], bus = r.billingUnits||[], txs = r.taxMethods||[], sts = r.serviceTypes||[], tm = r.transportMode||'海运';
+      lms.forEach(function(lm){bus.forEach(function(bu){txs.forEach(function(tx){sts.forEach(function(st){combos.push(ch.name+'-'+tm+'-'+lm+'-'+bu+'-'+tx+'-'+st)})})})});
+      // 成本项列表
+      var items = [];
+      if(type==='cost'){
+        items = this.chCostSelected.map(function(x){return{name:x.name,dp:x.price,cur:x.cur,enabled:x.enabled!==false,_sel:true}});
+      } else if(type==='wh'){
+        var whData = this.chCostWhData[this.chCostChannel];
+        items = (whData&&whData.warehouses||[]).map(function(w,i){return{name:w.fba||('仓点'+i),dp:w.拆送价,cur:w.cur||'USD',enabled:true,_sel:true}});
+      } else if(type==='exp'){
+        var expData = this.chCostExpData[this.chCostChannel];
+        items = (expData&&expData.rates||[]).map(function(r,i){return{name:r.weightTier+' × '+r.zipZone,dp:r.price,cur:r.cur||'RMB',enabled:true,_sel:true}});
+      }
+      this.syncItems = items;
+      this.syncItemSelectAll = true;
+      this.syncCombos = combos.map(function(c){return{code:c,_sel:true}});
+      this.syncCombosSelectAll = true;
+      this.showSyncDialog = true;
+      this.$nextTick(function(){
+        if(this.$refs.syncItemTable) this.$refs.syncItemTable.toggleAllSelection();
+        if(this.$refs.syncComboTable) this.$refs.syncComboTable.toggleAllSelection();
+      });
+    },
+    toggleSyncItemsAll: function(val){this.syncItems.forEach(function(c){if(c.enabled!==false)c._sel=val})},
+    onSyncItemSelectionChange: function(rows){var self=this;this.syncItems.forEach(function(c){c._sel=rows.indexOf(c)!==-1});this.syncItemSelectAll=rows.length===this.syncItems.filter(function(c){return c.enabled!==false}).length},
+    toggleSyncCombosAll: function(val){this.syncCombos.forEach(function(c){c._sel=val})},
+    onSyncComboSelectionChange: function(rows){var self=this;this.syncCombos.forEach(function(c){c._sel=rows.indexOf(c)!==-1});this.syncCombosSelectAll=rows.length===this.syncCombos.length},
+    confirmSync: function(){
+      var itemCnt=this.syncItems.filter(function(c){return c._sel}).length;
+      var comboCnt=this.syncCombos.filter(function(c){return c._sel}).length;
+      var total=itemCnt*comboCnt;
+      var msg=(this.syncType==='wh'?'仓点成本':this.syncType==='exp'?'快递派单价':'成本项')+' 已同步：'+itemCnt+' 项 × '+comboCnt+' 组合 = '+total+' 条更新（仅更新已有项价格，未新增或删除）';
+      if(this.syncAutoRecalc) msg+='，当周运价表的成本底价已更新';
+      ElementPlus.ElMessage.success(msg);
+      this.showSyncDialog = false;
+    },
+  }
+});
+app.use(ElementPlus);(function(){if(!localStorage.getItem('sf_ch_has_combos')){localStorage.setItem('sf_ch_has_combos',JSON.stringify(['美森360','美森432']))}if(!localStorage.getItem('sf_ch_combo_sigs')){var m={};m['美森360']='海运|卡派,快递派|不包税,包税,自主税号,自税递延|KG,m³|散货,整柜';m['美森432']='海运|卡派,快递派|不包税,包税,自主税号,自税递延|KG,m³|散货,整柜';localStorage.setItem('sf_ch_combo_sigs',JSON.stringify(m))}})();
+app.mount('#app');
 })();
 </script>
 </body>

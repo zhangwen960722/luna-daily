@@ -316,6 +316,15 @@
                                     <template #title>{{ item.name }}</template>
                                 </el-menu-item>
                             </el-sub-menu>
+                            <!-- 新增二级菜单：运价管理 -->
+                            <el-sub-menu index="2-5">
+                                <template #title>
+                                    <span>运价管理</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.freightRate" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
                             <!-- 新增二级菜单：事件管理 -->
                             <el-sub-menu index="2-3">
                                 <template #title>
@@ -325,21 +334,21 @@
                                     <template #title>{{ item.name }}</template>
                                 </el-menu-item>
                             </el-sub-menu>
+                            <!-- 新增二级菜单：航线管理 -->
+                            <el-sub-menu index="2-6">
+                                <template #title>
+                                    <span>航线管理</span>
+                                </template>
+                                <el-menu-item v-for="item in headTransportMenuList.routeManagement" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
                             <!-- 新增二级菜单：基础配置 -->
                             <el-sub-menu index="2-4">
                                 <template #title>
                                     <span>基础配置</span>
                                 </template>
                                 <el-menu-item v-for="item in headTransportMenuList.basicConfiguration" :key="item.index" :index="item.index">
-                                    <template #title>{{ item.name }}</template>
-                                </el-menu-item>
-                            </el-sub-menu>
-                            <!-- 新增二级菜单：超级运价 -->
-                            <el-sub-menu index="2-5">
-                                <template #title>
-                                    <span>超级运价</span>
-                                </template>
-                                <el-menu-item v-for="item in headTransportMenuList.superFreight" :key="item.index" :index="item.index">
                                     <template #title>{{ item.name }}</template>
                                 </el-menu-item>
                             </el-sub-menu>
@@ -505,36 +514,34 @@
                         { index: '异常处理池.html', name: '异常处理池', permission: '异常处理池' }
                     ].filter(item => hasPermission(item.permission)),
                     serviceManagement: [
-                        { index: '运输服务_主列表.html', name: '运输服务', permission: '运输服务' },
-                        { index: '服务组合_主列表.html', name: '服务组合', permission: '服务组合' }
+                        { index: '超级运价_服务渠道.html', name: '服务渠道', permission: '超级运价' },
+                        { index: '超级运价_服务组合.html', name: '服务组合', permission: '超级运价' }
                     ].filter(item => hasPermission(item.permission)),
                     eventManagement: [
                         { index: '物流事件_主列表.html', name: '物流事件', permission: '物流事件' },
                         { index: '亚马逊物流事件_主列表.html', name: '亚马逊物流事件', permission: '亚马逊物流事件' }
                     ].filter(item => hasPermission(item.permission)),
+                    routeManagement: [
+                        { index: '港口管理_主列表.html', name: '港口管理', permission: '港口管理' },
+                        { index: '超级运价_航线.html', name: '航线 & 船期', permission: '超级运价' }
+                    ].filter(item => hasPermission(item.permission)),
                     basicConfiguration: [
                         { index: '费用类型_主列表.html', name: '费用类型', permission: '费用类型' },
                         { index: '海外仓库列表_主列表.html', name: '平台仓库列表', permission: '海外仓库列表' },
-                        { index: '港口管理_主列表.html', name: '港口管理', permission: '港口管理' },
                         { index: 'VAT管理_主列表.html', name: 'VAT管理', permission: 'VAT管理' },
                         { index: '标识管理.html', name: '标识管理', permission: '标识管理' }
                     ].filter(item => hasPermission(item.permission)),
-                    superFreight: [
-                        { index: '超级运价_工作台.html', name: '运价更新工作台', permission: '超级运价' },
+                    freightRate: [
                         { index: '超级运价_运价查询.html', name: '运价查询', permission: '超级运价' },
-                        { index: '超级运价_服务渠道.html', name: '服务渠道', permission: '超级运价' },
-                        { index: '超级运价_航线.html', name: '航线 & 船期', permission: '超级运价' },
+                        { index: '超级运价_工作台.html', name: '运价更新工作台', permission: '超级运价' },
                         { index: '超级运价_成本管理.html', name: '成本管理', permission: '超级运价' },
-                        { index: '超级运价_服务组合.html', name: '服务组合', permission: '超级运价' },
-                        { index: '超级运价_运价表.html', name: '运价表维护', permission: '超级运价' },
-                        { index: '超级运价_附加费规则.html', name: '附加费规则', permission: '超级运价' },
-                        { index: '超级运价_运费优惠.html', name: '运费优惠', permission: '超级运价' },
-                        { index: '超级运价_附加费优惠.html', name: '附加费优惠', permission: '超级运价' }
+                        { index: '超级运价_附加费规则.html', name: '附加费规则', permission: '超级运价' }
                     ].filter(item => hasPermission(item.permission)),
                     others: [
 
                     ].filter(item => hasPermission(item.permission))
                 };
+
 
                 // 邀请入驻菜单列表
                 const inviteMenuList = [
@@ -577,10 +584,13 @@
                         item = headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value);
                     }
                     if (!item) {
+                        item = headTransportMenuList.routeManagement.find(m => m.index === activeMenu.value);
+                    }
+                    if (!item) {
                         item = headTransportMenuList.basicConfiguration.find(m => m.index === activeMenu.value);
                     }
                     if (!item) {
-                        item = headTransportMenuList.superFreight.find(m => m.index === activeMenu.value);
+                        item = headTransportMenuList.freightRate.find(m => m.index === activeMenu.value);
                     }
                     if (!item) {
                         item = headTransportMenuList.others.find(m => m.index === activeMenu.value);
@@ -607,11 +617,14 @@
                     if (headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value)) {
                         return '事件管理';
                     }
+                    if (headTransportMenuList.routeManagement.find(m => m.index === activeMenu.value)) {
+                        return '航线管理';
+                    }
                     if (headTransportMenuList.basicConfiguration.find(m => m.index === activeMenu.value)) {
                         return '基础配置';
                     }
-                    if (headTransportMenuList.superFreight.find(m => m.index === activeMenu.value)) {
-                        return '超级运价';
+                    if (headTransportMenuList.freightRate.find(m => m.index === activeMenu.value)) {
+                        return '运价管理';
                     }
                     return '';
                 });
@@ -622,10 +635,11 @@
                         return '基础资料';
                     }
                     if (headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value) ||
-                        headTransportMenuList.serviceManagement.find(m => m.index === activeMenu.value) || 
-                        headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value) || 
+                        headTransportMenuList.serviceManagement.find(m => m.index === activeMenu.value) ||
+                        headTransportMenuList.freightRate.find(m => m.index === activeMenu.value) ||
+                        headTransportMenuList.eventManagement.find(m => m.index === activeMenu.value) ||
+                        headTransportMenuList.routeManagement.find(m => m.index === activeMenu.value) ||
                         headTransportMenuList.basicConfiguration.find(m => m.index === activeMenu.value) ||
-                        headTransportMenuList.superFreight.find(m => m.index === activeMenu.value) ||
                         headTransportMenuList.others.find(m => m.index === activeMenu.value)) {
                         return '头程管理';
                     }
@@ -686,7 +700,9 @@
                                     ...headTransportMenuList.orderManagement,
                                     ...headTransportMenuList.serviceManagement,
                                     ...headTransportMenuList.eventManagement,
+                                    ...headTransportMenuList.routeManagement,
                                     ...headTransportMenuList.basicConfiguration,
+                                    ...headTransportMenuList.freightRate,
                                     ...headTransportMenuList.others,
                                     ...inviteMenuList, 
                                     ...merchantMenuList, 

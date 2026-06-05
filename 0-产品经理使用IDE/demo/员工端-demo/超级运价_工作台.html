@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运价更新工作台 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
+.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;margin-bottom:16px}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.card-header h3{margin:0;font-size:15px;font-weight:600}
+.batch-bar{background:linear-gradient(135deg,#1B5E20,#2DA44E);border-radius:8px;padding:14px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;color:#fff;flex-wrap:wrap;gap:8px}
+.batch-bar .week-label{font-size:16px;font-weight:700}
+.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
+.el-table td{font-size:13px}
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-secondary)}
+.metrics{display:flex;gap:16px;margin-bottom:16px}
+.metric-card{flex:1;background:#fff;border-radius:8px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.06);display:flex;align-items:center;gap:12px}
+.metric-card .num{font-size:28px;font-weight:700;color:#2DA44E}
+.metric-card .label{font-size:13px;color:var(--text-secondary)}
+.tab-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.expand-row{padding:0 20px 12px 20px}
+.wt-table .el-table__body-wrapper{overflow:visible}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="metrics">
+  <div class="metric-card"><div class="num">{{batches.length}}</div><div class="label">周批次总数</div></div>
+  <div class="metric-card"><div class="num">{{currentSailingCount}}</div><div class="label">本周船期数</div></div>
+  <div class="metric-card"><div class="num">{{priceGroupCount}}</div><div class="label">运价分组数</div></div>
+</div>
+
+<div class="batch-bar">
+  <div>
+    <div class="week-label">{{selectedBatchName||'请选择批次'}}</div>
+    <div v-if="selectedBatch" style="font-size:13px;opacity:0.9">{{selectedBatch.week}} | {{selectedBatch.start}} ~ {{selectedBatch.end}} | {{selectedBatch.status}}</div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <div v-if="selectedBatch" style="display:flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:6px;padding:4px 8px">
+      <span style="font-size:11px;opacity:0.8">USD→RMB</span>
+      <span style="font-size:13px;font-weight:700">{{ selectedBatch.exchangeRate }}</span>
+    </div>
+    <el-select v-model="selectedBatchName" placeholder="选择批次" style="width:220px" @change="switchBatch">
+      <el-option v-for="b in batches" :key="b.name" :label="b.name+' ('+b.status+')'" :value="b.name"></el-option>
+    </el-select>
+    <el-button @click="openAddBatch" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">新建周批次</el-button>
+    <el-button type="success" @click="openCopyWeek" :disabled="!selectedBatch||selectedBatch.status==='已过期'" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">从上周复制</el-button>
+    <el-button v-if="selectedBatch&&selectedBatch.status==='预告'" type="warning" @click="publishBatch" style="background:rgba(255,255,255,.22);color:#fff;border:1px solid rgba(255,255,255,.5);font-weight:600">发布 → 当前</el-button>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:0" v-if="selectedBatch">
+  <el-tabs v-model="activeTab">
+    <!-- 船期 Tab（只读 — 编辑在航线&船期页） -->
+    <el-tab-pane label="本周船期" name="sailing">
+      <div class="tab-header">
+        <span style="color:var(--text-secondary);font-size:13px">{{sailingList.length}} 条船期（只读）</span>
+        <a href="超级运价_航线.html" style="font-size:12px;color:#2DA44E;text-decoration:none;line-height:24px">编辑船期 →</a>
+      </div>
+      <el-table :data="sailingList" border stripe>
+        <el-table-column prop="routeName" label="航线" min-width="220"></el-table-column>
+        <el-table-column label="截单时间（按本地仓）" min-width="240"><template #default="s"><el-tag v-for="(d,wh) in s.row.cutoffTimes" :key="wh" size="small" style="margin:1px 2px">{{wh}}: {{d}}</el-tag></template></el-table-column>
+        <el-table-column prop="etd" label="ETD" width="80"></el-table-column>
+        <el-table-column prop="eta" label="ETA" width="80"></el-table-column>
+        <el-table-column prop="voyageDays" label="航程" width="60"></el-table-column>
+        <el-table-column prop="fastestPickup" label="最快提取" width="80"></el-table-column>
+      </el-table>
+    </el-tab-pane>
+
+    <!-- 运价 Tab - 两级折叠视图 -->
+    <el-tab-pane label="本周运价" name="price">
+      <div class="tab-header">
+        <span style="color:var(--text-secondary);font-size:13px">{{priceGroupCount}} 个分组（按 服务组合 + 仓库组/邮编前缀 + 交货地），{{priceRowCount}} 条重量段运价行</span>
+        <div style="display:flex;gap:8px">
+          <el-button v-if="selectedBatch.status!=='已过期'" size="small" type="primary" @click="openAddPrice">新增运价行</el-button>
+          <el-button size="small" @click="handleBatchEdit" :disabled="!selectedBatch||selectedBatch.status==='已过期'">批量调价</el-button>
+        </div>
+      </div>
+      <el-table :data="priceGroups" border stripe row-key="_key">
+        <el-table-column type="expand">
+          <template #default="g">
+            <div class="expand-row">
+              <el-table :data="g.row.weightTiers" border size="small" class="wt-table">
+                <el-table-column prop="weightTier" label="重量段" width="100"></el-table-column>
+                <el-table-column label="成本底价/KG" width="120" align="right"><template #default="w"><span style="color:var(--text-secondary)">{{w.row.costKg||'—'}}</span></template></el-table-column>
+                <el-table-column label="建议公布价/KG" width="130" align="right"><template #default="w"><span style="color:#2DA44E">{{w.row.suggestKg||'—'}}</span></template></el-table-column>
+                <el-table-column label="公布价/KG" width="120" align="right"><template #default="w"><strong>{{w.row.priceKg||'—'}}</strong></template></el-table-column>
+                <el-table-column label="利润/KG" width="100" align="right"><template #default="w"><span :style="w.row._profitKg>=0?'color:#2DA44E':'color:#F56C6C'">{{w.row._profitKg!=null?(w.row._profitKg>=0?'+':'')+w.row._profitKg:'—'}}</span></template></el-table-column>
+                <el-table-column label="利润%" width="80" align="right"><template #default="w"><span :style="w.row._profitKg>=0?'color:#2DA44E':'color:#F56C6C'">{{w.row._profitPct||'—'}}</span></template></el-table-column>
+                <el-table-column label="成本底价/m³" width="120" align="right"><template #default="w"><span style="color:var(--text-secondary)">{{w.row.costCbm||'—'}}</span></template></el-table-column>
+                <el-table-column label="建议公布价/m³" width="130" align="right"><template #default="w"><span style="color:#2DA44E">{{w.row.suggestCbm||'—'}}</span></template></el-table-column>
+                <el-table-column label="公布价/m³" width="120" align="right"><template #default="w"><strong>{{w.row.priceCbm||'—'}}</strong></template></el-table-column>
+                <el-table-column label="利润/m³" width="100" align="right"><template #default="w"><span :style="w.row._profitCbm>=0?'color:#2DA44E':'color:#F56C6C'">{{w.row._profitCbm!=null?(w.row._profitCbm>=0?'+':'')+w.row._profitCbm:'—'}}</span></template></el-table-column>
+              </el-table>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="comboName" label="服务组合" min-width="220"></el-table-column>
+        <el-table-column label="仓库组/邮编前缀" min-width="150">
+          <template #default="g"><span>{{g.row.warehouseGroup||'—'}}</span><el-tag v-if="g.row._dimType==='zip'" size="small" type="info" effect="plain" style="margin-left:4px">快递派</el-tag></template>
+        </el-table-column>
+        <el-table-column prop="pickupRegion" label="交货地" width="80"></el-table-column>
+        <el-table-column label="成本底价/KG" width="110" align="right"><template #default="g"><span style="color:var(--text-secondary);font-size:12px">{{g.row._costKgRange||'—'}}</span></template></el-table-column>
+        <el-table-column label="成本底价/m³" width="110" align="right"><template #default="g"><span style="color:var(--text-secondary);font-size:12px">{{g.row._costCbmRange||'—'}}</span></template></el-table-column>
+        <el-table-column label="公布价/KG" width="110" align="right"><template #default="g"><span style="font-weight:600;font-size:13px">{{g.row._priceKgRange||'—'}}</span></template></el-table-column>
+        <el-table-column label="公布价/m³" width="110" align="right"><template #default="g"><span style="font-weight:600;font-size:13px">{{g.row._priceCbmRange||'—'}}</span></template></el-table-column>
+        <el-table-column label="利润/KG" width="100" align="right"><template #default="g"><span :style="g.row._profitKgVal>=0?'color:#2DA44E;font-size:12px':'color:#F56C6C;font-size:12px'">{{g.row._profitKgRange||'—'}}</span></template></el-table-column>
+        <el-table-column label="利润/m³" width="100" align="right"><template #default="g"><span :style="g.row._profitCbmVal>=0?'color:#2DA44E;font-size:12px':'color:#F56C6C;font-size:12px'">{{g.row._profitCbmRange||'—'}}</span></template></el-table-column>
+        <el-table-column v-if="selectedBatch.status!=='已过期'" label="操作" width="70" fixed="right"><template #default="g"><el-button size="small" @click="openEditPrice(g.row,g.$index)">编辑</el-button></template></el-table-column>
+      </el-table>
+    </el-tab-pane>
+  </el-tabs>
+</div>
+<div v-else class="card empty-state"><p>请选择一个周批次查看船期和运价</p></div>
+
+<!-- ========== 新建批次 ========== -->
+<el-dialog v-model="showBatchDialog" title="新建周批次" width="520px" :close-on-click-modal="false">
+  <el-form :model="batchForm" label-width="110px">
+    <el-form-item label="批次名称" required><el-input v-model="batchForm.name" placeholder="如 2026-W06（2/2-2/8）"></el-input></el-form-item>
+    <el-form-item label="周次" required><el-input v-model="batchForm.week" placeholder="如 2026-W06"></el-input></el-form-item>
+    <el-row :gutter="16"><el-col :span="12"><el-form-item label="周起始" required><el-date-picker v-model="batchForm.start" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col><el-col :span="12"><el-form-item label="周结束" required><el-date-picker v-model="batchForm.end" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col></el-row>
+    <el-row :gutter="16"><el-col :span="12"><el-form-item label="USD→RMB汇率" required><el-input-number v-model="batchForm.exchangeRate" :min="0.0001" :precision="4" :step="0.01" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="汇率生效日" required><el-date-picker v-model="batchForm.exchangeRateDate" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col></el-row>
+    <el-form-item label="备注"><el-input v-model="batchForm.remark" placeholder="选填"></el-input></el-form-item>
+    <el-form-item label="从上周复制"><el-switch v-model="batchForm.copyLast"></el-switch><span style="margin-left:8px;font-size:12px;color:#909399">复制上周全部船期 + 运价行 + 汇率</span></el-form-item>
+  </el-form>
+  <template #footer><el-button @click="showBatchDialog=false">取消</el-button><el-button type="primary" @click="saveBatch">创建批次</el-button></template>
+</el-dialog>
+
+<!-- ========== 从上周复制运价行 ========== -->
+<el-dialog v-model="showCopyDialog" title="从上周复制运价行" width="480px" :close-on-click-modal="false">
+  <div style="margin-bottom:12px;font-size:14px">将复制 <strong>{{prevBatchName||'上周'}}</strong> 的运价行到 <strong>{{selectedBatchName}}</strong></div>
+  <div style="font-size:13px;color:var(--text-secondary);line-height:1.8">
+    <div>上周全部运价行（公布价保留，可在此基础上调价）</div>
+  </div>
+  <template #footer><el-button @click="showCopyDialog=false">取消</el-button><el-button type="primary" @click="confirmCopy">确认复制</el-button></template>
+</el-dialog>
+
+<!-- ========== 运价行弹窗 ========== -->
+<el-dialog v-model="showPriceDialog" :title="editPriceMode?'编辑运价行':'新增运价行'" width="480px" :close-on-click-modal="false">
+  <div style="background:#F0F9EB;border:1px solid #C8E6C9;border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#606266">
+    选择要新增运价行的服务组合和定价维度。保存后可在下方列表中展开并逐重量段编辑公布价。
+  </div>
+  <el-form :model="priceForm" label-width="110px">
+    <el-form-item label="服务组合" required><el-select v-model="priceForm.comboName" filterable style="width:100%"><el-option v-for="c in enabledCombos" :key="c.code" :label="c.code" :value="c.code"></el-option></el-select></el-form-item>
+    <el-row :gutter="12">
+      <el-col :span="12"><el-form-item label="定价维度" required label-width="80px"><el-select v-model="priceForm._dimType" style="width:100%"><el-option label="仓库组（卡派）" value="wh"></el-option><el-option label="邮编前缀（快递派）" value="zip"></el-option></el-select></el-form-item></el-col>
+      <el-col :span="12"><el-form-item label="交货地" required label-width="70px"><el-select v-model="priceForm.pickupRegion" style="width:100%"><el-option label="珠三角" value="珠三角"></el-option><el-option label="汕头" value="汕头"></el-option><el-option label="义乌" value="义乌"></el-option></el-select></el-form-item></el-col>
+    </el-row>
+    <el-form-item label="仓库组" required v-if="priceForm._dimType==='wh'"><el-input v-model="priceForm.warehouseGroup" placeholder="如 ONT8,LAX9,LGB8"></el-input></el-form-item>
+    <el-form-item label="邮编前缀" required v-if="priceForm._dimType==='zip'"><el-input v-model="priceForm.zipPrefixes" placeholder="如 8,9"></el-input></el-form-item>
+    <el-form-item label="重量段" required><el-select v-model="priceForm.weightTier" style="width:100%"><el-option v-for="t in weightTiers" :key="t" :label="t" :value="t"></el-option></el-select></el-form-item>
+    <el-row :gutter="16"><el-col :span="12"><el-form-item label="公布价-KG"><el-input-number v-model="priceForm.priceKg" :min="0" :precision="2" style="width:100%"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="公布价-m³"><el-input-number v-model="priceForm.priceCbm" :min="0" :precision="2" style="width:100%"></el-input-number></el-form-item></el-col></el-row>
+  </el-form>
+  <template #footer><el-button @click="showPriceDialog=false">取消</el-button><el-button type="primary" @click="savePrice">保存</el-button></template>
+</el-dialog>
+</div>
+
+<script>
+
+(function(){
+var app = Vue.createApp({
+  data: function(){
+    return {
+      activeTab: 'sailing',
+      selectedBatchName: '2026-W05（1/26-2/1）',
+      showBatchDialog: false, showCopyDialog: false,
+      showPriceDialog: false, editPriceMode: false, editPriceIdx: -1,
+
+      batches: [
+        {name:'2026-W05（1/26-2/1）',week:'2026-W05',start:'2026-01-26',end:'2026-02-01',status:'当前',exchangeRate:'7.2500'},
+        {name:'2026-W04（1/19-1/25）',week:'2026-W04',start:'2026-01-19',end:'2026-01-25',status:'已过期',exchangeRate:'7.1800'},
+        {name:'2026-W06（2/2-2/8）',week:'2026-W06',start:'2026-02-02',end:'2026-02-08',status:'预告',exchangeRate:'7.2500'}
+      ],
+      routes: [
+        {code:'CLX',originName:'上海港',destName:'长滩港',supplier:'MATSON'},
+        {code:'MAX',originName:'上海港',destName:'长滩港',supplier:'MATSON'},
+        {code:'SEA/SEA3',originName:'盐田港',destName:'长滩港',supplier:'COSCO'}
+      ],
+      enabledCombos: [
+        {code:'美森360-海运-卡派-KG-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',tax:'包税',serviceType:'散货'},
+        {code:'美森360-海运-卡派-KG-不包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',tax:'不包税',serviceType:'散货'},
+        {code:'美森360-海运-卡派-m³-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'m³',tax:'包税',serviceType:'散货'},
+        {code:'美森432-海运-卡派-KG-包税-散货',channel:'美森432',transport:'海运',lastMile:'卡派',billing:'KG',tax:'包税',serviceType:'散货'},
+        {code:'美森360-海运-快递派-KG-包税-散货',channel:'美森360',transport:'海运',lastMile:'快递派',billing:'KG',tax:'包税',serviceType:'散货'}
+      ],
+      weightTiers: ['8KG+','101KG+','2m³+'],
+      allSailingData: {
+        '2026-W05（1/26-2/1）': [
+          {routeName:'CLX 上海港→长滩港(MATSON)',cutoffTimes:{'广州仓':'2月1日','汕头仓':'2月1日','义乌仓':'1月30日'},etd:'2月5日',eta:'2月16日',voyageDays:'11天',fastestPickup:'2月17日'},
+          {routeName:'MAX 上海港→长滩港(MATSON)',cutoffTimes:{'广州仓':'2月2日','汕头仓':'2月2日'},etd:'2月6日',eta:'2月17日',voyageDays:'11天',fastestPickup:'2月18日'}
+        ],
+        '2026-W04（1/19-1/25）': [
+          {routeName:'CLX 上海港→长滩港(MATSON)',cutoffTimes:{'广州仓':'1月25日','汕头仓':'1月25日'},etd:'1月29日',eta:'2月9日',voyageDays:'11天',fastestPickup:'2月10日'}
+        ],
+        '2026-W06（2/2-2/8）': []
+      },
+      allPriceData: {
+        '2026-W05（1/26-2/1）': [
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'8KG+',pickupRegion:'珠三角',priceKg:'9.0',priceCbm:'—',_dimType:'wh'},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:'10.0',priceCbm:'—',_dimType:'wh'},
+          {comboName:'美森360-海运-卡派-m³-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'2m³+',pickupRegion:'珠三角',priceKg:'—',priceCbm:'1488.0',_dimType:'wh'},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:'9.7',priceCbm:'—',_dimType:'wh'},
+          {comboName:'美森360-海运-快递派-KG-包税-散货',warehouseGroup:'',weightTier:'1KG+',pickupRegion:'珠三角',priceKg:'12.0',priceCbm:'—',_dimType:'zip',zipPrefixes:'8,9'},
+          {comboName:'美森360-海运-快递派-KG-包税-散货',warehouseGroup:'',weightTier:'3KG+',pickupRegion:'珠三角',priceKg:'11.0',priceCbm:'—',_dimType:'zip',zipPrefixes:'8,9'}
+        ],
+        '2026-W04（1/19-1/25）': [
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:'9.8',priceCbm:'—',_dimType:'wh'}
+        ],
+        '2026-W06（2/2-2/8）': []
+      },
+      costRefMap: {
+        '美森360-海运-卡派-KG-包税-散货': { costKg:'6.04', costCbm:'1008.79', profitRate:'15' },
+        '美森360-海运-卡派-KG-不包税-散货': { costKg:'5.80', costCbm:'968.00', profitRate:'15' },
+        '美森360-海运-卡派-m³-包税-散货': { costKg:'6.04', costCbm:'1008.79', profitRate:'15' },
+        '美森432-海运-卡派-KG-包税-散货': { costKg:'5.50', costCbm:'920.00', profitRate:'12' },
+        '美森360-海运-快递派-KG-包税-散货': { costKg:'8.50', costCbm:'—', profitRate:'15' }
+      },
+      batchForm: { name:'', week:'', start:'', end:'', exchangeRate:7.2500, exchangeRateDate:'', copyLast:false },
+      priceForm: { comboName:'', warehouseGroup:'', zipPrefixes:'', weightTier:'101KG+', pickupRegion:'珠三角', priceKg:undefined, priceCbm:undefined, _dimType:'wh' }
+    };
+  },
+  computed: {
+    selectedBatch: function(){
+      var self=this; return this.batches.find(function(b){return b.name===self.selectedBatchName})||null;
+    },
+    sailingList: function(){ return this.allSailingData[this.selectedBatchName]||[]; },
+    priceList: function(){ return this.allPriceData[this.selectedBatchName]||[]; },
+    currentSailingCount: function(){ var b=this.selectedBatch; return b&&b.status==='当前'?this.sailingList.length:0; },
+    priceGroupCount: function(){ return this.priceGroups.length; },
+    priceRowCount: function(){ return this.priceList.length; },
+    prevBatchName: function(){
+      var self=this; var idx=this.batches.findIndex(function(b){return b.name===self.selectedBatchName}); return idx>0?this.batches[idx-1].name:null;
+    },
+    prevBatch: function(){
+      var self=this; var idx=this.batches.findIndex(function(b){return b.name===self.selectedBatchName}); return idx>0?this.batches[idx-1]:null;
+    },
+    priceGroups: function(){
+      var self=this; var map={};
+      this.priceList.forEach(function(r){
+        var key=(r.comboName||'')+'|'+(r.warehouseGroup||r.zipPrefixes||'')+'|'+(r.pickupRegion||'');
+        if(!map[key]){ map[key]={_key:key,comboName:r.comboName,warehouseGroup:r._dimType==='zip'?(r.zipPrefixes||''):(r.warehouseGroup||''),_dimType:r._dimType||'wh',pickupRegion:r.pickupRegion,weightTiers:[]}; }
+        var ref=self.costRefMap[r.comboName]||{};
+        var cKg=ref.costKg?parseFloat(ref.costKg):null,cCbm=ref.costCbm?parseFloat(ref.costCbm):null;
+        var pRate=ref.profitRate?parseFloat(ref.profitRate)/100:0;
+        var pKg=r.priceKg!=='—'?parseFloat(r.priceKg):null,pCbm=r.priceCbm!=='—'?parseFloat(r.priceCbm):null;
+        var sKg=cKg!==null&&pRate? (cKg*(1+pRate)).toFixed(2):null;
+        var sCbm=cCbm!==null&&pRate? (cCbm*(1+pRate)).toFixed(2):null;
+        map[key].weightTiers.push({
+          weightTier:r.weightTier, costKg:cKg!==null?cKg.toFixed(2):null, costCbm:cCbm!==null?cCbm.toFixed(2):null,
+          suggestKg:sKg, suggestCbm:sCbm, priceKg:r.priceKg, priceCbm:r.priceCbm,
+          _profitKg:pKg!==null&&cKg!==null?(pKg-cKg).toFixed(2):null,
+          _profitCbm:pCbm!==null&&cCbm!==null?(pCbm-cCbm).toFixed(2):null,
+          _profitPct:pKg!==null&&cKg!==null?((pKg-cKg)/cKg*100).toFixed(1)+'%':null
+        });
+      });
+      var groups=Object.values(map);
+      groups.forEach(function(g){
+        var kgs=g.weightTiers.filter(function(w){return w.priceKg!=='—'&&w.priceKg!=null});
+        var cbms=g.weightTiers.filter(function(w){return w.priceCbm!=='—'&&w.priceCbm!=null});
+        if(kgs.length){
+          var kCosts=kgs.map(function(w){return parseFloat(w.costKg||0)}),kPrices=kgs.map(function(w){return parseFloat(w.priceKg||0)});
+          var minKc=Math.min.apply(null,kCosts),maxKc=Math.max.apply(null,kCosts);
+          var minKp=Math.min.apply(null,kPrices),maxKp=Math.max.apply(null,kPrices);
+          g._costKgRange=minKc===maxKc?minKc.toFixed(2):minKc.toFixed(2)+'~'+maxKc.toFixed(2);
+          g._priceKgRange=minKp===maxKp?minKp.toFixed(2):minKp.toFixed(2)+'~'+maxKp.toFixed(2);
+          var avgKp=(minKp+maxKp)/2,avgKc=(minKc+maxKc)/2;
+          g._profitKgVal=avgKp-avgKc;
+          g._profitKgRange=(avgKp-avgKc).toFixed(2);
+        }
+        if(cbms.length){
+          var cCosts=cbms.map(function(w){return parseFloat(w.costCbm||0)}),cPrices=cbms.map(function(w){return parseFloat(w.priceCbm||0)});
+          var minCc=Math.min.apply(null,cCosts),maxCc=Math.max.apply(null,cCosts);
+          var minCp=Math.min.apply(null,cPrices),maxCp=Math.max.apply(null,cPrices);
+          g._costCbmRange=minCc===maxCc?minCc.toFixed(2):minCc.toFixed(2)+'~'+maxCc.toFixed(2);
+          g._priceCbmRange=minCp===maxCp?minCp.toFixed(2):minCp.toFixed(2)+'~'+maxCp.toFixed(2);
+          var avgCp=(minCp+maxCp)/2,avgCc=(minCc+maxCc)/2;
+          g._profitCbmVal=avgCp-avgCc;
+          g._profitCbmRange=(avgCp-avgCc).toFixed(2);
+        }
+      });
+      return groups;
+    }
+  },
+  methods: {
+    switchBatch: function(){ this.activeTab='sailing'; },
+    openAddBatch: function(){
+      this.batchForm = { name:'', week:'', start:'', end:'', exchangeRate:7.2500, exchangeRateDate:'', remark:'', copyLast:false };
+      this.showBatchDialog = true;
+    },
+    saveBatch: function(){
+      if(!this.batchForm.name){ElementPlus.ElMessage.warning('请输入批次名称');return}
+      if(!this.batchForm.week){ElementPlus.ElMessage.warning('请输入周次');return}
+      if(!this.batchForm.start){ElementPlus.ElMessage.warning('请选择周起始');return}
+      if(!this.batchForm.end){ElementPlus.ElMessage.warning('请选择周结束');return}
+      if(this.batchForm.end<=this.batchForm.start){ElementPlus.ElMessage.warning('周结束不能早于周起始');return}
+      if(!this.batchForm.exchangeRate||this.batchForm.exchangeRate<=0){ElementPlus.ElMessage.warning('汇率必须大于0');return}
+      var name = this.batchForm.name;
+      var nb = {name:name,week:this.batchForm.week,start:this.batchForm.start,end:this.batchForm.end,exchangeRate:String(this.batchForm.exchangeRate),status:'预告'};
+      this.batches.push(nb);
+      if(this.batchForm.copyLast){
+        var cur=this.batches.find(function(b){return b.status==='当前'});
+        if(cur&&this.allSailingData[cur.name]) this.allSailingData[name]=JSON.parse(JSON.stringify(this.allSailingData[cur.name]));
+        else this.allSailingData[name]=[];
+        if(cur&&this.allPriceData[cur.name]) this.allPriceData[name]=JSON.parse(JSON.stringify(this.allPriceData[cur.name]));
+        else this.allPriceData[name]=[];
+      } else { this.allSailingData[name]=[]; this.allPriceData[name]=[]; }
+      this.selectedBatchName = name;
+      ElementPlus.ElMessage.success('批次创建成功');
+      this.showBatchDialog = false;
+    },
+    openCopyWeek: function(){ this.showCopyDialog = true; },
+    confirmCopy: function(){
+      var prev = this.prevBatchName;
+      if(prev&&this.allPriceData[prev]) this.allPriceData[this.selectedBatchName]=JSON.parse(JSON.stringify(this.allPriceData[prev]));
+      ElementPlus.ElMessage.success('已从'+prev+'复制运价行');
+      this.showCopyDialog = false;
+    },
+    publishBatch: function(){
+      var self = this;
+      ElementPlus.ElMessageBox.confirm('确定将批次【'+this.selectedBatchName+'】发布为当前周？发布后原 CURRENT 批次将自动变为已过期。','发布确认',{confirmButtonText:'确认发布',cancelButtonText:'取消',type:'warning'}).then(function(){
+        var cur=self.batches.find(function(b){return b.status==='当前'});
+        if(cur) cur.status='已过期';
+        self.selectedBatch.status='当前';
+        self.selectedBatchName=self.selectedBatch.name;
+        ElementPlus.ElMessage.success('批次已发布为当前周');
+      }).catch(function(){});
+    },
+
+    openAddPrice: function(){
+      this.editPriceMode=false; this.editPriceIdx=-1;
+      this.priceForm={comboName:'',warehouseGroup:'',zipPrefixes:'',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:undefined,priceCbm:undefined,_dimType:'wh'};
+      this.showPriceDialog=true;
+    },
+    openEditPrice: function(row,idx){
+      this.editPriceMode=true; this.editPriceIdx=idx;
+      this.priceForm={comboName:row.comboName,warehouseGroup:row._dimType==='zip'?'':(row.warehouseGroup||''),zipPrefixes:row._dimType==='zip'?(row.warehouseGroup||''):'',weightTier:'',pickupRegion:row.pickupRegion||'',priceKg:undefined,priceCbm:undefined,_dimType:row._dimType||'wh'};
+      this.showPriceDialog=true;
+    },
+    savePrice: function(){
+      if(!this.priceForm.comboName){ElementPlus.ElMessage.warning('请选择服务组合');return}
+      if(this.priceForm._dimType==='wh'&&!this.priceForm.warehouseGroup){ElementPlus.ElMessage.warning('请输入仓库组');return}
+      if(this.priceForm._dimType==='zip'&&!this.priceForm.zipPrefixes){ElementPlus.ElMessage.warning('请输入邮编前缀');return}
+      if(!this.priceForm.weightTier){ElementPlus.ElMessage.warning('请选择重量段');return}
+      if(!this.priceForm.pickupRegion){ElementPlus.ElMessage.warning('请选择交货地');return}
+      var row={comboName:this.priceForm.comboName,warehouseGroup:this.priceForm._dimType==='zip'?this.priceForm.zipPrefixes:this.priceForm.warehouseGroup,weightTier:this.priceForm.weightTier,pickupRegion:this.priceForm.pickupRegion,priceKg:(this.priceForm.priceKg!==undefined&&this.priceForm.priceKg!==null)?String(this.priceForm.priceKg):'—',priceCbm:(this.priceForm.priceCbm!==undefined&&this.priceForm.priceCbm!==null)?String(this.priceForm.priceCbm):'—',_dimType:this.priceForm._dimType};
+      if(this.editPriceMode){ this.allPriceData[this.selectedBatchName].splice(this.editPriceIdx,1,row); ElementPlus.ElMessage.success('运价行已更新'); }
+      else { this.allPriceData[this.selectedBatchName].push(row); ElementPlus.ElMessage.success('运价行已新增'); }
+      this.showPriceDialog=false;
+    }
+  }
+});
+app.use(ElementPlus);
+app.mount('#app');
+})();
+</script>
+</body>
+</html>

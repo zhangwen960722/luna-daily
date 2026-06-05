@@ -1,6 +1,6 @@
-# 核心方案设计草稿 — 超级运价模块
+﻿# 核心方案设计草稿 — 超级运价模块
 
-> Phase 2：方案架构 | 基于 RDD v3.4 | 2026-05-27
+> Phase 2：方案架构 | 基于 RDD v3.6 | 2026-05-27 | 更新 2026-06-02（原型重生成 + 流程图标准化）
 
 ---
 
@@ -12,6 +12,7 @@
 | 2 | 预估运输时效 | `estimated_transit_time` | 子表 | 1:1 挂 service_channel |
 | 3 | 送仓预估时效 | `warehouse_delivery_estimate` | 子表 | 1:N 挂 service_channel |
 | 4 | 理赔承诺时效 | `claim_commitment` | 子表 | 1:N 挂 service_channel |
+| 4b | 渠道折算基准 | `渠道折算基准` | 子表 | 1:N 挂 service_channel |
 | 5 | 港口 | — | 引用 | 基础数据模块，不在本模块建表 |
 | 6 | 航线 | `route` | 主表 | |
 | 7 | 航线-渠道关联 | `route_channel` | 关联表 | N:N |
@@ -24,16 +25,18 @@
 | 14 | 渠道成本项 | `channel_cost_item` | 子表 | 1:N 挂 service_channel |
 | 15 | 服务组合 | `service_combination` | 主表 | 笛卡尔积生成 |
 | 16 | 组合成本项 | `combination_cost_item` | 子表 | 1:N 挂 service_combination |
-| 17 | 计费规则 | `billing_rule` | 子表 | 1:1 挂 service_combination |
-| 17b | 客户计费规则覆盖 | `customer_billing_override` | 子表 | 1:N 挂 service_combination |
-| 18 | 利润策略 | `profit_strategy` | 子表 | 1:1 挂 service_combination |
-| 19 | 附加费规则 | `surcharge_rule` | 主表 | |
-| 20 | 运费优惠规则 | `freight_discount` | 主表 | |
-| 21 | 附加费优惠规则 | `surcharge_discount` | 主表 | |
-| 22 | 操作审计日志 | `audit_log` | 主表 | |
-| 23 | 询价日志 | `query_log` | 主表 | |
+| 17 | 计费规则 | `billing_rule` | 子表 | 1:N 挂 service_combination |
+| 18 | 附加费规则 | `surcharge_rule` | 主表 | |
+| 19 | 运费优惠规则 | `freight_discount` | 子表 | 1:N 挂 service_combination，组合编辑弹窗内嵌管理 |
+| 14a | 渠道派送仓点成本 | `渠道派送仓点成本` | 子表 | 1:N 挂 service_channel，卡派专用 |
+| 16a | 组合派送仓点成本 | `combination_warehouse_cost` | 子表 | 1:N 挂 service_combination，卡派专用 |
+| 14b | 渠道快递派送单价 | `渠道快递派送单价` | 子表 | 1:N 挂 service_channel，快递派专用 |
+| 16b | 组合快递派送单价 | `combination_express_delivery_rate` | 子表 | 1:N 挂 service_combination，快递派专用 |
+| 20 | 附加费优惠规则 | `surcharge_discount` | 子表 | 1:N 挂 surcharge_rule，附加费规则编辑弹窗内嵌管理 |
+| 21 | 操作审计日志 | `audit_log` | 主表 | 二期 |
+| 22 | 询价日志 | `query_log` | 主表 | 二期 |
 
-> Port（港口）由基础数据模块维护，超级运价通过 `port_code` 引用，不在本模块建表。
+> Port（港口）由基础数据模块维护，超级运价通过 `港口代码` 引用，不在本模块建表。
 
 ---
 
@@ -44,8 +47,11 @@ erDiagram
     service_channel ||--o| estimated_transit_time : "1:1"
     service_channel ||--o{ warehouse_delivery_estimate : "1:N"
     service_channel ||--o{ claim_commitment : "1:N"
+    service_channel ||--o{ 渠道折算基准 : "1:N"
     service_channel ||--o{ weight_tier : "1:N"
     service_channel ||--o{ channel_cost_item : "1:N"
+    service_channel ||--o{ 渠道派送仓点成本 : "1:N"
+    service_channel ||--o{ 渠道快递派送单价 : "1:N"
     service_channel ||--o{ route_channel : "1:N"
     service_channel ||--o{ service_combination : "1:N"
 
@@ -60,12 +66,16 @@ erDiagram
     channel_cost_item ||--o{ combination_cost_item : "1:N"
 
     service_combination ||--o{ combination_cost_item : "1:N"
-    service_combination ||--o| billing_rule : "1:1"
-    service_combination ||--o{ customer_billing_override : "1:N"
-    service_combination ||--o| profit_strategy : "1:1"
+    service_combination ||--o{ combination_warehouse_cost : "1:N"
+    service_combination ||--o{ combination_express_delivery_rate : "1:N"
+    service_combination ||--o{ billing_rule : "1:N"
+    service_combination ||--o{ freight_discount : "1:N"
     service_combination ||--o{ price_table_row : "1:N"
 
     surcharge_rule ||--o{ surcharge_discount : "1:N"
+
+    cost_segment ||--o{ channel_cost_item : "1:N"
+    cost_segment ||--o{ combination_cost_item : "1:N"
 ```
 
 ---
@@ -80,17 +90,21 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `name` | 渠道名称 | String(50) | ✅ | | 如"美森360" |
-| `origin_country` | 起运国 | String(10) | ✅ | | 引用基础资料-国家 |
-| `dest_countries` | 目的国 | JSON | ✅ | | 多选，存储国家代码数组 |
-| `transport_mode` | 运输方式 | TinyInt | ✅ | Index | 10:海运 20:空运 30:洲际火车 40:洲际卡车 |
-| `last_mile_methods` | 尾程派送方式 | JSON | ✅ | | 多选，如["卡派","快递派"] |
-| `tax_methods` | 包税方式 | JSON | ✅ | | 多选，如["包税","不包税"] |
-| `billing_units` | 计费方式 | JSON | ✅ | | 多选，如["KG","CBM"] |
-| `service_types` | 服务类型 | JSON | ✅ | | 多选，如["散货","整柜"] |
-| `need_claim` | 是否需要时效理赔 | Boolean | ✅ | | |
-| `channel_type` | 渠道类型 | TinyInt | ✅ | | 10:全段服务（一期） 20:分段服务（三期预留） |
-| `status` | 状态 | TinyInt | ✅ | Index | 10:正常 20:已冻结；冻结后关联组合不参与运价查询 |
+| `name` | 渠道名称 | 字符串(50) | ✅ | | 如"美森360" |
+| `origin_country` | 起运国 | 字符串(10) | ✅ | | 引用基础资料-国家 |
+| `dest_countries` | 目的国 | 数组 | ✅ | | 多选，存储国家代码数组 |
+| `transport_mode` | 运输方式 | 小整数 | ✅ | Index | 10:海运 20:空运 30:洲际火车 40:洲际卡车 |
+| `last_mile_methods` | 尾程派送方式 | 数组 | ✅ | | 多选，如["卡派","快递派"] |
+| `tax_methods` | 包税方式 | 数组 | ✅ | | 多选，如["包税","不包税"] |
+| `billing_units` | 计费方式 | 数组 | ✅ | | 多选，如["KG","m³"] |
+| `service_types` | 服务类型 | 数组 | ✅ | | 多选，如["散货","整柜"] |
+| `need_claim` | 是否需要时效理赔 | 布尔 | ✅ | | |
+| `fba_sync` | FBA运单同步 | 布尔 | ✅ | | 默认=false；控制是否向亚马逊推送 DW |
+| `channel_type` | 渠道类型 | 小整数 | ✅ | | 10:全段服务（一期） 20:分段服务（三期预留） |
+| `container_spec` | 集装箱规格参考 | 字符串(50) | | | 如"40HQ×1"，仅备注不参与计算 |
+| `status` | 状态 | 小整数 | ✅ | Index | 10:正常 20:已冻结；冻结后关联组合不参与运价查询 |
+
+**子表**：`渠道折算基准`（见 3.1d）。
 
 **子表**：见下方 3.1a ~ 3.1c。
 
@@ -102,13 +116,12 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | BigInt | ✅ | Unique, FK | 1:1 |
-| `fba_sync` | FBA运单同步 | Boolean | ✅ | | 默认=false；控制是否向亚马逊推送 DW |
-| `amazon_service_level` | 亚马逊服务等级 | TinyInt | 条件 | | FBA同步=是时必填；10:标准 20:加急 30:快速 |
-| `transport_min_days` | 运输最小天数 | Int | 条件 | | FBA同步=是时必填 |
-| `transport_max_days` | 运输最大天数 | Int | 条件 | | FBA同步=是时必填，须 ≥ 最小天数 |
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Unique, FK | 1:1 |
+| `amazon_service_level` | 亚马逊服务等级 | 小整数 | 条件 | | 服务渠道.fba_sync=是时必填；10:标准 20:加急 30:快速 |
+| `transport_min_days` | 运输最小天数 | 整数 | 条件 | | 服务渠道.fba_sync=是时必填 |
+| `transport_max_days` | 运输最大天数 | 整数 | 条件 | | 服务渠道.fba_sync=是时必填，须 ≥ 最小天数 |
 
-**业务规则**：`fba_sync`=false 时，另三个字段不存储（非 disabled）。切换为 true 时必须重新填写，避免过期数据静默激活。
+**业务规则**：`service_channel.fba_sync`=false 时，另三个字段不存储（非 disabled）。切换为 true 时必须重新填写，避免过期数据静默激活。
 
 ---
 
@@ -118,14 +131,16 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | BigInt | ✅ | Index, FK | |
-| `fba_warehouse_code` | FBA仓库代码 | String(10) | ✅ | | 受目的国过滤，下拉仅展示 `仓库.country ∈ 渠道.目的国` |
-| `sail_to_warehouse_days` | 开船至送仓（天） | Int | ✅ | | 第一阶段：DW = 开船日 + 此值 |
-| `cabinet_to_warehouse_days` | 提柜至送仓（天） | Int | ✅ | | 第二阶段：DW = 提柜日 + 此值 |
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `fba_warehouse_code` | FBA仓库代码 | 字符串(10) | ✅ | | 受目的国过滤，下拉仅展示 `仓库.country ∈ 渠道.目的国` |
+| `sail_to_warehouse_days` | 开船至送仓（天） | 整数 | ✅ | | 第一阶段：DW = 开船日 + 此值 |
+| `cabinet_to_warehouse_days` | 提柜至送仓（天） | 整数 | ✅ | | 第二阶段：DW = 提柜日 + 此值 |
 
 **校验规则**：`cabinet_to_warehouse_days ≤ sail_to_warehouse_days`，否则阻止保存。
+**唯一约束**：`UNIQUE(channel_id, fba_warehouse_code)`，同一渠道下同一 FBA 仓库不可重复配置。
 **FBA仓库过滤**：仓库下拉仅展示 `仓库.country ∈ 服务渠道.目的国` 的仓库。
 **目的国修改校验**：减少目的国时，如已有该国 FBA 仓库的时效配置，阻止操作。
+**FBA运单同步联动**：`service_channel.fba_sync`=false 时，送仓预估时效配置不可编辑，已有数据清空。切换为 true 时必须重新填写，避免过期数据静默激活。
 
 ---
 
@@ -135,10 +150,10 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | BigInt | ✅ | Index, FK | |
-| `delivery_method` | 派送方式 | TinyInt | ✅ | | 10:快递派 20:卡派；从渠道的尾程派送方式中取值 |
-| `fba_warehouse_codes` | FBA仓库代码 | JSON | 条件 | | 卡派必填（不同仓点可配不同理赔时效）；快递派非必填 |
-| `claim_working_days` | 理赔时效（工作日） | Int | ✅ | | 实际送达天数 > 此值 → 触发理赔判定 |
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `delivery_method` | 派送方式 | 小整数 | ✅ | | 10:快递派 20:卡派；从渠道的尾程派送方式中取值 |
+| `fba_warehouse_codes` | FBA仓库代码 | 数组 | 条件 | | 卡派必填（不同仓点可配不同理赔时效）；快递派非必填 |
+| `claim_working_days` | 理赔时效（工作日） | 整数 | ✅ | | 实际送达天数 > 此值 → 触发理赔判定 |
 
 **业务规则**：
 - `service_channel.need_claim` = false → 理赔承诺时效配置不可编辑，已有数据清空
@@ -147,19 +162,58 @@ erDiagram
 
 ---
 
+### 3.1d 渠道折算基准 `渠道折算基准`
+
+> 1:N 挂在 service_channel 下。头程和派送段各自定义折算基准，按运输方式+尾程派送方式组合区分，支持多运输方式/多尾程方式扩展。
+
+| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
+|--------|--------|------|------|----------|------|
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `transport_mode` | 运输方式 | 小整数 | ✅ | | 10:海运 20:空运 30:洲际火车 40:洲际卡车 |
+| `last_mile_method` | 尾程派送方式 | 小整数 | | | NULL=头程（不区分尾程）；10:卡派 20:快递派。仅 tail 行必填 |
+| `standard_type` | 基准类型 | 小整数 | ✅ | | 10:头程(head) 20:派送(tail) |
+| `公斤折算基准` | KG基准 | 整数 | ✅ | | 海运头程=12525 / 派送卡派=350 |
+| `立方米折算基准` | CBM基准 | 小数(6,2) | ✅ | | 海运头程=75 / 派送卡派=1.8 |
+
+**唯一约束**：`UNIQUE(channel_id, transport_mode, COALESCE(last_mile_method, 0), standard_type)`。
+
+**业务规则**：
+- 渠道创建时自动生成该渠道运输方式对应的默认行——头程行（last_mile_method=NULL）1 条 + 每个尾程派送方式对应派送行各 1 条
+- 后续新增运输方式/尾程方式时需关注是否需要补行
+- 变更时标记该渠道下受影响组合为"待重算"，后台异步逐批重算
+
+**成本计算取用逻辑**：
+```
+头程: WHERE channel=X AND standard_type='head'
+派送: WHERE channel=X AND standard_type='tail' AND last_mile_method=组合.尾程方式
+```
+
+**折算公式**：
+```
+头程 每公斤  = 单价 × (if USD: rate else 1) ÷ 头程行.公斤折算基准    （÷12525）
+头程 每立方米 = 单价 × (if USD: rate else 1) ÷ 头程行.立方米折算基准   （÷75）
+派送 每公斤  = 仓点单价 × rate ÷ 派送行.公斤折算基准                         （÷350）
+派送 每立方米 = 仓点单价 × rate ÷ 派送行.立方米折算基准                        （÷1.8）
+成本底价 = 头程合计 + 派送段普通项 + MAX(派送段仓点成本 by 仓点)
+```
+
+---
+
 ### 3.2 航线 `route`
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `route_code` | 航线代码 | String(20) | | | 如"AAC/AAC2"，默认可为空 |
-| `origin_port_code` | 出发港代码 | String(10) | ✅ | Index | 引用港口主数据 |
-| `origin_port_name` | 出发港名称 | String(50) | ✅ | | 冗余存储，展示用 |
-| `dest_port_code` | 目的港代码 | String(10) | ✅ | Index | 引用港口主数据 |
-| `dest_port_name` | 目的港名称 | String(50) | ✅ | | 冗余存储，展示用 |
-| `supplier_id` | 船司 | String(20) | ✅ | | 引用 SRM 供应商 |
-| `estimated_transit_days` | 预计运输天数 | Int | | | 航线级别，船期可覆盖 |
+| `route_code` | 航线代码 | 字符串(20) | ✅ | | 如"AAC/AAC2" |
+| `origin_港口代码` | 出发港代码 | 字符串(10) | ✅ | Index | 选择港口名称后自动带出 |
+| `origin_port_name` | 出发港名称 | 字符串(50) | ✅ | | 下拉选择，来源：港口管理主数据 |
+| `dest_港口代码` | 目的港代码 | 字符串(10) | ✅ | Index | 选择港口名称后自动带出 |
+| `dest_port_name` | 目的港名称 | 字符串(50) | ✅ | | 下拉选择，来源：港口管理主数据 |
+| `supplier_id` | 船司 | 字符串(20) | ✅ | | 下拉选择，引用 SRM 供应商，筛选 大类=干线运输供应商 & 明细=海运 |
+| `estimated_transit_days` | 预计运输天数 | 整数 | | | 航线级别，船期可覆盖 |
 
 **关联表** `route_channel`：`route_id` + `channel_id`（N:N）
+
+**校验规则**：出发港和目的港不可相同（`origin_港口代码 ≠ dest_港口代码`），应用层阻止保存。
 
 ---
 
@@ -167,14 +221,18 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `batch_name` | 批次名称 | String(30) | ✅ | | 如"2026-W05（1/26-2/1）" |
-| `week_code` | 周次标识 | String(10) | ✅ | **Unique** | ISO 周次，如"2026-W05" |
-| `week_start` | 周起始日 | Date | ✅ | | |
-| `week_end` | 周结束日 | Date | ✅ | | |
-| `status` | 状态 | TinyInt | ✅ | Index | 10:预告 20:当前 30:已过期 |
-| `remark` | 备注 | String(200) | | | |
+| `batch_name` | 批次名称 | 字符串(30) | ✅ | | 如"2026-W05（1/26-2/1）" |
+| `week_code` | 周次标识 | 字符串(10) | ✅ | **Unique** | ISO 周次，如"2026-W05" |
+| `week_start` | 周起始日 | 日期 | ✅ | | |
+| `week_end` | 周结束日 | 日期 | ✅ | | |
+| `汇率` | USD→RMB 汇率 | 小数(10,4) | ✅ | | 新建批次时调用第三方汇率 API 自动拉取当日央行汇率并落库。运价管理员可覆盖 |
+| `汇率_date` | 汇率生效日 | 日期 | ✅ | | 默认 = week_start，记录 API 拉取日期，用于审计追溯 |
+| `status` | 状态 | 小整数 | ✅ | Index | 10:预告 20:当前 30:已过期 |
+| `remark` | 备注 | 字符串(200) | | | |
 
-> 状态流转：每周日 24:00，CURRENT→EXPIRED，PREVIEW→CURRENT。同时仅一条 CURRENT。
+> 校验规则：`week_end ≥ week_start`，否则阻止保存；`汇率 > 0`。状态流转：每周日 24:00，CURRENT→EXPIRED，PREVIEW→CURRENT。同时仅一条 CURRENT（应用层乐观锁 + DB 部分唯一索引 `UNIQUE(status) WHERE status=20` 兜底）。
+>
+> **汇率作用域**：该批次下所有「美元换汇计算」型成本项统一使用此汇率计算 每公斤成本 / 每立方米成本。汇率变更触发全批次成本底价重算，并在审计日志中记录。
 
 ---
 
@@ -182,13 +240,15 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `batch_id` | 周批次 | BigInt | ✅ | Index, FK | |
-| `route_id` | 航线 | BigInt | ✅ | Index, FK | |
-| `cutoff_times` | 截单时间 | JSON | ✅ | | {"广州仓":"2026-02-01","汕头仓":"2026-02-01"} |
-| `etd` | 预计开船时间 | Date | ✅ | | |
-| `eta` | 预计到港时间 | Date | ✅ | | |
-| `voyage_days` | 航程 | Int | ✅ | | ETD→ETA 自然日 |
-| `fastest_pickup` | 最快提取/送仓时间 | Date | | | 开船后第 X 天 |
+| `batch_id` | 周批次 | 长整数 | ✅ | Index, FK | |
+| `route_id` | 航线 | 长整数 | ✅ | Index, FK | |
+| `cutoff_times` | 截单时间 | 数组 | ✅ | | {"广州仓":"2026-02-01","汕头仓":"2026-02-01"} |
+| `etd` | 预计开船时间 | 日期 | ✅ | | |
+| `eta` | 预计到港时间 | 日期 | ✅ | | |
+| `voyage_days` | 航程 | 整数 | ✅ | | ETD→ETA 自然日；ETD/ETA 变更时自动重算 |
+| `fastest_pickup` | 最快提取/送仓时间 | 日期 | | | 开船后第 X 天 |
+
+**批量导入**：支持 Excel 模板导入船期数据，按周批次维度批量写入 `sailing_schedule` 表。
 
 ---
 
@@ -196,29 +256,42 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | BigInt | ✅ | Index, FK | |
-| `unit` | 计价单位 | TinyInt | ✅ | | 10:KG 20:CBM |
-| `tier_name` | 段名称 | String(20) | ✅ | | 如"8KG+"、"2CBM+" |
-| `start_value` | 起始值 | Decimal(10,2) | ✅ | | KG 或 m³ |
-| `end_value` | 结束值 | Decimal(10,2) | | | null=以上 |
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `unit` | 计价单位 | 小整数 | ✅ | | 10:KG 20:m³ |
+| `tier_name` | 段名称 | 字符串(20) | ✅ | | 如"8KG+"、"2CBM+" |
+| `start_value` | 起始值 | 小数(10,2) | ✅ | | KG 或 m³ |
+| `end_value` | 结束值 | 小数(10,2) | | | null=以上 |
 
 **设计说明**：`end_value` 为 null 表示"以上"（如 101KG+）。CBM 段同理（如 2CBM+）。段之间不应有间隙或重叠——由应用层校验保证。
+**联动约束**：与服务渠道.计费方式联动——`service_channel.billing_units` 含 KG 则必须配置 KG 段，含 m³ 则必须配置 m³ 段。
 
 ---
 
 ### 3.6 运价行 `price_table_row`
 
+> **定价维度按尾程派送方式分叉**：卡派 → 仓库组；快递派 → 邮编前缀（逗号拼接）。`仓库组` 与 `zip_prefixes` 互斥。
+
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `batch_id` | 周批次 | BigInt | ✅ | Index, FK | |
-| `combination_id` | 服务组合 | BigInt | ✅ | Index, FK | |
-| `warehouse_group` | 仓库组 | String(200) | ✅ | | 逗号分隔，如"ONT8,LAX9,LGB8" |
-| `weight_tier_id` | 重量段 | BigInt | ✅ | FK | |
-| `pickup_region` | 交货地 | String(20) | ✅ | Index | 如"珠三角""汕头""义乌" |
-| `price_per_kg` | 公布价-per-KG | Decimal(10,2) | 条件 | | 计费方式含 KG 时必填 |
-| `price_per_cbm` | 公布价-per-CBM | Decimal(10,2) | 条件 | | 计费方式含 CBM 时必填 |
+| `batch_id` | 周批次 | 长整数 | ✅ | Index, FK | |
+| `combination_id` | 服务组合 | 长整数 | ✅ | Index, FK | |
+| `仓库组` | 仓库组 | 字符串(200) | 条件 | | 逗号分隔，如"ONT8,LAX9,LGB8"；尾程=卡派时必填 |
+| `zip_prefixes` | 邮编前缀 | 字符串(100) | 条件 | | 尾程=快递派时必填，逗号拼接如 `8,9`；与 仓库组 互斥 |
+| `weight_tier_id` | 重量段 | 长整数 | ✅ | FK | |
+| `交货地` | 交货地 | 字符串(20) | ✅ | Index | 如"珠三角""汕头""义乌" |
+| `price_每公斤` | 公布价-per-KG | 小数(10,2) | 条件 | | 计费方式含 KG 时必填 |
+| `price_每立方米` | 公布价-per-CBM | 小数(10,2) | 条件 | | 计费方式含 CBM 时必填 |
+| `待重算` | 待重算标记 | 布尔 | ✅ | Default:0 | 新建批次从上周复制后标记为 1；运价更新工作台展示"X 条待重算"提醒；运价管理员可一键触发重算后置 0 |
 
 **设计说明**：仓库组用逗号存储（设计决策见 RDD）。参考签收时效和理赔时效不存储在运价行上——查询时从船期和理赔承诺时效实时计算。
+**唯一约束**：`UNIQUE(batch_id, combination_id, COALESCE(仓库组, ''), COALESCE(zip_prefixes, ''), weight_tier_id, 交货地)`，同一周批次下不允许重复运价行。
+**互斥校验**：应用层保证 `(仓库组 IS NOT NULL) XOR (zip_prefixes IS NOT NULL)`，保存时校验。
+
+---
+
+### 3.6b 邮编前缀
+
+快递派运价行和快递派单价表中，`zip_prefixes` 字段直接存储逗号拼接的邮编前缀（如 `8,9`），匹配时用 `startswith` 逐一比对。不再维护独立的邮编区间组实体。
 
 ---
 
@@ -226,8 +299,8 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `name` | 段名称 | String(20) | ✅ | | 如"揽收段""干线运输段" |
-| `is_enabled` | 是否启用 | Boolean | ✅ | | 禁用后不可在新渠道中选择 |
+| `name` | 段名称 | 字符串(20) | ✅ | | 如"揽收段""干线运输段" |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | | 禁用后不可在新渠道中选择 |
 
 ---
 
@@ -235,12 +308,16 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `segment_id` | 成本段 | BigInt | ✅ | Index, FK | |
-| `name` | 项名称 | String(30) | ✅ | | 如"海运费""报关费" |
-| `formula_type` | 公式类型 | TinyInt | ✅ | | 10:人民币直接计算 20:美元换汇计算 |
-| `default_price` | 建议默认价 | Decimal(10,2) | ✅ | | 渠道关联时自动带出 |
-| `currency` | 币种 | TinyInt | ✅ | | 10:RMB 20:USD |
-| `sort_order` | 排序 | Int | ✅ | | |
+| `segment_id` | 成本段 | 长整数 | ✅ | Index, FK | |
+| `name` | 项名称 | 字符串(30) | ✅ | | 如"海运费""报关费" |
+| `formula_type` | 公式类型 | 小整数 | ✅ | | 10:人民币直接计算 20:美元换汇计算 |
+| `default_price` | 建议默认价 | 小数(10,2) | ✅ | | 渠道关联时自动带出 |
+| `currency` | 币种 | 小整数 | ✅ | | 10:RMB 20:USD |
+| `sort_order` | 排序 | 整数 | ✅ | | |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | 禁用后新增渠道/组合不再出现 |
+| `is_preset` | 是否预置项 | 布尔 | — | Default:0 | 1=预置项。仅派送段的仓点成本、快递派单价为预置项：不可禁用、不可删除、批量更新按钮隐藏、默认价置灰 |
+
+**唯一约束**：`UNIQUE(segment_id, name)`，同一成本段下不可有同名模板。
 
 ---
 
@@ -248,15 +325,21 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | BigInt | ✅ | Index, FK | |
-| `segment_id` | 成本段 | BigInt | ✅ | FK | |
-| `template_id` | 成本项模板 | BigInt | ✅ | FK | |
-| `unit_price` | 原始单价 | Decimal(10,2) | ✅ | | 继承模板默认价，渠道可覆盖 |
-| `currency` | 币种 | TinyInt | ✅ | | 继承模板币种 |
-| `pickup_region` | 交货地 | String(20) | 条件 | | 成本段=揽收段时必填 |
-| `delivery_quote_source` | 派送报价来源 | TinyInt | 条件 | | 10:拆送价 20:组合一口价 30:整柜直送价 |
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `segment_id` | 成本段 | 长整数 | ✅ | FK | |
+| `template_id` | 成本项模板 | 长整数 | ✅ | FK | |
+| `单价` | 原始单价 | 小数(10,2) | ✅ | | 继承模板默认价，渠道可覆盖 |
+| `currency` | 币种 | 小整数 | ✅ | | 继承模板币种 |
+| `交货地` | 交货地 | 字符串(20) | 条件 | | 成本段=揽收段时必填；每个交货地单独一行 |
+| `delivery_quote_source` | 派送报价来源 | 小整数 | 条件 | | 10:拆送价 20:组合一口价 30:整柜直送价 |
+| `profit_full` | 全段利润率 | 小数(5,1) | ✅ | | 从模板继承，如 15 = 15% |
+| `profit_segment` | 分段利润率 | 小数(5,1) | ✅ | | 从模板继承，如 18 = 18% |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | 关闭后该渠道不适用此成本项，新生成组合时跳过 |
 
-> 无独立管理页面，在服务渠道编辑页中配置。修改此处不自动影响已有组合。
+> 无独立管理页面，在服务渠道编辑页中配置。修改此处不自动影响已有组合。`is_enabled`=false 时，已有组合不受影响；新创建组合时不再复制被禁用的项。
+> 利润率从模板继承，存储冗余以加速公布价计算（避免实时 join 模板表）。
+> **揽收段按交货地拆行**：同一揽收成本项模板在不同交货地（珠三角/汕头/义乌）有不同单价时，拆为多行。每行 = `(channel_id, template_id, 交货地)` 唯一。服务组合创建时按行逐一复制。
+**唯一约束**：`UNIQUE(channel_id, template_id, 交货地)`，同一渠道下同一成本项模板在同一交货地不可重复。
 
 ---
 
@@ -264,14 +347,14 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | BigInt | ✅ | Index, FK | |
-| `combination_code` | 组合编码 | String(50) | ✅ | **Unique** | 如"USMS360-SEA-TRUCK-KG-TAX-LCL" |
-| `transport_mode` | 运输方式 | TinyInt | ✅ | | 继承自渠道 |
-| `last_mile_method` | 尾程派送方式 | String(10) | ✅ | | 笛卡尔积展开后的单值 |
-| `tax_method` | 包税方式 | String(10) | ✅ | | 笛卡尔积展开后的单值 |
-| `billing_unit` | 计费方式 | String(5) | ✅ | | 笛卡尔积展开后的单值，KG/CBM |
-| `service_type` | 服务类型 | String(10) | ✅ | | 散货/整柜 |
-| `is_enabled` | 是否启用 | Boolean | ✅ | | 禁用后不在运价查询中出现 |
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `combination_code` | 服务组合名称 | 字符串(50) | ✅ | **Unique** | 默认由维度自动拼接，支持手动修改 |
+| `transport_mode` | 运输方式 | 小整数 | ✅ | | 继承自渠道 |
+| `last_mile_method` | 尾程派送方式 | 小整数 | ✅ | | 10:卡派 20:快递派；笛卡尔积展开后的单值 |
+| `tax_method` | 包税方式 | 小整数 | ✅ | | 10:包税 20:不包税 30:自主税号 40:自税递延；笛卡尔积展开后的单值 |
+| `billing_unit` | 计费方式 | 小整数 | ✅ | | 10:KG 20:m³；笛卡尔积展开后的单值 |
+| `service_type` | 服务类型 | 小整数 | ✅ | | 10:散货 20:整柜 |
+| `status` | 状态 | 小整数 | ✅ | Index | 10:正常 20:已冻结；冻结后不在运价查询中出现 |
 
 **设计说明**：服务组合由渠道属性笛卡尔积自动生成。`combination_code` 系统自动拼接。
 
@@ -281,68 +364,179 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `combination_id` | 服务组合 | BigInt | ✅ | Index, FK | |
-| `channel_cost_item_id` | 来源渠道成本项 | BigInt | | FK | 可追溯到渠道默认值 |
-| `segment_id` | 成本段 | BigInt | ✅ | FK | |
-| `item_name` | 项名称 | String(30) | ✅ | | 复制自模板 |
-| `unit_price` | 原始单价 | Decimal(10,2) | ✅ | | 继承渠道默认值 |
-| `currency` | 币种 | TinyInt | ✅ | | |
-| `exchange_rate` | 汇率 | Decimal(10,4) | 条件 | | 币种=USD 时必填 |
-| `cost_per_kg` | 每公斤成本 | Decimal(10,4) | | | 系统自动计算 |
-| `cost_per_cbm` | 每方成本 | Decimal(10,4) | | | 系统自动计算 |
-| `pickup_region` | 交货地 | String(20) | 条件 | | 揽收段必填 |
-| `delivery_quote_source` | 派送报价来源 | TinyInt | 条件 | | 派送段必填 |
-| `fba_warehouse_code` | FBA仓库代码 | String(10) | 条件 | | 派送段必填 |
-| `is_enabled` | 是否启用 | Boolean | ✅ | Default:1 | 禁用后计算时跳过 |
+| `combination_id` | 服务组合 | 长整数 | ✅ | Index, FK | |
+| `channel_cost_item_id` | 来源渠道成本项 | 长整数 | | FK | 可追溯到渠道默认值 |
+| `segment_id` | 成本段 | 长整数 | ✅ | FK | |
+| `item_name` | 项名称 | 字符串(30) | ✅ | | 复制自模板 |
+| `单价` | 原始单价 | 小数(10,2) | ✅ | | 继承渠道默认值 |
+| `currency` | 币种 | 小整数 | ✅ | | |
+| `每公斤成本` | 每公斤成本 | 小数(10,4) | | | 系统自动计算：USD项 = 单价 × 周批次.汇率 / KG基准 |
+| `每立方米成本` | 每方成本 | 小数(10,4) | | | 系统自动计算：USD项 = 单价 × 周批次.汇率 / CBM基准 |
+| `交货地` | 交货地 | 字符串(20) | 条件 | | 揽收段必填 |
+| `profit_full` | 全段利润率 | 小数(5,1) | ✅ | | 从渠道继承，如 15 = 15%。公布价 = 每公斤/方成本 × (1+利润率%) |
+| `profit_segment` | 分段利润率 | 小数(5,1) | ✅ | | 从渠道继承，如 18 = 18% |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | 禁用后计算时跳过 |
 | `effective_from` | 生效时间 | DateTime | | | 一期预留 |
+
+> **汇率来源**：不在此表存储独立汇率，统一读取所在周批次（weekly_schedule_batch）的 汇率。追溯时通过 batch_id → 汇率 还原计算过程。
+>
+> **派送段内部分类**：
+> - **普通项**（如提拆派费）：不区分仓点/报价来源，复用本表，计算逻辑与头程成本项完全一致（按 head_kg/立方米折算基准 均摊）
+> - **仓点项**（拆送价/组合一口价/整柜直送价）：使用独立的 `渠道派送仓点成本` / `combination_warehouse_cost` 管理，按仓点逐行定价后取 MAX
+>
+> 成本底价：
+> ```
+> 卡派:   头程共享 + 派送段普通项 + MAX(派送段仓点成本 by 仓点)
+> 快递派: 头程共享 + 派送段普通项 + Σ(快递派单价 by weight_tier × zip_zone)
+> ```
+> 卡派仓点成本用 `tail_kg/立方米折算基准` 折算，快递派单价已是 per KG/m³ 不需额外折算。
+>
+> **异步重算策略**：汇率变更或 head/tail 基准变更时，不直接在请求线程中全量重算。改为：(1) 标记受影响行 `待重算=1`；(2) 后台任务逐批（每批 50 条）重算 每公斤成本/cbm + 建议公布价；(3) 前端轮询 `/api/recalculation-status`。失败时保留旧值并写入告警日志。
+
+---
+
+### 成本模型设计决策
+
+> 以下原则约束四层成本模型的数据流向和实体归属，是跨模块一致性的基础。
+
+**D1 — 数据流单向原则**
+
+```
+模板(全局) → 渠道(默认值) → 组合(执行值)
+```
+
+修改模板 → 可选推送到渠道和组合。修改渠道 → 可选推送到组合。**修改组合绝不反向同步回渠道或模板**——组合的覆盖价可能是特谈价，反向推送会污染默认值。
+
+**D2 — 交货地在渠道层，不在模板层**
+
+揽收段同一成本项（如"装柜费"）在不同交货地有不同单价时，拆为多行存储在 `channel_cost_item`（渠道层），而非 `cost_item_template`（模板层）。理由：
+- 模板层定义"有什么成本项"，渠道层定义"在该渠道下收多少钱"
+- 不同渠道服务的交货地不同，模板层无法预知
+- 即使当前所有渠道价格一致，未来新增渠道时价格必然分化
+
+**D3 — 成本项变更的同步边界**
+
+- 模板建议默认价变更 → 可选推送到所有引用此模板的渠道和组合
+- 渠道成本项变更 → 可选仅推送到该渠道下的组合（通过「同步到组合」按钮+组合选择框）；同步仅更新组合中已有成本项的价格，不会新增或删除组合的成本项
+- 组合成本项变更 → 仅影响该组合，不传播
+- 卡派仓点/快递派单价 遵循相同规则，且按尾程派送方式过滤：卡派组合仅同步仓点成本，快递派组合仅同步快递派单价
+
+**D4 — 快递派单价不折算**
+
+卡派仓点成本（拆送/组合一口价/整柜直送）是供应商原始报价，需要用 `tail_kg/立方米折算基准` 折算为 per KG/m³。快递派单价是快递承运商给出的最终 per KG/m³ 价格，直接累加，不进折算公式。
+
+**D5 — 单价 静态链 × cost 周期计算**
+
+```
+静态链（跨批次不变）：
+  模板.单价 → 渠道.单价 → 组合.单价
+  同步规则: 模板变了推渠道+组合，渠道变了推组合
+
+周期计算（每批次独立）：
+  组合.每公斤成本 = 单价 × batch.汇率 ÷ 折算基准
+  同一组合在不同批次: 单价 相同，汇率不同 → 每公斤成本 不同
+```
+
+- `单价` 是持久化字段，走 D1-D3 的同步规则
+- `每公斤成本/cbm` 是计算字段，每次从 `单价 × 汇率 ÷ 基准` 实时/异步重算
+- 汇率变更或 单价 变更后，标记 `待重算=1`，后台逐批重算
+- 所有单价同步入口（模板批量更新、派送段同步、渠道同步）均提供「同步后自动更新当周运价表的成本底价」选项，默认开启
+- 汇率变更：二次确认弹窗后触发全批次异步重算
+- 折算基准变更（仅编辑模式）：保存时确认弹窗，确定后保存 + 自动重算；新增渠道不触发
+- 不同周批次的成本底价相互独立，由各自批次的汇率决定
+
+---
+
+### 3.11a 渠道派送仓点成本 `渠道派送仓点成本`
+
+| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
+|--------|--------|------|------|----------|------|
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `fba_warehouse_codes` | 仓库代码 | 数组 | ✅ | | 多选，来源于头程管理-基础配置-平台仓库列表，如 `["ONT8","LAX9","LGB8"]`；同一仓库不可出现在多行 |
+| `split_delivery_price` | 拆送价 | 小数(10,2) | 条件 | | 至少填一种报价方式 |
+| `combo_flat_price` | 组合一口价 | 小数(10,2) | — | | 按板计费 |
+| `fcl_direct_price` | 整柜直送价 | 小数(10,2) | — | | FCL 专用 |
+| `currency` | 币种 | 小整数 | ✅ | | USD / RMB |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | |
+
+### 3.11b 组合派送仓点成本 `combination_warehouse_cost`
+
+| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
+|--------|--------|------|------|----------|------|
+| `combination_id` | 服务组合 | 长整数 | ✅ | Index, FK | |
+| `source_channel_wh_cost_id` | 来源渠道仓点成本 | 长整数 | | FK | 可追溯到渠道级 |
+| `fba_warehouse_codes` | 仓库代码 | 数组 | ✅ | | 多选，来源于头程管理-基础配置-平台仓库列表；同一仓库不可出现在多行 |
+| `split_delivery_price` | 拆送价 | 小数(10,2) | 条件 | | |
+| `combo_flat_price` | 组合一口价 | 小数(10,2) | — | | |
+| `fcl_direct_price` | 整柜直送价 | 小数(10,2) | — | | |
+| `currency` | 币种 | 小整数 | ✅ | | |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | |
+
+---
+
+### 3.11c 渠道快递派送单价 `渠道快递派送单价`
+
+> 1:N 挂在 service_channel 下。快递派专用——快递承运商（UPS/FedEx 等）按重量段 × 邮编前缀给出的固定单价。
+
+| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
+|--------|--------|------|------|----------|------|
+| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `weight_tier_id` | 重量段 | 长整数 | ✅ | FK | 快递派专用重量段（如 0.5KG+/1KG+/2m³+），计价单位从 weight_tier.unit 推导 |
+| `zip_prefixes` | 邮编前缀 | 字符串(100) | ✅ | | 逗号拼接如 `8,9`，匹配时 startswith |
+| `单价` | 单价 | 小数(10,2) | ✅ | | per KG 或 per m³，视 weight_tier.unit 而定 |
+| `currency` | 币种 | 小整数 | ✅ | | 10:RMB 20:USD |
+
+**唯一约束**：`UNIQUE(channel_id, weight_tier_id, zip_prefixes)`。
+
+### 3.11d 组合快递派送单价 `combination_express_delivery_rate`
+
+> 1:N 挂在 service_combination 下。从渠道级复制，组合可覆盖单价。
+
+| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
+|--------|--------|------|------|----------|------|
+| `combination_id` | 服务组合 | 长整数 | ✅ | Index, FK | |
+| `source_channel_rate_id` | 来源渠道单价 | 长整数 | | FK | 可追溯到渠道级 |
+| `weight_tier_id` | 重量段 | 长整数 | ✅ | FK | |
+| `zip_prefixes` | 邮编前缀 | 字符串(100) | ✅ | | 逗号拼接如 `8,9`，匹配时 startswith |
+| `单价` | 单价 | 小数(10,2) | ✅ | | |
+| `currency` | 币种 | 小整数 | ✅ | | |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | |
+
+**唯一约束**：`UNIQUE(combination_id, weight_tier_id, zip_prefixes)`。
 
 ---
 
 ### 3.12 计费规则 `billing_rule`
 
+统一表格挂在服务组合上。首行为通用规则（`rule_type=10`，不可删除），可追加特殊规则（`rule_type=20`，按客户匹配覆盖通用值）。**1:N**。
+
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `combination_id` | 服务组合 | BigInt | ✅ | FK(1:1) | |
-| `volume_factor` | 计泡系数 | Int | ✅ | | 默认 6000 |
-| `weight_method` | 计重方式 | TinyInt | ✅ | | 10:按实重 20:按材重 30:取大 |
-| `weight_precision` | 计重精度 | Decimal(2,1) | ✅ | | 默认 0.1 |
-| `round_method` | 进位规则 | TinyInt | ✅ | | 10:四舍五入 20:向上 30:向下 |
-| `dimension_precision` | 尺寸精度 | Int | ✅ | | 默认 1cm |
-| `min_box_weight` | 最低箱收费重 | Decimal(6,2) | ✅ | | |
-| `min_shipment_weight` | 最低票收费重 | Decimal(6,2) | ✅ | | |
-| `min_pieces` | 最小承运件数 | Int | | | |
-| `max_pieces` | 最大承运件数 | Int | | | |
+| `combination_id` | 服务组合 | 长整数 | ✅ | Index, FK | |
+| `rule_type` | 对象类型 | 小整数 | ✅ | | 10:通用 20:特殊规则 |
+| `target_customers` | 目标 | 数组 | 条件 | | rule_type=20 时必填；多选客户ID；同一客户不可出现在多条规则中 |
+| `volume_factor` | 计泡系数 | 整数 | ✅ | | 计费方式=KG 时默认 6000；计费方式=m³ 时默认 363 |
+| `weight_method` | 计重方式 | 小整数 | ✅ | | 10:按实重 20:按材重 30:取大 |
+| `weight_precision` | 计重精度 | 小数(2,1) | | | 下拉枚举：1（向上取整）/ 0.1（保留一位小数）/ 0.01（保留两位小数）；KG 默认 1，m³ 默认 0.1 |
+| `dimension_precision` | 尺寸精度 | 小数(2,1) | | | 下拉枚举：1（向上取整）/ 0.1（保留一位小数）/ 0.01（保留两位小数）；默认 1 |
+| `min_box_weight` | 最低箱收费重 | 小数(6,2) | | | |
+| `min_shipment_weight` | 最低票收费重 | 小数(6,2) | | | |
+| `min_pieces` | 最小承运件数 | 整数 | | | |
+| `max_pieces` | 最大承运件数 | 整数 | | | |
+
+> 约束：同一客户不可在同一组合的多条特殊规则中出现。优先级：特殊规则 > 通用规则。同一客户命中多条特殊规则时取第一条。
 
 ---
 
-### 3.12b 客户计费规则覆盖 `customer_billing_override`
+### 3.13 利润策略
 
-| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
-|--------|--------|------|------|----------|------|
-| `combination_id` | 服务组合 | BigInt | ✅ | Index, FK | |
-| `customer_id` | 客户 | String(20) | ✅ | Index | 同一组合+客户唯一 |
-| `volume_factor` | 计泡系数 | Int | | | NULL=继承默认 |
-| `weight_method` | 计重方式 | TinyInt | | | NULL=继承默认 |
-| `weight_precision` | 计重精度 | Decimal(2,1) | | | NULL=继承默认 |
-| `dimension_precision` | 尺寸精度 | Int | | | NULL=继承默认 |
-| `min_box_weight` | 最低箱收费重 | Decimal(6,2) | | | NULL=继承默认 |
-| `min_shipment_weight` | 最低票收费重 | Decimal(6,2) | | | NULL=继承默认 |
-| `min_pieces` | 最小承运件数 | Int | | | NULL=继承默认 |
-| `max_pieces` | 最大承运件数 | Int | | | NULL=继承默认 |
+利润策略不作为独立实体。全段利润率 (`profit_full`) 和分段利润率 (`profit_segment`) 作为**成本项的内联字段**存储在 `cost_item_template`（见 §3.8）、`channel_cost_item`（见 §3.9）、`combination_cost_item`（见 §3.11）三张表中。`forbid_profit` 标记位于成本项模板。在成本管理页面统一配置，渠道和组合继承后可按需覆盖。
 
-> 唯一约束：`(combination_id, customer_id)`。查询时先取 billing_rule 默认值，再用此表非 NULL 字段覆盖。
-
----
-
-### 3.13 利润策略 `profit_strategy`
-
-| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
-|--------|--------|------|------|----------|------|
-| `combination_id` | 服务组合 | BigInt | ✅ | FK(1:1) | |
-| `method` | 加成方式 | TinyInt | ✅ | | 10:固定金额 20:百分比 |
-| `value` | 加成值 | Decimal(10,2) | ✅ | | 元 或 % |
-| `currency` | 币种 | TinyInt | 条件 | | 固定金额时必填 |
-| `scope_type` | 适用范围 | TinyInt | ✅ | | 10:组合级 20:段级(预留) 30:项级(预留) |
+> **设计决策**：
+> 1. 放在成本项：利润差异的最小粒度。全段/分段通过 profit_full/profit_segment 区分
+> 2. V1 仅百分比：固定金额场景极少，二期再补
+> 3. 三级继承：模板默认 → 渠道可覆盖 → 组合可覆盖
+> 4. 公布价 = Σ(成本价 × (1+利润率%))，全段组合取 profit_full，分段组合取 profit_segment
 
 ---
 
@@ -350,78 +544,63 @@ erDiagram
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `name` | 规则名称 | String(50) | ✅ | **Unique** | |
-| `rule_type` | 规则类型 | TinyInt | ✅ | | 10:字段匹配 20:公式阈值 30:人工添加 |
-| `action_type` | 动作类型 | TinyInt | ✅ | | 10:加收费用 20:标识提醒 30:阻止下单 |
-| `trigger_node` | 触发节点 | TinyInt | ✅ | | 10:运单创建 20:红外过机 |
-| `fee_label` | 费用类型标签 | String(20) | ✅ | | 如"出口费用" |
-| `fee_direction` | 费用方向 | TinyInt | ✅ | | 10:应收(+) 20:客户优惠(-) |
-| `discountable_level` | 可优惠级别 | TinyInt | 条件 | | 10:可全免 20:部分可优惠 30:不可优惠 |
-| `scope_type` | 生效范围 | TinyInt | ✅ | | 10:全局 20:指定渠道 30:指定组合 |
-| `scope_ids` | 生效范围ID列表 | JSON | 条件 | | |
-| `pricing_unit` | 计价单位 | TinyInt | 条件 | | 10:按票 20:按箱 30:按KG 40:按CBM 50:按数量 60:按申报价值% |
-| `unit_price` | 单价 | Decimal(10,2) | 条件 | | |
-| `currency` | 币种 | TinyInt | 条件 | | |
-| `status` | 状态 | TinyInt | ✅ | | 10:生效中 20:已禁用 |
-| `match_conditions` | 字段匹配条件 | JSON | 条件 | | 规则类型=字段匹配时必填 |
-| `formula_list` | 公式列表 | JSON | 条件 | | 规则类型=公式阈值时必填 |
-| `manual_input_fields` | 人工输入字段 | JSON | 条件 | | 规则类型=人工添加时必填 |
-| `supplier_cost_price` | 供应商成本单价 | Decimal(10,2) | | | 二期预留 |
-| `supplier_id` | 关联供应商 | String(20) | | | 二期预留 |
+| `name` | 规则名称 | 字符串(50) | ✅ | **Unique** | |
+| `rule_type` | 规则类型 | 小整数 | ✅ | | 10:字段匹配 20:公式阈值 30:人工添加 |
+| `action_type` | 动作类型 | 小整数 | ✅ | | 10:加收费用 20:标识提醒 30:阻止下单 |
+| `trigger_node` | 触发节点 | 小整数 | ✅ | | 10:运单创建 20:红外过机 |
+| `discountable_level` | 可优惠级别 | 小整数 | 条件 | | 10:可全免(服务型) 20:部分可优惠(成本型) 30:不可优惠(代收代缴型)；影响附加费优惠校验 |
+| `scope_type` | 生效范围 | 小整数 | — | | V1 固定=10(全局)；预留 20(指定渠道) |
+| `scope_ids` | 生效范围ID列表 | 数组 | — | | V1 为空；预留字段 |
+| `pricing_rows` | 计价明细 | 数组 | 条件 | | 动作类型=加收费用时必填。每行=一条费用线：fee_direction(10:应收/20:应付)、fee_label(FK→费用类型)、pricing_unit(10-50:按票/按箱/按KG/按m³/按数量)、price(支持负数)、currency(取值来源于基础资料-币种接口)。可配多行 |
+| `status` | 状态 | 小整数 | ✅ | | 10:生效中 20:已禁用；大列表控制，弹窗不展示 |
+| `match_conditions` | 字段匹配条件 | 数组 | 条件 | | 规则类型=字段匹配时必填 |
+| `formula_list` | 公式列表 | 数组 | 条件 | | 规则类型=公式阈值时必填。两条公式 OR 关系。可用变量：长/宽/高(cm)、单箱重量(kg)、SKU数量 |
+| `supplier_cost_price` | 供应商成本单价 | 小数(10,2) | | | 二期预留 |
+| `supplier_id` | 关联供应商 | 字符串(20) | | | 二期预留 |
 
 **设计说明**：三种规则类型的专属配置分别存储在 JSON 字段中（`match_conditions` / `formula_list` / `manual_input_fields`），不拆分子表，因为每种类型配置结构固定且不需要独立查询。
 
 ---
 
-### 3.15 运费优惠规则 `freight_discount`
+### 3.15 运费优惠规则 `freight_discount`（内嵌于服务组合编辑弹窗管理）
+
+规则直接挂在服务组合上，无适用范围字段（天然绑定所在组合）。**1:N**。
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `name` | 规则名称 | String(50) | ✅ | | |
-| `target_type` | 优惠对象类型 | TinyInt | ✅ | | 10:客户等级 20:客户特批 |
-| `target_level` | 目标客户等级 | String(20) | 条件 | | |
-| `target_customer_id` | 目标客户 | String(20) | 条件 | | |
-| `discount_mode` | 优惠方式 | TinyInt | ✅ | | 10:折扣率 20:固定减免 |
-| `discount_value` | 优惠值 | Decimal(6,4) | ✅ | | |
-| `scope_channel` | 适用范围-渠道 | TinyInt | ✅ | | 10:全局 20:指定渠道 |
-| `scope_channel_ids` | 渠道列表 | JSON | 条件 | | |
-| `scope_warehouse` | 适用范围-仓点 | TinyInt | ✅ | | 10:全局 20:指定仓点 |
-| `scope_warehouse_codes` | 仓点列表 | JSON | 条件 | | |
-| `validity_type` | 有效期类型 | TinyInt | ✅ | | 10:永久有效 20:固定期限 30:单次有效 |
-| `valid_from` | 有效期起 | Date | 条件 | | |
-| `valid_to` | 有效期止 | Date | 条件 | | |
-| `approval_no` | 飞书审批编号 | String(30) | 条件 | | 客户特批时必填 |
-| `status` | 状态 | TinyInt | ✅ | | 10:生效中 20:已过期 |
+| `combination_id` | 服务组合 | 长整数 | ✅ | Index, FK | |
+| `target_type` | 优惠对象类型 | 小整数 | ✅ | | 10:客户特批 20:客户等级 |
+| `target_levels` | 目标客户等级 | 数组 | 条件 | FK → 客商中心-等级管理 | target_type=20 时必填；多选 |
+| `target_customers` | 目标客户 | 数组 | 条件 | FK → 客商中心-客户管理 | target_type=10 时必填；多选 |
+| `discount_mode` | 优惠方式 | 小整数 | ✅ | | 10:折扣率 20:固定减免 |
+| `discount_value` | 优惠值 | 小数(6,4) | ✅ | | 折扣率模式：0.01~9.99；固定减免模式：元，支持负数 |
+| `validity_type` | 有效期类型 | 小整数 | ✅ | | 10:永久有效 20:固定期限 30:单次有效 |
+| `valid_from` | 有效期起 | 日期 | 条件 | | |
+| `valid_to` | 有效期止 | 日期 | 条件 | | |
+| `approval_no` | 飞书审批编号 | 字符串(30) | 条件 | | 客户特批时必填 |
+| `status` | 状态 | 小整数 | 自动 | | 10:生效中 20:已失效。系统自动维护：固定期限到期 → 20；单次有效被非取消运单引用 → 20。不可手动修改 |
+
+> **业务规则**：客户特批优先级高于客户等级。同组合上两条规则命中同一客户时，特批覆盖等级。
+>
+> **唯一性约束**：应用层校验 `UNIQUE(combination_id, target_type, target_levels/target_customers) WHERE status=10`。同一组合 + 同一对象类型 + 同一目标最多一条生效规则。
 
 ---
 
-### 3.16 附加费优惠规则 `surcharge_discount`
+### 3.16 附加费优惠规则 `surcharge_discount`（内嵌于附加费规则编辑弹窗管理）
+
+规则直接挂在附加费规则上，无适用范围字段（天然绑定所在规则）。**1:N**。与运费优惠独立配置。字段及约束同 §3.15，差异：`surcharge_rule_id` 替代 `combination_id`。
+
+> **唯一性约束**：应用层校验 `UNIQUE(surcharge_rule_id, target_type, target_levels/target_customers) WHERE status=10`。同一规则 + 同一对象类型 + 同一目标最多一条生效规则。
+
+### 3.17 审计日志 `audit_log`（二期）
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `name` | 规则名称 | String(50) | ✅ | | |
-| `target_type` | 优惠对象类型 | TinyInt | ✅ | | 10:客户等级 20:客户特批 |
-| `target_level` | 目标客户等级 | String(20) | 条件 | | |
-| `target_customer_id` | 目标客户 | String(20) | 条件 | | |
-| `surcharge_rule_id` | 目标附加费规则 | BigInt | ✅ | FK | |
-| `discount_mode` | 优惠方式 | TinyInt | ✅ | | 10:折扣率 20:固定减免 |
-| `discount_value` | 优惠值 | Decimal(6,4) | ✅ | | |
-| `validity_type` | 有效期类型 | TinyInt | ✅ | | 10:永久有效 20:固定期限 30:单次有效 |
-| `valid_from` | 有效期起 | Date | 条件 | | |
-| `valid_to` | 有效期止 | Date | 条件 | | |
-| `status` | 状态 | TinyInt | ✅ | | 10:生效中 20:已过期 |
-
----
-
-### 3.17 审计日志 `audit_log`
-
-| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
-|--------|--------|------|------|----------|------|
-| `operator_id` | 操作人 | String(20) | ✅ | Index | |
+| `operator_id` | 操作人 | 字符串(20) | ✅ | Index | |
 | `operated_at` | 操作时间 | DateTime | ✅ | Index | |
-| `entity_type` | 变更对象 | String(30) | ✅ | | 实体类型 |
-| `entity_id` | 变更对象ID | String(20) | ✅ | Index | |
-| `field_name` | 变更字段 | String(30) | ✅ | | |
+| `entity_type` | 变更对象 | 字符串(30) | ✅ | | 实体类型 |
+| `entity_id` | 变更对象ID | 字符串(20) | ✅ | Index | |
+| `field_name` | 变更字段 | 字符串(30) | ✅ | | |
 | `old_value` | 旧值 | Text | | | |
 | `new_value` | 新值 | Text | | | |
 
@@ -429,14 +608,14 @@ erDiagram
 
 ---
 
-### 3.18 询价日志 `query_log`
+### 3.18 询价日志 `query_log`（二期）
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `operator_id` | 操作人 | String(20) | ✅ | Index | |
+| `operator_id` | 操作人 | 字符串(20) | ✅ | Index | |
 | `queried_at` | 查询时间 | DateTime | ✅ | Index | |
-| `query_params` | 查询条件 | JSON | ✅ | | 目的国/仓点/件数/重量/尺寸/产品类型/交货地/客户 |
-| `results` | 返回结果 | JSON | ✅ | | 命中渠道列表 + 各渠道报价 |
+| `query_params` | 查询条件 | 数组 | ✅ | | 目的国/仓点/件数/重量/尺寸/产品类型/交货地/客户 |
+| `results` | 返回结果 | 数组 | ✅ | | 命中渠道列表 + 各渠道报价 |
 
 > 一期仅记录不做分析。软删除后可清理，保留 ≥ 1 年。
 
@@ -472,9 +651,9 @@ erDiagram
 
 ---
 
-## 5. 核心业务流程
+## 6. 核心业务流程
 
-### 5.1 运价查询完整链路
+### 6.1 运价查询完整链路
 
 ```mermaid
 flowchart TD
@@ -503,22 +682,37 @@ flowchart TD
     T -->|否| S
 ```
 
-### 5.2 成本批量更新流程
+### 6.2 成本批量更新流程
+
+两个入口，同一数据链路：
+
+**路径 A：模板「批量更新」**（成本管理 → 成本项模板 → 点击「批量更新」）
 
 ```mermaid
 flowchart TD
-    A[运价管理员: 修改成本项模板建议默认价] --> B{提示: 是否同步到关联组合?}
-    B -->|否| C[仅更新模板<br>不影响已有组合]
-    B -->|是| D[查询所有引用此模板的渠道成本项]
-    D --> E[通过渠道成本项<br>追溯到组合成本项]
-    E --> F[展示受影响组合清单:<br>组合名称/当前价/新价/公布价]
-    F --> G[运价管理员勾选]
-    G --> H[批量刷新选中组合的<br>成本项单价]
-    H --> I[系统重算<br>cost_per_kg / cost_per_cbm]
-    I --> J[关联组合的公布价<br>1分钟内自动刷新]
+    A[修改模板建议默认价/利润率] --> B[点击「批量更新」]
+    B --> C[展示受影响组合清单:<br>组合编码/渠道/当前值/更新后值]
+    C --> D[管理员勾选目标组合]
+    D --> E{勾选「自动更新成本底价」?}
+    E -->|是| F[批量更新组合成本价+利润率<br>同步更新渠道成本项<br>重算当周 cost_per_kg/m³]
+    E -->|否| G[仅批量更新组合成本价+利润率]
 ```
 
-### 5.3 新建周批次（每周运维入口）
+**路径 B：渠道「同步到组合」**（服务渠道 → 成本项弹窗 → 勾选 → 「同步到组合」）
+
+```mermaid
+flowchart TD
+    A[渠道成本项弹窗: 勾选成本项] --> B[点击「同步到组合」]
+    B --> C[展示: 勾选的成本项 + 该渠道全部组合]
+    C --> D[管理员调整勾选范围]
+    D --> E{勾选「自动更新成本底价」?}
+    E -->|是| F[更新选中组合的成本价<br>重算当周 cost_per_kg/m³]
+    E -->|否| G[仅更新选中组合的成本价]
+```
+
+> **关键约束**：两个路径均为「仅更新已有项」——只修改组合中已存在的成本项，不新增或删除。禁用项不可同步。仓点成本/快递派单价有独立同步按钮，且按组合尾程派送方式过滤（卡派仅同步仓点成本，快递派仅同步快递派单价）。
+
+### 6.3 新建周批次（每周运维入口）
 
 ```mermaid
 flowchart TD
@@ -532,7 +726,7 @@ flowchart TD
     G --> H[上一批次 → EXPIRED]
 ```
 
-### 5.4 附加费规则匹配（分节点）
+### 6.4 附加费规则匹配（分节点）
 
 ```mermaid
 flowchart TD
@@ -565,32 +759,33 @@ flowchart TD
 
 ---
 
-## 6. 风险探测报告
+## 7. 风险探测报告
 
 | 风险维度 | 场景描述 | 风险等级 | 建议解决方案 |
 |---------|---------|---------|------------|
 | **并发冲突** | 运价管理员 A 和 B 同时修改同一条运价行 | P1 | 乐观锁 version 字段，后提交者提示"数据已被他人修改" |
 | **并发冲突** | 成本批量更新时，某组合正在被另一个管理员单独调价 | P1 | 更新前校验 version，冲突的组合跳过并在结果中标注 |
-| **数据一致性** | 批量更新中途失败（部分组合更新成功、部分失败） | P0 | 放在事务中执行，任一失败则全部回滚；数量过多时分批提交 |
+| **数据一致性** | 批量更新中途失败（部分组合更新成功、部分失败） | P0 | ≤50 条时单事务执行（全部回滚）；>50 条时分批提交（每批 50 条独立事务），失败批次在结果报告中标注，运价管理员可单独重试 |
 | **数据一致性** | 删除已被渠道引用的成本项模板 | P0 | 删除前校验引用计数，有关联渠道时禁止删除，提示"已被 X 个渠道引用" |
 | **数据一致性** | 周批次从上周复制时，某个渠道已被删除 | P1 | 复制时校验渠道状态，已删除渠道的运价行不复制 |
 | **逆向异常** | 运价已发布到 CURRENT 批次，发现错误需要撤回 | P2 | 一期不做版本回滚（Phase 3），运价管理员手动覆盖正确的价格 |
 | **逆向异常** | 特批价生效后客户关系终止，优惠需要立即失效 | P1 | 提供"手动过期"按钮，运价管理员可提前终止优惠规则 |
-| **权限安全** | 销售查看运价时通过接口参数猜出成本底价 | P0 | 货主端接口不返回 cost_per_kg/cost_per_cbm；运营端接口校验角色权限 |
+| **权限安全** | 销售查看运价时通过接口参数猜出成本底价 | P0 | 货主端接口不返回 每公斤成本/每立方米成本；运营端接口校验角色权限 |
 | **权限安全** | 运价管理员 A 修改了运价管理员 B 配置的渠道 | P1 | 暂不做操作级权限隔离（一期 5-10 人团队），依赖审计日志追溯 |
 | **时间边界** | 周批次自动流转时（周日 24:00），有人正在编辑本周运价 | P2 | 流转前检查是否有未保存的编辑，弹窗提示"系统即将切换批次" |
 | **时间边界** | `effective_from` 到期自动切换时，存在未完成的运单 | P2 | 一期手动切换，运价管理员确认当前无在途业务后操作 |
 
 ---
 
-## 7. 信息架构（IA 设计）
+## 8. 信息架构（IA 设计）
 
-### 7.1 菜单结构
+### 8.1 菜单结构
 
 ```
-├── 🏠 首页（运价更新工作台）
-│   ├── 本周船期主列表
-│   └── 本周运价行一览
+├── 🏠 运价更新工作台（每周运维入口）
+│   ├── 顶部：批次选择器 + 指标卡
+│   ├── Tab 1: 本周船期（只读，链接到航线&船期页编辑）
+│   └── Tab 2: 本周运价（可编辑：新增/编辑运价行 + 批量调价 + 发布）
 │
 ├── 🔍 查价订舱
 │   ├── 运营端运价查询
@@ -601,29 +796,25 @@ flowchart TD
 │   │   ├── 渠道列表
 │   │   ├── 运输时效配置（预估/送仓/理赔）
 │   │   └── 重量段配置
-│   ├── 航线 & 船期
+│   ├── 航线 & 船期（主数据 + 船期录入）
 │   │   ├── 航线管理
-│   │   ├── 周船期批次
-│   │   └── 船期维护
+│   │   ├── 周船期批次（全量，含历史追溯）
+│   │   └── 船期维护（在批次内录入/编辑船期）
 │   ├── 成本管理
 │   │   ├── 成本段（全局目录）
 │   │   ├── 成本项模板（全局目录）
 │   │   └── 渠道成本项（渠道编辑页内嵌）
-│   └── 计费规则 & 利润策略（组合编辑页内嵌）
+│   └── 计费规则（组合编辑页内嵌）
 │
 ├── 🔄 运价运维
-│   ├── 服务组合管理
-│   ├── 运价表维护
-│   └── 批量更新
+│   └── 服务组合管理
 │
 ├── ⚙️ 规则引擎
-│   ├── 附加费规则
-│   ├── 运费优惠规则
-│   └── 附加费优惠规则
+│   └── 附加费规则
 │
-├── 📊 审计与日志
-│   ├── 操作审计日志
-│   └── 询价日志
+├── 📊 审计与日志（二期）
+│   ├── 操作审计日志（二期）
+│   └── 询价日志（二期）
 │
 └── ⚙️ 企业设置（基础资料模块）
     ├── 港口管理
@@ -633,26 +824,22 @@ flowchart TD
     └── 商品管理
 ```
 
-### 7.2 页面清单
+> **两页分工原则**：航线&船期页 = 主数据 + 全量批次历史 + 船期录入（"写"操作）；工作台 = 本周运维，对照船期调运价 + 发布（"用"操作）。船期和运价共享同一个周批次（`weekly_schedule_batch`），不是各管各的周期。工作台的船期 Tab 只读，点击"编辑船期 →"跳转到航线&船期页编辑。
+
+### 8.2 页面清单
 
 | 页面名称 | 所属菜单 | 对应实体/功能 | 类型 |
 |---------|---------|-------------|------|
-| 运价更新工作台-首页 | 首页 | 周船期批次 + 运价行 | 工作台 |
+| 运价更新工作台-首页 | 首页 | 周船期批次 + 运价行（船期 Tab 只读，运价 Tab 可编辑 + 发布） | 工作台 |
 | 运营端运价查询 | 查价订舱 | Epic 7 匹配引擎 | 查询页 |
 | 货主端在线询价 | 查价订舱 | Epic 7（隐藏成本底价） | 查询页 |
 | 服务渠道列表 | 基础配置 | ServiceChannel | 列表页 |
-| 服务渠道详情/编辑 | 基础配置 | ServiceChannel + 时效配置 + 重量段 + 渠道成本项 | 编辑页 |
-| 航线列表 | 基础配置 | Route | 列表页 |
-| 周船期批次列表 | 基础配置 | WeeklyScheduleBatch | 列表页 |
-| 船期维护（周批次内） | 基础配置 | SailingSchedule | 编辑页 |
-| 成本段管理 | 基础配置 | CostSegment | 列表页 |
-| 成本项模板管理 | 基础配置 | CostItemTemplate | 列表页 |
-| 服务组合列表 | 运价运维 | ServiceCombination | 列表页 |
-| 服务组合详情/成本项 | 运价运维 | CombinationCostItem + 计费规则 + 利润策略 + 客户计费规则覆盖 | 编辑页 |
-| 运价表维护 | 运价运维 | PriceTableRow（按周批次） | 编辑页 |
-| 附加费规则列表 | 规则引擎 | SurchargeRule | 列表页 |
-| 附加费规则新增/编辑 | 规则引擎 | SurchargeRule（三类型表单） | 编辑页 |
-| 运费优惠规则列表 | 规则引擎 | FreightDiscount | 列表页 |
-| 附加费优惠规则列表 | 规则引擎 | SurchargeDiscount | 列表页 |
-| 操作审计日志 | 审计与日志 | AuditLog | 列表页 |
-| 询价日志 | 审计与日志 | QueryLog | 列表页 |
+| 服务渠道详情/编辑 | 基础配置 | ServiceChannel + 时效配置 + 重量段 + 渠道成本项（不含派送仓点成本） | 编辑页 |
+| 航线 & 船期 | 路线管理 | Route + WeeklyScheduleBatch + SailingSchedule（航线 CRUD + 全量批次列表 + 船期录入/编辑） | 列表页 |
+| 成本项模板管理 | 基础配置 | CostSegment + CostItemTemplate（全局目录） | 列表页 |
+| 服务组合列表 | 运价运维 | ServiceCombination（勾选后批量设置运费优惠） | 列表页 |
+| 服务组合详情/编辑 | 运价运维 | 统一计费规则表 + 运费优惠规则 + 组合成本项（含利润策略覆盖） | 编辑页 |
+| 附加费规则列表 | 规则引擎 | SurchargeRule（勾选后批量设置附加费优惠） | 列表页 |
+| 附加费规则新增/编辑 | 规则引擎 | SurchargeRule（三类型表单 + 内嵌附加费优惠编辑） | 编辑页 |
+| 操作审计日志（二期） | 审计与日志 | AuditLog | 列表页 |
+| 询价日志（二期） | 审计与日志 | QueryLog | 列表页 |

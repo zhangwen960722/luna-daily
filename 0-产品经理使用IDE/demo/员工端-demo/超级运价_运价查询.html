@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运价查询 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
+.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;margin-bottom:16px}
+.section-label{font-size:13px;font-weight:600;color:#606266;margin-bottom:12px;padding-left:8px;border-left:3px solid #2DA44E;line-height:1}
+.cargo-summary{display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;padding:10px 14px;background:#f5f7fa;border-radius:6px;font-size:13px}
+.cargo-summary .item{display:flex;align-items:center;gap:4px}
+.cargo-summary .label{color:var(--text-secondary)}
+.cargo-summary .value{font-weight:600;color:#303133}
+.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
+.el-table td{font-size:13px}
+.price-red{color:#F53F3F;font-weight:bold}
+.price-yellow{color:#E6A23C;font-weight:bold}
+.price-green{color:#2DA44E;font-weight:bold}
+.result-bar{padding:10px 14px;background:#f0f9eb;border-radius:6px;margin-bottom:12px;font-size:13px;display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3 style="margin:0;font-size:16px;font-weight:600">运价查询</h3>
+    <span style="font-size:12px;color:var(--text-secondary)">输入货物参数，系统自动匹配渠道、运价、优惠、附加费</span>
+  </div>
+
+  <!-- 核心货物参数 -->
+  <div style="margin-bottom:16px">
+    <div class="section-label">核心参数</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end">
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">目的国 *</span><el-select v-model="query.dest" style="width:100px"><el-option label="美国" value="US"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">目的仓点 *</span><el-select v-model="query.wh" filterable style="width:130px"><el-option label="ONT8" value="ONT8"></el-option><el-option label="LAX9" value="LAX9"></el-option><el-option label="LGB8" value="LGB8"></el-option><el-option label="SBD1" value="SBD1"></el-option><el-option label="DFW6" value="DFW6"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">件数 *</span><el-input-number v-model="query.pcs" :min="1" style="width:90px"></el-input-number></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">单件重量(kg) *</span><el-input-number v-model="query.wt" :min="0.1" :step="0.1" :precision="1" style="width:130px"></el-input-number></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">计费方式</span><el-checkbox-group v-model="query.bill"><el-checkbox label="KG">KG</el-checkbox><el-checkbox label="CBM">CBM</el-checkbox></el-checkbox-group></div>
+    </div>
+
+    <!-- 单件尺寸 -->
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0 8px;margin-top:12px">
+      <span style="font-size:13px;color:#606266;white-space:nowrap">单件尺寸(cm) 选填</span>
+      <el-input-number v-model="query.len" :min="0" :precision="1" placeholder="长" style="width:110px"></el-input-number>
+      <span style="color:#909399">×</span>
+      <el-input-number v-model="query.wid" :min="0" :precision="1" placeholder="宽" style="width:110px"></el-input-number>
+      <span style="color:#909399">×</span>
+      <el-input-number v-model="query.ht" :min="0" :precision="1" placeholder="高" style="width:110px"></el-input-number>
+      <span style="font-size:11px;color:#909399;margin-left:8px">输入后自动换算材重/体积，匹配超重超长等附加费</span>
+    </div>
+
+    <!-- 货物参数自动换算 -->
+    <div class="cargo-summary" v-if="query.pcs&&query.wt">
+      <div class="item"><span class="label">总实重</span><span class="value">{{ (query.pcs*query.wt).toFixed(1) }} kg</span></div>
+      <div class="item" v-if="query.len&&query.wid&&query.ht"><span class="label">单件材重</span><span class="value">{{ (query.len*query.wid*query.ht/6000).toFixed(1) }} kg</span></div>
+      <div class="item" v-if="query.len&&query.wid&&query.ht"><span class="label">总材重</span><span class="value">{{ (query.len*query.wid*query.ht/6000*query.pcs).toFixed(1) }} kg</span></div>
+      <div class="item" v-if="query.len&&query.wid&&query.ht"><span class="label">总体积</span><span class="value">{{ (query.len*query.wid*query.ht/1e6*query.pcs).toFixed(4) }} m³</span></div>
+    </div>
+  </div>
+
+  <!-- 筛选条件 -->
+  <div style="margin-bottom:12px">
+    <div class="section-label">筛选条件（可选）</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end">
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">运输方式</span><el-select v-model="query.mode" clearable placeholder="不限" style="width:100px"><el-option label="海运" value="sea"></el-option><el-option label="空运" value="air"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">服务渠道</span><el-select v-model="query.ch" clearable placeholder="不限" style="width:130px"><el-option label="美森360" value="美森360"></el-option><el-option label="美森432" value="美森432"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">包税方式</span><el-select v-model="query.tax" clearable placeholder="不限" style="width:110px"><el-option label="包税" value="包税"></el-option><el-option label="不包税" value="不包税"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">交货地</span><el-select v-model="query.pu" style="width:110px"><el-option label="珠三角" value="珠三角"></el-option><el-option label="汕头" value="汕头"></el-option><el-option label="义乌" value="义乌"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">客户</span><el-select v-model="query.cust" clearable filterable placeholder="选填" style="width:180px"><el-option label="深圳市XX科技(VIP)" value="VIP"></el-option></el-select></div>
+      <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">产品类型</span><el-select v-model="query.prodType" clearable placeholder="选填" style="width:110px"><el-option label="粉末" value="粉末"></el-option><el-option label="液体" value="液体"></el-option><el-option label="带电" value="带电"></el-option></el-select></div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end">
+    <el-button type="primary" size="large" @click="doQuery">查询报价</el-button>
+  </div>
+</div>
+
+<!-- 结果 -->
+<div class="card" v-if="showResult" style="margin-bottom:0">
+  <div class="result-bar">
+    <span style="font-weight:600">查询结果：</span>
+    <el-tag size="small" type="success">{{ query.wh }}</el-tag>
+    <span>{{ query.pcs }}件 × {{ query.wt }}kg</span>
+    <span>总实重 {{ query.pcs*query.wt }}kg</span>
+    <template v-if="query.len&&query.wid&&query.ht">
+      <span style="color:#909399">|</span><span>材重 {{ (query.len*query.wid*query.ht/6000*query.pcs).toFixed(1) }}kg</span>
+      <span>体积 {{ (query.len*query.wid*query.ht/1e6*query.pcs).toFixed(4) }}m³</span>
+    </template>
+    <template v-if="query.prodType"><el-tag size="small" type="warning">{{ query.prodType }}</el-tag></template>
+    <span style="margin-left:auto;font-size:12px;color:#909399">{{ matchSteps.length }} 步匹配 · &lt;100ms</span>
+  </div>
+
+  <el-table :data="results" border stripe>
+    <el-table-column prop="ch" label="渠道" min-width="110"></el-table-column>
+    <el-table-column prop="bill" label="计价" width="55"></el-table-column>
+    <el-table-column prop="pub" label="公布价" width="90"></el-table-column>
+    <el-table-column label="运费优惠" min-width="140"><template #default="s"><span v-if="s.row.discRule" style="font-size:12px">{{ s.row.discRule }}</span><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
+    <el-table-column label="优惠后" width="80"><template #default="s">{{ s.row.disc||'—' }}</template></el-table-column>
+    <el-table-column label="附加费" min-width="180"><template #default="s"><span v-for="x in s.row.surch" style="margin-right:6px;font-size:11px">{{ x }}</span><span v-if="!s.row.surch.length" style="color:#C0C4CC">无</span></template></el-table-column>
+    <el-table-column label="最终报价" width="110"><template #default="s"><span :class="s.row._profitClass">{{ s.row.fp||'—' }}</span></template></el-table-column>
+    <el-table-column label="盈亏" width="65" align="center"><template #default="s"><el-tag :type="s.row._profitTag" size="small">{{ s.row._profitLabel }}</el-tag></template></el-table-column>
+    <el-table-column prop="sail" label="船期" min-width="140"></el-table-column>
+    <el-table-column prop="pick" label="最快提取" width="80"></el-table-column>
+  </el-table>
+  <p v-if="unmatchedHint" style="color:#E6A23C;margin-top:8px;font-size:12px">{{ unmatchedHint }}</p>
+
+  <el-collapse style="margin-top:12px">
+    <el-collapse-item title="查看匹配过程（七步流程）">
+      <el-timeline>
+        <el-timeline-item v-for="(s,i) in matchSteps" :key="i" :timestamp="s.time" :type="s.hit?'success':'info'" :color="s.hit?'#2DA44E':'#909399'">
+          <div style="font-weight:600;font-size:13px">{{s.label}}</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:2px">{{s.detail}}</div>
+        </el-timeline-item>
+      </el-timeline>
+    </el-collapse-item>
+  </el-collapse>
+</div>
+</div>
+
+<script>
+(function(){
+var app = Vue.createApp({
+  data: function(){
+    return {
+      query: { dest:'US', wh:'ONT8', pcs:3, wt:60, bill:['KG'], mode:'', ch:'', tax:'', pu:'珠三角', cust:'', prodType:'', len:undefined, wid:undefined, ht:undefined },
+      showResult: false, results: [], matchSteps: [], unmatchedHint: ''
+    };
+  },
+  methods: {
+    doQuery: function(){
+      var q = this.query;
+      if(!q.pcs || q.pcs<1){ ElementPlus.ElMessage.warning('请输入件数'); return; }
+      if(!q.wt || q.wt<=0){ ElementPlus.ElMessage.warning('请输入单件重量'); return; }
+      if(!q.bill || !q.bill.length){ ElementPlus.ElMessage.warning('请选择计费方式'); return; }
+
+      var wh = q.wh, bMode = q.bill[0], totalWt = q.pcs * q.wt;
+      var hasDims = q.len && q.wid && q.ht;
+      var totalCbm = hasDims ? (q.len*q.wid*q.ht/1e6*q.pcs) : null;
+
+      // Price table
+      var table = [
+        {ch:'美森360',bill:'KG',pub:10.0,cost:9.24,whg:'ONT8,LAX9,LGB8,SBD1,SMF3,DFW6',sail:'1/28-2/8 航程11天',pick:'2/10'},
+        {ch:'美森360',bill:'m³',pub:1488.0,cost:1558.84,whg:'ONT8,LAX9,LGB8,SBD1',sail:'1/28-2/8 航程11天',pick:'2/10'},
+        {ch:'美森432',bill:'KG',pub:9.7,cost:8.66,whg:'ONT8,LAX9,SBD1',sail:'1/29-2/9 航程11天',pick:'2/11'},
+        {ch:'EX456',bill:'KG',pub:5.6,cost:4.80,whg:'ONT8,SBD1',sail:'1/28-2/11 航程14天',pick:'2/14'},
+        {ch:'洛杉矶600',bill:'KG',pub:null,cost:null,whg:'ONT8',sail:'1/28-2/10 航程12天',pick:'2/12'}
+      ];
+
+      // Filter
+      var matched=[], unmatched=[];
+      table.forEach(function(p){
+        if(q.ch && p.ch !== q.ch) return;
+        if(q.mode==='sea' && p.ch.indexOf('美森')===-1 && p.ch!=='EX456' && p.ch!=='洛杉矶600') return;
+        if(q.tax==='不包税' && p.ch==='美森360') return;
+        if(bMode && p.bill !== bMode) return;
+        if(p.whg.split(',').map(function(s){return s.trim()}).indexOf(wh)===-1){ unmatched.push(p); return; }
+        matched.push(p);
+      });
+
+      // Discount + surcharge
+      var cust = q.cust, prod = q.prodType;
+      var discRate = cust ? 0.9 : 1;
+      var discRuleName = cust ? 'VIP-美森渠道9折（客户等级）' : '';
+var surcharges=[], scTotal=0;
+      if(prod==='粉末'){ surcharges.push('粉末+1.5/KG'); scTotal+=1.5; if(cust){ surcharges[surcharges.length-1]+='(VIP-0.5)'; scTotal-=0.5; }}
+      if(hasDims){ var l=q.len,w=q.wid,h=q.ht; if((l+w)*2+h>300||l+w*2+h*2>265){ surcharges.push('超重超长200/箱'); scTotal+=200/q.pcs; }}
+
+      var self = this;
+      this.results = matched.map(function(p){
+        var disc = p.pub ? (p.pub*discRate).toFixed(1) : null;
+        var fp = p.pub ? ((p.pub*discRate)+scTotal).toFixed(1) : null;
+        var profit = fp && p.cost ? (parseFloat(fp)-p.cost).toFixed(2) : null;
+        var profitClass = profit ? (profit>=1?'price-green':profit>=0?'price-yellow':'price-red') : '';
+        var profitTag = profit ? (profit>=1?'success':profit>=0?'warning':'danger') : 'info';
+        var profitLabel = profit ? (profit>=1?'盈利':profit>=0?'薄利':'亏本') : '无报价';
+        return {ch:p.ch,bill:p.bill,pub:p.pub?String(p.pub):'暂未报价',discRule:discRuleName,disc:disc?disc:'—',surch:surcharges,fp:fp?fp+'/KG':'—',cost:p.cost||0,sail:p.sail,pick:p.pick,_profitClass:profitClass,_profitTag:profitTag,_profitLabel:profitLabel};
+      });
+
+      this.unmatchedHint = unmatched.length ? unmatched.map(function(u){return u.ch;}).join('、')+' 未匹配'+wh+'，暂未报价' : '';
+
+      this.matchSteps = [
+        {label:'Step 1 确定候选渠道',detail:'目的国=美国 → 5个候选渠道'+(q.ch?' → 过滤渠道='+q.ch:'')+(q.mode?' → 过滤运输='+q.mode:''),time:'~15ms',hit:true},
+        {label:'Step 2 确定候选组合',detail:'计费='+bMode+(q.tax?' · 包税='+q.tax:'')+' → 组合过滤完成',time:'~20ms',hit:true},
+        {label:'Step 3 运价行匹配',detail:'目的仓='+wh+' → 仓库组 contains → 匹配 '+matched.length+' 条运价行 · '+unmatched.length+' 条未匹配',time:'~25ms',hit:matched.length>0},
+        {label:'Step 4 运费优惠匹配',detail:cust?'客户=VIP → 美森渠道9折':'未指定客户 → 跳过',time:'~10ms',hit:!!cust},
+        {label:'Step 5 附加费匹配',detail:prod?'产品='+prod+' → 字段匹配'+(surcharges.length?surcharges.join('; '):'无附加费触发'):'未指定产品类型',time:'~12ms',hit:!!prod},
+        {label:'Step 6 附加费优惠匹配',detail:(cust&&prod)?'VIP → 粉末附加费减0.5元':'无匹配优惠规则',time:'~8ms',hit:!!(cust&&prod)},
+        {label:'Step 7 组装最终报价',detail:'公布价×运费优惠+附加费净额 → '+matched.length+'个渠道比价完成',time:'~5ms',hit:true}
+      ];
+
+      this.showResult = true;
+    }
+  }
+});
+app.use(ElementPlus);
+app.mount('#app');
+})();
+</script>
+</body>
+</html>

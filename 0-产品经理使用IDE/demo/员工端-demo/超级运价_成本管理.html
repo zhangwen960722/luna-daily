@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>成本管理 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E;--bg:#F0F2F5;--card-bg:#fff;--text:#303133;--text-secondary:#909399;--border-light:#EBEEF5}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5}
+.page-layout{display:flex;gap:16px;height:calc(100vh - 32px)}
+.seg-panel{width:200px;flex-shrink:0;background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px 0;display:flex;flex-direction:column}
+.seg-panel-header{padding:0 20px 16px;font-size:15px;font-weight:600;border-bottom:1px solid var(--border-light)}
+.seg-list{flex:1;overflow-y:auto;padding:8px 0}
+.seg-item{padding:12px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-left:3px solid transparent;transition:background .15s}
+.seg-item:hover{background:#F5F7FA}
+.seg-item.active{background:#F0F9EB;border-left-color:#2DA44E;font-weight:600;color:#2DA44E}
+.seg-item .count{font-size:11px;color:var(--text-secondary);background:#F0F2F5;padding:1px 8px;border-radius:10px}
+.seg-item.active .count{background:#C8E6C9;color:#2DA44E}
+.content-panel{flex:1;background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:20px;display:flex;flex-direction:column;overflow:hidden}
+.content-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0;flex-wrap:wrap;gap:8px}
+.content-toolbar h3{margin:0;font-size:15px;font-weight:600}
+.el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
+.el-table td{font-size:13px}
+.row-disabled td{background:#FAFAFA!important;color:#C0C4CC}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="page-layout">
+    <!-- ====== 左侧：成本段 ====== -->
+    <div class="seg-panel">
+      <div class="seg-panel-header">成本段</div>
+      <div class="seg-list">
+        <div v-for="seg in segGroups" :key="seg.name" class="seg-item" :class="{active: activeSeg===seg.name}" @click="selectSeg(seg.name)">
+          <span>{{ seg.name }}</span>
+          <span class="count">{{ seg.count }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 右侧：成本项模板 ====== -->
+    <div class="content-panel">
+      <div class="content-toolbar">
+        <h3>{{ activeSeg }} — 成本项模板</h3>
+        <div style="display:flex;gap:8px">
+          <el-button v-if="selectedItems.length" type="warning" plain @click="openBatchProfit">批量设置利润率（{{selectedItems.length}}）</el-button>
+          <el-button type="primary" @click="openAdd">新增成本项</el-button>
+        </div>
+      </div>
+
+      <el-table :data="segItems" border stripe @selection-change="onSelectionChange" @select="onSelect" ref="itemTable"  style="flex:1">
+        <el-table-column type="selection" width="40" ></el-table-column>
+        <el-table-column label="启用" width="55" align="center">
+          <template #default="s"><el-switch v-model="s.row.enabled" size="small" :disabled="s.row._preset" @change="onToggleItem(s.row)"></el-switch></template>
+        </el-table-column>
+        <el-table-column prop="name" label="成本项" min-width="150"></el-table-column>
+        <el-table-column label="公式类型" width="140">
+          <template #default="s">
+            <el-tag v-if="s.row.formulaType===10" type="info" size="small">人民币直接计算</el-tag>
+            <el-tag v-else size="small" effect="plain">美元换汇计算</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="dp" label="建议默认价" width="120" align="right">
+          <template #default="s">{{ s.row.dp }} <span style="font-size:11px;color:#909399">{{ s.row.cur }}</span></template>
+        </el-table-column>
+        <el-table-column label="全段利润率" width="105" align="center">
+          <template #default="s">
+            <span style="font-weight:600;color:#2DA44E">{{ s.row.profitFull }}%</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="分段利润率" width="105" align="center">
+          <template #default="s">
+            <span style="font-weight:600;color:#E6A23C">{{ s.row.profitSegment }}%</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="155" align="center" fixed="right">
+          <template #default="s">
+            <el-button size="small" @click="openEdit(s.row)">编辑</el-button>
+            <el-button v-if="!s.row._preset" size="small" @click="openBatchUpdate(s.row)">批量更新</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div style="margin-top:16px;display:flex;gap:16px;">
+        <div style="flex:1;background:#F0F9EB;padding:12px 16px;border-radius:4px;font-size:12px;color:#909399;line-height:1.6;">
+          <span style="color:#67C23A;font-weight:600;">人民币直接计算</span> 单价 ÷ 基准（如 500 ÷ 12525 = 0.04）
+        </div>
+        <div style="flex:1;background:#FDF6EC;padding:12px 16px;border-radius:4px;font-size:12px;color:#909399;line-height:1.6;">
+          <span style="color:#E6A23C;font-weight:600;">美元换汇计算</span> 单价 × 汇率 ÷ 基准（如 $10,429 × 7.25 ÷ 12525 = 6.04）
+        </div>
+        <div style="flex:1;background:#FDF6EC;padding:12px 16px;border-radius:4px;font-size:12px;color:#909399;line-height:1.6;">
+          <span style="color:#E6A23C;font-weight:600;">卡派派送费</span> 报价 × 汇率 ÷ 派送基准（如 $30 × 7.25 ÷ 350 = 0.62）
+        </div>
+        <div style="flex:1;background:#F4F4F5;padding:12px 16px;border-radius:4px;font-size:12px;color:#909399;line-height:1.6;">
+          <span style="color:#909399;font-weight:600;">快递派单价</span> 不折算，直接累加
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 新增/编辑弹窗 ====== -->
+  <el-dialog v-model="showEdit" :title="(editMode&&editReadonly?'查看成本项（已禁用）':editMode?'编辑成本项':'新增成本项')" width="480px" :close-on-click-modal="false">
+    <el-form :model="editForm" label-width="100px">
+      <el-form-item label="所属段"><span style="color:#303133;font-weight:600">{{ activeSeg }}</span></el-form-item>
+      <el-form-item label="成本项名称" required><el-input v-model="editForm.name" :disabled="editReadonly"></el-input></el-form-item>
+      <el-form-item label="公式类型" required>
+        <el-radio-group v-model="editForm.formulaType" :disabled="editReadonly">
+          <el-radio :value="10">人民币直接计算</el-radio>
+          <el-radio :value="20">美元换汇计算</el-radio>
+        </el-radio-group>
+      </el-form-item>
+      <el-row :gutter="12">
+        <el-col :span="12"><el-form-item label="建议默认价" required><el-input-number v-model="editForm.dpVal" disabled :min="0" :precision="2" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
+        <el-col :span="12"><el-form-item label="币种" required><el-select v-model="editForm.cur" disabled style="width:100%"><el-option label="RMB" value="RMB"></el-option><el-option label="USD" value="USD"></el-option></el-select></el-form-item></el-col>
+      </el-row>
+      <el-divider content-position="left">利润策略</el-divider>
+      <el-form-item label="全段利润率"><el-input-number v-model="editForm.profitFull" :min="0" :precision="1" :disabled="editReadonly" style="width:160px" controls-position="right"></el-input-number><span style="margin-left:4px;font-size:13px;color:#909399">%</span></el-form-item>
+      <el-form-item label="分段利润率"><el-input-number v-model="editForm.profitSegment" :min="0" :precision="1" :disabled="editReadonly" style="width:160px" controls-position="right"></el-input-number><span style="margin-left:4px;font-size:13px;color:#909399">%</span></el-form-item>
+    </el-form>
+    <template #footer><el-button @click="showEdit=false">取消</el-button><el-button type="primary" @click="saveEdit" :disabled="editReadonly">保存</el-button></template>
+  </el-dialog>
+
+  <!-- ====== 批量设置利润率 ====== -->
+  <el-dialog v-model="showBatch" title="批量设置利润率" width="460px" :close-on-click-modal="false">
+    <div style="margin-bottom:16px;padding:10px 14px;background:#F5F7FA;border-radius:6px;font-size:13px;color:var(--text-secondary)">已选择 <strong style="color:#303133">{{ selectedItems.length }}</strong> 个成本项</div>
+    <el-form label-width="100px">
+      <el-form-item label="全段利润率"><el-input-number v-model="batchForm.profitFull" :min="0" :precision="1" style="width:180px" controls-position="right"></el-input-number><span style="margin-left:6px;color:#909399">%</span></el-form-item>
+      <el-form-item label="分段利润率"><el-input-number v-model="batchForm.profitSegment" :min="0" :precision="1" style="width:180px" controls-position="right"></el-input-number><span style="margin-left:6px;color:#909399">%</span></el-form-item>
+    </el-form>
+    <template #footer><el-button @click="showBatch=false">取消</el-button><el-button type="primary" @click="batchSetProfit">确认设置</el-button></template>
+  </el-dialog>
+
+  <!-- ====== 批量更新弹窗 ====== -->
+  <el-dialog v-model="showBuDialog" title="批量更新建议默认价" width="700px" :close-on-click-modal="false">
+    <el-form label-width="110px">
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="成本项名称"><el-input :model-value="buRow?buRow.name:''" disabled></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="币种"><el-input :model-value="buRow?buRow.cur:''" disabled></el-input></el-form-item></el-col></el-row>
+      <el-row :gutter="16"><el-col :span="12"><el-form-item label="原建议默认价"><el-input :model-value="buRow?buRow.dp:''" disabled></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="新建议默认价" required><el-input-number v-model="buForm.newPrice" :min="0" :precision="2" style="width:100%"></el-input-number></el-form-item></el-col></el-row>
+    </el-form>
+    <el-divider>同步到关联服务组合</el-divider>
+    <div v-if="!buCombos||buCombos.length===0" style="text-align:center;padding:24px;color:var(--text-secondary)">暂无关联的服务组合</div>
+    <template v-else>
+      <div style="margin-bottom:8px"><el-checkbox v-model="buForm.selectAll" :indeterminate="buIndeterminate" @change="toggleBuAll">全选（已选 {{buSelectedCount}} / {{buCombos.length}}）</el-checkbox></div>
+      <el-table :data="buCombos" border stripe size="small" max-height="280">
+        <el-table-column width="50"><template #default="s"><el-checkbox v-model="buForm.selectedCombos[s.row.code]"></el-checkbox></template></el-table-column>
+        <el-table-column prop="code" label="服务组合" min-width="260"></el-table-column>
+        <el-table-column prop="ch" label="渠道" width="80"></el-table-column>
+        <el-table-column prop="costPrice" label="当前成本价" min-width="100"></el-table-column>
+        <el-table-column label="更新后" min-width="100"><template #default><span style="color:#2DA44E;font-weight:bold">{{buForm.newPrice}}</span></template></el-table-column>
+      </el-table>
+      <div style="margin-top:8px"><el-checkbox v-model="buAutoRecalc" size="small">同步后自动更新当周运价表的成本底价（推荐）</el-checkbox></div>
+    </template>
+    <template #footer><el-button @click="showBuDialog=false">取消</el-button><el-button type="primary" @click="confirmBatchUpdate" :disabled="buSelectedCount===0">确认更新（{{buSelectedCount}} 个组合）</el-button></template>
+  </el-dialog>
+
+  </div>
+
+<script>
+(function(){
+var app=Vue.createApp({
+data:function(){
+  return {
+    activeSeg:'揽收段', selectedItems:[],
+    showEdit:false, editMode:false, editReadonly:false, showBatch:false,  showBuDialog:false, buRow:null, buAutoRecalc:true, buForm:{newPrice:0,selectAll:true,selectedCombos:{}},
+    editForm:{seg:'揽收段',name:'',formulaType:10,dpVal:0,cur:'RMB',profitFull:15,profitSegment:18,forbidProfit:false,idx:-1},
+    batchForm:{profitFull:15,profitSegment:18},
+    allSegs:['揽收段','干线运输段','关务段','仓储段','派送段'],
+    items:[
+      {seg:'揽收段',name:'装柜费',dp:'500',dpVal:500,cur:'RMB',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'揽收段',name:'拖车费',dp:'1950',dpVal:1950,cur:'RMB',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'干线运输段',name:'海运费',dp:'5.0',dpVal:5,cur:'USD',formulaType:20,profitFull:12,profitSegment:12,forbidProfit:false,enabled:true},
+      {seg:'干线运输段',name:'港杂费',dp:'250',dpVal:250,cur:'RMB',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'关务段',name:'国内报关费',dp:'2800',dpVal:2800,cur:'RMB',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'关务段',name:'国外清关费',dp:'1500',dpVal:1500,cur:'USD',formulaType:20,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'关务段',name:'税金',dp:'1800',dpVal:1800,cur:'USD',formulaType:20,profitFull:0,profitSegment:0,forbidProfit:true,enabled:true},
+      {seg:'仓储段',name:'国内存储费',dp:'15',dpVal:15,cur:'RMB',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'仓储段',name:'国外存储费',dp:'2.0',dpVal:2,cur:'USD',formulaType:20,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'仓储段',name:'库内操作费',dp:'5.0',dpVal:5,cur:'RMB',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'派送段',name:'目的港提还柜费',dp:'350',dpVal:350,cur:'USD',formulaType:20,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'派送段',name:'仓点成本（卡派）',_preset:true,dp:'—',dpVal:0,cur:'—',formulaType:20,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true},
+      {seg:'派送段',name:'快递派单价（快递派）',_preset:true,dp:'—',dpVal:0,cur:'—',formulaType:10,profitFull:15,profitSegment:18,forbidProfit:false,enabled:true}
+    ],comboAffectedMap:{海运费:[{code:"美森360-海运-卡派-KG-包税-散货",ch:"美森360",costPrice:"5.0"},{code:"美森360-海运-卡派-KG-不包税-散货",ch:"美森360",costPrice:"5.0"},{code:"美森360-海运-卡派-m³-包税-散货",ch:"美森360",costPrice:"5.0"},{code:"美森432-海运-卡派-KG-包税-散货",ch:"美森432",costPrice:"5.2"}],港杂费:[{code:"美森360-海运-卡派-KG-包税-散货",ch:"美森360",costPrice:"250"}],国内报关费:[{code:"美森360-海运-卡派-KG-包税-散货",ch:"美森360",costPrice:"2800"},{code:"美森432-海运-卡派-KG-包税-散货",ch:"美森432",costPrice:"2800"}]}
+  }
+},
+computed:{
+  segGroups:function(){
+    var self=this, map={};
+    this.items.forEach(function(i){if(!map[i.seg])map[i.seg]=0;map[i.seg]++});
+    return Object.keys(map).map(function(k){return{name:k,count:map[k]}});
+  },
+  buCombos:function(){if(!this.buRow)return[];return this.comboAffectedMap[this.buRow.name]||[]},buSelectedCount:function(){var self=this;return this.buCombos.filter(function(c){return self.buForm.selectedCombos[c.code]}).length},buIndeterminate:function(){var c=this.buSelectedCount;return c>0&&c<this.buCombos.length},
+  segItems:function(){
+    var self=this;
+    return this.items.filter(function(i){return i.seg===self.activeSeg});
+  }
+},
+methods:{
+  selectSeg:function(seg){this.activeSeg=seg;this.selectedItems=[];if(this.$refs.itemTable)this.$refs.itemTable.clearSelection()},
+  rowClassName:function(arg){return arg.row.enabled===false?'row-disabled':''},
+  onSelectionChange:function(rows){var self=this;var disabled=rows.filter(function(r){return !r.enabled});if(disabled.length){var names=disabled.map(function(r){return r.name}).join('、');ElementPlus.ElMessage.warning('以下成本项已禁用，已自动排除：'+names);setTimeout(function(){disabled.forEach(function(r){self.$refs.itemTable.toggleRowSelection(r,false)})},50)}this.selectedItems=rows.filter(function(r){return r.enabled})},
+  onSelect:function(selection,row){if(!row.enabled){ElementPlus.ElMessage.warning(row.name+' 已禁用，不可勾选');this.$refs.itemTable.toggleRowSelection(row,false)}},
+  onToggleItem:function(row){ElementPlus.ElMessage[row.enabled?'success':'warning'](row.name+(row.enabled?' 已启用':' 已禁用'))},
+  batchToggle:function(on){for(var i=0;i<this.selectedItems.length;i++)this.selectedItems[i].enabled=on;ElementPlus.ElMessage.success('已批量'+(on?'启用':'禁用')+this.selectedItems.length+' 项');this.$refs.itemTable.clearSelection()},
+  openAdd:function(){this.editMode=false;this.editReadonly=false;this.editForm={isDelivery:false,name:'',formulaType:10,dpVal:0,cur:'RMB',profitFull:15,profitSegment:18,idx:-1};this.showEdit=true;this.editForm.isDelivery=row.seg==="派送段"},
+  openEdit:function(row){this.editMode=true;this.editReadonly=!row.enabled;this.editForm={name:row.name,formulaType:row.formulaType,dpVal:row.dpVal,cur:row.cur,profitFull:row.profitFull,profitSegment:row.profitSegment,idx:this.items.indexOf(row)};this.showEdit=true},
+  saveEdit:function(){
+    if(!this.editForm.name){ElementPlus.ElMessage.warning('请输入成本项名称');return}
+    if(this.editForm.dpVal===null||this.editForm.dpVal===''){ElementPlus.ElMessage.warning('请输入建议默认价');return}
+    if(this.editMode){
+      var row=this.items[this.editForm.idx];
+      row.name=this.editForm.name;row.formulaType=this.editForm.formulaType;
+      row.dp=String(this.editForm.dpVal);row.dpVal=this.editForm.dpVal;row.cur=this.editForm.cur;
+      row.profitFull=this.editForm.profitFull;row.profitSegment=this.editForm.profitSegment;
+      ElementPlus.ElMessage.success(row.name+' 已更新');
+    }else{
+      this.items.push({seg:this.activeSeg,name:this.editForm.name,formulaType:this.editForm.formulaType,dp:String(this.editForm.dpVal),dpVal:this.editForm.dpVal,cur:this.editForm.cur,profitFull:this.editForm.profitFull,profitSegment:this.editForm.profitSegment,enabled:true});
+      ElementPlus.ElMessage.success('已新增 '+this.editForm.name);
+    }
+    this.showEdit=false;
+  },
+  removeItem:function(row){
+    var self=this;
+    ElementPlus.ElMessageBox.confirm('确定删除【'+row.name+'】？已关联的渠道和组合不受影响。','确认删除',{type:'warning'}).then(function(){self.items.splice(self.items.indexOf(row),1);ElementPlus.ElMessage.success('已删除')}).catch(function(){});
+  },
+  openBatchUpdate:function(row){this.buRow=row;var self=this,combos=this.comboAffectedMap[row.name]||[],sel={};combos.forEach(function(c){sel[c.code]=true});this.buForm={newPrice:parseFloat(row.dp)||0,selectAll:true,selectedCombos:sel};this.showBuDialog=true},toggleBuAll:function(val){var self=this;this.buCombos.forEach(function(c){self.buForm.selectedCombos[c.code]=val})},confirmBatchUpdate:function(){if(this.buForm.newPrice===null||this.buForm.newPrice<0){ElementPlus.ElMessage.warning("请输入新价格");return}if(this.buSelectedCount===0){ElementPlus.ElMessage.warning("请至少选择一个服务组合");return}this.buRow.dp=String(this.buForm.newPrice);this.buRow.dpVal=this.buForm.newPrice;var self=this,updated=[];this.buCombos.forEach(function(c){if(self.buForm.selectedCombos[c.code]){c.costPrice=String(self.buForm.newPrice);updated.push(c.code)}});ElementPlus.ElMessage.success(this.buRow.name+"建议默认价已更新为"+this.buForm.newPrice+"，已同步"+updated.length+"个组合");this.showBuDialog=false;if(this.buAutoRecalc)ElementPlus.ElMessage.success("当周运价表成本底价已触发重算")},removeItem:function(){},openBatchProfit:function(){this.batchForm={profitFull:15,profitSegment:18};this.showBatch=true},
+  batchSetProfit:function(){
+    var self=this;
+    for(var i=0;i<this.selectedItems.length;i++){this.selectedItems[i].profitFull=this.batchForm.profitFull;this.selectedItems[i].profitSegment=this.batchForm.profitSegment}
+    ElementPlus.ElMessage.success('已为 '+this.selectedItems.length+' 个成本项设置全段利润率 '+this.batchForm.profitFull+'%，分段利润率 '+this.batchForm.profitSegment+'%');
+    this.showBatch=false;this.$refs.itemTable.clearSelection();
+  }
+}
+});
+app.use(ElementPlus);
+app.mount('#app');
+})();
+</script>
+</body>
+</html>
