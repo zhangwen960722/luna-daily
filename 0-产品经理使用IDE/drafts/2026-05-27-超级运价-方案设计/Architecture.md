@@ -1,6 +1,6 @@
 ﻿# 核心方案设计草稿 — 超级运价模块
 
-> Phase 2：方案架构 | 基于 RDD v3.6 | 2026-05-27 | 更新 2026-06-02（原型重生成 + 流程图标准化）
+> Phase 2：方案架构 | 基于 RDD v3.6 | 2025-05-27 | 更新 2026-06-06（全局实体抽象 + 利润策略重构 + 周批次快照模型）
 
 ---
 
@@ -12,31 +12,37 @@
 | 2 | 预估运输时效 | `estimated_transit_time` | 子表 | 1:1 挂 service_channel |
 | 3 | 送仓预估时效 | `warehouse_delivery_estimate` | 子表 | 1:N 挂 service_channel |
 | 4 | 理赔承诺时效 | `claim_commitment` | 子表 | 1:N 挂 service_channel |
-| 4b | 渠道折算基准 | `渠道折算基准` | 子表 | 1:N 挂 service_channel |
 | 5 | 港口 | — | 引用 | 基础数据模块，不在本模块建表 |
 | 6 | 航线 | `route` | 主表 | |
 | 7 | 航线-渠道关联 | `route_channel` | 关联表 | N:N |
-| 8 | 周船期批次 | `weekly_schedule_batch` | 主表 | |
+| 8 | 周船期批次 | `weekly_schedule_batch` | 主表 | 每周快照容器：汇率 + 折算基准 + 重量段 + 默认利润率 |
 | 9 | 船期 | `sailing_schedule` | 子表 | 1:N 挂 weekly_schedule_batch |
-| 10 | 重量段配置 | `weight_tier` | 子表 | 1:N 挂 service_channel |
-| 11 | 运价行 | `price_table_row` | 子表 | 挂 weekly_schedule_batch + combination |
-| 12 | 成本段 | `cost_segment` | 主表 | 全局目录 |
-| 13 | 成本项模板 | `cost_item_template` | 子表 | 1:N 挂 cost_segment |
-| 14 | 渠道成本项 | `channel_cost_item` | 子表 | 1:N 挂 service_channel |
-| 15 | 服务组合 | `service_combination` | 主表 | 笛卡尔积生成 |
-| 16 | 组合成本项 | `combination_cost_item` | 子表 | 1:N 挂 service_combination |
-| 17 | 计费规则 | `billing_rule` | 子表 | 1:N 挂 service_combination |
-| 18 | 附加费规则 | `surcharge_rule` | 主表 | |
-| 19 | 运费优惠规则 | `freight_discount` | 子表 | 1:N 挂 service_combination，组合编辑弹窗内嵌管理 |
-| 14a | 渠道派送仓点成本 | `渠道派送仓点成本` | 子表 | 1:N 挂 service_channel，卡派专用 |
-| 16a | 组合派送仓点成本 | `combination_warehouse_cost` | 子表 | 1:N 挂 service_combination，卡派专用 |
-| 14b | 渠道快递派送单价 | `渠道快递派送单价` | 子表 | 1:N 挂 service_channel，快递派专用 |
-| 16b | 组合快递派送单价 | `combination_express_delivery_rate` | 子表 | 1:N 挂 service_combination，快递派专用 |
-| 20 | 附加费优惠规则 | `surcharge_discount` | 子表 | 1:N 挂 surcharge_rule，附加费规则编辑弹窗内嵌管理 |
-| 21 | 操作审计日志 | `audit_log` | 主表 | 二期 |
-| 22 | 询价日志 | `query_log` | 主表 | 二期 |
+| 10 | 运价行 | `price_table_row` | 子表 | 挂 weekly_schedule_batch + combination |
+| 11 | 成本段 | `cost_segment` | 主表 | 全局目录 |
+| 12 | 成本项模板 | `cost_item_template` | 子表 | 1:N 挂 cost_segment，纯成本，不含利润字段 |
+| 13 | 渠道成本项 | `channel_cost_item` | 子表 | 1:N 挂 service_channel，纯成本继承 |
+| 14 | 服务组合 | `service_combination` | 主表 | 笛卡尔积生成 |
+| 15 | 组合成本项 | `combination_cost_item` | 子表 | 1:N 挂 service_combination，纯成本执行 |
+| 16 | 计费规则 | `billing_rule` | 子表 | 1:N 挂 service_combination |
+| 17 | 附加费规则 | `surcharge_rule` | 主表 | |
+| 18 | 运费优惠规则 | `freight_discount` | 子表 | 1:N 挂 service_combination，组合编辑弹窗内嵌管理 |
+| 19 | 渠道派送仓点成本 | `渠道派送仓点成本` | 子表 | 1:N 挂 service_channel，卡派专用 |
+| 20 | 组合派送仓点成本 | `combination_warehouse_cost` | 子表 | 1:N 挂 service_combination，卡派专用 |
+| 21 | 渠道快递派送单价 | `渠道快递派送单价` | 子表 | 1:N 挂 service_channel，快递派专用 |
+| 22 | 组合快递派送单价 | `combination_express_delivery_rate` | 子表 | 1:N 挂 service_combination，快递派专用 |
+| 23 | 附加费优惠规则 | `surcharge_discount` | 子表 | 1:N 挂 surcharge_rule，附加费规则编辑弹窗内嵌管理 |
+| 24 | 操作审计日志 | `audit_log` | 主表 | 二期 |
+| 25 | 询价日志 | `query_log` | 主表 | 二期 |
 
-> Port（港口）由基础数据模块维护，超级运价通过 `港口代码` 引用，不在本模块建表。
+**全局目录实体（独立于渠道/组合，运价管理员维护）**：
+
+| # | RDD 实体 | 表名 | 类型 | 说明 |
+|---|---------|------|------|------|
+| G1 | 成本折算基准 | `loading_standard` | 主表 | 全局，Key = (运输方式, 尾程方式, 类型)；渠道/组合不存 |
+| G2 | 重量段模板 | `weight_tier_template` | 主表 | 全局，Key = (运输方式, 计价单位)；渠道引用模板ID |
+| G3 | 利润策略 | `profit_strategy` | 主表 | 全局，名称 + 百分比 + 适用范围；渠道引用策略ID |
+
+> **核心原则**：配置层（渠道/组合）只存引用ID，不存具体值。执行层（周批次）做快照。变更下周生效，历史不受影响。
 
 ---
 
@@ -47,13 +53,13 @@ erDiagram
     service_channel ||--o| estimated_transit_time : "1:1"
     service_channel ||--o{ warehouse_delivery_estimate : "1:N"
     service_channel ||--o{ claim_commitment : "1:N"
-    service_channel ||--o{ 渠道折算基准 : "1:N"
-    service_channel ||--o{ weight_tier : "1:N"
     service_channel ||--o{ channel_cost_item : "1:N"
     service_channel ||--o{ 渠道派送仓点成本 : "1:N"
     service_channel ||--o{ 渠道快递派送单价 : "1:N"
     service_channel ||--o{ route_channel : "1:N"
     service_channel ||--o{ service_combination : "1:N"
+    service_channel }o--|| weight_tier_template : "引用"
+    service_channel }o--|| profit_strategy : "引用"
 
     route ||--o{ route_channel : "1:N"
     route ||--o{ sailing_schedule : "1:N"
@@ -76,6 +82,10 @@ erDiagram
 
     cost_segment ||--o{ channel_cost_item : "1:N"
     cost_segment ||--o{ combination_cost_item : "1:N"
+    
+    loading_standard ||--o{ weekly_schedule_batch : "周批次快照引用"
+    weight_tier_template ||--o{ weekly_schedule_batch : "周批次快照引用"
+    profit_strategy ||--o{ weekly_schedule_batch : "周批次快照引用"
 ```
 
 ---
@@ -102,9 +112,11 @@ erDiagram
 | `fba_sync` | FBA运单同步 | 布尔 | ✅ | | 默认=false；控制是否向亚马逊推送 DW |
 | `channel_type` | 渠道类型 | 小整数 | ✅ | | 10:全段服务（一期） 20:分段服务（三期预留） |
 | `container_spec` | 集装箱规格参考 | 字符串(50) | | | 如"40HQ×1"，仅备注不参与计算 |
+| `weight_tier_template_id` | 重量段模板 | 长整数 | ✅ | FK → weight_tier_template | 渠道创建时根据运输方式+计价单位自动匹配，可手动更换 |
+| `profit_strategy_id` | 利润策略 | 长整数 | | FK → profit_strategy | 渠道创建时根据渠道类型自动匹配，可手动更换 |
 | `status` | 状态 | 小整数 | ✅ | Index | 10:正常 20:已冻结；冻结后关联组合不参与运价查询 |
 
-**子表**：`渠道折算基准`（见 3.1d）。
+> **全局引用**：成本折算基准（`loading_standard`）、重量段模板（`weight_tier_template`）、利润策略（`profit_strategy`）均为全局独立实体。渠道只存引用ID，不存具体值。具体值在周批次创建时快照到批次表。
 
 **子表**：见下方 3.1a ~ 3.1c。
 
@@ -162,38 +174,34 @@ erDiagram
 
 ---
 
-### 3.1d 渠道折算基准 `渠道折算基准`
+### 3.1d 成本折算基准 `loading_standard`（全局表，G1）
 
-> 1:N 挂在 service_channel 下。头程和派送段各自定义折算基准，按运输方式+尾程派送方式组合区分，支持多运输方式/多尾程方式扩展。
+> 独立全局实体。按运输方式 × 尾程方式 × 基准类型定义。**渠道和组合不存此值**，运价维护时从全局表拉取并快照到周批次。
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
 | `transport_mode` | 运输方式 | 小整数 | ✅ | | 10:海运 20:空运 30:洲际火车 40:洲际卡车 |
-| `last_mile_method` | 尾程派送方式 | 小整数 | | | NULL=头程（不区分尾程）；10:卡派 20:快递派。仅 tail 行必填 |
-| `standard_type` | 基准类型 | 小整数 | ✅ | | 10:头程(head) 20:派送(tail) |
-| `公斤折算基准` | KG基准 | 整数 | ✅ | | 海运头程=12525 / 派送卡派=350 |
-| `立方米折算基准` | CBM基准 | 小数(6,2) | ✅ | | 海运头程=75 / 派送卡派=1.8 |
+| `last_mile_method` | 尾程派送方式 | 小整数 | | | NULL=头程（不区分尾程）；仅 tail 行必填 |
+| `standard_type` | 基准类型 | 小整数 | ✅ | | 10:头程 20:派送 |
+| `kg_standard` | 公斤折算基准 | 整数 | ✅ | | 海运头程=12525 / 海运卡派=350 |
+| `cbm_standard` | 方折算基准 | 小数(6,2) | ✅ | | 海运头程=75 / 海运卡派=1.8 |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | |
 
-**唯一约束**：`UNIQUE(channel_id, transport_mode, COALESCE(last_mile_method, 0), standard_type)`。
+**唯一约束**：`UNIQUE(transport_mode, COALESCE(last_mile_method, 0), standard_type)`。
 
-**业务规则**：
-- 渠道创建时自动生成该渠道运输方式对应的默认行——头程行（last_mile_method=NULL）1 条 + 每个尾程派送方式对应派送行各 1 条
-- 后续新增运输方式/尾程方式时需关注是否需要补行
-- 变更时标记该渠道下受影响组合为"待重算"，后台异步逐批重算
+**预置数据**：
+| 运输方式 | 尾程方式 | 类型 | KG基准 | 方基准 |
+|----------|----------|------|--------|--------|
+| 海运 | — | 头程 | 12525 | 75 |
+| 海运 | 卡派 | 派送 | 350 | 1.8 |
+| 空运 | — | 头程 | 6000 | — |
 
-**成本计算取用逻辑**：
+**折算公式**（运价维护时实时计算）：
 ```
-头程: WHERE channel=X AND standard_type='head'
-派送: WHERE channel=X AND standard_type='tail' AND last_mile_method=组合.尾程方式
-```
-
-**折算公式**：
-```
-头程 每公斤  = 单价 × (if USD: rate else 1) ÷ 头程行.公斤折算基准    （÷12525）
-头程 每立方米 = 单价 × (if USD: rate else 1) ÷ 头程行.立方米折算基准   （÷75）
-派送 每公斤  = 仓点单价 × rate ÷ 派送行.公斤折算基准                         （÷350）
-派送 每立方米 = 仓点单价 × rate ÷ 派送行.立方米折算基准                        （÷1.8）
+头程 per KG  = 单价 × (USD项? 周批次汇率 : 1) ÷ 头程行.kg_standard
+头程 per CBM = 单价 × (USD项? 周批次汇率 : 1) ÷ 头程行.cbm_standard
+派送 per KG  = 仓点单价 × 周批次汇率 ÷ 派送行.kg_standard
+派送 per CBM = 仓点单价 × 周批次汇率 ÷ 派送行.cbm_standard
 成本底价 = 头程合计 + 派送段普通项 + MAX(派送段仓点成本 by 仓点)
 ```
 
@@ -228,11 +236,20 @@ erDiagram
 | `汇率` | USD→RMB 汇率 | 小数(10,4) | ✅ | | 新建批次时调用第三方汇率 API 自动拉取当日央行汇率并落库。运价管理员可覆盖 |
 | `汇率_date` | 汇率生效日 | 日期 | ✅ | | 默认 = week_start，记录 API 拉取日期，用于审计追溯 |
 | `status` | 状态 | 小整数 | ✅ | Index | 10:预告 20:当前 30:已过期 |
+| `loading_snapshot` | 折算基准快照 | JSON | ✅ | | 创建时从 `loading_standard` 拉取，格式: `[{transport_mode, last_mile_method, standard_type, kg_standard, cbm_standard}]` |
+| `weight_tier_snapshot` | 重量段快照 | JSON | ✅ | | 创建时从组合→渠道→模板拉取，按组合分组 |
+| `profit_rate_snapshot` | 默认利润率快照 | JSON | ✅ | | 创建时从组合→利润策略拉取，按组合分组 |
 | `remark` | 备注 | 字符串(200) | | | |
 
-> 校验规则：`week_end ≥ week_start`，否则阻止保存；`汇率 > 0`。状态流转：每周日 24:00，CURRENT→EXPIRED，PREVIEW→CURRENT。同时仅一条 CURRENT（应用层乐观锁 + DB 部分唯一索引 `UNIQUE(status) WHERE status=20` 兜底）。
+> **校验规则**：`week_end ≥ week_start`，否则阻止保存；`汇率 > 0`。
 >
-> **汇率作用域**：该批次下所有「美元换汇计算」型成本项统一使用此汇率计算 每公斤成本 / 每立方米成本。汇率变更触发全批次成本底价重算，并在审计日志中记录。
+> **状态流转**：每周日 24:00，CURRENT→EXPIRED，PREVIEW→CURRENT。同时仅一条 CURRENT（应用层乐观锁 + DB 部分唯一索引 `UNIQUE(status) WHERE status=20` 兜底）。
+>
+> **周批次 = 执行层快照容器**：新建批次时从全局表（`loading_standard`、`weight_tier_template`、`profit_strategy`）拉取当前值，快照到本批次。快照后该批次独立于全局表——全局变更不影响已创建批次，下周新建时自动带新值。
+>
+> **生命周期**：预告（可编辑/可删除/可废弃）→ 当前（已发布，锁定不可改）→ 已过期（历史快照，不可删不可改）。
+>
+> **汇率作用域**：该批次下所有「美元换汇计算」型成本项统一使用此汇率计算 每公斤成本 / 每立方米成本。
 
 ---
 
@@ -252,18 +269,34 @@ erDiagram
 
 ---
 
-### 3.5 重量段 `weight_tier`
+### 3.5 重量段模板 `weight_tier_template`（全局表，G2）
+
+> 独立全局实体。按运输方式 × 计价单位定义标准重量段。渠道通过 `weight_tier_template_id` 引用模板，渠道可在此基础上追加自定义段。
 
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
-| `channel_id` | 服务渠道 | 长整数 | ✅ | Index, FK | |
+| `transport_mode` | 运输方式 | 小整数 | ✅ | | 10:海运 20:空运 30:洲际火车 40:洲际卡车 |
 | `unit` | 计价单位 | 小整数 | ✅ | | 10:KG 20:m³ |
-| `tier_name` | 段名称 | 字符串(20) | ✅ | | 如"8KG+"、"2CBM+" |
-| `start_value` | 起始值 | 小数(10,2) | ✅ | | KG 或 m³ |
+| `tier_name` | 段名称 | 字符串(20) | ✅ | | 如"8KG+"、"101KG+"、"2m³+" |
+| `start_value` | 起始值 | 小数(10,2) | ✅ | | |
 | `end_value` | 结束值 | 小数(10,2) | | | null=以上 |
+| `sort_order` | 排序 | 整数 | ✅ | | 按从小到大排列 |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | |
 
-**设计说明**：`end_value` 为 null 表示"以上"（如 101KG+）。CBM 段同理（如 2CBM+）。段之间不应有间隙或重叠——由应用层校验保证。
-**联动约束**：与服务渠道.计费方式联动——`service_channel.billing_units` 含 KG 则必须配置 KG 段，含 m³ 则必须配置 m³ 段。
+**唯一约束**：`UNIQUE(transport_mode, unit, tier_name)`。
+
+**预置数据**：
+| 运输方式 | 计价单位 | 段名称 | 范围 |
+|----------|----------|--------|------|
+| 海运 | KG | 8KG+ | 8 ~ 101 |
+| 海运 | KG | 101KG+ | 101 ~ ∞ |
+| 海运 | m³ | 2m³+ | 2 ~ ∞ |
+| 空运 | KG | 12KG+ | 12 ~ 21 |
+| 空运 | KG | 21KG+ | 21 ~ 51 |
+| 空运 | KG | 51KG+ | 51 ~ 101 |
+| 空运 | KG | 101KG+ | 101 ~ ∞ |
+
+**渠道引用扩展**：渠道创建时根据运输方式自动匹配模板默认段。渠道可追加自定义段（存储在 `channel_weight_tier_override` 子表，仅该渠道可见），不可删除模板原有段。
 
 ---
 
@@ -306,6 +339,8 @@ erDiagram
 
 ### 3.8 成本项模板 `cost_item_template`（全局目录）
 
+> 纯成本底座。利润策略（`profit_strategy`）为独立实体，由渠道/组合引用。
+
 | 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
 |--------|--------|------|------|----------|------|
 | `segment_id` | 成本段 | 长整数 | ✅ | Index, FK | |
@@ -319,7 +354,33 @@ erDiagram
 
 **唯一约束**：`UNIQUE(segment_id, name)`，同一成本段下不可有同名模板。
 
+> **不再包含** `profit_full` / `profit_segment` 字段。利润率由利润策略（`profit_strategy`）独立管理，成本项只关注成本本身。
+
 ---
+
+### 3.8b 利润策略 `profit_strategy`（全局表，G3）
+
+> 独立全局实体。定义默认利润率，被渠道/组合引用。全段服务引用全段策略，分段服务（三期）引用分段策略。
+
+| 字段名 | 中文名 | 类型 | 必填 | 约束/索引 | 备注 |
+|--------|--------|------|------|----------|------|
+| `name` | 策略名称 | 字符串(30) | ✅ | | 如"全段默认利润率""分段默认利润率" |
+| `profit_rate` | 默认利润率 | 小数(5,1) | ✅ | | 如 15 = 15% |
+| `applicable_scope` | 适用范围 | 小整数 | ✅ | | 10:全段服务 20:分段服务 30:通用 |
+| `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | |
+
+**预置数据**：
+| 名称 | 利润率 | 适用范围 |
+|------|--------|----------|
+| 全段默认 | 15% | 全段服务 |
+| 分段默认 | 18% | 分段服务 |
+
+**使用方式**：
+- 渠道创建时根据 `channel_type` 自动匹配对应 scope 的策略
+- 组合创建时从渠道继承 `profit_strategy_id`
+- 周批次创建时从组合引用拉取利润率 → 快照到批次
+- 运价编辑时：默认利润率填充所有重量段（初始值一样），运价管理员逐行手工覆盖
+- 策略变更下周新建批次时生效，不影响历史批次
 
 ### 3.9 渠道成本项 `channel_cost_item`（纯数据层）
 
@@ -332,12 +393,10 @@ erDiagram
 | `currency` | 币种 | 小整数 | ✅ | | 继承模板币种 |
 | `交货地` | 交货地 | 字符串(20) | 条件 | | 成本段=揽收段时必填；每个交货地单独一行 |
 | `delivery_quote_source` | 派送报价来源 | 小整数 | 条件 | | 10:拆送价 20:组合一口价 30:整柜直送价 |
-| `profit_full` | 全段利润率 | 小数(5,1) | ✅ | | 从模板继承，如 15 = 15% |
-| `profit_segment` | 分段利润率 | 小数(5,1) | ✅ | | 从模板继承，如 18 = 18% |
 | `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | 关闭后该渠道不适用此成本项，新生成组合时跳过 |
 
 > 无独立管理页面，在服务渠道编辑页中配置。修改此处不自动影响已有组合。`is_enabled`=false 时，已有组合不受影响；新创建组合时不再复制被禁用的项。
-> 利润率从模板继承，存储冗余以加速公布价计算（避免实时 join 模板表）。
+> **不再包含利润字段**。利润率由利润策略独立管理，渠道通过 `profit_strategy_id` 引用。
 > **揽收段按交货地拆行**：同一揽收成本项模板在不同交货地（珠三角/汕头/义乌）有不同单价时，拆为多行。每行 = `(channel_id, template_id, 交货地)` 唯一。服务组合创建时按行逐一复制。
 **唯一约束**：`UNIQUE(channel_id, template_id, 交货地)`，同一渠道下同一成本项模板在同一交货地不可重复。
 
@@ -354,9 +413,11 @@ erDiagram
 | `tax_method` | 包税方式 | 小整数 | ✅ | | 10:包税 20:不包税 30:自主税号 40:自税递延；笛卡尔积展开后的单值 |
 | `billing_unit` | 计费方式 | 小整数 | ✅ | | 10:KG 20:m³；笛卡尔积展开后的单值 |
 | `service_type` | 服务类型 | 小整数 | ✅ | | 10:散货 20:整柜 |
+| `weight_tier_template_id` | 重量段模板 | 长整数 | ✅ | FK | 从渠道继承 |
+| `profit_strategy_id` | 利润策略 | 长整数 | | FK | 从渠道继承 |
 | `status` | 状态 | 小整数 | ✅ | Index | 10:正常 20:已冻结；冻结后不在运价查询中出现 |
 
-**设计说明**：服务组合由渠道属性笛卡尔积自动生成。`combination_code` 系统自动拼接。
+**设计说明**：服务组合由渠道属性笛卡尔积自动生成。`combination_code` 系统自动拼接。成本折算基准不存组合，运价维护时从全局表实时拉取。
 
 ---
 
@@ -373,8 +434,6 @@ erDiagram
 | `每公斤成本` | 每公斤成本 | 小数(10,4) | | | 系统自动计算：USD项 = 单价 × 周批次.汇率 / KG基准 |
 | `每立方米成本` | 每方成本 | 小数(10,4) | | | 系统自动计算：USD项 = 单价 × 周批次.汇率 / CBM基准 |
 | `交货地` | 交货地 | 字符串(20) | 条件 | | 揽收段必填 |
-| `profit_full` | 全段利润率 | 小数(5,1) | ✅ | | 从渠道继承，如 15 = 15%。公布价 = 每公斤/方成本 × (1+利润率%) |
-| `profit_segment` | 分段利润率 | 小数(5,1) | ✅ | | 从渠道继承，如 18 = 18% |
 | `is_enabled` | 是否启用 | 布尔 | ✅ | Default:1 | 禁用后计算时跳过 |
 | `effective_from` | 生效时间 | DateTime | | | 一期预留 |
 
@@ -397,7 +456,7 @@ erDiagram
 
 ### 成本模型设计决策
 
-> 以下原则约束四层成本模型的数据流向和实体归属，是跨模块一致性的基础。
+> 以下原则约束成本模型的数据流向和实体归属，是跨模块一致性的基础。
 
 **D1 — 数据流单向原则**
 
@@ -405,45 +464,41 @@ erDiagram
 模板(全局) → 渠道(默认值) → 组合(执行值)
 ```
 
-修改模板 → 可选推送到渠道和组合。修改渠道 → 可选推送到组合。**修改组合绝不反向同步回渠道或模板**——组合的覆盖价可能是特谈价，反向推送会污染默认值。
+修改模板 → 可选推送到渠道和组合。修改渠道 → 可选推送到组合。**修改组合绝不反向同步回渠道或模板**。
 
 **D2 — 交货地在渠道层，不在模板层**
 
-揽收段同一成本项（如"装柜费"）在不同交货地有不同单价时，拆为多行存储在 `channel_cost_item`（渠道层），而非 `cost_item_template`（模板层）。理由：
-- 模板层定义"有什么成本项"，渠道层定义"在该渠道下收多少钱"
-- 不同渠道服务的交货地不同，模板层无法预知
-- 即使当前所有渠道价格一致，未来新增渠道时价格必然分化
+揽收段同一成本项在不同交货地有不同单价时，拆为多行存储在 `channel_cost_item`（渠道层），而非 `cost_item_template`（模板层）。
 
 **D3 — 成本项变更的同步边界**
 
 - 模板建议默认价变更 → 可选推送到所有引用此模板的渠道和组合
-- 渠道成本项变更 → 可选仅推送到该渠道下的组合（通过「同步到组合」按钮+组合选择框）；同步仅更新组合中已有成本项的价格，不会新增或删除组合的成本项
+- 渠道成本项变更 → 可选推送到该渠道下的组合；同步仅更新已有项价格，不新增不删除
 - 组合成本项变更 → 仅影响该组合，不传播
-- 卡派仓点/快递派单价 遵循相同规则，且按尾程派送方式过滤：卡派组合仅同步仓点成本，快递派组合仅同步快递派单价
+- 卡派仓点/快递派单价遵循相同规则
+- **同步后不自动更新运价表**：同步操作完成后，系统标记当前批次受影响运价行为"待重算"。运价管理员在工作台统一处理——[重算成本底价] 或 [已知晓，不调整]
 
 **D4 — 快递派单价不折算**
 
-卡派仓点成本（拆送/组合一口价/整柜直送）是供应商原始报价，需要用 `tail_kg/立方米折算基准` 折算为 per KG/m³。快递派单价是快递承运商给出的最终 per KG/m³ 价格，直接累加，不进折算公式。
+卡派仓点成本需要用 `tail_kg_standard / tail_cbm_standard` 折算为 per KG/m³。快递派单价已是最终 per KG/m³ 价格，直接累加。
 
-**D5 — 单价 静态链 × cost 周期计算**
+**D5 — 单价静态链 × 批次周期计算**
 
 ```
 静态链（跨批次不变）：
   模板.单价 → 渠道.单价 → 组合.单价
-  同步规则: 模板变了推渠道+组合，渠道变了推组合
 
 周期计算（每批次独立）：
-  组合.每公斤成本 = 单价 × batch.汇率 ÷ 折算基准
-  同一组合在不同批次: 单价 相同，汇率不同 → 每公斤成本 不同
+  从周批次读取: 汇率 + 折算基准快照 + 默认利润率快照
+  成本底价 = 组合.单价 × batch.汇率 ÷ batch.折算基准
+  初始公布价 = 成本底价 × (1 + batch.默认利润率)
 ```
 
-- `单价` 是持久化字段，走 D1-D3 的同步规则
-- `每公斤成本/cbm` 是计算字段，每次从 `单价 × 汇率 ÷ 基准` 实时/异步重算
-- 汇率变更或 单价 变更后，标记 `待重算=1`，后台逐批重算
-- 所有单价同步入口（模板批量更新、派送段同步、渠道同步）均提供「同步后自动更新当周运价表的成本底价」选项，默认开启
-- 汇率变更：二次确认弹窗后触发全批次异步重算
-- 折算基准变更（仅编辑模式）：保存时确认弹窗，确定后保存 + 自动重算；新增渠道不触发
-- 不同周批次的成本底价相互独立，由各自批次的汇率决定
+- `单价` 走 D1-D3 的同步规则
+- 汇率、折算基准、利润率均在周批次创建时快照，该批次内独立
+- 成本单价变更后，系统自动标记当前批次受影响运价行为"待重算"
+- 运价管理员在工作台触发重算：拉取组合最新单价 × 本批次汇率 ÷ 本批次折算基准
+- **不再提供"同步后自动更新运价表"选项**——运价重算统一在工作台人工触发
 
 ---
 
@@ -528,15 +583,9 @@ erDiagram
 
 ---
 
-### 3.13 利润策略
+### 3.13 利润策略（已移除，见 §3.8b `profit_strategy`）
 
-利润策略不作为独立实体。全段利润率 (`profit_full`) 和分段利润率 (`profit_segment`) 作为**成本项的内联字段**存储在 `cost_item_template`（见 §3.8）、`channel_cost_item`（见 §3.9）、`combination_cost_item`（见 §3.11）三张表中。`forbid_profit` 标记位于成本项模板。在成本管理页面统一配置，渠道和组合继承后可按需覆盖。
-
-> **设计决策**：
-> 1. 放在成本项：利润差异的最小粒度。全段/分段通过 profit_full/profit_segment 区分
-> 2. V1 仅百分比：固定金额场景极少，二期再补
-> 3. 三级继承：模板默认 → 渠道可覆盖 → 组合可覆盖
-> 4. 公布价 = Σ(成本价 × (1+利润率%))，全段组合取 profit_full，分段组合取 profit_segment
+利润策略已从成本项内联字段重构为独立全局实体 `profit_strategy`（见 §3.8b）。成本项模板（§3.8）、渠道成本项（§3.9）、组合成本项（§3.11）均不再包含利润字段。
 
 ---
 

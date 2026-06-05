@@ -163,6 +163,8 @@
         .placeholder-tags .el-checkbox {
             margin-right: 16px;
         }
+
+        .is-readonly { pointer-events: none; opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -222,7 +224,7 @@
                     </el-table-column>
                     <el-table-column prop="status" label="状态" min-width="100" align="center">
                         <template #default="scope">
-                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'" effect="plain">
+                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'">
                                 {{ scope.row.status }}
                             </el-tag>
                         </template>
@@ -231,14 +233,8 @@
                     <el-table-column prop="updateTime" label="更新时间" min-width="160"></el-table-column>
                     <el-table-column label="操作" width="160" align="center" fixed="right">
                         <template #default="scope">
-                            <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">
-                                编辑
-                            </el-button>
-                            <el-button 
-                                link 
-                                :type="scope.row.status === '正常' ? 'danger' : 'success'" 
-                                size="small" 
-                                @click="toggleStatus(scope.row)">
+                            <el-button type="primary" link @click="openDialog('edit', scope.row)">编辑</el-button>
+                            <el-button :type="scope.row.status === '正常' ? 'danger' : 'success'" link @click="toggleStatus(scope.row)">
                                 {{ scope.row.status === '正常' ? '冻结' : '启用' }}
                             </el-button>
                         </template>
@@ -260,11 +256,11 @@
 
         <!-- 新增/编辑弹窗 -->
         <el-dialog 
-            :title="dialogType === 'add' ? '新增物流事件' : '编辑物流事件'" 
+            :title="dialogType === 'add' ? '新增物流事件' : (isReadonly ? '查看物流事件' : '编辑物流事件')" 
             v-model="dialogVisible" 
             width="650px"
             destroy-on-close>
-            <div style="padding: 10px 0; max-height: 60vh; overflow-y: auto;">
+            <div :class="{'is-readonly': isReadonly}" style="padding: 10px 0; max-height: 60vh; overflow-y: auto;">
                 <div class="a11y-form-group">
                     <label for="event-name-input" class="a11y-form-label">
                         <span style="color: #F56C6C; margin-right: 4px;">*</span>物流事件名称
@@ -350,8 +346,8 @@
             </div>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">返回</el-button>
-                    <el-button type="primary" @click="saveData">确定</el-button>
+                    <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+                    <el-button v-if="!isReadonly" type="primary" @click="saveData">确定</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -400,7 +396,9 @@
                     }
                 ]);
                 
-                // 分页
+                const isReadonly = ref(false);
+
+                // 分页相关
                 const currentPage = ref(1);
                 const pageSize = ref(10);
                 const total = ref(2);
@@ -418,9 +416,9 @@
                 // 切换状态 (启用/冻结)
                 const toggleStatus = (row) => {
                     const action = row.status === '正常' ? '冻结' : '启用';
-                    ElementPlus.ElMessageBox.confirm(
-                        `确定要${action}事件【${row.eventName}】吗？`,
-                        `${action}提示`,
+                    ElMessageBox.confirm(
+                        `确定要${action}该物流事件吗？`,
+                        '提示',
                         {
                             confirmButtonText: '确定',
                             cancelButtonText: '取消',
@@ -428,7 +426,10 @@
                         }
                     ).then(() => {
                         row.status = row.status === '正常' ? '已冻结' : '正常';
-                        ElementPlus.ElMessage.success(`已${action}`);
+                        ElMessage({
+                            type: 'success',
+                            message: `${action}成功`
+                        });
                     }).catch(() => {});
                 };
 
@@ -447,8 +448,9 @@
                 });
 
                 // 打开弹窗
-                const openDialog = (type, row) => {
+                const openDialog = (type, row = null) => {
                     dialogType.value = type;
+                    isReadonly.value = type === 'edit' && row && row.status !== '正常';
                     if (type === 'edit' && row) {
                         formData.id = row.id;
                         formData.eventName = row.eventName;
@@ -524,8 +526,9 @@
                     handleSearch,
                     resetSearch,
                     toggleStatus,
-                    dialogVisible,
                     dialogType,
+                    dialogVisible,
+                    isReadonly,
                     formData,
                     openDialog,
                     saveData

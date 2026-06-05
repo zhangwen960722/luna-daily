@@ -127,6 +127,7 @@
         }
 
         /* 表格首行视觉区分优化 */
+        .is-readonly { pointer-events: none; opacity: 0.7; }
         .el-table th.el-table__cell {
             background-color: #FAFAFA !important;
             color: #303133;
@@ -206,11 +207,15 @@
                             </el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="操作" width="120" align="center" fixed="right">
+                    <el-table-column label="状态" width="80" align="center">
                         <template #default="scope">
-                            <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">
-                                编辑
-                            </el-button>
+                            <el-tag :type="scope.row.status==='正常'?'success':'danger'" size="small">{{ scope.row.status }}</el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="180" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">编辑</el-button>
+                            <el-button link :type="scope.row.status==='正常'?'warning':'success'" size="small" @click="togglePortStatus(scope.row)">{{ scope.row.status==='正常'?'禁用':'启用' }}</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -229,12 +234,12 @@
         </div>
 
         <!-- 新增/编辑弹窗 -->
-        <el-dialog 
-            :title="dialogType === 'add' ? '新增港口' : '编辑港口'" 
-            v-model="dialogVisible" 
+        <el-dialog
+            :title="dialogType === 'add' ? '新增港口' : (isPortReadonly ? '查看港口（已禁用）' : '编辑港口')"
+            v-model="dialogVisible"
             width="500px"
             destroy-on-close>
-            <div style="padding: 10px 0;">
+            <div :class="{'is-readonly': isPortReadonly}" style="padding: 10px 0;">
                 <div class="a11y-form-group">
                     <label for="type-select" class="a11y-form-label">
                         <span style="color: #F56C6C; margin-right: 4px;">*</span>类型
@@ -296,8 +301,8 @@
             </div>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">返回</el-button>
-                    <el-button type="primary" @click="saveData">确定</el-button>
+                    <el-button @click="dialogVisible = false">{{ isPortReadonly ? '关闭' : '返回' }}</el-button>
+                    <el-button v-if="!isPortReadonly" type="primary" @click="saveData">确定</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -317,17 +322,17 @@
 
                 // 表格数据
                 const tableData = ref([
-                    { id: 1, portName: '深圳港', portCode: 'szg', country: '中国', type: '海港' },
-                    { id: 2, portName: '上海港', portCode: 'shg', country: '中国', type: '海港' },
-                    { id: 3, portName: '盐田港', portCode: 'ytg', country: '中国', type: '海港' },
-                    { id: 4, portName: '南沙港', portCode: 'nsg', country: '中国', type: '海港' },
-                    { id: 5, portName: '长滩港', portCode: 'ctg', country: '美国', type: '海港' },
-                    { id: 6, portName: '洛杉矶港', portCode: 'lsjg', country: '美国', type: '海港' },
-                    { id: 7, portName: '杭州', portCode: 'hz', country: '中国', type: '空港' },
-                    { id: 8, portName: '北京', portCode: 'bj', country: '中国', type: '空港' },
-                    { id: 9, portName: '广州白云', portCode: 'gzby', country: '中国', type: '空港' },
-                    { id: 10, portName: '孟菲斯', portCode: 'mem', country: '美国', type: '空港' },
-                    { id: 11, portName: '路易斯维尔', portCode: 'sdf', country: '美国', type: '空港' }
+                    { id: 1, portName: '深圳港', portCode: 'szg', country: '中国', type: '海港', status: '正常' },
+                    { id: 2, portName: '上海港', portCode: 'shg', country: '中国', type: '海港', status: '正常' },
+                    { id: 3, portName: '盐田港', portCode: 'ytg', country: '中国', type: '海港', status: '正常' },
+                    { id: 4, portName: '南沙港', portCode: 'nsg', country: '中国', type: '海港', status: '正常' },
+                    { id: 5, portName: '长滩港', portCode: 'ctg', country: '美国', type: '海港', status: '正常' },
+                    { id: 6, portName: '洛杉矶港', portCode: 'lsjg', country: '美国', type: '海港', status: '正常' },
+                    { id: 7, portName: '杭州', portCode: 'hz', country: '中国', type: '空港', status: '正常' },
+                    { id: 8, portName: '北京', portCode: 'bj', country: '中国', type: '空港', status: '正常' },
+                    { id: 9, portName: '广州白云', portCode: 'gzby', country: '中国', type: '空港', status: '正常' },
+                    { id: 10, portName: '孟菲斯', portCode: 'mem', country: '美国', type: '空港', status: '正常' },
+                    { id: 11, portName: '路易斯维尔', portCode: 'sdf', country: '美国', type: '空港', status: '正常' }
                 ]);
                 
                 // 分页
@@ -349,6 +354,7 @@
                 // 弹窗控制
                 const dialogVisible = ref(false);
                 const dialogType = ref('add');
+                const isPortReadonly = ref(false);
                 const formData = reactive({
                     id: null,
                     portName: '',
@@ -365,6 +371,7 @@
                 // 打开弹窗
                 const openDialog = (type, row) => {
                     dialogType.value = type;
+                    isPortReadonly.value = (type === 'edit' && row && row.status !== '正常');
                     if (type === 'edit' && row) {
                         formData.id = row.id;
                         formData.portName = row.portName;
@@ -379,6 +386,16 @@
                         formData.type = '海港';
                     }
                     dialogVisible.value = true;
+                };
+
+                // 切换状态
+                const togglePortStatus = (row) => {
+                    var act = row.status === '正常' ? '禁用' : '启用';
+                    var msg = act === '禁用' ? '确定禁用港口【'+row.portName+'】？' : '确定启用港口【'+row.portName+'】？';
+                    ElementPlus.ElMessageBox.confirm(msg, '确认'+act, {confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){
+                        row.status = row.status === '正常' ? '已冻结' : '正常';
+                        ElementPlus.ElMessage.success('已'+act);
+                    }).catch(function(){});
                 };
 
                 // 保存数据
@@ -423,8 +440,10 @@
                     resetSearch,
                     dialogVisible,
                     dialogType,
+                    isPortReadonly,
                     formData,
                     openDialog,
+                    togglePortStatus,
                     saveData
                 };
             }

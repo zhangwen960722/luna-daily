@@ -1,0 +1,107 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>折算基准 - 超级运价</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+<script src="https://unpkg.com/element-plus"></script>
+<style>
+:root{--el-color-primary:#2DA44E}
+body,html{margin:0;padding:0;background:#f0f2f5;font-family:"Helvetica Neue",Helvetica,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;height:100%}
+#app{padding:20px;box-sizing:border-box;height:100%;display:flex;flex-direction:column}
+.content-card{background:#fff;padding:20px;border-radius:4px;box-shadow:0 1px 4px rgba(0,21,41,.08);margin-bottom:16px}
+.main-content{flex:1;display:flex;flex-direction:column;margin-bottom:0}
+.search-area{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.search-item{display:flex;flex-direction:column;gap:8px}
+.search-item label{color:#606266;font-size:14px;font-weight:500}
+.btn-search-primary{background-color:#2DA44E!important;border-color:#2DA44E!important;color:#FFF!important;height:32px}
+.btn-search-reset{background-color:#FFF!important;border-color:#DCDFE6!important;color:#000!important;height:32px}
+.table-container{flex:1;overflow:hidden}
+.el-table th.el-table__cell{background-color:#FAFAFA!important;color:#303133;font-weight:500}
+.is-readonly { pointer-events: none; opacity: 0.7; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="content-card">
+    <div class="search-area">
+      <div style="display:flex;align-items:center;gap:8px"><el-select v-model="filterTransport" placeholder="全部运输方式" clearable size="small" style="width:140px"><el-option label="海运" :value="10"></el-option><el-option label="空运" :value="20"></el-option><el-option label="洲际火车" :value="30"></el-option><el-option label="洲际卡车" :value="40"></el-option></el-select></div>
+      <div style="display:flex;align-items:center;gap:8px"><el-select v-model="filterType" placeholder="全部基准类型" clearable size="small" style="width:140px"><el-option label="头程" :value="10"></el-option><el-option label="派送" :value="20"></el-option></el-select></div>
+      <el-button class="btn-search-primary" @click="doSearch">查询</el-button>
+      <el-button class="btn-search-reset" @click="resetSearch">重置</el-button>
+      <div style="margin-left:auto"><el-button type="primary" @click="addRow">新增</el-button></div>
+    </div>
+  </div>
+  <div class="content-card main-content">
+    <div class="table-container">
+      <el-table :data="filteredList" border height="100%" style="width:100%">
+        <el-table-column label="运输方式" min-width="120"><template #default="s">{{ s.row.transportLabel }}</template></el-table-column>
+        <el-table-column label="尾程方式" min-width="130"><template #default="s">{{ s.row.lastMileLabel||'—（头程）' }}</template></el-table-column>
+        <el-table-column label="基准类型" min-width="100">
+          <template #default="s">
+            <el-tag v-if="s.row.typeLabel === '头程'" type="success" size="small" effect="plain">{{ s.row.typeLabel }}</el-tag>
+            <el-tag v-else-if="s.row.typeLabel === '派送'" type="warning" size="small" effect="plain">{{ s.row.typeLabel }}</el-tag>
+            <span v-else>{{ s.row.typeLabel }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="KG基准" min-width="130" align="right"><template #default="s">{{ s.row.kgStandard!=null?s.row.kgStandard:'—' }}</template></el-table-column>
+        <el-table-column label="m³基准" min-width="130" align="right"><template #default="s">{{ s.row.cbmStandard!=null?s.row.cbmStandard:'—' }}</template></el-table-column>
+        <el-table-column label="状态" min-width="80" align="center"><template #default="s"><el-tag :type="s.row.enabled?'success':'danger'">{{s.row.enabled?'正常':'已冻结'}}</el-tag></template></el-table-column>
+        <el-table-column label="操作" min-width="140" align="center" fixed="right">
+          <template #default="s">
+            <el-button size="small" @click="editRow(s.row)">编辑</el-button>
+            <el-button size="small" :type="s.row.enabled?'danger':'success'" @click="toggleStatus(s.row)">{{s.row.enabled?'冻结':'启用'}}</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+  </div>
+  <el-dialog v-model="showEdit" :title="editMode?(isReadonly?'查看折算基准':'编辑折算基准'):'新增折算基准'" width="460px" :close-on-click-modal="false">
+    <div :class="{'is-readonly': isReadonly}">
+    <el-form :model="form" label-width="110px">
+      <el-form-item label="运输方式" required><el-select v-model="form.transportMode" :disabled="editMode" style="width:100%"><el-option label="海运" :value="10"></el-option><el-option label="空运" :value="20"></el-option><el-option label="洲际火车" :value="30"></el-option><el-option label="洲际卡车" :value="40"></el-option></el-select></el-form-item>
+      <el-form-item label="尾程方式" required><el-select v-model="form.lastMile" :disabled="editMode" style="width:100%"><el-option label="头程（不区分尾程）" value="none"></el-option><el-option label="卡派" value="卡派"></el-option><el-option label="快递派" value="快递派"></el-option></el-select></el-form-item>
+      <el-form-item label="基准类型" required><el-select v-model="form.standardType" :disabled="editMode" style="width:100%"><el-option label="头程" :value="10"></el-option><el-option label="派送" :value="20"></el-option></el-select></el-form-item>
+      <el-form-item label="KG基准" required><el-input-number v-model="form.kgStandard" :min="1" style="width:100%"></el-input-number></el-form-item>
+      <el-form-item label="m³基准" required><el-input-number v-model="form.cbmStandard" :min="0.01" :precision="2" style="width:100%"></el-input-number></el-form-item>
+    </el-form>
+    </div>
+    <template #footer><el-button @click="showEdit=false">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="saveEdit">保存</el-button></template>
+  </el-dialog>
+</div>
+<script>
+(function(){
+var app=Vue.createApp({
+data:function(){return{
+  filterTransport:'',filterType:'',showEdit:false,editMode:false,editIdx:-1,form:{transportMode:10,lastMile:'none',standardType:10,kgStandard:null,cbmStandard:null},
+  list:[
+    {transportMode:10,transportLabel:'海运',lastMile:'none',lastMileLabel:'',standardType:10,typeLabel:'头程',kgStandard:12525,cbmStandard:75.0,enabled:true},
+    {transportMode:10,transportLabel:'海运',lastMile:'卡派',lastMileLabel:'卡派',standardType:20,typeLabel:'派送',kgStandard:350,cbmStandard:1.8,enabled:true},
+    {transportMode:10,transportLabel:'海运',lastMile:'快递派',lastMileLabel:'快递派',standardType:20,typeLabel:'派送',kgStandard:null,cbmStandard:null,enabled:true},
+    {transportMode:20,transportLabel:'空运',lastMile:'none',lastMileLabel:'',standardType:10,typeLabel:'头程',kgStandard:6000,cbmStandard:null,enabled:true}
+  ]
+}},computed:{
+  isReadonly: function(){ return this.editMode && this.list[this.editIdx] && !this.list[this.editIdx].enabled; },
+  filteredList:function(){var self=this;return self.list.filter(function(x){if(self.filterTransport&&x.transportMode!==self.filterTransport)return false;if(self.filterType&&x.standardType!==self.filterType)return false;return true})}
+},methods:{
+  doSearch:function(){ElementPlus.ElMessage.success('查询完成')},
+  resetSearch:function(){this.filterTransport='';this.filterType=''},
+  addRow:function(){this.editMode=false;this.form={transportMode:10,lastMile:'none',standardType:10,kgStandard:null,cbmStandard:null};this.showEdit=true},
+  toggleStatus:function(row){var self=this;var action=row.enabled?'冻结':'启用';ElementPlus.ElMessageBox.confirm('确定要'+action+'该折算基准吗？','状态变更提示',{type:'warning'}).then(function(){row.enabled=!row.enabled;ElementPlus.ElMessage.success('已成功'+action)}).catch(function(){})},
+  editRow:function(row){this.editMode=true;this.editIdx=this.list.indexOf(row);this.form={transportMode:row.transportMode,lastMile:row.lastMile,standardType:row.standardType,kgStandard:row.kgStandard,cbmStandard:row.cbmStandard};this.showEdit=true},
+  saveEdit:function(){
+    if(this.form.kgStandard===null||this.form.kgStandard===undefined){ElementPlus.ElMessage.warning('请输入KG基准');return}
+    if(this.form.cbmStandard===null||this.form.cbmStandard===undefined){ElementPlus.ElMessage.warning('请输入m³基准');return}
+    var transportLabel=this.form.transportMode===10?'海运':(this.form.transportMode===20?'空运':(this.form.transportMode===30?'洲际火车':'洲际卡车'));
+    var typeLabel=this.form.standardType===10?'头程':'派送';var lastMileLabel=this.form.lastMile==='none'?'':this.form.lastMile;
+    if(this.editMode){var row=this.list[this.editIdx];row.kgStandard=this.form.kgStandard;row.cbmStandard=this.form.cbmStandard;ElementPlus.ElMessage.success('折算基准已更新，下周新建批次时生效')}
+    else{var self=this;var dup=this.list.find(function(x){return x.transportMode===self.form.transportMode&&x.lastMile===self.form.lastMile&&x.standardType===self.form.standardType});if(dup){ElementPlus.ElMessage.warning('已存在相同的组合');return}this.list.push({transportMode:this.form.transportMode,transportLabel:transportLabel,lastMile:this.form.lastMile,lastMileLabel:lastMileLabel,standardType:this.form.standardType,typeLabel:typeLabel,kgStandard:this.form.kgStandard,cbmStandard:this.form.cbmStandard,enabled:true});ElementPlus.ElMessage.success('折算基准已新增')}
+    this.showEdit=false
+  }
+}});
+app.use(ElementPlus);app.mount('#app');
+})();
+</script>
+</body>
+</html>

@@ -204,7 +204,7 @@
                     </el-table-column>
                     <el-table-column prop="status" label="状态" min-width="100" align="center">
                         <template #default="scope">
-                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'" effect="plain">
+                            <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'">
                                 {{ scope.row.status }}
                             </el-tag>
                         </template>
@@ -220,7 +220,7 @@
                                 :type="scope.row.status === '正常' ? 'danger' : 'success'" 
                                 size="small" 
                                 @click="toggleStatus(scope.row)">
-                                {{ scope.row.status === '正常' ? '禁用' : '启用' }}
+                                {{ scope.row.status === '正常' ? '冻结' : '启用' }}
                             </el-button>
                         </template>
                     </el-table-column>
@@ -241,11 +241,11 @@
 
         <!-- 新增/编辑弹窗 -->
         <el-dialog 
-            :title="dialogType === 'add' ? '新增费用类型' : '编辑费用类型'" 
+            :title="dialogType === 'add' ? '新增费用类型' : (isReadonly ? '查看费用类型' : '编辑费用类型')" 
             v-model="dialogVisible" 
-            width="500px"
+            width="650px"
             destroy-on-close>
-            <div style="padding: 10px 0;">
+            <div :class="{'is-readonly': isReadonly}" style="padding: 10px 0; max-height: 60vh; overflow-y: auto;">
                 <div class="a11y-form-group">
                     <label for="fee-name-input" class="a11y-form-label">
                         <span style="color: #F56C6C; margin-right: 4px;">*</span>费用名称
@@ -273,8 +273,8 @@
             </div>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="dialogVisible = false">返回</el-button>
-                    <el-button type="primary" @click="saveData">确定</el-button>
+                    <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+                    <el-button v-if="!isReadonly" type="primary" @click="saveData">确定</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -297,7 +297,9 @@
                     { id: 2, feeName: '超重费', feeDirection: '应付', status: '冻结', operator: '李四' }
                 ]);
                 
-                // 分页
+                const isReadonly = ref(false);
+
+                // 分页相关
                 const currentPage = ref(1);
                 const pageSize = ref(10);
                 const total = ref(2);
@@ -314,18 +316,21 @@
 
                 // 切换状态 (启用/禁用)
                 const toggleStatus = (row) => {
-                    const action = row.status === '正常' ? '禁用' : '启用';
-                    ElementPlus.ElMessageBox.confirm(
-                        `确定要${action}费用类型【${row.feeName}】吗？`,
-                        `${action}提示`,
+                    const action = row.status === '正常' ? '冻结' : '启用';
+                    ElMessageBox.confirm(
+                        `确定要${action}该费用类型吗？`,
+                        '提示',
                         {
                             confirmButtonText: '确定',
                             cancelButtonText: '取消',
                             type: 'warning',
                         }
                     ).then(() => {
-                        row.status = row.status === '正常' ? '冻结' : '正常';
-                        ElementPlus.ElMessage.success(`已${action}`);
+                        row.status = row.status === '正常' ? '已冻结' : '正常';
+                        ElMessage({
+                            type: 'success',
+                            message: `${action}成功`
+                        });
                     }).catch(() => {});
                 };
 
@@ -339,8 +344,9 @@
                 });
 
                 // 打开弹窗
-                const openDialog = (type, row) => {
+                const openDialog = (type, row = null) => {
                     dialogType.value = type;
+                    isReadonly.value = type === 'edit' && row && row.status !== '正常';
                     if (type === 'edit' && row) {
                         formData.id = row.id;
                         formData.feeName = row.feeName;
@@ -377,8 +383,9 @@
                     handleSearch,
                     resetSearch,
                     toggleStatus,
-                    dialogVisible,
                     dialogType,
+                    dialogVisible,
+                    isReadonly,
                     formData,
                     openDialog,
                     saveData
