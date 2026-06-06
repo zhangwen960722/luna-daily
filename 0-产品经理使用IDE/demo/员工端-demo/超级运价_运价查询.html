@@ -69,6 +69,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <div class="section-label">筛选条件（可选）</div>
     <div style="display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end">
       <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">运输方式</span><el-select v-model="query.mode" clearable placeholder="不限" style="width:100px"><el-option label="海运" value="sea"></el-option><el-option label="空运" value="air"></el-option></el-select></div>
+<div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">目的港</span><el-select v-model="query.destPort" clearable placeholder="不限" style="width:120px"><el-option label="长滩港" value="长滩港"></el-option><el-option label="洛杉矶港" value="洛杉矶港"></el-option><el-option label="奥克兰港" value="奥克兰港"></el-option></el-select></div>
       <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">服务渠道</span><el-select v-model="query.ch" clearable placeholder="不限" style="width:130px"><el-option label="美森360" value="美森360"></el-option><el-option label="美森432" value="美森432"></el-option></el-select></div>
       <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">包税方式</span><el-select v-model="query.tax" clearable placeholder="不限" style="width:110px"><el-option label="包税" value="包税"></el-option><el-option label="不包税" value="不包税"></el-option></el-select></div>
       <div><span style="font-size:13px;color:#606266;display:block;margin-bottom:4px">交货地</span><el-select v-model="query.pu" style="width:110px"><el-option label="珠三角" value="珠三角"></el-option><el-option label="汕头" value="汕头"></el-option><el-option label="义乌" value="义乌"></el-option></el-select></div>
@@ -108,6 +109,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-table-column label="盈亏" width="65" align="center"><template #default="s"><el-tag :type="s.row._profitTag" size="small">{{ s.row._profitLabel }}</el-tag></template></el-table-column>
     <el-table-column prop="sail" label="船期" min-width="140"></el-table-column>
     <el-table-column prop="pick" label="最快提取" width="80"></el-table-column>
+    <el-table-column label="操作" width="130" fixed="right"><template #default="s"><el-button size="small" type="primary" text @click="expandDetail(s.row,s.$index)">[展开费用明细]</el-button></template></el-table-column>
   </el-table>
   <p v-if="unmatchedHint" style="color:#E6A23C;margin-top:8px;font-size:12px">{{ unmatchedHint }}</p>
 
@@ -129,7 +131,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 var app = Vue.createApp({
   data: function(){
     return {
-      query: { dest:'US', wh:'ONT8', pcs:3, wt:60, bill:['KG'], mode:'', ch:'', tax:'', pu:'珠三角', cust:'', prodType:'', len:undefined, wid:undefined, ht:undefined },
+      query: { dest:'US', wh:'ONT8', pcs:3, wt:60, bill:['KG'], mode:'', ch:'', tax:'', pu:'珠三角', cust:'', prodType:'', destPort:'', len:undefined, wid:undefined, ht:undefined },
       showResult: false, results: [], matchSteps: [], unmatchedHint: ''
     };
   },
@@ -176,10 +178,10 @@ var surcharges=[], scTotal=0;
       this.results = matched.map(function(p){
         var disc = p.pub ? (p.pub*discRate).toFixed(1) : null;
         var fp = p.pub ? ((p.pub*discRate)+scTotal).toFixed(1) : null;
-        var profit = fp && p.cost ? (parseFloat(fp)-p.cost).toFixed(2) : null;
-        var profitClass = profit ? (profit>=1?'price-green':profit>=0?'price-yellow':'price-red') : '';
-        var profitTag = profit ? (profit>=1?'success':profit>=0?'warning':'danger') : 'info';
-        var profitLabel = profit ? (profit>=1?'盈利':profit>=0?'薄利':'亏本') : '无报价';
+        var profitRate = fp && p.cost && p.cost>0 ? ((parseFloat(fp)-p.cost)/p.cost) : null;
+        var profitClass = profitRate!=null ? (profitRate>=0.05?'price-green':profitRate>=0?'price-yellow':'price-red') : '';
+        var profitTag = profitRate!=null ? (profitRate>=0.05?'success':profitRate>=0?'warning':'danger') : 'info';
+        var profitLabel = profitRate!=null ? (profitRate>=0.05?'盈利':profitRate>=0?'薄利':'亏本') : '无报价';
         return {ch:p.ch,bill:p.bill,pub:p.pub?String(p.pub):'暂未报价',discRule:discRuleName,disc:disc?disc:'—',surch:surcharges,fp:fp?fp+'/KG':'—',cost:p.cost||0,sail:p.sail,pick:p.pick,_profitClass:profitClass,_profitTag:profitTag,_profitLabel:profitLabel};
       });
 
@@ -196,6 +198,16 @@ var surcharges=[], scTotal=0;
       ];
 
       this.showResult = true;
+    },
+    expandDetail: function(row, idx){
+      var detail = '渠道: ' + row.ch + '\n';
+      detail += '公布价: ' + row.pub + '\n';
+      detail += '折扣: ' + (row.discRule || '无') + ' → ' + (row.disc||'—') + '\n';
+      detail += '附加费: ' + (row.surch && row.surch.length ? row.surch.join(', ') : '无') + '\n';
+      detail += '最终报价: ' + (row.fp||'—') + '\n';
+      detail += '成本底价: ' + (row.cost||'—') + '\n';
+      detail += '盈亏状态: ' + (row._profitLabel||'—');
+      ElementPlus.ElMessageBox.alert(detail, '费用明细 — '+row.ch, {confirmButtonText:'关闭',customStyle:'white-space:pre-line;font-size:13px'});
     }
   }
 });

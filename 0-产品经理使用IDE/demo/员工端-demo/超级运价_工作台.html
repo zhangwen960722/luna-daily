@@ -265,8 +265,8 @@ var app = Vue.createApp({
       },
       allPriceData: {
         '2026-W05（1/26-2/1）': [
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'8KG+',pickupRegion:'珠三角',priceKg:'11.00',priceCbm:'—',_dimType:'wh',_initKg:'10.60',_overridden:true},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:'10.80',priceCbm:'—',_dimType:'wh',_initKg:'10.60',_overridden:true},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'8KG+',pickupRegion:'珠三角',priceKg:'11.00',priceCbm:'—',_dimType:'wh',_initKg:'10.60',_overridden:true,_costKg:'9.50'},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:'10.80',priceCbm:'—',_dimType:'wh',_initKg:'10.60',_overridden:true,_costKg:'9.00'},
           {comboName:'美森360-海运-卡派-m³-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'2m³+',pickupRegion:'珠三角',priceKg:'—',priceCbm:'1488.00',_dimType:'wh',_initCbm:'1160.11',_overridden:true},
           {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8',weightTier:'101KG+',pickupRegion:'珠三角',priceKg:'9.70',priceCbm:'—',_dimType:'wh',_initKg:'6.16',_overridden:true},
           {comboName:'美森360-海运-快递派-KG-包税-散货',warehouseGroup:'',weightTier:'1KG+',pickupRegion:'珠三角',priceKg:'12.00',priceCbm:'—',_dimType:'zip',zipPrefixes:'8,9',_initKg:'9.78',_overridden:true},
@@ -310,7 +310,7 @@ var app = Vue.createApp({
         var key=(r.comboName||'')+'|'+(r.warehouseGroup||r.zipPrefixes||'')+'|'+(r.pickupRegion||'');
         if(!map[key]){ map[key]={_key:key,comboName:r.comboName,warehouseGroup:r._dimType==='zip'?(r.zipPrefixes||''):(r.warehouseGroup||''),_dimType:r._dimType||'wh',pickupRegion:r.pickupRegion,weightTiers:[]}; }
         var ref=self.costRefMap[r.comboName]||{};
-        var cKg=ref.costKg?parseFloat(ref.costKg):null,cCbm=ref.costCbm?parseFloat(ref.costCbm):null;
+        var cKg=r._costKg!=null?parseFloat(r._costKg):(ref.costKg?parseFloat(ref.costKg):null);var cCbm=r._costCbm!=null?parseFloat(r._costCbm):(ref.costCbm?parseFloat(ref.costCbm):null);
         var pKg=r.priceKg!=='—'?parseFloat(r.priceKg):null,pCbm=r.priceCbm!=='—'?parseFloat(r.priceCbm):null;
         var iKg=r._initKg?parseFloat(r._initKg):null,iCbm=r._initCbm?parseFloat(r._initCbm):null;
         map[key].weightTiers.push({
@@ -497,7 +497,7 @@ var app = Vue.createApp({
       var self=this; var ref=this.costRefMap[this.priceForm.comboName]||{};
       var snap=this.selectedBatch&&this.selectedBatch._snapshot?this.selectedBatch._snapshot:{profitRate:15.0};
       var pRate=snap.profitRate/100;
-      var cKg=ref.costKg?parseFloat(ref.costKg):null,cCbm=ref.costCbm?parseFloat(ref.costCbm):null;
+      var cKg=r._costKg!=null?parseFloat(r._costKg):(ref.costKg?parseFloat(ref.costKg):null);var cCbm=r._costCbm!=null?parseFloat(r._costCbm):(ref.costCbm?parseFloat(ref.costCbm):null);
       var iKg=cKg!==null?(cKg*(1+pRate)).toFixed(2):null,iCbm=cCbm!==null?(cCbm*(1+pRate)).toFixed(2):null;
       var wg=this.priceForm._dimType==='zip'?this.priceForm.zipPrefixes:this.priceForm.warehouseGroup;
       this.weightTiers.forEach(function(t){

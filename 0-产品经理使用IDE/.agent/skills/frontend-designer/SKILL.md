@@ -1,598 +1,458 @@
-# 前端 Demo 样式规范 — LUNA
+---
+name: frontend-designer
+description: 原型设计师，基于项目沉淀的组件库、交互模式和设计规范生成可运行的单文件HTML原型
+---
 
-> **版本**：V1.0  
-> **适用范围**：飞点跨境供应链 TMS 系统 — 员工端所有前端 Demo  
-> **最后更新**：2026-05-26  
-> **基于**：`1-demo/产品原型/员工端-demo/` 下 34 个 HTML 原型提炼
+# Frontend Designer Skill
+
+你现在是**熟悉本项目前端规范的前端架构师**。你的任务不是写一个通用页面，而是**严格遵循项目已沉淀的设计模式**生成可直接运行的原型。
 
 ---
 
-## 1. 技术栈
+## 🎯 When to use this skill
 
-| 层级 | 选型 | 引入方式 |
-|------|------|---------|
-| 框架 | Vue 3 | CDN `unpkg.com/vue@3/dist/vue.global.js` |
-| 组件库 | Element Plus | CDN `unpkg.com/element-plus` |
-| 图标 | @element-plus/icons-vue | CDN |
-| 图表 | ECharts 5 | CDN（仅首页 Dashboard 使用） |
+### 系统触发
+| 触发方 | 步骤 |
+|--------|------|
+| `3-generate-specs.md` | Step 4 |
 
-```html
-<!-- 标准头部引用 -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
-<script src="https://unpkg.com/element-plus"></script>
-<script src="https://unpkg.com/@element-plus/icons-vue"></script>
+### 关键词触发
+| 关键词 | 示例 |
+|--------|------|
+| "画页面"、"做页面"、"生成页面"、"Demo" | "帮我把这个列表页画出来" |
+| "原型"、"HTML"、"前端" | "生成一个运价查询的原型" |
+| "界面"、"长什么样"、"交互"、"弹窗" | "这个新增弹窗长什么样" |
+| "注册"、"index"、"菜单"、"导航" | "把这个新页面注册到菜单里" |
+| "改样式"、"调整布局"、"换颜色"、"加按钮" | "帮我把表格的表头改成灰色" |
+
+### 场景触发
+| 场景 |
+|------|
+| PRD 中的页面规格需要可视化，生成可运行的单文件 HTML |
+| 用户直接要求做一个原型页面来验证交互 |
+| 需要修改现有原型页面的字段、布局或交互 |
+
+## 📥 输入
+
+### 1. 对话上下文（已加载，直接提取）
+
+- 用户在本轮对话中描述的修改/新增内容：改什么字段、加什么按钮、调整什么布局等
+- 若涉及多个改动点，逐一列出，不遗漏
+
+### 2. 必读文件（生成/修改前先加载）
+
+#### 上游文档
+| 文档 | 路径模式 | 本次对象 |
+|------|---------|---------|
+| 用户需求(RDD) | `drafts/[模块名]/YYYY-MM-DD-用户需求.md` | 从对话中确定模块名，取最新日期 |
+| 数据设计 | `drafts/[模块名]/YYYY-MM-DD-数据设计.md` | 同上 |
+| PRD | `drafts/[模块名]/YYYY-MM-DD-PRD.md` | 同上（如已产出） |
+
+> 重点关注：页面对应的字段列表、字段类型、交互行为、关联接口
+
+#### 端侧参考（必读）
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| 员工端首页 | `demo/员工端-demo/index.html` | 菜单结构、注册方式 |
+| 货主端首页 | `demo/货主端-demo/index.html` | 同上 |
+| 同端已有页面 | `demo/[对应端]-demo/` 下至少 2-3 个 `.html` | 确保样式和交互模式一致 |
+
+#### 项目参考
+| 文件 | 路径 |
+|------|------|
+| 项目规则 | `.agent/rules/project-rule.md` |
+
+### 3. 冲突处理（生成前必执行）
+
+若读取的上游文档之间存在不一致（如用户需求(RDD)字段表 vs PRD 字段定义 vs 数据设计 Schema）：
+
+1. **以 PRD 为准**（PRD 是面向研发的最终规格，通常为最新版本）
+2. **主动提醒用户**："检测到 [文档A] 与 [文档B] 中 [字段名] 的定义不一致（A: X / B: Y），已以 PRD 为准生成。是否需要同步更新？"
+3. 不得跳过提醒、不得自行决定忽略
+
+### 4. 操作目标
+
+- 若新增页面：页面名称 + 归属端（员工端/货主端）+ 归属菜单
+- 若修改已有页面：对应的 HTML 文件路径（从对话上下文或文件列表中确认）
+
+---
+
+## 🧱 技术栈（不可替换）
+
+```
+Vue 3 CDN   → <script src="https://unpkg.com/vue@3/dist/vue.global.js">
+Element Plus → <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+               <script src="https://unpkg.com/element-plus">
+Icons       → <script src="https://unpkg.com/@element-plus/icons-vue">
 ```
 
+- **单文件 HTML**，无构建工具、无 npm、无 TypeScript 编译
+- **Mock 数据内联**在 `<script>` 的 `setup()` 中，用 `reactive` / `ref` 数组
+- **不引入额外 CDN**，不换组件库
+
 ---
 
-## 2. 主题色系
+## 🎨 样式系统
 
-### 2.1 主色（绿色系）
-
-LUNA 使用 **绿色** 作为品牌主色，区别于传统 ERP 的蓝色/紫色。
-
-| Token | 色值 | 用途 |
-|-------|------|------|
-| `--el-color-primary` | `#2DA44E` | 主按钮、链接、选中态、Tab 激活下划线 |
-| `--el-color-primary-light-3` | `#6bc083` / `#2C974B` | 浅色变体 |
-| `--el-color-primary-light-5` | `#95cfa4` | |
-| `--el-color-primary-light-7` | `#bee5c6` | |
-| `--el-color-primary-light-9` | `#e9f7ea` | 极浅背景 |
-| `--el-color-primary-dark-2` | `#24833e` | 深色悬停 |
-
-### 2.2 CSS 变量定义
+### 主题色
 
 ```css
 :root {
-    --el-color-primary: #2DA44E;
-    --el-color-primary-light-3: #2C974B;
-    --el-color-danger: #F53F3F;
-    --el-border-color: #DCDFE6;
+    --el-color-primary: #2DA44E;      /* 绿色主色 */
     --el-bg-color: #F5F7FA;
     --el-text-color-primary: #303133;
     --el-text-color-regular: #606266;
+    --el-border-color: #DCDFE6;
     --el-border-radius-base: 4px;
 }
 ```
 
-### 2.3 状态色
+### 字体层级
 
-| 状态 | 色值 | 用途 |
+- 页面标题：`24px` 加粗 | 区块标题：`16px` 加粗 | 正文：`14px` | 辅助：`12px`
+
+### 间距系统（8px 网格）
+
+- `4px` 元素内部 | `8px` 相关元素间 | `16px` 区块内部 | `24px` 区块间 | `32px` 页面分区
+
+### 组件尺寸速查
+
+| 组件 | 高度 | 圆角 |
 |------|------|------|
-| 成功 | `#67C23A` | 成功标签、正向趋势 |
-| 危险/错误 | `#F56C6C` / `#F53F3F` | 删除按钮、异常标签、负向趋势 |
-| 警告 | `#E6A23C` | 警告提示 |
-| 信息 | `#909399` | 辅助信息、次要文字 |
+| 按钮 | 32px | 6px |
+| 输入框 | 32px | 6px |
+| 表格行 | 40px | — |
+| 分页 | 32px | 6px |
 
-### 2.4 中性色
-
-| Token | 色值 | 用途 |
-|-------|------|------|
-| 页面背景 | `#F5F7FA` / `#f0f2f5` | body 背景 |
-| 卡片背景 | `#FFFFFF` | 内容卡片 |
-| 主文字 | `#303133` | 标题、正文 |
-| 常规文字 | `#606266` | 表单标签、表格文字 |
-| 辅助文字 | `#909399` | 提示、占位符 |
-| 边框 | `#DCDFE6` | 表格边框、卡片边框 |
-| 浅灰背景 | `#FAFAFA` | 表格表头、弹窗标题栏 |
-
----
-
-## 3. 字体排版
-
-### 3.1 字体族
+### PC 端基础样式
 
 ```css
-font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", 
-             "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-```
-
-### 3.2 字号层级
-
-| 层级 | 字号 | 粗细 | 用途 |
-|------|------|------|------|
-| 页面标题 | `20px` | `bold` | 页面主标题 |
-| 弹窗标题 | `18px` | `600` | Dialog 标题 |
-| 模块标题 | `16px` | `500` / `bold` | 卡片标题、表格标题 |
-| 区块标题 | `15px` | `bold` | section-title |
-| 正文 | `14px` | `normal` | 表格、表单、文字 |
-| 辅助文字 | `12px` | `normal` | 趋势文字、备注 |
-
-### 3.3 圆角
-
-| 元素 | 圆角值 |
-|------|--------|
-| 卡片、表格、输入框 | `4px` |
-| 表单模块卡片 | `6px` |
-| 菜单项 | `8px` |
-
----
-
-## 4. 布局系统
-
-### 4.1 整体框架
-
-```
-┌──────────────────────────────────────────────┐
-│ 侧边栏 (#304156)  │  顶部标签栏 + 工具栏       │
-│   Logo           │───────────────────────────│
-│   菜单项          │  内容区 (padding: 16px)    │
-│                  │  ┌─────────────────────┐  │
-│                  │  │  搜索筛选区          │  │
-│                  │  ├─────────────────────┤  │
-│                  │  │  操作按钮栏          │  │
-│                  │  ├─────────────────────┤  │
-│                  │  │  数据表格            │  │
-│                  │  ├─────────────────────┤  │
-│                  │  │  分页               │  │
-│                  │  └─────────────────────┘  │
-└──────────────────────────────────────────────┘
-```
-
-### 4.2 侧边栏
-
-```css
-/* 侧边栏 */
-.el-aside {
-    background-color: #304156;
-    color: #fff;
-    box-shadow: 2px 0 6px rgba(0,21,41,.35);
+body {
+    margin: 0;
+    padding: 16px;
+    background-color: var(--el-bg-color);
+    font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+    font-size: 14px;
+    color: var(--el-text-color-primary);
 }
 
-/* Logo 区域 */
-.sidebar-logo-container {
-    height: 60px;
-    background-color: #2b3643;
-    color: #fff;
-    font-size: 18px;
-    font-weight: bold;
-}
-
-/* 折叠按钮 */
-.sidebar-toggle-container {
-    height: 40px;
-    background-color: #2b3643;
-    color: #bfcbd9;
-    border-top: 1px solid #1f2d3d;
-}
-```
-
-### 4.3 内容卡片
-
-```css
+/* 列表页卡片 */
 .content-card {
     background-color: #FFFFFF;
-    border-radius: 4px;
-    padding: 16px;           /* 列表页 */
-    /* padding: 24px; */     /* 表单页 */
-    box-shadow: 0 1px 4px rgba(0,21,41,.08);
+    border-radius: var(--el-border-radius-base);
+    padding: 16px;
+    height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
     box-sizing: border-box;
 }
-```
 
-### 4.4 搜索区域
-
-```css
+/* 搜索筛选区（flex 流式，非灰底块） */
 .search-area {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     align-items: center;
-    flex-wrap: wrap;
+    margin-bottom: 16px;
 }
 
 .search-item {
     display: flex;
     align-items: center;
 }
+
 .search-item label {
     margin-right: 8px;
-    color: #606266;
+    color: var(--el-text-color-regular);
     font-size: 14px;
 }
-```
 
----
-
-## 5. 页面类型模板
-
-### 5.1 主列表页 (Main List)
-
-**结构**：搜索卡片 → Tab 页签 → 表格卡片（操作栏 + 表格 + 分页）
-
-```html
-<div id="app">
-    <!-- 搜索区域卡片 -->
-    <div class="content-card" style="height: auto; margin-bottom: 16px;">
-        <div class="search-area">
-            <el-input v-model="searchForm.keyword" placeholder="关键词" clearable style="width: 200px;" />
-            <el-select v-model="searchForm.type" placeholder="类型" clearable style="width: 200px;" />
-            <el-button class="btn-search-primary" @click="handleSearch">
-                <el-icon><Search /></el-icon>查询
-            </el-button>
-            <el-button class="btn-search-reset" @click="resetSearch">
-                <el-icon><RefreshRight /></el-icon>重置
-            </el-button>
-            <el-button type="success" style="margin-left: auto;" @click="handleAdd">新增</el-button>
-        </div>
-    </div>
-
-    <!-- 表格卡片 -->
-    <div class="content-card" style="flex: 1;">
-        <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-            <el-tab-pane label="Tab1" name="tab1" />
-        </el-tabs>
-        <el-table :data="tableData" border height="100%">
-            <!-- columns -->
-        </el-table>
-        <el-pagination background layout="total, prev, pager, next" :total="total" />
-    </div>
-</div>
-```
-
-### 5.2 表单页 (Form — 新增/编辑)
-
-**结构**：弹窗容器 → 标题栏 → 表单区（分模块卡片）→ 底部操作栏
-
-```html
-<div class="demo-container">
-    <!-- 标题栏 -->
-    <div class="dialog-header">
-        <span class="dialog-title">{{ pageTitle }}</span>
-    </div>
-
-    <!-- 表单区 -->
-    <div class="dialog-body">
-        <el-form label-position="top" :model="formData" :rules="rules">
-            <!-- 模块标题 -->
-            <div class="section-title">模块名称</div>
-            <el-row :gutter="24">
-                <el-col :span="8"> ... </el-col>
-            </el-row>
-        </el-form>
-    </div>
-
-    <!-- 底部操作栏 -->
-    <div class="footer-actions">
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">保存</el-button>
-        <el-button type="success" @click="handleSaveAndMore">保存并生成组合</el-button>
-    </div>
-</div>
-```
-
-**关键 CSS**：
-
-```css
-.demo-container {
-    width: 1000px;                  /* 固定宽度，居中 */
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.08);
+/* 表格容器 */
+.table-container {
+    flex: 1;
+    overflow: hidden;
 }
 
-.dialog-header {
-    padding: 16px 24px;
-    border-bottom: 1px solid #DCDFE6;
-}
-
-.section-title {
-    font-size: 15px;
-    font-weight: bold;
-    margin: 24px 0 16px;
-    padding-left: 8px;
-    border-left: 4px solid #2DA44E;
-}
-
-.footer-actions {
-    padding: 12px 24px;
-    border-top: 1px solid #DCDFE6;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-```
-
-### 5.3 详情页 (Detail / 档案)
-
-**结构**：弹窗容器 → 标题栏 → 内容区（模块化卡片 + 分区标题）→ 底部操作栏
-
-```html
-<div class="demo-container">
-    <div class="dialog-title">
-        <span>标题</span>
-        <el-button text @click="close">X</el-button>
-    </div>
-    <div class="form-content">
-        <div class="form-card">
-            <div class="section-title">模块一</div>
-            <el-descriptions :column="3" border />
-        </div>
-    </div>
-    <div class="form-actions">
-        <el-button @click="close">关闭</el-button>
-    </div>
-</div>
-```
-
-**表单模块卡片**：
-
-```css
-.form-card {
-    background-color: #fff;
-    border: 1px solid #ebeef5;
-    border-radius: 6px;
-    padding: 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-.form-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    border-color: #dcdfe6;
-}
-```
-
-### 5.4 弹窗配置 (Dialog Config)
-
-用于在列表页内嵌的配置弹窗（如运输服务 → 配置时效）。
-
-```html
-<el-dialog v-model="dialogVisible" :title="'配置时效 - ' + currentName" width="800px">
-    <el-tabs v-model="activeTab">
-        <el-tab-pane label="Tab1" name="tab1">
-            <!-- 表单或内嵌表格 -->
-        </el-tab-pane>
-        <el-tab-pane label="Tab2" name="tab2" :disabled="condition">
-            <!-- 条件禁用的 Tab -->
-        </el-tab-pane>
-    </el-tabs>
-    <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="save">保存</el-button>
-    </template>
-</el-dialog>
-```
-
----
-
-## 6. 组件样式规范
-
-### 6.1 按钮
-
-| 类型 | 类名 / 用法 | 样式 |
-|------|------------|------|
-| 主按钮 | `type="primary"` | 绿底白字 `#2DA44E` |
-| 成功按钮 | `type="success"` | 绿底白字 |
-| 搜索按钮 | `.btn-search-primary` | 绿底白字 `#2DA44E !important`，高 32px |
-| 重置按钮 | `.btn-search-reset` | 白底黑字，边框 `#DCDFE6`，高 32px |
-| 文字按钮 | `link type="primary"` | 无边框，用于表格操作列 |
-| 危险文字按钮 | `link type="danger"` | 红色文字，用于冻结/删除 |
-
-```css
-.btn-search-primary {
-    background-color: #2DA44E !important;
-    border-color: #2DA44E !important;
-    color: #FFFFFF !important;
-}
-.btn-search-reset {
-    background-color: #FFFFFF !important;
-    border-color: #DCDFE6 !important;
-    color: #000000 !important;
-}
-```
-
-### 6.2 表格
-
-```css
 /* 表头 */
 .el-table th.el-table__cell {
     background-color: #FAFAFA;
     color: #303133;
     font-weight: 500;
 }
-```
 
-| 属性 | 值 |
-|------|-----|
-| border | `true` |
-| height | `100%`（填满容器） |
-| 操作列宽度 | `120-180px`，fixed="right" |
-| 空状态 | 默认 |
+/* 行悬停 */
+.wb-row { cursor: pointer; }
+.wb-row:hover { background: #f0faf2; }
 
-### 6.3 状态标签 (Tag)
-
-| 场景 | type | effect |
-|------|------|--------|
-| 正常/启用 | `success` | `plain` （浅绿底） |
-| 已冻结/禁用 | `danger` | `plain` （浅红底） |
-| 标准信息标签 | `primary` | `light` |
-
-```html
-<el-tag :type="row.status === '正常' ? 'success' : 'danger'" effect="plain">
-    {{ row.status }}
-</el-tag>
-```
-
-### 6.4 表单
-
-- **label-position**：新增/编辑页用 `"top"`（标签在输入框上方）；搜索筛选区用默认（左侧）
-- **require-asterisk-position**：`"left"`（红色星号在标签左侧）
-- **输入框/选择框宽度**：`width: 100%`（表单内）；`style="width: 200px"`（搜索区）
-- **多选下拉**：`collapse-tags` 折叠标签
-
-### 6.5 分页
-
-```html
-<el-pagination background layout="total, prev, pager, next" :total="total" />
-```
-
-分页区域靠右：
-```css
+/* 分页 */
 .pagination-area {
     margin-top: 16px;
     display: flex;
     justify-content: flex-end;
 }
+
+/* 搜索按钮 */
+.btn-search-primary {
+    background-color: #2DA44E !important;
+    border-color: #2DA44E !important;
+    color: #FFFFFF !important;
+}
+
+.btn-search-reset {
+    background-color: #FFFFFF !important;
+    border-color: #DCDFE6 !important;
+    color: #000000 !important;
+}
+
+/* 弹窗分区标题 */
+.section-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #303133;
+    margin-top: 24px;
+    margin-bottom: 16px;
+    padding-left: 8px;
+    border-left: 4px solid #2DA44E;
+}
+.section-title:first-child {
+    margin-top: 0;
+}
+```
+
+
+> **运价模块变体**：超级运价系列页面使用压缩 CSS + `.card` 类（`border-radius:8px; box-shadow:...; padding:20px`）替代 `.content-card`，背景色 `--bg:#F0F2F5`。其余模块统一使用上述标准模式。
+
+### PDA 端基础样式
+
+PDA 是手机模拟器，固定尺寸：
+```css
+.pda { width:390px; height:844px; background:var(--bg); border-radius:40px; border:12px solid #2c3e50; box-shadow:0 20px 40px rgba(0,0,0,0.2); overflow:hidden; display:flex; flex-direction:column; position:relative; }
+.notch { position:absolute; top:0; left:50%; transform:translateX(-50%); width:150px; height:28px; background:#2c3e50; border-radius:0 0 18px 18px; z-index:10; }
+```
+
+PDA 头部：
+```css
+.bar { background:var(--p); color:#fff; padding:44px 12px 10px; display:flex; align-items:center; }
+.bar .t { position:absolute; left:50%; transform:translateX(-50%); font-size:16px; font-weight:600; }
 ```
 
 ---
 
-## 7. 弹窗规范
+## 📐 PC 端页面架构
 
-### 7.1 新增/编辑弹窗
+### 整体结构（固定模式）
+
+```
+el-card.page-card
+  └── el-tabs (v-model="activeTab", 每个Tab带数字角标)
+       ├── el-tab-pane (name="xxx")  ← 状态Tab
+       │    ├── .search-area > el-form :inline  ← 搜索区（灰底）
+       │    │    ├── el-form-item × N
+       │    │    └── [搜索] [重置]
+       │    └── el-table (border) ← 数据表格
+       └── el-tab-pane (name="yyy")
+            └── ...
+
+el-drawer (v-model, size="55%") ← 详情抽屉（在 el-card 外层）
+```
+
+### Tab 状态模式
+
+每个 Tab 对应一个业务状态，Tab 标签带数字角标：
+```html
+<el-tab-pane :label="'待收货 ('+pendingCount+')'" name="pending">
+<el-tab-pane :label="'已收货 ('+receivedCount+')'" name="received">
+```
+
+### 搜索区模式
+
+- 不同 Tab 的搜索条件**独立**（各自 `reactive` 对象）
+- 已完成类 Tab 的搜索时间字段标签与列表列名一致（"完成时间"→"完成时间"）
+- 搜索字段描述写在 `placeholder` 内，不外部放 label。模式选择：2-4 字段用 `.search-area` flex 流式；5+ 字段或含高级筛选用 `el-card` 包裹 `el-form :inline`
+
+### 表格列宽规范
+
+| 列类型 | 写法 | 说明 |
+|--------|------|------|
+| 固定窄列（状态/序号） | `width="80"` | 内容宽度固定 |
+| 操作列 | `width="160"`、`fixed="right"` | 固定在右侧，不被横向滚动带走 |
+| 常规列 | `min-width="120"` | 禁止写死 `width`，让列自适应 |
+| 长文本列 | `min-width="250"` + `show-overflow-tooltip` | 地址、描述等超长字段 |
+
+### 操作列按钮
 
 ```html
-<el-dialog v-model="visible" :title="title" width="400px" destroy-on-close>
-    <el-form :model="form" label-width="100px">
-        <!-- form items -->
-    </el-form>
+<el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+<el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+```
+
+### 状态标签色值
+
+| 业务状态 | `el-tag` type |
+|---------|---------------|
+| 正常、启用、生效 | `success`（绿） |
+| 已冻结、禁用、已取消 | `danger`（红）或 `info`（灰） |
+| 预告、待处理 | `warning`（橙） |
+| 草稿、待审核 | `info`（灰） |
+
+### 弹窗模板（el-dialog）
+
+```html
+<el-dialog v-model="dialogVisible" :title="isReadonly ? '查看XX' : '编辑XX'" width="800px" destroy-on-close>
+    <div :class="{'is-readonly': isReadonly}">
+        <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top">
+            <div class="section-title">基本信息</div>
+            <el-row :gutter="24">
+                <el-col :span="12">
+                    <el-form-item label="字段名" prop="field">
+                        <el-input v-model="formData.field" placeholder="请输入"></el-input>
+                    </el-form-item>
+                </el-col>
+            </el-row>
+        </el-form>
+    </div>
     <template #footer>
-        <el-button @click="visible = false">返回</el-button>
-        <el-button type="primary" @click="submit">确定</el-button>
+        <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+        <el-button v-if="!isReadonly" type="primary" @click="confirmSave">确 定</el-button>
     </template>
 </el-dialog>
 ```
+- 表单双列布局：`el-row :gutter="24"` + `el-col :span="12"`
+- 分区标题：`.section-title`（绿色左边框 4px + 加粗）
+- 弹窗宽度：简单表单 600px，复杂表单 800px
+- **不使用 `append-to-body`**（file:// 协议下跨 iframe 安全限制）
 
-### 7.2 确认弹窗
-
-```html
-ElMessageBox.confirm('确定要执行此操作吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-    dangerouslyUseHTMLString: true   // 如需在消息中嵌入 HTML
-})
-```
-
-### 7.3 消息提示
-
-```javascript
-ElMessage.success('操作成功');
-ElMessage.warning('请检查必填项');
-ElMessage.error('操作失败');
-```
-
----
-
-## 8. 图标使用
-
-### 8.1 注册方式
-
-```javascript
-// 全局注册所有图标（推荐）
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-    app.component(key, component);
-}
-```
-
-### 8.2 常用图标
-
-| 图标 | 组件名 | 场景 |
-|------|--------|------|
-| 搜索 | `<Search />` | 查询按钮 |
-| 重置 | `<RefreshRight />` | 重置按钮 |
-| 关闭 | `<Close />` | 弹窗关闭 |
-| 警告 | `<WarningFilled />` | 提示信息 |
-
----
-
-## 9. 图表规范（首页 Dashboard）
-
-### 9.1 ECharts 容器
+### 冻结数据弹窗只读
 
 ```css
-.chart-container {
-    height: 350px;
-    width: 100%;
-    background: #fff;
-}
+.is-readonly { pointer-events: none; opacity: 0.7; }
 ```
 
-### 9.2 统计卡片
+```javascript
+const isReadonly = ref(false);
+const openDialog = (type, row = null) => {
+    if (type === 'edit' && row && row.status !== '正常') {
+        isReadonly.value = true;
+    } else {
+        isReadonly.value = false;
+    }
+};
+```
 
-```css
-.stat-card { border: none; }
-.stat-title { font-size: 14px; color: #909399; }
-.stat-value { font-size: 28px; font-weight: bold; color: #303133; }
-.stat-trend { font-size: 12px; border-top: 1px solid #EBEEF5; padding-top: 10px; }
-.trend-up { color: #67C23A; font-weight: bold; }
-.trend-down { color: #F56C6C; font-weight: bold; }
+### 状态切换二次确认
+
+```javascript
+const toggleStatus = (row) => {
+    const action = row.status === '正常' ? '冻结' : '启用';
+    ElMessageBox.confirm(`确定要${action}该XX吗？`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+    }).then(() => {
+        row.status = row.status === '正常' ? '已冻结' : '正常';
+        ElMessage.success(`${action}成功`);
+    }).catch(() => {});
+};
 ```
 
 ---
 
-## 10. 响应式与间距
+## 📱 PDA 端页面架构
 
-### 10.1 栅格
+### 整体结构
+
+```
+.pda > .notch
+       > .bar (头部：返回按钮 + 居中标题 + 用户胶囊)
+       > .body > .body-in (内容区)
+```
+
+### 页面导航
+
+- **不使用 Vue Router**，用 `v-if` 状态机切换视图
+- `v` 变量控制当前页面：`'login'` → `'menu'` → `'inbound'` → ...
+- `navStack` 数组维护返回栈
+
+```javascript
+const v = ref('login');
+const navStack = ref([]);
+function goTo(page) { navStack.value.push(v.value); v.value = page; }
+function goBack() { if (navStack.value.length > 0) { v.value = navStack.value.pop(); } }
+```
+
+### 头部栏
 
 ```html
-<el-row :gutter="24">
-    <el-col :span="8">  <!-- 三列 --> </el-col>
-    <el-col :span="12"> <!-- 两列 --> </el-col>
-    <el-col :span="24"> <!-- 单列 --> </el-col>
-</el-row>
+<div class="bar">
+    <div class="l">
+        <div v-if="navStack.length>0" class="back" @click="goBack"><span>‹</span></div>
+    </div>
+    <div class="t">{{ pageTitle }}</div>
+    <div class="r">
+        <div class="bar-user" @click="showSwitcher=!showSwitcher">
+            <span class="bar-av">李</span><span>{{ userCenterShort }}</span><span>▼</span>
+        </div>
+    </div>
+</div>
 ```
 
-### 10.2 通用间距
+### 登录页
 
-| 场景 | 值 |
-|------|-----|
-| 页面 padding | `16px` / `20px` |
-| 卡片 padding | `16px`（列表）/ `24px`（表单） |
-| 卡片间距 | `16px` / `20px` |
-| 搜索区 gap | `16px` |
-| 表单行间距 | 由 `el-row :gutter` 控制 |
-| 模块标题 margin | `24px 0 16px` |
+- 用户名 + 密码 + 仓储中心下拉 → 登录按钮
+- 三个字段都填了才启用按钮 `:disabled="!user||!pwd||!center"`
+
+### 首页菜单
+
+4列网格 `.grid { grid-template-columns:1fr 1fr; gap:10px; }`
+菜单项 `.mi`：图标 + 标题 + 副标题，点击跳转
+
+### 操作页模式
+
+- **表单式，非相机式**：输入框 + [扫] 按钮，扫码自动填充，不模拟相机界面
+- **操作留页**：完成后清空表单留在当前页，不退回首页
+- **不重复展示**：扫描后输入框已有值，不再弹一行重复信息
+- **复选框精简**：标签即说明，不加括号解释
+- **连续快速**：连续扫码自动累计
 
 ---
 
-## 11. 数据模拟规范
+## 🔴 必须遵守的约束
 
-### 11.1 Mock 数据
-
-```javascript
-// 使用 Vue 3 Composition API
-const { createApp, ref, reactive, computed } = Vue;
-const { ElMessage, ElMessageBox } = ElementPlus;
-
-const tableData = ref([
-    { id: 1, name: '示例', status: '正常' },
-]);
-```
-
-### 11.2 页面间数据传递
-
-```javascript
-// 写入
-sessionStorage.setItem('key', JSON.stringify(data));
-// 读取
-const data = JSON.parse(sessionStorage.getItem('key') || '{}');
-```
+| # | 约束 | 原因 |
+|:---|:---|:---|
+| 1 | **禁用 `append-to-body`** | file:// 协议下跨 iframe 安全限制，el-drawer/el-dialog 都不加此属性 |
+| 2 | **详情/表单均用 `el-dialog` 居中弹窗** | 全项目统一弹窗交互，不用 `el-drawer` 右侧抽屉 |
+| 3 | **`el-table-column` 必须完整闭合** | CDN 模式下自闭合 `<el-table-column .../>` 会导致渲染白屏 |
+| 4 | **弹窗须加 `destroy-on-close`** | 关闭弹窗后再打开时残留上次表单数据 |
+| 5 | **`el-form-item` 须带 `prop` 属性** | 校验规则通过 `prop` 匹配，省略则 `required` 等校验失效 |
+| 6 | **Tab 搜索条件独立** | 不同 Tab 用各自 reactive 对象，切换 Tab 时不清空其他 Tab 的搜索状态 |
+| 7 | **Mock 数据真实合理** | 运单号用 FD{日期}{序号}，任务号用 IB-/TR- 前缀，时间用合理范围 |
+| 8 | **文件命名：模块前缀 + 功能描述** | 下划线分隔，如 `超级运价_工作台.html`、`查价订舱.html` |
+| 9 | **新页面要注册到 index.html** | 每个新原型页面都要在 index.html 的导航中加菜单项 |
+| 10 | **一个页面一个 HTML 文件** | 不拆组件文件，全部写在一个 HTML 里 |
 
 ---
 
-## 12. 命名约定
+## 📝 文件命名与位置
 
-| 元素 | 命名规则 | 示例 |
-|------|---------|------|
-| CSS 类名 | kebab-case | `.content-card`, `.search-area`, `.section-title` |
-| Vue data | camelCase | `tableData`, `dialogVisible`, `activeTab` |
-| Vue methods | camelCase | `handleSearch`, `resetSearch`, `handleAdd` |
-| 文件命名 | 中文\_页面类型 | `仓库列表_主列表.html`, `干线运输服务新增.html` |
+- **路径**: `demo/员工端-demo/[英文名].html` 或 `demo/货主端-demo/[英文名].html`（按角色分端）
+- **命名规则**: 小写 + 下划线，描述功能
+  - 员工端页面：`超级运价_工作台.html`, `超级运价_运价查询.html`, `仓库列表_主列表.html`
+  - 货主端页面：`查价订舱.html`, `商品管理.html`, `收货地址管理.html`
+- **首页**: `index.html`（Shell + 菜单路由 + iframe/组件加载）
 
 ---
 
-## 13. 代码检查清单
+## ↔️ 与 workflow 3 的对接
 
-生成前端 Demo 前，确认：
+> 若目标文件已存在则在原文件上修改，不新建。详见 project-rule §修改前判断。
 
-- [ ] 引用 Vue 3 + Element Plus CDN
-- [ ] `:root` 中设置了 `--el-color-primary: #2DA44E`
-- [ ] body 背景色为 `#F5F7FA` / `#f0f2f5`
-- [ ] 表格表头背景 `#FAFAFA`
-- [ ] 搜索按钮使用 `.btn-search-primary` / `.btn-search-reset`
-- [ ] 操作列 fixed="right" 且宽度合适
-- [ ] 弹窗 `destroy-on-close`
-- [ ] 表单必填字段有 `required` 校验
-- [ ] 状态标签使用 `effect="plain"`
-- [ ] 注册了所有 Element Plus Icons
+当 `/3-generate-specs` 的步骤4触发时：
+
+1. 读取本 skill 文件（样式规范、CSS 变量、组件尺寸均已内嵌）
+2. 读取对应的 PRD 或 数据设计文档（获取字段列表和交互流程）
+3. 按本 skill 的模式生成 HTML
+4. 确保 `demo/员工端-demo/index.html` 和 `demo/货主端-demo/index.html` 都注册新页面
+5. 输出时说明：新文件路径 + 两个 index.html 的变更
+
+> 执行完成后，若修改了任何设计文件（原型 / index.html），自动执行 project-rule §文件联动规则，确保 PRD 与原型一致性。
