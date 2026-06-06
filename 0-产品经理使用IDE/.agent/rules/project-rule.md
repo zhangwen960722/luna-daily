@@ -13,6 +13,24 @@ trigger: always_on
 > 
 > 优先级：project-rule §安全/文件/联动 > Skill 方法论 > project-rule §格式/命名
 
+### Agent 预读规则 ★ 最高
+
+> 主对话调用 Agent 执行任务时，必须在 prompt 开头附带以下预读指令。Agent 不得跳过。
+
+```
+## 执行前必读
+
+1. 读取 0-产品经理使用IDE/.agent/rules/project-rule.md
+2. 根据任务类型，读取对应的 Skill 文件：
+   - 需求分析 → .agent/skills/requirement-clarifier/SKILL.md
+   - 数据建模 → .agent/skills/data-modeler/SKILL.md
+   - 边界探测 → .agent/skills/edge-case-detector/SKILL.md
+   - PRD撰写 → .agent/skills/prd-writer/SKILL.md
+   - 原型生成/修改 → .agent/skills/frontend-designer/SKILL.md
+3. 按 Skill 定义的输出模板和规范执行，不得凭记忆
+4. 完成后执行 project-rule §修改后自检 + §文件联动规则
+```
+
 ---
 
 ## 产品思维
