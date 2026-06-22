@@ -189,7 +189,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10</td>
 <td>YES</td>
 <td>是</td>
-<td>customer 表 is_peer、supplier 表 is_peer</td>
+<td>customer 表 is_peer、supplier 表 is_peer、customer_contract 表 is_new_customer</td>
 </tr>
 <tr>
 <td>是否</td>
@@ -197,6 +197,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>NO</td>
 <td>否</td>
 <td>同上</td>
+</tr>
+<tr>
+<td>是否新客户</td>
+<td>10</td>
+<td>YES</td>
+<td>是</td>
+<td>customer_contract 表 is_new_customer 字段</td>
+</tr>
+<tr>
+<td>是否新客户</td>
+<td>20</td>
+<td>NO</td>
+<td>否</td>
+<td>同上（选&quot;否&quot;时老客户代码 old_customer_code 必填）</td>
 </tr>
 <tr>
 <td>合同签署状态</td>
@@ -1823,7 +1837,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li>类型：弹窗（550px）</li>
 <li>前置条件：enterpriseAttribute=中国大陆</li>
 </ul>
-<p><strong>V1.4 新增共有字段</strong>：</p>
+<p><strong>V1.7 新增签约共有字段</strong>：</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
@@ -1834,13 +1848,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </tr>
 </thead>
 <tbody><tr>
+<td>是否新客户</td>
+<td>Select</td>
+<td>✅</td>
+<td>是 / 否。选&quot;否&quot;时老客户代码必填</td>
+</tr>
+<tr>
+<td>老客户代码</td>
+<td>Input</td>
+<td>条件</td>
+<td>是否新客户=否 时显示 + 必填，写入 customer_contract.old_customer_code</td>
+</tr>
+<tr>
 <td>所属公司</td>
 <td>Select</td>
 <td>✅</td>
 <td>若从合同管理Tab新增合同流入，则默认带入且不可改；若从列表直接签约，则需选择</td>
 </tr>
 </tbody></table></div>
-<p><strong>4分支字段组合</strong>（除共有 所属公司 + 我司合同抬头 外）：</p>
+<p><strong>4分支字段组合</strong>（除共有 是否新客户+老客户代码 + 所属公司 + 我司合同抬头 外）：</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
@@ -1900,6 +1926,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </tr>
 </thead>
 <tbody><tr>
+<td>是否新客户</td>
+<td>Select</td>
+<td>✅</td>
+<td>是 / 否。选&quot;否&quot;时老客户代码必填</td>
+</tr>
+<tr>
+<td>老客户代码</td>
+<td>Input</td>
+<td>条件</td>
+<td>是否新客户=否 时显示 + 必填</td>
+</tr>
+<tr>
 <td>我司合同抬头</td>
 <td>Input(disabled)</td>
 <td>✅</td>
@@ -2818,6 +2856,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>删除 termination_date → 判断 end_date vs today</td>
 <td>end_date &gt; today → 30(已签署)；end_date ≤ today → 40(已过期)</td>
 <td>实时处理</td>
+</tr>
+<tr>
+<td>R53</td>
+<td>签约-是否新客户</td>
+<td>签约弹窗必填，默认&quot;是&quot;</td>
+<td>选&quot;是&quot;→老客户代码隐藏；选&quot;否&quot;→老客户代码显示+必填</td>
+<td>大陆+香港签约均适用</td>
+</tr>
+<tr>
+<td>R54</td>
+<td>签约-老客户代码</td>
+<td>is_new_customer=false 时必填</td>
+<td>写入 customer_contract.old_customer_code</td>
+<td>Toast &quot;请填写老客户代码&quot;</td>
 </tr>
 </tbody></table></div>
 <hr>
