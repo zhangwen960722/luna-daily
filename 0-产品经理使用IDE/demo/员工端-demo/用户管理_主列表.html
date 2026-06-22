@@ -468,6 +468,17 @@
         <el-dialog v-model="signDialogVisible" title="合同签约" width="550px" destroy-on-close>
             <el-form :model="signForm" @submit.prevent>
                 <div class="a11y-form-group">
+                    <label for="sign-is-new-customer" class="a11y-form-label is-required">是否新客户</label>
+                    <el-select id="sign-is-new-customer" v-model="signForm.isNewCustomer" placeholder="请选择" style="width: 100%;">
+                        <el-option label="是" value="是"></el-option>
+                        <el-option label="否" value="否"></el-option>
+                    </el-select>
+                </div>
+                <div class="a11y-form-group" v-if="signForm.isNewCustomer === '否'">
+                    <label for="sign-old-customer-code" class="a11y-form-label is-required">老客户代码</label>
+                    <el-input id="sign-old-customer-code" v-model="signForm.oldCustomerCode" placeholder="请输入老客户代码" style="width: 100%;"></el-input>
+                </div>
+                <div class="a11y-form-group">
                     <label for="sign-is-simple" class="a11y-form-label is-required">是否简易合同</label>
                     <el-select id="sign-is-simple" v-model="signForm.isSimple" placeholder="请选择" style="width: 100%;">
                         <el-option label="是" value="是"></el-option>
@@ -669,6 +680,15 @@
         <!-- 合同签约弹窗 (针对中国香港特殊客户) -->
         <el-dialog v-model="hkSignDialogVisible" title="合同签约" width="550px" destroy-on-close>
             <el-form :model="hkSignForm" :rules="hkSignRules" ref="hkSignFormRef" label-position="top">
+                <el-form-item label="是否新客户" required>
+                    <el-select v-model="hkSignForm.isNewCustomer" placeholder="请选择" style="width: 100%;">
+                        <el-option label="是" value="是"></el-option>
+                        <el-option label="否" value="否"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item v-if="hkSignForm.isNewCustomer === '否'" label="老客户代码" required>
+                    <el-input v-model="hkSignForm.oldCustomerCode" placeholder="请输入老客户代码" style="width: 100%;"></el-input>
+                </el-form-item>
                 <el-form-item label="我司合同抬头" prop="companyTitle" required>
                     <el-input v-model="hkSignForm.companyTitle" disabled placeholder="香港富力顿"></el-input>
                 </el-form-item>
@@ -963,6 +983,8 @@
                 const signDialogVisible = ref(false);
                 const currentSignRow = ref(null);
                 const signForm = reactive({
+                    isNewCustomer: '是',
+                    oldCustomerCode: '',
                     isSimple: '否',
                     isStandard: '是',
                     companyTitle: '广州飞点',
@@ -1044,6 +1066,8 @@
                 const hkSignDialogVisible = ref(false);
                 const hkSignFormRef = ref(null);
                 const hkSignForm = reactive({
+                    isNewCustomer: '是',
+                    oldCustomerCode: '',
                     companyTitle: '香港富力顿',
                     startDate: '',
                     endDate: '',
