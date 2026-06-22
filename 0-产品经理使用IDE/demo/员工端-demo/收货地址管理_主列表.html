@@ -111,6 +111,13 @@
                     <div class="search-item">
                         <el-input v-model="searchForm.phone" placeholder="联系电话" clearable style="width: 200px;"></el-input>
                     </div>
+                    <div class="search-item">
+                        <el-select v-model="searchForm.status" placeholder="审核状态" clearable style="width: 150px;">
+                            <el-option label="待审核" value="待审核"></el-option>
+                            <el-option label="已通过" value="已通过"></el-option>
+                            <el-option label="已拒绝" value="已拒绝"></el-option>
+                        </el-select>
+                    </div>
                     <div>
                         <el-button class="btn-search-primary" @click="handleSearch">
                             <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
@@ -147,13 +154,7 @@
             <el-tabs v-model="mainTab" @tab-click="handleMainTabClick">
                 <!-- ===== 收货地址管理 ===== -->
                 <el-tab-pane label="收货地址管理" name="shipping">
-                    <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-                        <el-tab-pane label="待审核" name="待审核"></el-tab-pane>
-                        <el-tab-pane label="已通过" name="已通过"></el-tab-pane>
-                        <el-tab-pane label="已拒绝" name="已拒绝"></el-tab-pane>
-                        <el-tab-pane label="全部" name="全部"></el-tab-pane>
-                    </el-tabs>
-                    <div class="table-container">
+                    <div class="table-container" style="margin-top: 16px;">
                         <el-table :data="tableData" border height="100%" style="width: 100%">
                             <el-table-column prop="contact" label="联系人" min-width="120"></el-table-column>
                             <el-table-column prop="phone" label="联系电话" min-width="150"></el-table-column>
@@ -268,8 +269,7 @@
                 // V2.3: 顶层Tab
                 const mainTab = ref('shipping');
 
-                const activeTab = ref('待审核');
-                const searchForm = reactive({ customerName: '', contact: '', phone: '' });
+                const searchForm = reactive({ customerName: '', contact: '', phone: '', status: '' });
                 const total = ref(2);
                 
                 const allData = [
@@ -279,19 +279,16 @@
 
                 const tableData = computed(() => {
                     let data = allData;
-                    if (searchForm.customerName) {
-                        data = data.filter(item => item.customerName.includes(searchForm.customerName));
-                    }
-                    if (activeTab.value === '全部') {
-                        return data;
-                    }
-                    return data.filter(item => item.status === activeTab.value);
+                    if (searchForm.customerName) data = data.filter(item => item.customerName.includes(searchForm.customerName));
+                    if (searchForm.contact) data = data.filter(item => item.contact.includes(searchForm.contact));
+                    if (searchForm.phone) data = data.filter(item => item.phone.includes(searchForm.phone));
+                    if (searchForm.status) data = data.filter(item => item.status === searchForm.status);
+                    return data;
                 });
 
                 const handleMainTabClick = () => {};
-                const handleTabClick = () => {};
                 const handleSearch = () => { ElMessage.success('执行搜索'); };
-                const resetSearch = () => { searchForm.customerName = ''; searchForm.contact = ''; searchForm.phone = ''; };
+                const resetSearch = () => { searchForm.customerName = ''; searchForm.contact = ''; searchForm.phone = ''; searchForm.status = ''; };
                 
                 const auditDialogVisible = ref(false);
                 const currentAuditRow = ref(null);
@@ -349,8 +346,8 @@
 
                 return {
                     mainTab,
-                    activeTab, searchForm, tableData, total,
-                    handleMainTabClick, handleTabClick, handleSearch, resetSearch,
+                    searchForm, tableData, total,
+                    handleMainTabClick, handleSearch, resetSearch,
                     pickupSearch, pickupTableData, pickupTotal,
                     handlePickupSearch, resetPickupSearch,
                     auditDialogVisible, currentAuditRow, handleAudit, handleReject, handleApprove
