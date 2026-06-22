@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据设计 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#0891b2}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#0891b215;color:#0891b2;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #0891b2;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#0891b2;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">港口仓库</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">数据设计</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>数据设计 — 仓库管理</h1>
+<blockquote>
+<p><strong>文档版本</strong>: v2.1 | <strong>日期</strong>: 2026-06-06 | <strong>作者</strong>: AI PM<br><strong>上游文档</strong>: <code>2026-06-06-用户需求.md</code><br><strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 &quot;平台仓库列表&quot; + &quot;仓库列表&quot;</p>
+</blockquote>
+<hr>
+<h3>一、实体清单 × 表映射</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>实体名称</th>
+<th>对应表/子表</th>
+<th>映射方式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Port (港口)</td>
+<td><code>port</code></td>
+<td>独立表</td>
+<td>海运港口和空运港口基础数据，供运单系统引用</td>
+</tr>
+<tr>
+<td>LocalWarehouse (本地仓)</td>
+<td><code>warehouse</code></td>
+<td>独立表</td>
+<td>国内集货仓/中转仓，地址内联在单表中。海外仓Tab待二期实现</td>
+</tr>
+<tr>
+<td>OverseasWarehouse (海外平台仓库)</td>
+<td><code>overseas_warehouse</code></td>
+<td>独立表</td>
+<td>FBA/其他平台仓库主记录，1:N 地址</td>
+</tr>
+<tr>
+<td>WarehouseAddress (仓库地址)</td>
+<td><code>overseas_warehouse_address</code></td>
+<td>子表</td>
+<td>通过 <code>overseas_warehouse_id</code> 关联父表</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p><strong>已恢复实体</strong>：Port (港口) — v2.0 曾基于 Excel 源数据缺失而移除。v2.1 经 Demo+Excel 数据融合后恢复：Demo <code>港口管理_主列表.html</code> 中存在完整的港口管理功能，Excel 无港口 Sheet 但不代表不需要。港口管理为运单系统的基础依赖数据。</p>
+</blockquote>
+<hr>
+<h3>二、逐表字段清单</h3>
+<h4>表0: <code>port</code> | 对应实体: Port (港口)</h4>
+<blockquote>
+<p><strong>设计说明</strong>: 存储海运港口和空运港口的基础数据。港口代码根据类型有不同长度约束（海港5位、空港3位），前后端均需校验。港口为运单系统的基础依赖数据，供起运港/目的港选择引用。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>port_name</code></td>
+<td align="left">港口名称</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;深圳港&quot;&quot;上海港&quot;&quot;杭州&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>port_code</code></td>
+<td align="left">港口代码</td>
+<td align="left">String(10)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">海港5位字符，空港3位字符</td>
+</tr>
+<tr>
+<td align="left"><code>country</code></td>
+<td align="left">国家</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;中国&quot;&quot;美国&quot;&quot;英国&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>type</code></td>
+<td align="left">港口类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:海港, 20:空港</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新 +1</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li>无内部关联。被运单系统引用（起运港/目的港），但引用关系在运单模块侧维护。</li>
+</ul>
+<hr>
+<h4>表1: <code>warehouse</code> | 对应实体: LocalWarehouse (本地仓)</h4>
+<blockquote>
+<p><strong>设计说明</strong>: 存储国内本地仓库信息，地址字段内联在单表中（一个仓库一个地址），含收货人联系方式。支持冻结/启用状态管理。列表页含&quot;本地仓&quot;和&quot;海外仓&quot;两个Tab，当前仅本地仓Tab有数据，海外仓Tab为占位（二期实现）。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>warehouse_code</code></td>
+<td align="left">仓库代码</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">如&quot;huadu&quot;&quot;baiyun&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>warehouse_name</code></td>
+<td align="left">仓库名称</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;花都仓&quot;&quot;白云仓&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>contact_name</code></td>
+<td align="left">收货人</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">手机号</td>
+<td align="left">String(11)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">11位数字，前后端均需校验</td>
+</tr>
+<tr>
+<td align="left"><code>country</code></td>
+<td align="left">国家</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">新增时默认&quot;中国&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>province</code></td>
+<td align="left">省份</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;广东省&quot;&quot;浙江省&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>city</code></td>
+<td align="left">城市</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;广州市&quot;&quot;深圳市&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>zipcode</code></td>
+<td align="left">邮编</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>address</code></td>
+<td align="left">详细地址</td>
+<td align="left">String(255)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新 +1</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li>无内部关联</li>
+</ul>
+<hr>
+<h4>表2: <code>overseas_warehouse</code> | 对应实体: OverseasWarehouse (海外平台仓库)</h4>
+<blockquote>
+<p><strong>设计说明</strong>: 存储FBA和其他海外平台的仓库主记录。<code>country_code</code> 冗余存储便于列表展示和搜索，与首个地址的国家代码保持同步。<code>warehouse_code</code> 需唯一性约束，防止重复录入。运单系统通过接口查询和新增此表数据。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>platform</code></td>
+<td align="left">仓库所属平台</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">FBA Tab下默认&quot;FBA&quot;；其他平台手动输入如&quot;WALMART&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>warehouse_code</code></td>
+<td align="left">仓库代码</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong> (tenant_id + warehouse_code 联合唯一索引)</td>
+<td align="left">如&quot;BWI1&quot;&quot;MEM1s&quot;&quot;IND2&quot;。唯一性校验</td>
+</tr>
+<tr>
+<td align="left"><code>country_code</code></td>
+<td align="left">国家代码</td>
+<td align="left">String(10)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如 US/GB/DE/CN，列表展示和搜索用</td>
+</tr>
+<tr>
+<td align="left"><code>data_source</code></td>
+<td align="left">数据来源</td>
+<td align="left">String(20)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">系统同步 / 客户录入</td>
+</tr>
+<tr>
+<td align="left"><code>confirm_status</code></td>
+<td align="left">确认状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:未确认, 20:已确认。运单新建时默认10</td>
+</tr>
+<tr>
+<td align="left"><code>update_time</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">最后更新时间</td>
+</tr>
+<tr>
+<td align="left"><code>creator</code></td>
+<td align="left">操作人</td>
+<td align="left">String(50)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">创建/更新人</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新 +1</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>One-to-Many</code> with <code>overseas_warehouse_address</code> (通过 <code>id</code> → <code>overseas_warehouse_id</code>)</li>
+</ul>
+<hr>
+<h4>表3: <code>overseas_warehouse_address</code> | 对应实体: WarehouseAddress (仓库地址)</h4>
+<blockquote>
+<p><strong>设计说明</strong>: 海外平台仓库的物理地址子表。一个仓库可绑定多个地址。<code>address_abbr</code> 为派生字段（仓库代码-邮编），由前端实时计算并提交存储。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>overseas_warehouse_id</code></td>
+<td align="left">仓库ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left">Index, FK</td>
+<td align="left">关联 <code>overseas_warehouse.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>country_code</code></td>
+<td align="left">国家代码</td>
+<td align="left">String(10)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如 US/UK/CN</td>
+</tr>
+<tr>
+<td align="left"><code>province</code></td>
+<td align="left">州/省</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如 CA/TX/GD</td>
+</tr>
+<tr>
+<td align="left"><code>city</code></td>
+<td align="left">城市</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>detail</code></td>
+<td align="left">详细地址</td>
+<td align="left">String(255)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">街道、门牌号</td>
+</tr>
+<tr>
+<td align="left"><code>zip_code</code></td>
+<td align="left">邮编</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>address_abbr</code></td>
+<td align="left">地址简称</td>
+<td align="left">String(100)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">派生字段：warehouse_code-zip_code，自动生成。前后端均存储</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新 +1</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>Many-to-One</code> with <code>overseas_warehouse</code> (通过 <code>overseas_warehouse_id</code>)</li>
+</ul>
+<hr>
+<h3>三、ER 关系图</h3>
+<pre><code class="language-mermaid">erDiagram
+    PORT {
+        BigInt id PK
+        String tenant_id
+        String port_name
+        String port_code
+        String country
+        TinyInt type
+        TinyInt status
+    }
+
+    WAREHOUSE {
+        BigInt id PK
+        String tenant_id
+        String warehouse_code
+        String warehouse_name
+        String contact_name
+        String phone
+        String country
+        String province
+        String city
+        String zipcode
+        String address
+        TinyInt status
+    }
+
+    OVERSEAS_WAREHOUSE {
+        BigInt id PK
+        String tenant_id
+        String platform
+        String warehouse_code
+        String country_code
+        String data_source
+        TinyInt confirm_status
+        DateTime update_time
+        String creator
+    }
+
+    OVERSEAS_WAREHOUSE_ADDRESS {
+        BigInt id PK
+        String tenant_id
+        BigInt overseas_warehouse_id FK
+        String country_code
+        String province
+        String city
+        String detail
+        String zip_code
+        String address_abbr
+    }
+
+    OVERSEAS_WAREHOUSE ||--o{ OVERSEAS_WAREHOUSE_ADDRESS : &quot;1:N (overseas_warehouse_id)&quot;
+</code></pre>
+<h3>四、关键设计说明</h3>
+<ul>
+<li><strong>已恢复表</strong>：<code>port</code>（港口）表在 v2.1 中恢复。v2.0 因 Excel 源数据未包含港口管理而移除，v2.1 经 Demo+Excel 数据融合后恢复——Demo <code>港口管理_主列表.html</code> 中有完整的港口 CRUD 功能，港口数据为运单系统的起运港/目的港基础依赖。</li>
+<li><strong>软删除策略</strong>：4张表均使用 <code>is_deleted</code> 软删除。冻结（status=20）不等于删除——冻结是状态变更，被冻结的数据仍可查询但不可编辑；软删除是完全不可见。级联规则：删除 <code>overseas_warehouse</code> 时级联软删除其下所有 <code>overseas_warehouse_address</code> 记录。</li>
+<li><strong>乐观锁</strong>：4张表均需 <code>version</code> 字段，用于并发编辑控制。</li>
+<li><strong>唯一约束</strong>：<code>overseas_warehouse</code> 表在 <code>(tenant_id, warehouse_code)</code> 上建立联合唯一索引，确保同一租户下仓库代码不重复。前端提交前校验 + 后端唯一索引双重保障。</li>
+<li><strong>派生字段说明</strong>：<code>address_abbr</code> 由前端根据 <code>warehouse_code + zip_code</code> 实时计算，后端同时存储一份便于列表展示和搜索。更新仓库代码或邮编时需同步更新所有关联地址的 <code>address_abbr</code>。</li>
+<li><strong>country_code 冗余</strong>：<code>overseas_warehouse.country_code</code> 与首个地址的 <code>country_code</code> 保持同步，支持列表级别的国家代码搜索，避免每次查询都需要 JOIN 地址表。</li>
+<li><strong>状态分离</strong>：<code>warehouse.status</code> 的&quot;正常/已冻结&quot;是生命周期控制；<code>overseas_warehouse.confirm_status</code> 的&quot;已确认/未确认&quot;是数据质量标记。两者互不干扰，各自独立流转。</li>
+<li><strong>手机号约束</strong>：<code>warehouse.phone</code> 限定为 <code>String(11)</code>，前端校验11位数字格式，后端 API 层同步校验。</li>
+<li><strong>外部接口</strong>：运单系统需通过 <code>GET /api/overseas-warehouses</code> 查询仓库列表，通过 <code>POST /api/overseas-warehouses</code> 新增仓库。新增接口需做幂等处理（基于 warehouse_code 去重），防止网络重试导致重复创建。</li>
+</ul>
+
+  </div>
+</div>
+</body>
+</html>

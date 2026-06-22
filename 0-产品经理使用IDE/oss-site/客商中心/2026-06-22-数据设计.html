@@ -1,0 +1,2835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据设计 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#7c3aed}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#7c3aed15;color:#7c3aed;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #7c3aed;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#7c3aed;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">客商中心</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">数据设计</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>数据设计 — 客商中心</h1>
+<blockquote>
+<p><strong>文档版本</strong>: v1.6 | <strong>日期</strong>: 2026-06-22 | <strong>作者</strong>: AI PM（v1.6: customer_contract新增is_primary主合同标记+termination_date解约时间+sign_status新增50:已解约；v1.5: customer表新增sales_assistant字段；v1.4: 合同1:1→1:N多主体签约——customer_contract去Unique约束+新增contract_company+账期下沉至合同表，customer表移除账期字段）<br><strong>上游文档</strong>: <code>2026-06-22-用户需求.md</code></p>
+</blockquote>
+<hr>
+<h2>一、实体清单 x 表映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>实体名称</th>
+<th>对应表/子表</th>
+<th>映射方式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户</td>
+<td><code>customer</code></td>
+<td>独立表</td>
+<td>聚合根</td>
+</tr>
+<tr>
+<td>客户联系人</td>
+<td><code>customer_contact</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>customer_id</code> 关联，固定3角色</td>
+</tr>
+<tr>
+<td>客户资料</td>
+<td><code>customer_material</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>customer_id</code> 关联</td>
+</tr>
+<tr>
+<td>客户资料文件</td>
+<td><code>customer_material_file</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>material_id</code> 关联</td>
+</tr>
+<tr>
+<td>客户地址</td>
+<td><code>customer_address</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>customer_id</code> 关联，只读</td>
+</tr>
+<tr>
+<td>客户关联账户</td>
+<td>—</td>
+<td>纯逻辑实体</td>
+<td>引用账户模块，按合同/所属公司关联，客商中心只读展示</td>
+</tr>
+<tr>
+<td>客户账期</td>
+<td><code>customer_contract</code> 内联</td>
+<td>合同表字段</td>
+<td>与合同1:1，跟随合同而非客户</td>
+</tr>
+<tr>
+<td>客户合同</td>
+<td><code>customer_contract</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>customer_id</code> 关联，一个客户可有多份合同（不同所属公司）</td>
+</tr>
+<tr>
+<td>客户通信信息</td>
+<td><code>customer_communication</code></td>
+<td>1:1 子表</td>
+<td>通过 <code>customer_id</code> 关联</td>
+</tr>
+<tr>
+<td>合同所属公司</td>
+<td><code>customer_contract</code> 内联</td>
+<td>合同表字段</td>
+<td>每份合同挂一个主体公司</td>
+</tr>
+<tr>
+<td>供应商</td>
+<td><code>supplier</code></td>
+<td>独立表</td>
+<td>聚合根</td>
+</tr>
+<tr>
+<td>供应商联系人</td>
+<td><code>supplier_contact</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>supplier_id</code> 关联</td>
+</tr>
+<tr>
+<td>供应商打单服务</td>
+<td><code>supplier_print_service</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>supplier_id</code> 关联</td>
+</tr>
+<tr>
+<td>供应商资料</td>
+<td><code>supplier_material</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>supplier_id</code> 关联</td>
+</tr>
+<tr>
+<td>等级</td>
+<td><code>level</code></td>
+<td>独立表</td>
+<td>客户等级和供应商等级通过 <code>level_type</code> 区分</td>
+</tr>
+<tr>
+<td>入驻链接</td>
+<td><code>invitation_link</code></td>
+<td>独立表</td>
+<td>含token、过期时间、使用状态</td>
+</tr>
+<tr>
+<td>入驻草稿</td>
+<td><code>profile_draft</code></td>
+<td>独立表</td>
+<td>暂存并退出时保存的JSON快照</td>
+</tr>
+<tr>
+<td>企业客户档案</td>
+<td><code>enterprise_profile</code></td>
+<td>独立表</td>
+<td>入驻端写入</td>
+</tr>
+<tr>
+<td>自然人客户档案</td>
+<td><code>personal_profile</code></td>
+<td>独立表</td>
+<td>入驻端写入</td>
+</tr>
+<tr>
+<td>取货地址（档案）</td>
+<td><code>pickup_address</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>profile_type + profile_id</code> 多态关联</td>
+</tr>
+<tr>
+<td>联系人（档案）</td>
+<td><code>profile_contact</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>profile_type + profile_id</code> 多态关联</td>
+</tr>
+<tr>
+<td>飞书审批记录</td>
+<td><code>feishu_approval</code></td>
+<td>1:1 子表</td>
+<td>通过 <code>contract_id</code> 关联，记录审批流水</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>二、逐表字段清单</h2>
+<h3>表1: <code>customer</code> | 对应实体: 客户 (Customer)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.4 合同1:1→1:N。<code>sign_status</code>、账期相关字段（<code>billing_cycle</code>/<code>payment_term</code>/<code>settlement_type</code>/<code>days_or_date</code>）下沉至 <code>customer_contract</code> 表，客户级合同状态和账期通过关联合同表获取，不再在 customer 表冗余。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>customer_code</code></td>
+<td align="left">客户编号</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">规则: K + 1 + 4位自增序号，如 K10001</td>
+</tr>
+<tr>
+<td align="left"><code>customer_type</code></td>
+<td align="left">客户类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:自然人, 20:企业</td>
+</tr>
+<tr>
+<td align="left"><code>customer_name</code></td>
+<td align="left">客户名称</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>nickname</code></td>
+<td align="left">客户昵称</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">客户自定义昵称</td>
+</tr>
+<tr>
+<td align="left"><code>credit_code</code></td>
+<td align="left">统一社会信用代码</td>
+<td align="left">String(18)</td>
+<td align="left">条件</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">企业类型必填 + 全局唯一，自然人NULL</td>
+</tr>
+<tr>
+<td align="left"><code>enterprise_attribute</code></td>
+<td align="left">客户属地</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:中国大陆, 20:中国香港</td>
+</tr>
+<tr>
+<td align="left"><code>is_peer</code></td>
+<td align="left">是否同行</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:是, 20:否</td>
+</tr>
+<tr>
+<td align="left"><code>customer_level</code></td>
+<td align="left">客户等级</td>
+<td align="left">String(4)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SS/S/A/B/C/D/E/F/G，默认G</td>
+</tr>
+<tr>
+<td align="left"><code>cs_representative</code></td>
+<td align="left">客服代表</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选，如 <code>[&quot;张客服&quot;,&quot;王客服&quot;]</code></td>
+</tr>
+<tr>
+<td align="left"><code>sales_representative</code></td>
+<td align="left">销售代表</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">单选</td>
+</tr>
+<tr>
+<td align="left"><code>sales_assistant</code></td>
+<td align="left">销售助理</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">单选</td>
+</tr>
+<tr>
+<td align="left"><code>sales_source</code></td>
+<td align="left">销售来源</td>
+<td align="left">String(200)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>business_types</code></td>
+<td align="left">开通业务</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选，如 <code>[&quot;TMS&quot;,&quot;WMS&quot;]</code></td>
+</tr>
+<tr>
+<td align="left"><code>service_status</code></td>
+<td align="left">服务状态</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>first_order_time</code></td>
+<td align="left">首次下单时间</td>
+<td align="left">DateTime</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>days_without_order</code></td>
+<td align="left">未下单天数</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新+1</td>
+</tr>
+</tbody></table></div>
+<p><strong>唯一约束</strong>: <code>credit_code</code> 全局唯一（当 customer_type=20 时）。</p>
+<blockquote>
+<p><strong>变更说明</strong>：移除 <code>sign_status</code>、<code>billing_cycle</code>、<code>payment_term</code>、<code>settlement_type</code>、<code>days_or_date</code> 5 个字段。合同签署状态和账期信息从 <code>customer_contract</code> 表按合同查询。货主端登录时的合同状态校验改为检查该客户是否有任一有效合同（<code>sign_status=30</code> 且 <code>contract_end_date &gt;= now()</code>）。</p>
+</blockquote>
+<h3>表2: <code>customer_contact</code> | 对应实体: 客户联系人 (CustomerContact)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>customer.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>role</code></td>
+<td align="left">角色标签</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:公司负责人, 20:物流联系人, 30:财务负责人</td>
+</tr>
+<tr>
+<td align="left"><code>name</code></td>
+<td align="left">姓名</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">联系电话</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>email</code></td>
+<td align="left">邮箱</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_contract_contact</code></td>
+<td align="left">是否合同对接人</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false（3条中仅1条可为true）</td>
+</tr>
+<tr>
+<td align="left"><code>is_account_receiver</code></td>
+<td align="left">是否系统账号接收人</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false（3条中仅1条可为true）</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表3: <code>customer_material</code> | 对应实体: 客户资料 (CustomerMaterial)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>customer.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>label</code></td>
+<td align="left">资料名称</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如：营业执照、法人身份证正反面、天眼查风险信息</td>
+</tr>
+<tr>
+<td align="left"><code>material_type</code></td>
+<td align="left">资料类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:营业执照, 20:法人身份证正反面, 30:天眼查风险信息PDF, 99:自定义</td>
+</tr>
+<tr>
+<td align="left"><code>is_required</code></td>
+<td align="left">是否必传</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">营业执照根据客户类型动态判断</td>
+</tr>
+<tr>
+<td align="left"><code>sort_order</code></td>
+<td align="left">排序</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">默认项固定在前</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表4: <code>customer_material_file</code> | 文件附件子表</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>material_id</code></td>
+<td align="left">资料ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>customer_material.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>file_name</code></td>
+<td align="left">文件名</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>file_url</code></td>
+<td align="left">文件地址</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>file_type</code></td>
+<td align="left">文件类型</td>
+<td align="left">String(20)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">pdf/image</td>
+</tr>
+<tr>
+<td align="left"><code>file_size</code></td>
+<td align="left">文件大小</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">字节</td>
+</tr>
+<tr>
+<td align="left"><code>card_side</code></td>
+<td align="left">身份证面</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">仅 material_type=20 时: 10:人像面, 20:国徽面</td>
+</tr>
+<tr>
+<td align="left"><code>source</code></td>
+<td align="left">来源</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:手工上传, 20:E签宝回传, 30:OCR识别, 40:天眼查自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+</tbody></table></div>
+<h3>表5: <code>customer_address</code> | 对应实体: 客户地址库 (CustomerAddress)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>customer.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>address_type</code></td>
+<td align="left">地址类型</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:取件地址, 20:收货地址</td>
+</tr>
+<tr>
+<td align="left"><code>contact_name</code></td>
+<td align="left">联系人名称</td>
+<td align="left">String(50)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">联系电话</td>
+<td align="left">String(20)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>zipcode</code></td>
+<td align="left">邮编</td>
+<td align="left">String(10)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>address</code></td>
+<td align="left">详细地址</td>
+<td align="left">String(500)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表6: <code>customer_contract</code> | 对应实体: 客户合同 (Contract)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.4 合同1:1→1:N。<code>customer_id</code> 去掉 Unique 约束，允许一个客户多份合同。新增 <code>contract_company</code> 标识每份合同所属主体公司。账期字段（<code>billing_cycle</code>/<code>payment_term</code>/<code>settlement_type</code>/<code>days_or_date</code>）从 <code>customer</code> 表下沉至此表——每份合同独立账期。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">1:N 关联 <code>customer.id</code>（去掉 Unique 约束）</td>
+</tr>
+<tr>
+<td align="left"><code>contract_company</code></td>
+<td align="left">所属公司</td>
+<td align="left">TinyInt</td>
+<td align="left">✅</td>
+<td align="left">—</td>
+<td align="left">10:广州飞点, 20:深圳飞点, 30:广东飞点, 40:香港富力顿, 50:墨链</td>
+</tr>
+<tr>
+<td align="left"><code>sign_status</code></td>
+<td align="left">合同签署状态</td>
+<td align="left">TinyInt</td>
+<td align="left">✅</td>
+<td align="left">Index</td>
+<td align="left">10:未签署, 20:签署中, 30:已签署, 40:已过期, 50:已解约</td>
+</tr>
+<tr>
+<td align="left"><code>is_primary</code></td>
+<td align="left">是否生效主合同</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">Radio 单选，同一客户同时仅一份；无标记时默认第一份已签署合同为主合同；Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>billing_cycle</code></td>
+<td align="left">账单周期</td>
+<td align="left">TinyInt</td>
+<td align="left">✅</td>
+<td align="left">—</td>
+<td align="left">10:固定, 20:不固定</td>
+</tr>
+<tr>
+<td align="left"><code>payment_term</code></td>
+<td align="left">签约账期</td>
+<td align="left">TinyInt</td>
+<td align="left">✅</td>
+<td align="left">—</td>
+<td align="left">101:月结, 102:双月结, 103:三月结, 201:周结, 202:到港前结, 203:签收月结, 204:到海外仓结, 205:签收结</td>
+</tr>
+<tr>
+<td align="left"><code>settlement_type</code></td>
+<td align="left">结算类型</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:按月, 20:按天（由账期自动推导）</td>
+</tr>
+<tr>
+<td align="left"><code>days_or_date</code></td>
+<td align="left">天数/号</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">&gt;=0 整数</td>
+</tr>
+<tr>
+<td align="left"><code>settlement_month</code></td>
+<td align="left">结算月</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">0:月结, 1:双月结, 2:三月结；仅 settlement_type=10 时有效</td>
+</tr>
+<tr>
+<td align="left"><code>is_simple</code></td>
+<td align="left">是否简易合同</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">true:是, false:否</td>
+</tr>
+<tr>
+<td align="left"><code>is_standard</code></td>
+<td align="left">是否标准合同</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">true:是, false:否</td>
+</tr>
+<tr>
+<td align="left"><code>company_title</code></td>
+<td align="left">我司合同抬头</td>
+<td align="left">String(200)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">根据域名和所属公司自动填充</td>
+</tr>
+<tr>
+<td align="left"><code>contract_years</code></td>
+<td align="left">合同有效期限(年)</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">1/2/3</td>
+</tr>
+<tr>
+<td align="left"><code>contract_start_date</code></td>
+<td align="left">合同开始日期</td>
+<td align="left">Date</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">默认当天</td>
+</tr>
+<tr>
+<td align="left"><code>contract_end_date</code></td>
+<td align="left">合同结束日期</td>
+<td align="left">Date</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">开始日期 + 合同期限，自动计算</td>
+</tr>
+<tr>
+<td align="left"><code>termination_date</code></td>
+<td align="left">解约时间</td>
+<td align="left">Date</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">可选；填写后定时任务扫描：termination_date ≤ today 且 sign_status=30 → 自动变更为50(已解约)。删除时按 end_date 恢复：end_date &gt; today→30, end_date ≤ today→40</td>
+</tr>
+<tr>
+<td align="left"><code>sign_date</code></td>
+<td align="left">签订日期</td>
+<td align="left">Date</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">默认当天（简易合同场景）</td>
+</tr>
+<tr>
+<td align="left"><code>modify_content</code></td>
+<td align="left">合同修改内容</td>
+<td align="left">Text</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">非标合同场景</td>
+</tr>
+<tr>
+<td align="left"><code>signing_mode</code></td>
+<td align="left">签约方式</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:大陆线上签约, 20:香港线下签约</td>
+</tr>
+<tr>
+<td align="left"><code>feishu_approval_type</code></td>
+<td align="left">飞书审批类型</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:简易, 20:墨线, 30:美线（大陆线上签约时路由）</td>
+</tr>
+<tr>
+<td align="left"><code>feishu_instance_id</code></td>
+<td align="left">飞书审批实例ID</td>
+<td align="left">String(100)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">发起审批后回填</td>
+</tr>
+<tr>
+<td align="left"><code>esign_contract_id</code></td>
+<td align="left">E签宝合同ID</td>
+<td align="left">String(100)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">E签宝生成合同后回填</td>
+</tr>
+<tr>
+<td align="left"><code>esign_file_url</code></td>
+<td align="left">E签宝回传附件</td>
+<td align="left">String(500)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">审批通过后E签宝回传的合同文件地址</td>
+</tr>
+<tr>
+<td align="left"><code>is_contract_auto_sync</code></td>
+<td align="left">是否标准合同自动回写</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">true:标准合同取签约值自动回写, false:非标合同手工维护</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<p><strong>唯一约束</strong>: 同一客户在飞点租户下，有且仅能有一份处于&quot;已签约&quot;或&quot;签约中&quot;状态的合同（全局唯一有效合同）。旧合同过期/作废后，方可签署新合同。实现方式：签约时校验该客户下是否已存在 <code>sign_status IN (&#39;已签约&#39;, &#39;签约中&#39;)</code> 的合同记录，若存在则阻止新签。</p>
+<p><strong>主合同与当前生效判定</strong>：</p>
+<ul>
+<li><code>is_primary</code> 由用户手动单选，同一客户同时仅一份生效主合同（Radio 互斥）。无标记时默认第一份已签署合同为主合同</li>
+<li>&quot;当前生效主合同&quot;校验规则：<br>① <code>is_primary=true</code><br>② <code>sign_status=30(已签署)</code><br>③ <code>contract_start_date ≤ today ≤ contract_end_date</code><br>④ <code>termination_date IS NULL OR today &lt; termination_date</code><br>→ 全部满足 → 该合同为当前生效主合同；任一不满足 → 无生效合同（主合同身份保留，状态如实展示，能否登录由信控决定）</li>
+<li>主合同是身份标记，不对签约唯一性产生约束</li>
+</ul>
+<p><strong>解约时间与已解约状态</strong>：</p>
+<ul>
+<li>填写 <code>termination_date</code> 后不立即改变 <code>sign_status</code>，由每日定时任务扫描 <code>termination_date ≤ today AND sign_status=30</code> 的记录 → 自动变更为 <code>50(已解约)</code></li>
+<li>删除 <code>termination_date</code> 时实时恢复：<code>contract_end_date &gt; today → 30(已签署)</code>，<code>contract_end_date ≤ today → 40(已过期)</code></li>
+</ul>
+<h3>表7: <code>customer_communication</code> | 对应实体: 通信信息 (Communication)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, <strong>Unique</strong></td>
+<td align="left">1:1 关联 <code>customer.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>comm_type</code></td>
+<td align="left">工具类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:企业微信（当前仅支持企业微信）</td>
+</tr>
+<tr>
+<td align="left"><code>group_id</code></td>
+<td align="left">群聊ID</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>表8: <code>supplier</code> | 对应实体: 供应商 (Supplier)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_code</code></td>
+<td align="left">供应商编号</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">规则: G + 10001自增序号，如 G10001</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_name</code></td>
+<td align="left">供应商名称</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">全局唯一</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_short_name</code></td>
+<td align="left">供应商简称</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_category</code></td>
+<td align="left">供应商大类</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选，枚举：干线运输供应商/揽货服务商/仓储供应商/关务供应商/尾程运输供应商/综合代理/其他</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_detail</code></td>
+<td align="left">供应商明细</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选，跟随大类联动</td>
+</tr>
+<tr>
+<td align="left"><code>scac</code></td>
+<td align="left">SCAC代码</td>
+<td align="left">String(20)</td>
+<td align="left">条件</td>
+<td align="left">—</td>
+<td align="left">明细含&quot;快递&quot;时必填</td>
+</tr>
+<tr>
+<td align="left"><code>level</code></td>
+<td align="left">供应商等级</td>
+<td align="left">String(4)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SS~G（默认G），下拉取level表level_type=20且status=10的数据</td>
+</tr>
+<tr>
+<td align="left"><code>is_peer</code></td>
+<td align="left">是否同行</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:是, 20:否</td>
+</tr>
+<tr>
+<td align="left"><code>service_status</code></td>
+<td align="left">服务状态</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>source_type</code></td>
+<td align="left">来源类型</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:手工创建, 20:客户转换</td>
+</tr>
+<tr>
+<td align="left"><code>source_customer_id</code></td>
+<td align="left">来源客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">互转时记录来源客户</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制</td>
+</tr>
+</tbody></table></div>
+<h3>表9: <code>supplier_contact</code> | 对应实体: 供应商联系人</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_id</code></td>
+<td align="left">供应商ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>supplier.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>name</code></td>
+<td align="left">姓名</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">联系电话</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">仅限数字</td>
+</tr>
+<tr>
+<td align="left"><code>email</code></td>
+<td align="left">邮箱</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_contract_contact</code></td>
+<td align="left">是否合同对接人</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>is_account_receiver</code></td>
+<td align="left">是否系统账号接收人</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表10: <code>supplier_print_service</code> | 对应实体: 打单服务</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_id</code></td>
+<td align="left">供应商ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>receive_channel</code></td>
+<td align="left">收货渠道</td>
+<td align="left">String(200)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表11: <code>supplier_material</code> | 对应实体: 供应商资料</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>supplier_id</code></td>
+<td align="left">供应商ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>label</code></td>
+<td align="left">资料名称</td>
+<td align="left">String(100)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">可自定义</td>
+</tr>
+<tr>
+<td align="left"><code>file_name</code></td>
+<td align="left">文件名</td>
+<td align="left">String(200)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>file_url</code></td>
+<td align="left">文件地址</td>
+<td align="left">String(500)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>表12: <code>level</code> | 对应实体: 等级 (Level)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>level_type</code></td>
+<td align="left">等级类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:客户等级, 20:供应商等级</td>
+</tr>
+<tr>
+<td align="left"><code>level_code</code></td>
+<td align="left">级别代码</td>
+<td align="left">String(4)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">SS/S/A/B/C/D/E/F/G</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>operator</code></td>
+<td align="left">操作人</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">创建/最后编辑人</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<p><strong>唯一约束</strong>: <code>(tenant_id, level_type, level_code)</code> 联合唯一。</p>
+<p><strong>设计说明</strong>：</p>
+<ul>
+<li>冻结保护：冻结操作前需检查 <code>customer</code> 或 <code>supplier</code> 表中引用该等级的记录数，若 &gt; 0 则阻止冻结并返回提示</li>
+<li>查询接口：提供 <code>GET /api/level/query?level_type=10|20</code> 公开查询接口，供CRM/SRM等外部系统调用</li>
+<li>无权限管控：等级管理对所有运营角色开放，接口层不校验操作权限</li>
+</ul>
+<hr>
+<h3>表13: <code>invitation_link</code> | 对应实体: 入驻链接 (InvitationLink)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.1 新增。销售生成唯一入驻链接发送给客户，客户点击后进入入驻流程。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>token</code></td>
+<td align="left">链接Token</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">UUID生成，保证唯一</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">预关联客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">如销售已预创建客户记录则关联</td>
+</tr>
+<tr>
+<td align="left"><code>expire_time</code></td>
+<td align="left">过期时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">创建时间 + 14天</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">链接状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:有效, 20:已使用, 30:已过期</td>
+</tr>
+<tr>
+<td align="left"><code>used_at</code></td>
+<td align="left">使用时间</td>
+<td align="left">DateTime</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">客户点击链接并进入入驻时记录</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">销售代表</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>表14: <code>profile_draft</code> | 对应实体: 入驻草稿 (ProfileDraft)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.1 新增。客户暂存并退出时，整个表单数据保存为JSON快照，与正式档案数据隔离。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>link_id</code></td>
+<td align="left">链接ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>invitation_link.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>profile_type</code></td>
+<td align="left">档案类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:企业档案, 20:自然人档案</td>
+</tr>
+<tr>
+<td align="left"><code>draft_data</code></td>
+<td align="left">草稿数据</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">整个表单的JSON快照</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">首次暂存时间</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">最后暂存时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">每次暂存更新</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>表15: <code>enterprise_profile</code> | 对应实体: 企业客户档案 (EnterpriseProfile)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.1 重构。企业客户自助入驻档案表。新增完整的注册地址拆分（省/市/详细）、渠道含老板介绍、平台与业务国级联、天眼查风险信息。入驻提交后生成 <code>customer</code> 记录。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>link_id</code></td>
+<td align="left">关联链接ID</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">关联 <code>invitation_link.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>enterprise_attribute</code></td>
+<td align="left">企业属地</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:中国大陆, 20:中国香港（默认10）</td>
+</tr>
+<tr>
+<td align="left"><code>company_name</code></td>
+<td align="left">公司名称</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">OCR自动识别，可修改</td>
+</tr>
+<tr>
+<td align="left"><code>registration_no</code></td>
+<td align="left">公司注册号码</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">OCR自动识别，可修改</td>
+</tr>
+<tr>
+<td align="left"><code>credit_code</code></td>
+<td align="left">统一社会信用代码</td>
+<td align="left">String(18)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">全局唯一校验</td>
+</tr>
+<tr>
+<td align="left"><code>license_url</code></td>
+<td align="left">营业执照地址</td>
+<td align="left">String(500)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">OCR识别源文件</td>
+</tr>
+<tr>
+<td align="left"><code>company_province</code></td>
+<td align="left">公司注册地址-省</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;广东省&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>company_city</code></td>
+<td align="left">公司注册地址-市</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;深圳市&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>company_detail_address</code></td>
+<td align="left">公司注册地址-详细</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>channel</code></td>
+<td align="left">添加渠道</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:探迹, 20:展会, 30:老板介绍, 40:朋友推荐</td>
+</tr>
+<tr>
+<td align="left"><code>main_country</code></td>
+<td align="left">主营业务国</td>
+<td align="left">String(5)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">US/UK/DE 等</td>
+</tr>
+<tr>
+<td align="left"><code>main_platform</code></td>
+<td align="left">主要经营平台</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选，与业务国级联</td>
+</tr>
+<tr>
+<td align="left"><code>id_card_front_url</code></td>
+<td align="left">法人身份证人像面</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>id_card_back_url</code></td>
+<td align="left">法人身份证国徽面</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>tianyancha_risk_pdf_url</code></td>
+<td align="left">天眼查风险信息PDF</td>
+<td align="left">String(500)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">提交后自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>remarks</code></td>
+<td align="left">客户备注</td>
+<td align="left">Text</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">审核状态</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">10:草稿(暂存), 20:待审核(已提交), 30:已通过, 40:已驳回</td>
+</tr>
+<tr>
+<td align="left"><code>submitted_at</code></td>
+<td align="left">提交时间</td>
+<td align="left">DateTime</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">点击入驻时记录</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表16: <code>personal_profile</code> | 对应实体: 自然人客户档案 (PersonalProfile)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.1 重构。新增个人联系地址拆分、身份证号唯一校验。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>link_id</code></td>
+<td align="left">关联链接ID</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>personal_region_type</code></td>
+<td align="left">所属地</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:中国大陆, 20:中国香港</td>
+</tr>
+<tr>
+<td align="left"><code>full_name</code></td>
+<td align="left">个人姓名全称</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">OCR自动识别，可修改</td>
+</tr>
+<tr>
+<td align="left"><code>id_card_no</code></td>
+<td align="left">身份证号</td>
+<td align="left">String(18)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique</strong></td>
+<td align="left">全局唯一校验</td>
+</tr>
+<tr>
+<td align="left"><code>id_card_front_url</code></td>
+<td align="left">身份证人像面</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>id_card_back_url</code></td>
+<td align="left">身份证国徽面</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>personal_province</code></td>
+<td align="left">个人联系地址-省</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>personal_city</code></td>
+<td align="left">个人联系地址-市</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>personal_detail_address</code></td>
+<td align="left">个人联系地址-详细</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>channel</code></td>
+<td align="left">添加渠道</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:探迹, 20:展会, 30:老板介绍, 40:朋友推荐</td>
+</tr>
+<tr>
+<td align="left"><code>business_country</code></td>
+<td align="left">主营业务国</td>
+<td align="left">String(5)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">US/UK/DE 等</td>
+</tr>
+<tr>
+<td align="left"><code>main_platform</code></td>
+<td align="left">主要经营平台</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选，与业务国级联</td>
+</tr>
+<tr>
+<td align="left"><code>remarks</code></td>
+<td align="left">客户备注</td>
+<td align="left">Text</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">审核状态</td>
+<td align="left">TinyInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">10:草稿, 20:待审核, 30:已通过, 40:已驳回</td>
+</tr>
+<tr>
+<td align="left"><code>submitted_at</code></td>
+<td align="left">提交时间</td>
+<td align="left">DateTime</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表17: <code>pickup_address</code> | 对应实体: 取货地址（档案端）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>profile_type</code></td>
+<td align="left">档案类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:企业档案, 20:自然人档案</td>
+</tr>
+<tr>
+<td align="left"><code>profile_id</code></td>
+<td align="left">档案ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">关联 <code>enterprise_profile.id</code> 或 <code>personal_profile.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>province</code></td>
+<td align="left">省份</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;广东省&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>city</code></td>
+<td align="left">城市</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;深圳市&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>detail</code></td>
+<td align="left">详细地址</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表18: <code>profile_contact</code> | 对应实体: 档案联系人</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>profile_type</code></td>
+<td align="left">档案类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:企业档案, 20:自然人档案</td>
+</tr>
+<tr>
+<td align="left"><code>profile_id</code></td>
+<td align="left">档案ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>role</code></td>
+<td align="left">角色标签</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:公司负责人, 20:物流联系人, 30:财务负责人</td>
+</tr>
+<tr>
+<td align="left"><code>name</code></td>
+<td align="left">姓名</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">联系电话</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>email</code></td>
+<td align="left">邮箱地址</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_contract_contact</code></td>
+<td align="left">是否合同对接人</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_account_receiver</code></td>
+<td align="left">是否系统账号接收人</td>
+<td align="left">Boolean</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>表19: <code>feishu_approval</code> | 对应实体: 飞书审批记录 (FeishuApproval)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V1.1 新增。记录每笔合同签约的飞书审批流程状态，与合同1:1关联。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>contract_id</code></td>
+<td align="left">合同ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>customer_contract.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>approval_type</code></td>
+<td align="left">审批类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:简易, 20:墨线, 30:美线</td>
+</tr>
+<tr>
+<td align="left"><code>feishu_instance_id</code></td>
+<td align="left">飞书审批实例ID</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">发起审批后飞书返回</td>
+</tr>
+<tr>
+<td align="left"><code>approval_status</code></td>
+<td align="left">审批状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:审批中, 20:已通过, 30:已驳回, 40:已撤销</td>
+</tr>
+<tr>
+<td align="left"><code>approval_result</code></td>
+<td align="left">审批结果详情</td>
+<td align="left">JSON</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">审批节点、审批人、意见等</td>
+</tr>
+<tr>
+<td align="left"><code>requested_at</code></td>
+<td align="left">发起时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>completed_at</code></td>
+<td align="left">完成时间</td>
+<td align="left">DateTime</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">审批通过/驳回/撤销时记录</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>三、ER 关系图</h2>
+<pre><code class="language-mermaid">erDiagram
+    invitation_link ||--o| enterprise_profile : &quot;1:0..1 (link_id)&quot;
+    invitation_link ||--o| personal_profile : &quot;1:0..1 (link_id)&quot;
+    invitation_link ||--o| profile_draft : &quot;1:0..1 (link_id)&quot;
+    
+    customer ||--o{ customer_contact : &quot;1:N&quot;
+    customer ||--o{ customer_material : &quot;1:N&quot;
+    customer_material ||--o{ customer_material_file : &quot;1:N&quot;
+    customer ||--o{ customer_address : &quot;1:N&quot;
+    customer ||--o{ customer_contract : &quot;1:N&quot;
+    customer_contract ||--|| feishu_approval : &quot;1:0..1&quot;
+    customer ||--|| customer_communication : &quot;1:1&quot;
+    customer }o--|| level : &quot;N:1 (customer_level, level_type=10)&quot;
+    
+    supplier ||--o{ supplier_contact : &quot;1:N&quot;
+    supplier ||--o{ supplier_print_service : &quot;1:N&quot;
+    supplier ||--o{ supplier_material : &quot;1:N&quot;
+    supplier }o--|| level : &quot;N:1 (level, level_type=20)&quot;
+    
+    enterprise_profile ||--o{ pickup_address : &quot;1:N (profile_type=10)&quot;
+    enterprise_profile ||--o{ profile_contact : &quot;1:N (profile_type=10)&quot;
+    personal_profile ||--o{ pickup_address : &quot;1:N (profile_type=20)&quot;
+    personal_profile ||--o{ profile_contact : &quot;1:N (profile_type=20)&quot;
+    
+    enterprise_profile ||--o| customer : &quot;1:0..1 (入驻审核通过后生成)&quot;
+    personal_profile ||--o| customer : &quot;1:0..1 (入驻审核通过后生成)&quot;
+</code></pre>
+<hr>
+<h2>四、关键设计说明</h2>
+<h3>新增表说明（V1.1）</h3>
+<ul>
+<li><strong><code>invitation_link</code></strong>: 入驻链接管理表。销售生成链接时创建记录（token=UUID, expire_time=now+14天）。客户点击链接时校验 status=有效且未过期。链接过期后定时任务可将 status 更新为&quot;已过期&quot;。</li>
+<li><strong><code>profile_draft</code></strong>: 入驻草稿表。客户暂存并退出时，前端将整个表单数据序列化为JSON存入 <code>draft_data</code>。客户下次打开链接时从草稿恢复。正式提交入驻后，草稿记录软删除。</li>
+<li><strong><code>feishu_approval</code></strong>: 飞书审批记录表。与合同1:0..1关联（仅大陆线上签约产生审批记录）。审批状态变化由飞书回调更新。审批通过后触发E签宝生成合同。</li>
+</ul>
+<h3>软删除策略</h3>
+<ul>
+<li><strong>启用表</strong>: 所有19张表均启用软删除</li>
+<li><strong>级联规则</strong>: 逻辑删除 <code>customer</code> 时，同步软删除其下所有子表记录</li>
+<li><strong>逻辑删除 <code>supplier</code> 时</strong>: 同步软删除 supplier_contact, supplier_print_service, supplier_material</li>
+<li><strong>档案表</strong>: enterprise_profile 和 personal_profile 不支持物理删除</li>
+</ul>
+<h3>乐观锁</h3>
+<ul>
+<li><strong>启用表</strong>: <code>customer</code>、<code>supplier</code> — 存在并发修改风险</li>
+<li><strong>不需要</strong>: 子表通过主表乐观锁间接保护；等级表（低频）</li>
+</ul>
+<h3>JSON 字段使用场景</h3>
+<ul>
+<li><strong><code>supplier_category</code> / <code>supplier_detail</code></strong>: 多选固定枚举，JSON存储避免多对多关联表</li>
+<li><strong><code>cs_representative</code> / <code>business_types</code></strong>: 多选值，JSON数组存储</li>
+<li><strong><code>main_platform</code></strong>: 多选平台，JSON数组。与 <code>main_country</code> 级联逻辑在前端实现</li>
+<li><strong><code>profile_draft.draft_data</code></strong>: 整个草稿表单的JSON快照</li>
+<li><strong><code>feishu_approval.approval_result</code></strong>: 飞书审批节点详情，JSON存储</li>
+</ul>
+<h3>纯逻辑实体说明</h3>
+<ul>
+<li><strong>客户关联账户 (CustomerAccount)</strong>: 无独立表，数据来自统一账户模块</li>
+</ul>
+<h3>多态关联说明</h3>
+<ul>
+<li><strong><code>pickup_address</code> 和 <code>profile_contact</code></strong>: 通过 <code>profile_type</code> + <code>profile_id</code> 关联企业或自然人档案</li>
+</ul>
+<h3>唯一性约束</h3>
+<ul>
+<li><strong><code>customer.credit_code</code></strong>: 企业客户统一社会信用代码全局唯一（customer_type=20时约束生效）</li>
+<li><strong><code>personal_profile.id_card_no</code></strong>: 自然人身份证号全局唯一</li>
+<li><strong><code>supplier.supplier_name</code></strong>: 供应商名称全局唯一</li>
+<li><strong><code>invitation_link.token</code></strong>: UUID生成保证全库唯一</li>
+<li><strong><code>level (tenant_id, level_type, level_code)</code></strong>: 联合唯一</li>
+</ul>
+<h3>等级冻结保护（新增）</h3>
+<ul>
+<li>冻结等级（level.status 10→20）前，后端校验：<ul>
+<li><code>SELECT COUNT(*) FROM customer WHERE customer_level = level.level_code AND is_deleted = false</code></li>
+<li><code>SELECT COUNT(*) FROM supplier WHERE level = level.level_code AND is_deleted = false</code></li>
+<li>若任一 COUNT &gt; 0，返回错误：<code>&quot;该等级已被N个客户/供应商绑定，无法冻结&quot;</code></li>
+</ul>
+</li>
+<li>此校验为业务层逻辑，不在数据库层实现外键约束</li>
+</ul>
+<h3>供应商转客户数据流（新增）</h3>
+<pre><code>选中供应商 → 打开转客户弹窗 → 继承 supplierName → customerName (disabled)
+  → 补充 customerType / creditCode / enterpriseAttribute / isPeer / customerLevel
+     / csRepresentative / salesRepresentative / salesSource / businessTypes
+  → 补充联系人（固定3角色）+ 资料 + 通信信息
+  → 提交 → 创建 customer 记录 + 关联子表
+  → 自动生成 ROOT 账户（调用账户模块 API）
+  → 发送邮件通知（含账号密码）
+  → 不删除 source supplier 记录
+</code></pre>
+<h3>签约流程数据流（新增）</h3>
+<pre><code>customer_contract.signing_mode = 10 (大陆线上)
+  → 创建 feishu_approval 记录 (approval_type=简易/墨线/美线, approval_status=审批中)
+  → 飞书回调 approval_status=已通过
+  → 触发 E签宝生成合同 → esign_contract_id 回填
+  → 客户签署完成后 E签宝回调 → esign_file_url 回填
+  → is_contract_auto_sync = true → 自动回写 customer_contract.sign_status=已签署 + 日期字段
+  → is_contract_auto_sync = false → 销售手工在合同管理Tab维护
+
+customer_contract.signing_mode = 20 (香港线下)
+  → 上传合同附件 → 保存 → customer_contract.sign_status=已签署
+</code></pre>
+<h3>入驻数据流（新增）</h3>
+<pre><code>销售创建 invitation_link (status=有效, expire_time=now+14天)
+  → 客户点击链接（校验token有效性+过期）
+  → 客户填写档案表单
+  → 暂存并退出 → 写入 profile_draft (draft_data=JSON快照)
+  → 客户再次打开 → 从 profile_draft 恢复表单
+  → 点击入驻提交 → 校验必填 + OCR识别结果
+  → 调用天眼查API → 生成 risk PDF → 存入 tianyancha_risk_pdf_url
+  → 写入 enterprise_profile/personal_profile (status=待审核)
+  → 创建 customer 记录
+  → 创建初始 customer_contract 记录 (sign_status=未签署, contract_company=默认)
+  → 在用户管理-待签约中生成签约流程数据
+  → 页面置灰 + 显示审核提示
+</code></pre>
+<hr>
+<h2>五、跨模块数据融合：客商中心 × 货主端</h2>
+<blockquote>
+<p><strong>设计原则</strong>：客商中心是客户主数据的 System of Record，所有客户状态变更（创建/冻结/启用/等级变更）均通过接口同步至货主端。货主端不直接修改 <code>customer</code> 表，只读引用。</p>
+</blockquote>
+<h3>5.1 跨模块实体依赖</h3>
+<pre><code>客商中心（主数据源）
+  ├── customer                      ──→ 货主端 sub_account.customer_id (FK)
+  ├── customer_contract.sign_status ──→ 货主端登录准入校验（检查是否有任一有效合同：sign_status=30 AND end_date&gt;=now()）
+  ├── customer.service_status       ──→ 货主端冻结联动
+  ├── customer.customer_name        ──→ 货主端首页欢迎语
+  └── customer_contact              ──→ 货主端 ROOT 账号邮箱/手机号来源
+
+货主端（消费者）
+  ├── sub_account           ──→ 通过 customer_id 关联客户
+  ├── sub_account.is_root   ──→ 标记 ROOT 账户（入驻自动创建）
+  └── role (引用系统设置)   ──→ ROOT 角色入驻自动创建
+</code></pre>
+<h3>5.2 跨模块数据流</h3>
+<p><strong>DS1 — 客户入驻→子账号自动开通</strong>：</p>
+<pre><code>enterprise_profile/personal_profile 审核通过 (status: 10→30)
+  → 创建 customer 记录
+  → 创建初始 customer_contract 记录 (sign_status=未签署, contract_company=默认公司)
+  → 触发: POST /api/shipper/sub-account/create-root
+    body: {
+      customer_id: &lt;customer.id&gt;,
+      contract_id: &lt;contract.id&gt;,
+      customer_name: &lt;customer.customer_name&gt;,
+      contact_email: &lt;customer_contact.email WHERE is_account_receiver=true&gt;,
+      contact_phone: &lt;customer_contact.phone WHERE is_account_receiver=true&gt;
+    }
+  → 货主端:
+    1. 创建 sub_account (is_root=true, account=&#39;admin&#39;, password=随机8位)
+    2. 创建 role (role_code=&#39;ROOT&#39;, role_name=&#39;主账号默认角色&#39;)
+       - 若该 tenant 下已存在 ROOT 角色则跳过
+    3. 创建 sub_account_role (关联 ROOT 角色)
+    4. 发送邮件（含账号+密码+登录地址）
+  → 返回: { sub_account_id, account, temp_password }
+  → 客商中心记录日志
+</code></pre>
+<p><strong>DS2 — 手工创建客户+生成账户</strong>：</p>
+<pre><code>运营端点击&quot;保存并生成账户&quot;
+  → 创建 customer 记录
+  → 创建初始 customer_contract 记录 (sign_status=未签署, contract_company=所选公司)
+  → 触发: 同 DS1
+  → Toast &quot;保存成功，并已为该客户生成系统账户！&quot;
+</code></pre>
+<p><strong>DS3 — 客户冻结→子账号同步冻结</strong>：</p>
+<pre><code>customer.service_status: 10→20 (正常→已冻结)
+  → 触发: POST /api/shipper/sub-account/batch-freeze
+    body: { customer_id: &lt;id&gt; }
+  → 货主端:
+    UPDATE sub_account SET status = 20, updated_at = NOW()
+    WHERE customer_id = &lt;id&gt; AND is_deleted = false
+  → 返回: { frozen_count: N }
+  → 失败处理: 部分子账号冻结失败→记录异常日志+告警运维+继续
+
+注意: ROOT 账号也被冻结（系统级操作），但企业管理员不可在货主端单独操作 ROOT
+</code></pre>
+<blockquote>
+<p><strong>V1.4 变更</strong>：签约完成后不再更新 <code>customer.sign_status</code>（字段已移除），改为更新对应 <code>customer_contract.sign_status</code>。</p>
+</blockquote>
+<p><strong>DS4 — 客户启用→子账号同步启用</strong>：</p>
+<pre><code>customer.service_status: 20→10 (已冻结→正常)
+  → 触发: POST /api/shipper/sub-account/batch-enable
+    body: { customer_id: &lt;id&gt; }
+  → 货主端:
+    UPDATE sub_account SET status = 10, updated_at = NOW()
+    WHERE customer_id = &lt;id&gt; AND is_deleted = false
+</code></pre>
+<p><strong>DS5 — 供应商转客户→ROOT账户开通</strong>：</p>
+<pre><code>转客户弹窗提交 → 创建 customer 记录
+  → 触发: 同 DS1（创建 ROOT 子账号 + ROOT 角色 + 邮件通知）
+  → source_type=20 (客户转换)，记录 source_supplier_id
+</code></pre>
+<h3>5.3 跨模块接口契约</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>调用方</th>
+<th>提供方</th>
+<th>幂等性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>创建ROOT子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/create-root</td>
+<td>客商中心</td>
+<td>货主端</td>
+<td>✅ (customer_id去重)</td>
+</tr>
+<tr>
+<td>批量冻结子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-freeze</td>
+<td>客商中心</td>
+<td>货主端</td>
+<td>✅ (已冻结跳过)</td>
+</tr>
+<tr>
+<td>批量启用子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-enable</td>
+<td>客商中心</td>
+<td>货主端</td>
+<td>✅ (已启用跳过)</td>
+</tr>
+<tr>
+<td>查询客户状态</td>
+<td>GET</td>
+<td>/api/customer/{id}/status</td>
+<td>货主端</td>
+<td>客商中心</td>
+<td>—</td>
+</tr>
+<tr>
+<td>查询客户信息</td>
+<td>GET</td>
+<td>/api/customer/{id}/profile</td>
+<td>货主端</td>
+<td>客商中心</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<h3>5.4 事务与一致性保证</h3>
+<ul>
+<li><strong>创建客户+ROOT账户</strong>：先创建 <code>customer</code> 记录（本地事务），再调用货主端接口。若货主端接口失败，<code>customer</code> 记录已创建但 ROOT 账户未创建 → 异步重试3次 → 失败后记录到 <code>pending_sync</code> 队列 → 定时任务补推。</li>
+<li><strong>冻结/启用联动</strong>：客商中心冻结成功后，同步调用货主端批量接口。若失败 → 不回滚客商中心操作（冻结本身已生效）→ 记录异常日志 → 运维告警。</li>
+<li><strong>最终一致性</strong>：货主端登录时实时校验 <code>customer.service_status</code> 和 <code>sign_status</code>，作为兜底。即使同步延迟，不影响安全性。</li>
+</ul>
+<h3>5.5 货主端登录时的状态校验</h3>
+<pre><code>货主端登录 → 校验流程:
+  1. 校验 sub_account.status = 10 (正常)
+  2. 校验 sub_account 所属 customer 是否存在 (is_deleted = false)
+  3. 调用 GET /api/customer/{customer_id}/status
+     → 检查 customer.service_status = 10 (正常)
+     → 若 customer.service_status = 20 → 拒绝登录：&quot;您的企业账户已被冻结，请联系客服&quot;
+  4. 检查该客户是否有任一有效合同：
+     → SELECT COUNT(*) FROM customer_contract 
+       WHERE customer_id = &lt;id&gt; AND sign_status = 30 AND contract_end_date &gt;= NOW()
+     → 均可登录（查价不限制）
+     → 若无任何有效合同（sign_status != 30）且尝试下单 → 提示&quot;请先完成合同签约&quot;
+</code></pre>
+<h3>5.6 共享实体字段对齐</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>客商中心来源</th>
+<th>货主端使用</th>
+<th>对齐状态</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>customer_name</td>
+<td><code>customer.customer_name</code></td>
+<td>首页欢迎语、子账号所属企业展示</td>
+<td>✅ 已对齐</td>
+</tr>
+<tr>
+<td>service_status</td>
+<td><code>customer.service_status</code> (10:正常, 20:已冻结)</td>
+<td>登录校验、冻结联动</td>
+<td>✅ 已对齐</td>
+</tr>
+<tr>
+<td>sign_status</td>
+<td><code>customer_contract.sign_status</code> (10:未签署, 20:签署中, 30:已签署, 40:已过期)</td>
+<td>登录/下单准入（检查是否有任一有效合同）</td>
+<td>✅ 已对齐</td>
+</tr>
+<tr>
+<td>customer_level</td>
+<td><code>customer.customer_level</code> (SS~G)</td>
+<td>货主端暂不展示</td>
+<td>⚠️ 待确认是否需展示</td>
+</tr>
+<tr>
+<td>credit_code</td>
+<td><code>customer.credit_code</code></td>
+<td>不引用</td>
+<td>✅ 无冲突</td>
+</tr>
+<tr>
+<td>contact.email</td>
+<td><code>customer_contact.email</code> (is_account_receiver=true)</td>
+<td>ROOT 账户创建时作为通知邮箱</td>
+<td>✅ 已对齐</td>
+</tr>
+<tr>
+<td>contract_company</td>
+<td><code>customer_contract.contract_company</code> (10:广州飞点~50:墨链)</td>
+<td>虚拟账户按公司分离</td>
+<td>✅ 新增</td>
+</tr>
+</tbody></table></div>
+
+  </div>
+</div>
+</body>
+</html>

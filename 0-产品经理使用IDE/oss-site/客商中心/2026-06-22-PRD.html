@@ -1,0 +1,4002 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#7c3aed}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#7c3aed15;color:#7c3aed;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #7c3aed;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#7c3aed;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">客商中心</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">PRD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>客商中心 — 产品需求文档（PRD）</h1>
+<hr>
+<h2>0. 文档基础信息</h2>
+<ul>
+<li>文档标题：客商中心（客户入驻 + 客户管理 + 合同签约 + 供应商管理 + 等级管理）</li>
+<li>版本号：v1.6</li>
+<li>状态：草稿</li>
+<li>作者：AI PM（v1.6: 主合同标记+合同解约时间+sign_status新增已解约+当前生效主合同自动判定；v1.5: 新增客户/编辑客户界面新增销售助理字段+基本信息布局重组+开通业务移至第四排首位；v1.4: 合同1:1→1:N多主体签约——新增所属公司枚举+合同管理Tab+签约弹窗增加所属公司+业务规则下沉至合同级）</li>
+<li>评审人：产品/研发/测试/业务代表</li>
+<li>计划里程碑：评审 待定 / 提测 待定 / 上线 待定</li>
+</ul>
+<h3>0.1 变更记录</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>变更日期</th>
+<th>变更内容</th>
+<th>变更人</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>v0.1</td>
+<td>2026-06-06</td>
+<td>初稿，基于 Demo 反向生成</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>v1.1</td>
+<td>2026-06-06</td>
+<td>基于 V1.1.2 客户入驻需求调研完整更新：新增入驻流程、飞书审批+E签宝签约链路、天眼查风险信息、暂存机制、信用代码/身份证号唯一校验、入驻链接管理</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>v1.3</td>
+<td>2026-06-06</td>
+<td>客商中心×货主端数据融合：新增 §13 融合业务规则 + 跨模块接口契约 + 联动验收标准</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>v1.4</td>
+<td>2026-06-16</td>
+<td>合同1:1→1:N多主体签约：合同新增所属公司枚举、账期下沉至合同表、签约弹窗增加所属公司、客户管理弹窗3Tab(合同管理/合同信息/账期)、用户管理合同三列→合同数量Popover、主列表操作列增加签约按钮、业务规则/数据设计同步更新</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>v1.5</td>
+<td>2026-06-18</td>
+<td>新增客户/编辑客户界面新增&quot;销售助理&quot;字段；销售代表/销售助理/销售来源字段重组；开通业务移至第四排首位。数据设计customer表新增sales_assistant字段</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>v1.6</td>
+<td>2026-06-22</td>
+<td>主合同标记(is_primary)+合同解约时间(termination_date)+sign_status新增50:已解约+当前生效主合同自动判定规则。合同管理Tab新增&quot;主合同&quot;和&quot;解约时间&quot;列。数据设计customer_contract表新增is_primary+termination_date字段</td>
+<td>AI PM</td>
+</tr>
+</tbody></table></div>
+<h3>0.2 关联链接</h3>
+<ul>
+<li>用户需求(RDD)：<code>drafts/客商中心/2026-06-22-用户需求.md</code></li>
+<li>数据设计：<code>drafts/客商中心/2026-06-22-数据设计.md</code></li>
+<li>需求背景：无</li>
+<li>原型：<code>demo/员工端-demo/客户管理.html</code> 等</li>
+</ul>
+<h3>0.3 评审记录</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>参会人</th>
+<th>主要问题/结论</th>
+<th>待办</th>
+</tr>
+</thead>
+</table></div>
+<hr>
+<h2>1. 需求定义</h2>
+<h3>1.1 背景与现状</h3>
+<p>飞点跨境供应链的客户入驻当前依赖销售手工发送链接+微信跟进，入驻进度不可追踪。客户和供应商信息分散在多个渠道，合同签约流程未标准化——中国大陆客户走线上（飞书审批+E签宝），中国香港客户走线下，但两种流程均缺乏系统承载。</p>
+<h3>1.2 目标与成功口径</h3>
+<ul>
+<li>目标：建立统一的客商中心，覆盖客户入驻→签约→开户的完整链路，实现客户/供应商全生命周期管理</li>
+<li>成功口径：入驻提交到待签约数据生成 &lt; 5分钟，客户查询 30 秒内完成，互转 1 分钟内完成</li>
+</ul>
+<h3>1.3 范围与边界</h3>
+<ul>
+<li>In Scope（本期 P0）：入驻链接管理、企业/自然人客户档案（含暂存、OCR、天眼查、唯一校验）、客户管理（含账期/资料/联系人/通信/关联账户）、合同签约（大陆线上飞书+E签宝 / 香港线下）、供应商管理、等级管理、客户与供应商互转</li>
+<li>Out of Scope：先开户再签约特殊流程（二期）、评分详情（二期）、开票抬头（二期）、Excel批量导入导出</li>
+</ul>
+<h3>1.4 影响范围</h3>
+<ul>
+<li>影响角色：销售代表、客服代表、销售助理、供应商管理专员、运营管理员、客户（入驻端）</li>
+<li>依赖系统：统一账户模块、飞书开放平台（审批）、E签宝（电子签约）、天眼查API（企业风险信息）、OCR服务</li>
+</ul>
+<hr>
+<h2>2. 枚举字典</h2>
+<blockquote>
+<p>所有枚举字段的键值对集中定义，研发以此为准。与数据设计 Schema 中的 TinyInt 值保持一致。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>枚举名</th>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>适用实体/字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户类型</td>
+<td>10</td>
+<td>PERSONAL</td>
+<td>自然人</td>
+<td>customer 表 customer_type 字段</td>
+</tr>
+<tr>
+<td>客户类型</td>
+<td>20</td>
+<td>ENTERPRISE</td>
+<td>企业</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>企业属地</td>
+<td>10</td>
+<td>MAINLAND</td>
+<td>中国大陆</td>
+<td>customer 表 enterprise_attribute、企业档案表、自然人档案表</td>
+</tr>
+<tr>
+<td>企业属地</td>
+<td>20</td>
+<td>HONGKONG</td>
+<td>中国香港</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>是否</td>
+<td>10</td>
+<td>YES</td>
+<td>是</td>
+<td>customer 表 is_peer、supplier 表 is_peer</td>
+</tr>
+<tr>
+<td>是否</td>
+<td>20</td>
+<td>NO</td>
+<td>否</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>合同签署状态</td>
+<td>10</td>
+<td>UNSIGNED</td>
+<td>未签署</td>
+<td>customer_contract 表 sign_status 字段</td>
+</tr>
+<tr>
+<td>合同签署状态</td>
+<td>20</td>
+<td>SIGNING</td>
+<td>签署中</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>合同签署状态</td>
+<td>30</td>
+<td>SIGNED</td>
+<td>已签署</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>合同签署状态</td>
+<td>40</td>
+<td>EXPIRED</td>
+<td>已过期</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>合同签署状态</td>
+<td>50</td>
+<td>TERMINATED</td>
+<td>已解约</td>
+<td>同上（主动提前终止，与已过期区分）</td>
+</tr>
+<tr>
+<td>服务状态</td>
+<td>10</td>
+<td>NORMAL</td>
+<td>正常</td>
+<td>customer、supplier、supplier_print_service、level 表的 service_status/status 字段</td>
+</tr>
+<tr>
+<td>服务状态</td>
+<td>20</td>
+<td>FROZEN</td>
+<td>已冻结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>账单周期</td>
+<td>10</td>
+<td>FIXED</td>
+<td>固定</td>
+<td>customer_contract 表 billing_cycle 字段</td>
+</tr>
+<tr>
+<td>账单周期</td>
+<td>20</td>
+<td>UNFIXED</td>
+<td>不固定</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>101</td>
+<td>MONTHLY</td>
+<td>月结</td>
+<td>customer_contract 表 payment_term 字段（账单周期=固定）</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>102</td>
+<td>BIMONTHLY</td>
+<td>双月结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>103</td>
+<td>TRIMONTHLY</td>
+<td>三月结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>201</td>
+<td>WEEKLY</td>
+<td>周结</td>
+<td>customer_contract 表 payment_term 字段（账单周期=不固定）</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>202</td>
+<td>PRE_PORT</td>
+<td>到港前结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>203</td>
+<td>SIGN_MONTHLY</td>
+<td>签收月结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>204</td>
+<td>OVERSEAS_WAREHOUSE</td>
+<td>到海外仓结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约账期</td>
+<td>205</td>
+<td>SIGN_SETTLE</td>
+<td>签收结</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>结算类型</td>
+<td>10</td>
+<td>BY_MONTH</td>
+<td>按月</td>
+<td>customer_contract 表 settlement_type 字段</td>
+</tr>
+<tr>
+<td>结算类型</td>
+<td>20</td>
+<td>BY_DAY</td>
+<td>按天</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>等级代码</td>
+<td>—</td>
+<td>SS/S/A/B/C/D/E/F/G</td>
+<td>SS~G</td>
+<td>customer 表 customer_level、supplier 表 level、level 表 level_code</td>
+</tr>
+<tr>
+<td>等级类型</td>
+<td>10</td>
+<td>CUSTOMER</td>
+<td>客户等级</td>
+<td>level 表 level_type 字段</td>
+</tr>
+<tr>
+<td>等级类型</td>
+<td>20</td>
+<td>SUPPLIER</td>
+<td>供应商等级</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>100</td>
+<td>MAINLINE</td>
+<td>干线运输供应商</td>
+<td>supplier 表 supplier_category 字段（多选JSON）</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>200</td>
+<td>CARGO_COLLECTION</td>
+<td>揽货服务商</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>300</td>
+<td>WAREHOUSE</td>
+<td>仓储供应商</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>400</td>
+<td>CUSTOMS</td>
+<td>关务供应商</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>500</td>
+<td>LAST_MILE</td>
+<td>尾程运输供应商</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>600</td>
+<td>AGENCY</td>
+<td>综合代理</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>900</td>
+<td>OTHER</td>
+<td>其他</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>101</td>
+<td>TRUCKING</td>
+<td>汽运</td>
+<td>supplier 表 supplier_detail 字段（多选JSON，跟随大类联动）</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>102</td>
+<td>SEA</td>
+<td>海运</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>103</td>
+<td>AIR</td>
+<td>空运</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>104</td>
+<td>RAILWAY</td>
+<td>铁运</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>201</td>
+<td>HUOLALA</td>
+<td>货拉拉</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>202</td>
+<td>TRAILER</td>
+<td>拖车行</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>301</td>
+<td>OVERSEAS_TRANSIT</td>
+<td>海外中转仓</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>302</td>
+<td>BONDED</td>
+<td>保税仓</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>303</td>
+<td>LOCAL</td>
+<td>本地仓</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>401</td>
+<td>DECLARATION</td>
+<td>报关行</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>402</td>
+<td>CLEARANCE</td>
+<td>清关行</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>403</td>
+<td>INSPECTION</td>
+<td>查验代理</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>501</td>
+<td>EXPRESS</td>
+<td>快递</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>502</td>
+<td>TRUCK</td>
+<td>卡车</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>601</td>
+<td>PEER</td>
+<td>同行</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>901</td>
+<td>OTHER_DETAIL</td>
+<td>其他</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>联系人角色</td>
+<td>10</td>
+<td>COMPANY_HEAD</td>
+<td>公司负责人</td>
+<td>customer_contact 表 role 字段、profile_contact 表 role 字段</td>
+</tr>
+<tr>
+<td>联系人角色</td>
+<td>20</td>
+<td>LOGISTICS_CONTACT</td>
+<td>物流联系人</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>联系人角色</td>
+<td>30</td>
+<td>FINANCE_HEAD</td>
+<td>财务负责人</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>资料类型</td>
+<td>10</td>
+<td>BUSINESS_LICENSE</td>
+<td>营业执照</td>
+<td>customer_material 表 material_type 字段</td>
+</tr>
+<tr>
+<td>资料类型</td>
+<td>20</td>
+<td>ID_CARD</td>
+<td>法人身份证正反面</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>资料类型</td>
+<td>30</td>
+<td>TIANYANCHA</td>
+<td>天眼查风险信息PDF</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>资料类型</td>
+<td>99</td>
+<td>CUSTOM</td>
+<td>自定义</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>地址类型</td>
+<td>10</td>
+<td>PICKUP</td>
+<td>取件地址</td>
+<td>customer_address 表 address_type 字段</td>
+</tr>
+<tr>
+<td>地址类型</td>
+<td>20</td>
+<td>RECEIVE</td>
+<td>收货地址</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>通信工具类型</td>
+<td>10</td>
+<td>WECOM</td>
+<td>企业微信</td>
+<td>customer_communication 表 comm_type 字段</td>
+</tr>
+<tr>
+<td>添加渠道</td>
+<td>10</td>
+<td>TANJI</td>
+<td>探迹</td>
+<td>企业档案表、自然人档案表 channel 字段</td>
+</tr>
+<tr>
+<td>添加渠道</td>
+<td>20</td>
+<td>EXHIBITION</td>
+<td>展会</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>添加渠道</td>
+<td>30</td>
+<td>BOSS_INTRO</td>
+<td>老板介绍</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>添加渠道</td>
+<td>40</td>
+<td>FRIEND</td>
+<td>朋友推荐</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>身份证面</td>
+<td>10</td>
+<td>FRONT</td>
+<td>人像面</td>
+<td>customer_material_file 表 card_side 字段</td>
+</tr>
+<tr>
+<td>身份证面</td>
+<td>20</td>
+<td>BACK</td>
+<td>国徽面</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>档案审核状态</td>
+<td>10</td>
+<td>DRAFT</td>
+<td>草稿</td>
+<td>企业档案表、自然人档案表 status 字段</td>
+</tr>
+<tr>
+<td>档案审核状态</td>
+<td>20</td>
+<td>PENDING</td>
+<td>待审核</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>档案审核状态</td>
+<td>30</td>
+<td>APPROVED</td>
+<td>已通过</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>档案审核状态</td>
+<td>40</td>
+<td>REJECTED</td>
+<td>已驳回</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>档案类型</td>
+<td>10</td>
+<td>ENTERPRISE</td>
+<td>企业档案</td>
+<td>pickup_address 表、profile_contact 表 profile_type 字段</td>
+</tr>
+<tr>
+<td>档案类型</td>
+<td>20</td>
+<td>PERSONAL</td>
+<td>自然人档案</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>入驻链接状态</td>
+<td>10</td>
+<td>VALID</td>
+<td>有效</td>
+<td>invitation_link 表 status 字段</td>
+</tr>
+<tr>
+<td>入驻链接状态</td>
+<td>20</td>
+<td>USED</td>
+<td>已使用</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>入驻链接状态</td>
+<td>30</td>
+<td>EXPIRED</td>
+<td>已过期</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>所属公司</td>
+<td>10</td>
+<td>GZ_FEIDIAN</td>
+<td>广州飞点</td>
+<td>customer_contract 表 contract_company 字段</td>
+</tr>
+<tr>
+<td>所属公司</td>
+<td>20</td>
+<td>SZ_FEIDIAN</td>
+<td>深圳飞点</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>所属公司</td>
+<td>30</td>
+<td>GD_FEIDIAN</td>
+<td>广东飞点</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>所属公司</td>
+<td>40</td>
+<td>HK_FULIDUN</td>
+<td>香港富力顿</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>所属公司</td>
+<td>50</td>
+<td>MOLIAN</td>
+<td>墨链</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>签约方式</td>
+<td>10</td>
+<td>MAINLAND_ONLINE</td>
+<td>大陆线上签约</td>
+<td>customer_contract 表 signing_mode 字段</td>
+</tr>
+<tr>
+<td>签约方式</td>
+<td>20</td>
+<td>HK_OFFLINE</td>
+<td>香港线下签约</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>飞书审批类型</td>
+<td>10</td>
+<td>SIMPLE</td>
+<td>简易</td>
+<td>feishu_approval 表、customer_contract 表 feishu_approval_type 字段</td>
+</tr>
+<tr>
+<td>飞书审批类型</td>
+<td>20</td>
+<td>MOXIAN</td>
+<td>墨线</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>飞书审批类型</td>
+<td>30</td>
+<td>MEIXIAN</td>
+<td>美线</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>审批状态</td>
+<td>10</td>
+<td>IN_PROGRESS</td>
+<td>审批中</td>
+<td>feishu_approval 表 approval_status 字段</td>
+</tr>
+<tr>
+<td>审批状态</td>
+<td>20</td>
+<td>APPROVED</td>
+<td>已通过</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>审批状态</td>
+<td>30</td>
+<td>REJECTED</td>
+<td>已驳回</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>审批状态</td>
+<td>40</td>
+<td>CANCELLED</td>
+<td>已撤销</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>文件来源</td>
+<td>10</td>
+<td>MANUAL</td>
+<td>手工上传</td>
+<td>customer_material_file 表 source 字段</td>
+</tr>
+<tr>
+<td>文件来源</td>
+<td>20</td>
+<td>ESIGN</td>
+<td>E签宝回传</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>文件来源</td>
+<td>30</td>
+<td>OCR</td>
+<td>OCR识别</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>文件来源</td>
+<td>40</td>
+<td>TIANYANCHA</td>
+<td>天眼查生成</td>
+<td>同上</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>3. 状态机</h2>
+<h3>3.1 入驻链接状态流转</h3>
+<pre><code>[有效] ──{客户点击链接}──→ [已使用]
+[有效] ──{超过14天}──→ [已过期]
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>有效</td>
+<td>客户点击链接进入入驻</td>
+<td>已使用</td>
+<td>客户</td>
+<td>—</td>
+</tr>
+<tr>
+<td>有效</td>
+<td>超过expire_time</td>
+<td>已过期</td>
+<td>系统自动</td>
+<td>定时任务</td>
+</tr>
+</tbody></table></div>
+<h3>3.2 档案审核状态流转</h3>
+<pre><code>[草稿] ──{暂存并退出}──→ [草稿]（更新快照）
+[草稿] ──{点击入驻提交}──→ [待审核]
+[待审核] ──{审核通过}──→ [已通过] ──→ 生成 customer 记录 + 待签约数据
+[待审核] ──{审核驳回}──→ [已驳回]
+</code></pre>
+<h3>3.3 客户/供应商/等级 服务状态流转</h3>
+<pre><code>[正常] ──{冻结}──→ [已冻结] ──{启用}──→ [正常]
+</code></pre>
+<p>客户冻结/启用联动关联账户同步变更；供应商和等级独立操作。</p>
+<h3>3.4 合同签署状态流转</h3>
+<blockquote>
+<p>V1.4：合同签署状态从 customer 级下沉至 customer_contract 级。一个客户可有多份合同，每份合同独立流转。签约时新增合同记录（不为同一所属公司重复签约）。<br>V1.6：新增&quot;已解约&quot;状态（50），与&quot;已过期&quot;区分——已解约是主动提前终止，已过期是自然到期。解约时间到期后由定时任务自动变更状态。</p>
+</blockquote>
+<pre><code>[未签署] ──{发起签约}──→ [签署中]
+[签署中] ──{大陆: 飞书审批通过+E签宝签署完成 / 香港: 上传附件保存}──→ [已签署]
+[已签署] ──{contract_end_date &lt; now()}──→ [已过期]
+[已签署] ──{termination_date ≤ today（定时任务）}──→ [已解约]
+[已解约] ──{删除 termination_date + end_date &gt; today}──→ [已签署]
+[已过期] ──{重新签约（生成新合同，不覆盖旧合同）}──→ [签署中]
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>未签署</td>
+<td>发起签约（含所属公司）</td>
+<td>签署中</td>
+<td>销售/客服</td>
+<td>serviceStatus=正常；该客户在租户下不能已有&quot;已签约&quot;或&quot;签约中&quot;合同（一个客户全局只能有一个有效合同）</td>
+</tr>
+<tr>
+<td>已过期</td>
+<td>发起签约（新合同）</td>
+<td>签署中</td>
+<td>销售/客服</td>
+<td>serviceStatus=正常；生成新合同记录</td>
+</tr>
+<tr>
+<td>签署中</td>
+<td>大陆：飞书审批通过+E签宝签署完成</td>
+<td>已签署</td>
+<td>系统自动</td>
+<td>—</td>
+</tr>
+<tr>
+<td>签署中</td>
+<td>香港：上传合同附件+保存</td>
+<td>已签署</td>
+<td>销售/客服</td>
+<td>附件至少1个</td>
+</tr>
+<tr>
+<td>已签署</td>
+<td>合同到期（end_date &lt; now()）</td>
+<td>已过期</td>
+<td>系统定时任务</td>
+<td>contract_end_date &lt; now()</td>
+</tr>
+<tr>
+<td>已签署</td>
+<td>解约时间到期（termination_date ≤ today）</td>
+<td>已解约</td>
+<td>系统定时任务</td>
+<td>termination_date IS NOT NULL</td>
+</tr>
+<tr>
+<td>已解约</td>
+<td>删除解约时间 + end_date &gt; today</td>
+<td>已签署</td>
+<td>手动操作</td>
+<td>用户手动删除termination_date字段</td>
+</tr>
+<tr>
+<td>已解约</td>
+<td>删除解约时间 + end_date ≤ today</td>
+<td>已过期</td>
+<td>手动操作</td>
+<td>用户手动删除termination_date字段</td>
+</tr>
+</tbody></table></div>
+<h3>3.5 飞书审批状态流转</h3>
+<pre><code>[审批中] ──{飞书回调: 通过}──→ [已通过]
+[审批中] ──{飞书回调: 驳回}──→ [已驳回]
+[审批中] ──{撤销审批}──→ [已撤销]
+[已通过] ──→ 触发 E签宝 生成合同
+</code></pre>
+<hr>
+<h2>4. 功能清单与页面映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能点</th>
+<th>优先级</th>
+<th>对应页面</th>
+<th>页面类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>入驻链接</td>
+<td>生成/发送入驻链接</td>
+<td>P0</td>
+<td>客户管理列表（按钮）</td>
+<td>弹窗</td>
+</tr>
+<tr>
+<td>企业客户档案</td>
+<td>企业入驻表单（含暂存/提交/OCR/天眼查）</td>
+<td>P0</td>
+<td>企业客户档案.html</td>
+<td>表单页</td>
+</tr>
+<tr>
+<td>自然人客户档案</td>
+<td>个人入驻表单（含暂存/提交/OCR）</td>
+<td>P0</td>
+<td>自然人客户档案.html</td>
+<td>表单页</td>
+</tr>
+<tr>
+<td>客户管理</td>
+<td>客户列表 + 17列 + 搜索过滤 + Tab</td>
+<td>P0</td>
+<td>客户管理.html</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>客户管理</td>
+<td>手工创建客户（7个Tab）</td>
+<td>P0</td>
+<td>客户管理.html（弹窗）</td>
+<td>编辑页</td>
+</tr>
+<tr>
+<td>客户管理</td>
+<td>编辑/查看客户（冻结态只读）</td>
+<td>P0</td>
+<td>客户管理.html（弹窗）</td>
+<td>编辑页</td>
+</tr>
+<tr>
+<td>客户管理</td>
+<td>保存并生成账户（权限+邮件通知）</td>
+<td>P0</td>
+<td>客户管理.html（弹窗）</td>
+<td>按钮</td>
+</tr>
+<tr>
+<td>客户管理</td>
+<td>冻结/启用客户（关联账户联动）</td>
+<td>P0</td>
+<td>客户管理.html</td>
+<td>列表操作</td>
+</tr>
+<tr>
+<td>客户管理</td>
+<td>转供应商</td>
+<td>P0</td>
+<td>客户管理.html（弹窗）</td>
+<td>弹窗</td>
+</tr>
+<tr>
+<td>合同签约</td>
+<td>大陆线上签约（4分支+飞书审批+E签宝）</td>
+<td>P0</td>
+<td>签约弹窗</td>
+<td>弹窗</td>
+</tr>
+<tr>
+<td>合同签约</td>
+<td>香港线下签约（简化+保存即签约）</td>
+<td>P0</td>
+<td>HK签约弹窗</td>
+<td>弹窗</td>
+</tr>
+<tr>
+<td>供应商管理</td>
+<td>供应商列表 + 搜索过滤（名称/大类/明细/是否同行）</td>
+<td>P0</td>
+<td>供应商管理.html</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>供应商管理</td>
+<td>新增/编辑供应商 — 4个Tab（基本信息/联系人/资料/打单服务）</td>
+<td>P0</td>
+<td>供应商管理.html（弹窗）</td>
+<td>编辑页</td>
+</tr>
+<tr>
+<td>供应商管理</td>
+<td>大类明细级联 + SCAC条件必填（快递）</td>
+<td>P0</td>
+<td>供应商管理.html（弹窗）</td>
+<td>表单联动</td>
+</tr>
+<tr>
+<td>供应商管理</td>
+<td>供应商名称唯一校验</td>
+<td>P0</td>
+<td>供应商管理.html（弹窗）</td>
+<td>校验</td>
+</tr>
+<tr>
+<td>供应商管理</td>
+<td>冻结/启用</td>
+<td>P0</td>
+<td>供应商管理.html</td>
+<td>列表操作</td>
+</tr>
+<tr>
+<td>供应商管理</td>
+<td>转客户（继承+补充+ROOT账号+邮件通知）</td>
+<td>P0</td>
+<td>转客户弹窗</td>
+<td>弹窗</td>
+</tr>
+<tr>
+<td>等级管理</td>
+<td>等级列表（分客户/供应商Tab + 查询+新增级别按钮）</td>
+<td>P0</td>
+<td>等级管理.html</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>等级管理</td>
+<td>新增级别（级别代码底纹+状态单选）</td>
+<td>P0</td>
+<td>等级管理.html（弹窗）</td>
+<td>弹窗</td>
+</tr>
+<tr>
+<td>等级管理</td>
+<td>冻结/启用（绑定保护）</td>
+<td>P0</td>
+<td>等级管理.html</td>
+<td>列表操作</td>
+</tr>
+<tr>
+<td>等级管理</td>
+<td>查询接口供CRM/SRM调用</td>
+<td>P0</td>
+<td>—</td>
+<td>API</td>
+</tr>
+</tbody></table></div>
+<h3>4.1 页面导航关系图</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 入驻端
+        L1[入驻链接] --&gt;|点击| D1[企业客户档案]
+        L1 --&gt;|点击| D2[自然人客户档案]
+        D1 --&gt;|暂存| DRAFT[草稿快照]
+        D2 --&gt;|暂存| DRAFT
+        D1 --&gt;|提交入驻| C1[客户列表]
+        D2 --&gt;|提交入驻| C1
+    end
+    subgraph 运营端-客户
+        C1[客户管理列表] --&gt;|新增| C2[手工创建客户弹窗]
+        C1 --&gt;|编辑| C3[编辑客户弹窗]
+        C1 --&gt;|签约| C4{签约方式}
+        C4 --&gt;|大陆| C5[大陆签约弹窗]
+        C4 --&gt;|香港| C6[HK签约弹窗]
+        C5 --&gt;|发起| FS[飞书审批]
+        FS --&gt;|通过| ES[E签宝]
+        ES --&gt;|回传| C1
+        C6 --&gt;|保存| C1
+        C1 --&gt;|转供应商| C7[转供应商弹窗]
+        C7 --&gt;|确认| S1[供应商管理列表]
+        C1 --&gt;|发送入驻链接| L1
+    end
+    subgraph 运营端-供应商
+        S1 --&gt;|新增/编辑| S2[供应商弹窗]
+        S1 --&gt;|转客户| S3[转客户弹窗]
+        S3 --&gt;|确认| C1
+    end
+    subgraph 运营端-配置
+        LV1[等级管理] --&gt;|新增级别| LV2[等级弹窗]
+        LV1 -.-&gt;|被引用| C1
+        LV1 -.-&gt;|被引用| S1
+    end
+    subgraph 运营端-互转
+        S1 --&gt;|转客户| S3[转客户弹窗]
+        S3 --&gt;|确认+ROOT账号+邮件| C1
+        C1 --&gt;|转供应商| C7[转供应商弹窗]
+        C7 --&gt;|确认| S1
+    end
+</code></pre>
+<hr>
+<h2>5. 页面规格</h2>
+<h3>5.1 入驻链接弹窗</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：客户管理列表 &gt; 点击&quot;发送入驻链接&quot;</li>
+<li>类型：弹窗（400px）</li>
+<li>访问角色：销售代表、管理员</li>
+</ul>
+<p><strong>表单字段</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>关联客户</td>
+<td>Select</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>可选，关联已有客户记录</td>
+</tr>
+<tr>
+<td>有效天数</td>
+<td>Select</td>
+<td>—</td>
+<td>14</td>
+<td>—</td>
+<td>7/14/30天</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>点击&quot;生成链接&quot; → 创建 invitation_link 记录（token=UUID, expire_time=now+expireDays）</li>
+<li>显示链接 + 复制按钮 + &quot;发送给客户&quot;提示</li>
+<li>链接格式：<code>https://{domain}/onboarding?token={uuid}</code></li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>生成链接：<code>POST /api/invitation-link/create</code> (body: <code>{customerId, expireDays}</code>)</li>
+</ul>
+<hr>
+<h3>5.2 企业客户档案页面</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：客户端 &gt; 入驻链接进入</li>
+<li>类型：表单页（1100px宽卡片布局）</li>
+<li>访问角色：未登录客户（通过token校验）</li>
+<li><strong>页面入口校验</strong>：token有效性+过期时间，过期显示&quot;链接已过期，请联系您的销售代表重新发送入驻邀请&quot;</li>
+</ul>
+<p><strong>模块化卡片布局</strong>：</p>
+<p><strong>卡片1 — 基础认证信息</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>企业属地</td>
+<td>Select</td>
+<td>✅</td>
+<td>中国大陆/中国香港（默认大陆）</td>
+</tr>
+<tr>
+<td>营业执照</td>
+<td>Upload</td>
+<td>—</td>
+<td>上传后触发OCR自动识别公司名称、注册号、信用代码</td>
+</tr>
+<tr>
+<td>公司名称</td>
+<td>Input</td>
+<td>✅</td>
+<td>OCR自动填充，可修改</td>
+</tr>
+<tr>
+<td>公司注册号码</td>
+<td>Input</td>
+<td>✅</td>
+<td>OCR自动填充，可修改</td>
+</tr>
+<tr>
+<td>统一社会信用代码</td>
+<td>Input</td>
+<td>✅</td>
+<td>OCR自动填充，可修改；提交时全局唯一校验</td>
+</tr>
+<tr>
+<td>公司注册地址-省</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>公司注册地址-市</td>
+<td>Select</td>
+<td>✅</td>
+<td>与省级联</td>
+</tr>
+<tr>
+<td>公司注册地址-详细</td>
+<td>Input</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>卡片2 — 取货地址</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>取货地址-省份</td>
+<td>Select</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>取货地址-城市</td>
+<td>Select</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>取货地址-详细</td>
+<td>Input</td>
+<td>✅</td>
+</tr>
+</tbody></table></div>
+<ul>
+<li>支持动态新增/删除行，至少保留1条</li>
+</ul>
+<p><strong>卡片3 — 联系人与权限配置</strong>：</p>
+<ul>
+<li>固定3角色行（公司负责人/物流联系人/财务负责人）</li>
+<li>每行：姓名(✅) / 电话(✅) / 邮箱(✅)</li>
+<li>合同对接人：3人中单选1人</li>
+<li>接收系统账号：3人中单选1人</li>
+</ul>
+<p><strong>卡片4 — 业务与渠道</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>联动</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>添加渠道</td>
+<td>Select</td>
+<td>✅</td>
+<td>探迹/展会/老板介绍/朋友推荐</td>
+</tr>
+<tr>
+<td>主营业务国</td>
+<td>Select</td>
+<td>✅</td>
+<td>美国/英国/德国等</td>
+</tr>
+<tr>
+<td>主要经营平台</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>与业务国级联选择</td>
+</tr>
+</tbody></table></div>
+<p><strong>卡片5 — 法人证件上传</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>法人身份证人像面</td>
+<td>Upload(大图)</td>
+<td>✅</td>
+<td>≤2MB, jpg/png/jpeg</td>
+</tr>
+<tr>
+<td>法人身份证国徽面</td>
+<td>Upload(大图)</td>
+<td>✅</td>
+<td>≤2MB, jpg/png/jpeg</td>
+</tr>
+<tr>
+<td>客户备注</td>
+<td>Textarea</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>底栏按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>暂存并退出</td>
+<td>校验无需全部填写 → 序列化表单为JSON → 写入 profile_draft → Toast &quot;信息已暂存，您可在有效期内继续填写&quot;</td>
+</tr>
+<tr>
+<td>入驻</td>
+<td>校验必填项 + 信用代码唯一性 → 调用天眼查API生成风险信息PDF → 提交后页面置灰 → 显示&quot;您的入驻申请已提交，我们将在1-3个工作日内完成审核&quot;</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[暂存恢复]：每次打开链接时检查是否有 <code>profile_draft</code> 记录，有则自动恢复表单数据</li>
+<li>[OCR识别]：营业执照上传完成 → 调用OCR API → 自动回填公司名称/注册号/信用代码 → Toast &quot;营业执照上传成功，已自动识别信息，如有误可手动修改&quot;</li>
+<li>[页面置灰]：点击入驻提交后，整个页面变为不可编辑状态，仅显示审核提示</li>
+<li>[天眼查降级]：天眼查API调用失败 → Toast &quot;企业风险信息获取失败，不影响入驻提交，稍后系统将自动补采&quot;，入驻流程不阻断</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>加载草稿：<code>GET /api/profile/draft/{token}</code></li>
+<li>暂存草稿：<code>POST /api/profile/draft/save</code> (body: <code>{token, profileType, draftData}</code>)</li>
+<li>入驻提交：<code>POST /api/profile/enterprise/submit</code> (body: 全量表单)</li>
+<li>OCR营业执照：<code>POST /api/ocr/business-license</code> (body: <code>{file}</code>)</li>
+<li>天眼查风险信息：<code>POST /api/tianyancha/risk-check</code> (body: <code>{creditCode, companyName}</code>)</li>
+</ul>
+<hr>
+<h3>5.3 自然人客户档案页面</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：客户端 &gt; 入驻链接进入</li>
+<li>类型：表单页</li>
+<li>与企业的差异：<ul>
+<li>无营业执照，改为身份证正反面OCR识别姓名+身份证号</li>
+<li>无&quot;法人证件上传&quot;独立卡片（身份证已在基础认证中）</li>
+<li>身份证号全局唯一校验</li>
+<li>字段：personalRegionType(所属地)、fullName、idCardNo、personalProvince、personalCity、personalDetailAddress</li>
+</ul>
+</li>
+<li>其余卡片（取货地址、联系人、业务与渠道）与企业版相同</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>OCR身份证：<code>POST /api/ocr/id-card</code> (body: <code>{file}</code>)</li>
+</ul>
+<hr>
+<h3>5.4 客户管理列表页</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：运营端 &gt; 客户管理</li>
+<li>类型：列表页</li>
+<li>访问角色：销售代表、客服代表、销售助理、管理员</li>
+</ul>
+<p><strong>搜索区</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户名称</td>
+<td>Input（模糊搜索）</td>
+</tr>
+<tr>
+<td>客户类型</td>
+<td>Select(multiple)：企业/自然人</td>
+</tr>
+<tr>
+<td>客户属地</td>
+<td>Select(multiple)：中国大陆/中国香港</td>
+</tr>
+<tr>
+<td>是否同行</td>
+<td>Select(multiple)：是/否</td>
+</tr>
+</tbody></table></div>
+<p><strong>按钮</strong>：查询、重置、新增客户、转供应商、发送入驻链接</p>
+<p><strong>Tab页签</strong>：正常 / 已冻结 / 全部</p>
+<p><strong>列表字段</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>类型/格式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>客户编号</td>
+<td>文本，K+序号</td>
+</tr>
+<tr>
+<td>2</td>
+<td>客户名称</td>
+<td>文本，超长省略+tooltip</td>
+</tr>
+<tr>
+<td>3</td>
+<td>客户类型</td>
+<td>文本：企业/自然人</td>
+</tr>
+<tr>
+<td>4</td>
+<td>客户属地</td>
+<td>文本：中国大陆/中国香港</td>
+</tr>
+<tr>
+<td>5</td>
+<td>是否同行</td>
+<td>文本：是/否</td>
+</tr>
+<tr>
+<td>6</td>
+<td>客服代表</td>
+<td>文本，多选用&quot;、&quot;连接</td>
+</tr>
+<tr>
+<td>7</td>
+<td>客户等级</td>
+<td>文本：SS~G</td>
+</tr>
+<tr>
+<td>8</td>
+<td>合同数量</td>
+<td>按钮：N份合同，点击弹出Popover（签约主体/合同状态/起止日期/账期/天数号）</td>
+</tr>
+<tr>
+<td>9</td>
+<td>服务状态</td>
+<td>Tag：正常(success)/已冻结(danger)</td>
+</tr>
+<tr>
+<td>10</td>
+<td>首次下单时间</td>
+<td>文本</td>
+</tr>
+<tr>
+<td>11</td>
+<td>未下单天数</td>
+<td>文本</td>
+</tr>
+<tr>
+<td>12</td>
+<td>操作</td>
+<td>按钮：编辑 / 签约 / 冻结或启用</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>V1.4：合同签署状态/开始日期/结束日期/账期从列表列中移除（一个客户多份合同无法单行展示），改为&quot;合同数量&quot;列。</p>
+</blockquote>
+<p><strong>操作列按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>显示条件</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>编辑</td>
+<td>始终</td>
+<td>打开编辑弹窗（已冻结→只读&quot;查看客户&quot;）</td>
+</tr>
+<tr>
+<td>签约</td>
+<td>serviceStatus=正常</td>
+<td>大陆→线上签约弹窗（选我司合同抬头）；香港→HK线下签约弹窗（我司合同抬头=香港富力顿）。确定时校验签约主体唯一</td>
+</tr>
+<tr>
+<td>冻结</td>
+<td>serviceStatus=正常</td>
+<td>二次确认弹窗 → 冻结 + 关联账户同步冻结</td>
+</tr>
+<tr>
+<td>启用</td>
+<td>serviceStatus=已冻结</td>
+<td>二次确认弹窗 → 启用 + 关联账户同步启用</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>5.5 手工创建客户弹窗</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：客户管理列表 &gt; 点击&quot;新增客户&quot;</li>
+<li>类型：编辑弹窗（900px宽）</li>
+<li>弹窗标题：&quot;手工创建客户&quot;</li>
+</ul>
+<p><strong>基本信息</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户编号</td>
+<td>Input(disabled)</td>
+<td>—</td>
+<td>K+1+0001自增</td>
+<td>编辑时不可改</td>
+</tr>
+<tr>
+<td>客户类型</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>编辑时不可改</td>
+</tr>
+<tr>
+<td>客户名称</td>
+<td>Input</td>
+<td>✅</td>
+<td>—</td>
+<td>编辑时不可改</td>
+</tr>
+<tr>
+<td>客户昵称</td>
+<td>Input</td>
+<td>✅</td>
+<td>—</td>
+<td>placeholder: &quot;请填写客户昵称，举例：qyjskj&quot;，位于是否同行前</td>
+</tr>
+<tr>
+<td>统一社会信用代码</td>
+<td>Input</td>
+<td>条件</td>
+<td>—</td>
+<td>企业必填+唯一校验；自然人禁用；编辑时不可改</td>
+</tr>
+<tr>
+<td>客户属地</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>编辑时不可改</td>
+</tr>
+<tr>
+<td>是否同行</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>客户等级</td>
+<td>Select</td>
+<td>✅</td>
+<td>G</td>
+<td>SS~G，来源等级管理</td>
+</tr>
+<tr>
+<td>客服代表</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>销售代表</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>销售助理</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>销售来源</td>
+<td>Input</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>开通业务</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>—</td>
+<td>TMS/WMS</td>
+</tr>
+</tbody></table></div>
+<p><strong>更多信息 Tab（7个有效+2个占位）</strong>：</p>
+<ol>
+<li><strong>合同管理 Tab</strong>（原服务合同+账期合并）：合同列表（所属公司/签署状态/起止日期/账期/结算类型/虚拟账户）+ 新增合同按钮 + 查看详情/签约操作按钮。见下方 §5.5.1 合同管理明细</li>
+<li><strong>资料 Tab</strong>：营业执照（企业必填）+ 法人身份证正反面（始终必传）+ 天眼查风险信息（选传）+ 自定义附件</li>
+<li><strong>地址库 Tab</strong>：只读表格，来源于客户档案，空数据显示空状态</li>
+<li><strong>联系人 Tab</strong>：固定3行（公司负责人/物流联系人/财务负责人），每行含姓名/电话/邮箱，指定合同对接人+系统账号接收人</li>
+<li><strong>通信信息 Tab</strong>：commType（固定&quot;企业微信&quot;）+ groupId（必填）</li>
+<li><strong>关联账户 Tab</strong>：只读表格（账户名称/所属公司/账户角色/绑定邮箱/账户状态/最近登录时间），数据来源于账户模块。一个客户可能有多套虚拟账户分别对应不同所属公司</li>
+<li><strong>评分详情 Tab</strong>（占位）：空状态</li>
+<li><strong>开票抬头 Tab</strong>（占位）：空状态</li>
+</ol>
+<p><strong>底栏按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>返回</td>
+<td>二次确认 → 关闭弹窗</td>
+</tr>
+<tr>
+<td>保存</td>
+<td>校验必填 → 保存 → Toast &quot;手工创建客户成功！&quot;</td>
+</tr>
+<tr>
+<td>保存并生成账户</td>
+<td>需权限 → 额外校验身份证完整性+营业执照(企业) → 保存 + 开通账户 + 邮件通知 → Toast &quot;保存成功，并已为该客户生成系统账户！&quot; → 自动创建一条初始合同（合同状态=未签署，所属公司=默认）</td>
+</tr>
+</tbody></table></div>
+<h5>5.5.1 合同管理 Tab（列表形式）</h5>
+<blockquote>
+<p>V1.4 新增。编辑弹窗中展示该客户下所有合同列表，支持行内编辑日期和上传服务协议。<br>V1.6 更新：新增&quot;主合同&quot;Radio列 + &quot;解约时间&quot;DatePicker列；合同状态Tag新增&quot;已解约(danger)&quot;。</p>
+</blockquote>
+<p><strong>合同列表字段</strong>（8 列）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>主合同</td>
+<td>Radio</td>
+<td>手动标记该合同是否为主合同。允许标记多份。当前生效主合同（唯一）由系统按日期规则自动判定，在列表顶部以 Tag &quot;当前生效&quot; 标注</td>
+</tr>
+<tr>
+<td>2</td>
+<td>签约主体</td>
+<td>Select</td>
+<td>下拉选择；大陆客户可选4家（广州飞点/深圳飞点/广东飞点/墨链），香港仅香港富力顿；编辑态置灰</td>
+</tr>
+<tr>
+<td>3</td>
+<td>合同状态</td>
+<td>Tag(只读)</td>
+<td>已签署(success)/签署中(warning)/已过期(info)/已解约(danger)/未签署(info)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>合同开始日期</td>
+<td>DatePicker</td>
+<td>行内日期选择器，编辑态置灰</td>
+</tr>
+<tr>
+<td>5</td>
+<td>合同结束日期</td>
+<td>DatePicker</td>
+<td>行内日期选择器，编辑态置灰</td>
+</tr>
+<tr>
+<td>6</td>
+<td>解约时间</td>
+<td>DatePicker</td>
+<td>行内日期选择器，可编辑。填写后由定时任务到期自动将状态变更为已解约；删除时按结束日期自动恢复状态</td>
+</tr>
+<tr>
+<td>7</td>
+<td>服务协议</td>
+<td>Upload + 链接</td>
+<td>上传按钮 + 已上传文件的可点击链接</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互规则</strong>：</p>
+<ul>
+<li><strong>合同来源</strong>：所有合同统一通过主列表「签约」按钮创建，签约完成后自动同步至本 Tab。合同管理 Tab 不提供「新增合同」按钮</li>
+<li><strong>编辑态保护</strong>：编辑已有客户时，&quot;签约主体&quot;&quot;合同开始日期&quot;&quot;合同结束日期&quot;三列置灰不可编辑</li>
+<li><strong>主合同标记</strong>：Radio 单选互斥，同一客户同时仅一份生效主合同，点击即切换。无标记时默认第一份已签署合同为主合同</li>
+<li><strong>当前生效主合同</strong>：系统在列表顶部 Tag 标注&quot;当前生效&quot;（仅一份）。校验 isPrimary=true 且已签署+在有效期内+未解约，任一不满足则无生效合同</li>
+<li><strong>解约时间</strong>：可填可删。填写后不立即改变状态，定时任务处理。删除时实时恢复状态</li>
+<li><strong>服务协议上传</strong>：行内 <code>el-upload</code> 选择文件后自动回显文件名</li>
+<li><strong>签约唯一校验</strong>：发起签约时校验——该客户在飞点租户下是否已有&quot;已签约&quot;或&quot;签约中&quot;的合同。<strong>一个客户全局只能有一个有效合同</strong>。若已存在有效合同则拦截，旧合同过期/作废后方可签新合同</li>
+</ul>
+<h5>5.5.2 账期 Tab（列表形式）</h5>
+<blockquote>
+<p>V1.4。以表格列表形式展示每份合同的完整账期明细，每行可独立编辑。</p>
+</blockquote>
+<p><strong>列表字段</strong>（每行 = 一个所属分公司）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>所属分公司</td>
+<td>只读文本</td>
+<td>来自合同管理 Tab 的签约主体</td>
+</tr>
+<tr>
+<td>2</td>
+<td>账单周期</td>
+<td>Select</td>
+<td>固定 / 不固定，切换时清空账期</td>
+</tr>
+<tr>
+<td>3</td>
+<td>账期</td>
+<td>Select</td>
+<td>联动账单周期动态可选值</td>
+</tr>
+<tr>
+<td>4</td>
+<td>结算类型</td>
+<td>只读文本</td>
+<td>按月/按天，由账单周期+账期自动推导</td>
+</tr>
+<tr>
+<td>5</td>
+<td>结算月</td>
+<td>只读文本</td>
+<td>仅按月时显示：月结=0, 双月结=1, 三月结=2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>天数/号</td>
+<td>InputNumber</td>
+<td>≥0 整数，行内编辑</td>
+</tr>
+</tbody></table></div>
+<p><strong>新增合同→签约流程</strong>：</p>
+<pre><code>客户管理列表 → 点击&quot;签约&quot;按钮 → 选择所属公司 + 填写合同信息
+  → 签约成功 → 编辑弹窗「合同管理」Tab 自动新增一条合同记录
+  → 在「合同管理」Tab 补充日期和服务协议
+  → 在「账期」Tab 编辑完整账期明细
+</code></pre>
+<hr>
+<h3>5.6 编辑客户弹窗</h3>
+<p>与手工创建共用组件，差异：</p>
+<ul>
+<li>标题：serviceStatus=正常 → &quot;编辑客户&quot;；已冻结 → &quot;查看客户&quot;</li>
+<li>已冻结：全部字段只读，底栏仅&quot;关闭&quot;按钮</li>
+<li>编辑态：customerType/name/creditCode/enterpriseAttribute 均 disabled</li>
+</ul>
+<hr>
+<h3>5.7 大陆线上签约弹窗</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：客户管理列表 &gt; 签约（大陆客户）或合同管理Tab &gt; 新增合同 &gt; 签约</li>
+<li>类型：弹窗（550px）</li>
+<li>前置条件：enterpriseAttribute=中国大陆</li>
+</ul>
+<p><strong>V1.4 新增共有字段</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>所属公司</td>
+<td>Select</td>
+<td>✅</td>
+<td>若从合同管理Tab新增合同流入，则默认带入且不可改；若从列表直接签约，则需选择</td>
+</tr>
+</tbody></table></div>
+<p><strong>4分支字段组合</strong>（除共有 所属公司 + 我司合同抬头 外）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>isSimple</th>
+<th>isStandard</th>
+<th>表单字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>否</td>
+<td>是</td>
+<td>签约账期(域名+属地联动) + 合同期限(1/2/3年) + 开始日期(默认当天) + 结束日期(自动计算)</td>
+</tr>
+<tr>
+<td>否</td>
+<td>否</td>
+<td>合同修改内容(textarea) + 附件</td>
+</tr>
+<tr>
+<td>是</td>
+<td>是</td>
+<td>签约账期 + 合同期限(1/2/3年) + 签订日期(默认当天)</td>
+</tr>
+<tr>
+<td>是</td>
+<td>否</td>
+<td>合同期限(1/2/3年) + 签订日期(默认当天) + 合同修改内容 + 附件</td>
+</tr>
+</tbody></table></div>
+<p><strong>提交后流程</strong>：</p>
+<ol>
+<li>创建/更新 customer_contract 记录（sign_status=签署中）</li>
+<li>调用飞书审批 → 创建 feishu_approval 记录</li>
+<li>飞书审批根据合同类型路由到简易/墨线/美线审批流</li>
+<li>审批通过回调 → 调用 E签宝 API 生成合同</li>
+<li>E签宝签署完成回调 → esign_file_url 回填 → 合同信息回写</li>
+</ol>
+<p><strong>合同信息回写规则</strong>：</p>
+<ul>
+<li>标准合同（is_contract_auto_sync=true）：customer_contract.sign_status=已签署 + contract_start_date/end_date 取签约值自动写入</li>
+<li>非标合同（is_contract_auto_sync=false）：销售手工在合同管理Tab中点击&quot;查看详情&quot;后维护</li>
+</ul>
+<hr>
+<h3>5.8 香港线下签约弹窗</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：客户管理列表 &gt; 签约（香港客户）</li>
+<li>类型：弹窗（400px）</li>
+</ul>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>我司合同抬头</td>
+<td>Input(disabled)</td>
+<td>✅</td>
+<td>只读，默认&quot;香港富力顿&quot;</td>
+</tr>
+<tr>
+<td>合同开始日期</td>
+<td>DatePicker</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>合同结束日期</td>
+<td>DatePicker</td>
+<td>✅</td>
+<td>不可早于开始日期</td>
+</tr>
+<tr>
+<td>服务合同协议</td>
+<td>Upload</td>
+<td>✅</td>
+<td>PDF/图片，至少1个附件</td>
+</tr>
+</tbody></table></div>
+<p><strong>提交后</strong>：保存 → customer_contract.sign_status=已签署 → Toast &quot;合同签约成功！&quot;</p>
+<hr>
+<h3>5.9 转供应商弹窗</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>必填</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>供应商名称</td>
+<td>—</td>
+<td>disabled，继承自客户名称</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>✅</td>
+<td>多选</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>✅</td>
+<td>多选，跟随大类联动</td>
+</tr>
+<tr>
+<td>SCAC</td>
+<td>条件</td>
+<td>明细含快递时必填</td>
+</tr>
+<tr>
+<td>供应商等级</td>
+<td>✅</td>
+<td>SS~G</td>
+</tr>
+</tbody></table></div>
+<p>更多信息 Tab — 联系人：动态增删行 + 对接人指派。</p>
+<hr>
+<h3>5.10 供应商管理列表页</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：运营端 &gt; 供应商管理</li>
+<li>类型：列表页</li>
+<li>访问角色：无权限管控，所有运营角色可访问</li>
+</ul>
+<p><strong>搜索区</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>供应商名称</td>
+<td>Input（模糊搜索）</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>Select(multiple)</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>Select(multiple)（跟随大类联动）</td>
+</tr>
+<tr>
+<td>是否同行</td>
+<td>Select(multiple)：是/否</td>
+</tr>
+</tbody></table></div>
+<p><strong>按钮</strong>：查询、重置、新增供应商、转客户</p>
+<p><strong>Tab页签</strong>：正常 / 已冻结 / 全部</p>
+<p><strong>列表字段（6列）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>类型/格式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>供应商名称</td>
+<td>文本，超长省略+tooltip</td>
+</tr>
+<tr>
+<td>2</td>
+<td>供应商大类</td>
+<td>文本，多选用&quot;、&quot;连接</td>
+</tr>
+<tr>
+<td>3</td>
+<td>供应商明细</td>
+<td>文本，多选用&quot;、&quot;连接</td>
+</tr>
+<tr>
+<td>4</td>
+<td>供应商等级</td>
+<td>文本：SS~G</td>
+</tr>
+<tr>
+<td>5</td>
+<td>服务状态</td>
+<td>Tag：正常(success)/已冻结(danger)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>操作</td>
+<td>按钮：编辑 / 冻结或启用</td>
+</tr>
+</tbody></table></div>
+<p><strong>操作列按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>显示条件</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>编辑</td>
+<td>始终</td>
+<td>打开编辑弹窗（已冻结→只读&quot;查看供应商&quot;）</td>
+</tr>
+<tr>
+<td>冻结</td>
+<td>serviceStatus=正常</td>
+<td>二次确认弹窗（type:warning）→ 冻结</td>
+</tr>
+<tr>
+<td>启用</td>
+<td>serviceStatus=已冻结</td>
+<td>二次确认弹窗 → 启用</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>5.11 新增/编辑供应商弹窗</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：供应商管理列表 &gt; 点击&quot;新增供应商&quot;或&quot;编辑&quot;</li>
+<li>类型：编辑弹窗（900px宽），Tab切换布局</li>
+<li>Tab列表：基本信息 / 联系人 / 资料 / 打单服务</li>
+</ul>
+<p><strong>Tab1 — 基本信息</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>供应商编号</td>
+<td>Input(disabled)</td>
+<td>—</td>
+<td>G+10001自增</td>
+<td>—</td>
+<td>编辑时不可改</td>
+</tr>
+<tr>
+<td>是否同行</td>
+<td>Select</td>
+<td>✅</td>
+<td>否</td>
+<td>—</td>
+<td>是/否</td>
+</tr>
+<tr>
+<td>供应商名称</td>
+<td>Input</td>
+<td>✅</td>
+<td>—</td>
+<td>全局唯一</td>
+<td>编辑时不可改</td>
+</tr>
+<tr>
+<td>供应商简称</td>
+<td>Input</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>供应商大类</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>7大类：干线运输供应商/揽货服务商/仓储供应商/关务供应商/尾程运输供应商/综合代理/其他</td>
+</tr>
+<tr>
+<td>供应商明细</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>—</td>
+<td>与大类级联</td>
+<td>跟随大类联动，大类切换→明细清空</td>
+</tr>
+<tr>
+<td>SCAC代码</td>
+<td>Input</td>
+<td>条件</td>
+<td>—</td>
+<td>—</td>
+<td>明细含&quot;快递&quot;时必填</td>
+</tr>
+<tr>
+<td>供应商等级</td>
+<td>Select</td>
+<td>✅</td>
+<td>G</td>
+<td>—</td>
+<td>下拉取等级管理-供应商等级Tab中状态=正常的等级</td>
+</tr>
+</tbody></table></div>
+<p><strong>大类 → 明细级联映射</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>供应商大类</th>
+<th>供应商明细</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>干线运输供应商</td>
+<td>汽运、海运、空运、铁运</td>
+</tr>
+<tr>
+<td>揽货服务商</td>
+<td>货拉拉、拖车行</td>
+</tr>
+<tr>
+<td>仓储供应商</td>
+<td>海外中转仓、保税仓、本地仓</td>
+</tr>
+<tr>
+<td>关务供应商</td>
+<td>报关行、清关行、查验代理</td>
+</tr>
+<tr>
+<td>尾程运输供应商</td>
+<td>快递、卡车</td>
+</tr>
+<tr>
+<td>综合代理</td>
+<td>同行</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>其他</td>
+</tr>
+</tbody></table></div>
+<p><strong>Tab2 — 联系人</strong>：</p>
+<ul>
+<li>支持动态增删行</li>
+<li>字段：姓名(✅) / 电话(✅,仅限数字) / 邮箱(✅)</li>
+<li>合同对接人：多联系人中单选1人</li>
+<li>系统账号接收人：多联系人中单选1人</li>
+<li>保存校验：未指定合同对接人或系统账号接收人时阻止保存</li>
+</ul>
+<p><strong>Tab3 — 资料</strong>：</p>
+<ul>
+<li>支持新增自定义资料名称</li>
+<li>每条资料支持上传附件（PDF/图片）</li>
+<li>支持动态增删资料行</li>
+</ul>
+<p><strong>Tab4 — 打单服务</strong>：</p>
+<ul>
+<li>字段：收货渠道(文本) + 状态(正常/已冻结) + 操作(冻结/启用按钮)</li>
+<li>支持动态增删行</li>
+<li>每条可独立冻结/启用</li>
+</ul>
+<p><strong>底栏按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>返回</td>
+<td>二次确认 → 关闭弹窗</td>
+</tr>
+<tr>
+<td>保存</td>
+<td>校验必填（含供应商名称唯一性+联系人对接人指派+SCAC条件必填）→ 保存 → Toast &quot;供应商保存成功！&quot;</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>5.12 转客户弹窗</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：供应商管理列表 &gt; 选中1条记录 &gt; 点击&quot;转客户&quot;</li>
+<li>类型：编辑弹窗（900px宽），Tab切换布局</li>
+<li>Tab列表：基本信息 / 联系人 / 资料 / 通信信息</li>
+</ul>
+<p><strong>Tab1 — 基本信息</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户类型</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>自然人/企业</td>
+</tr>
+<tr>
+<td>客户名称</td>
+<td>Input(disabled)</td>
+<td>—</td>
+<td>取供应商名称</td>
+<td>—</td>
+<td>不可修改</td>
+</tr>
+<tr>
+<td>统一社会信用代码</td>
+<td>Input</td>
+<td>条件</td>
+<td>—</td>
+<td>全局唯一</td>
+<td>企业必填，自然人禁用</td>
+</tr>
+<tr>
+<td>客户属地</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>中国大陆/中国香港</td>
+</tr>
+<tr>
+<td>是否同行</td>
+<td>Select</td>
+<td>✅</td>
+<td>取供应商值</td>
+<td>—</td>
+<td>是/否</td>
+</tr>
+<tr>
+<td>客户等级</td>
+<td>Select</td>
+<td>✅</td>
+<td>G</td>
+<td>—</td>
+<td>SS~G</td>
+</tr>
+<tr>
+<td>客服代表</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>销售代表</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>销售助理</td>
+<td>Select</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>销售来源</td>
+<td>Input</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>开通业务</td>
+<td>Select(multiple)</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>TMS/WMS</td>
+</tr>
+</tbody></table></div>
+<p><strong>Tab2 — 联系人</strong>：固定3角色行（同客户新增），需指定合同对接人+系统账号接收人。</p>
+<p><strong>Tab3 — 资料</strong>：营业执照（企业必填）+ 法人身份证正反面（始终必填）+ 自定义附件。</p>
+<p><strong>Tab4 — 通信信息</strong>：通信工具类型（固定&quot;企业微信&quot;）+ 群聊ID（必填）。</p>
+<p><strong>底栏按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>返回</td>
+<td>二次确认 → 关闭弹窗</td>
+</tr>
+<tr>
+<td>确认转换</td>
+<td>校验必填 → 创建客户记录 + 关联子表 → 调用账户模块自动生成ROOT账户 → 发送邮件通知（含账号密码）→ Toast &quot;已成功将供应商 [名称] 转换为客户，ROOT账户已生成并邮件通知！&quot;</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>5.13 等级管理页面</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：运营端 &gt; 等级管理</li>
+<li>类型：列表页（双Tab）</li>
+<li>访问角色：无权限管控，所有运营角色可访问</li>
+</ul>
+<p><strong>Tab结构</strong>：【客户等级】+【供应商等级】两个Tab，各自独立维护。</p>
+<p><strong>按钮</strong>：查询、新增级别</p>
+<p><strong>主列表字段</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>类型/格式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>级别代码</td>
+<td>文本：SS/S/A/B/C/D/E/F/G</td>
+</tr>
+<tr>
+<td>2</td>
+<td>操作人</td>
+<td>文本</td>
+</tr>
+<tr>
+<td>3</td>
+<td>状态</td>
+<td>Tag：正常(success)/已冻结(danger)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>操作</td>
+<td>按钮：启用 / 冻结</td>
+</tr>
+</tbody></table></div>
+<p><strong>操作列按钮</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>按钮</th>
+<th>显示条件</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启用</td>
+<td>status=已冻结</td>
+<td>二次确认弹窗 → 启用</td>
+</tr>
+<tr>
+<td>冻结</td>
+<td>status=正常</td>
+<td>二次确认弹窗(type:warning) → 若该等级已被客户/供应商绑定则阻止冻结并提示；否则执行冻结</td>
+</tr>
+</tbody></table></div>
+<p><strong>新增级别弹窗</strong>（400px）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>级别代码</td>
+<td>Select</td>
+<td>✅</td>
+<td>同Tab内级别代码唯一</td>
+<td>底纹提示A/B/C/D/E/F/G/S/SS</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>Radio</td>
+<td>✅</td>
+<td>—</td>
+<td>启用(正常) / 冻结</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[新增]：点击&quot;新增级别&quot; → 弹窗 → 选择级别代码(底纹提示可选值) + 状态 → 确定 → 列表新增</li>
+<li>[冻结]：点击正常级别&quot;冻结&quot; → 二次确认：<code>ElMessageBox.confirm</code>(type:warning) → 确认 → 后端校验该等级是否被客户/供应商绑定 → 已绑定则Toast &quot;该等级已被N个客户/供应商绑定，无法冻结&quot; → 未绑定则执行冻结</li>
+<li>[启用]：点击已冻结级别&quot;启用&quot; → 二次确认 → 执行启用</li>
+<li>[外部查询接口]：<code>GET /api/level/query?level_type=10|20</code> 供CRM/SRM调用，无需鉴权</li>
+</ul>
+<hr>
+<h2>6. 业务规则</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发点</th>
+<th>条件/公式</th>
+<th>输出</th>
+<th>异常处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R01</td>
+<td>入驻链接过期</td>
+<td>now() &gt; expire_time AND status=有效</td>
+<td>status→已过期</td>
+<td>客户点击提示&quot;链接已过期，请联系您的销售代表重新发送入驻邀请&quot;</td>
+</tr>
+<tr>
+<td>R02</td>
+<td>入驻链接已使用</td>
+<td>status=已使用</td>
+<td>不可再次使用</td>
+<td>客户点击提示&quot;该链接已被使用&quot;</td>
+</tr>
+<tr>
+<td>R03</td>
+<td>暂存并退出</td>
+<td>—</td>
+<td>写入 profile_draft（JSON快照）</td>
+<td>Toast &quot;信息已暂存&quot;</td>
+</tr>
+<tr>
+<td>R04</td>
+<td>点击入驻提交</td>
+<td>校验必填 + credit_code全局唯一</td>
+<td>status→待审核 + 页面置灰</td>
+<td>必填未填→Toast &quot;请完善必填信息&quot;</td>
+</tr>
+<tr>
+<td>R05</td>
+<td>入驻提交后</td>
+<td>调用天眼查API</td>
+<td>生成风险信息PDF</td>
+<td>API失败→Toast提示但不阻断入驻</td>
+</tr>
+<tr>
+<td>R06</td>
+<td>信用代码重复</td>
+<td>credit_code 已存在于 customer.credit_code 或 enterprise_profile.credit_code</td>
+<td>—</td>
+<td>阻止提交，&quot;该统一社会信用代码已被使用&quot;</td>
+</tr>
+<tr>
+<td>R07</td>
+<td>身份证号重复</td>
+<td>id_card_no 已存在</td>
+<td>—</td>
+<td>阻止提交，&quot;该身份证号已被使用&quot;</td>
+</tr>
+<tr>
+<td>R08</td>
+<td>入驻提交后</td>
+<td>—</td>
+<td>在用户管理-待签约中生成待提交签约流程数据</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R09</td>
+<td>客户编号生成</td>
+<td>K + 1 + 4位自增序号</td>
+<td>K10001</td>
+<td>编辑时不可修改</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>客户类型=自然人</td>
+<td>creditCode 自动清空+disabled</td>
+<td>creditCode=NULL</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R11</td>
+<td>客户类型=企业</td>
+<td>creditCode 必填+全局唯一校验</td>
+<td>—</td>
+<td>Toast &quot;企业客户必须输入统一社会信用代码&quot;</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>编辑客户</td>
+<td>customerType/name/creditCode/enterpriseAttribute disabled</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R13</td>
+<td>冻结客户</td>
+<td>二次确认(type:warning)</td>
+<td>serviceStatus→已冻结 + 关联账户同步冻结</td>
+<td>用户取消不执行</td>
+</tr>
+<tr>
+<td>R14</td>
+<td>启用客户</td>
+<td>二次确认</td>
+<td>serviceStatus→正常 + 关联账户同步启用</td>
+<td>用户取消不执行</td>
+</tr>
+<tr>
+<td>R15</td>
+<td>已冻结客户编辑</td>
+<td>dialogTitle=&quot;查看客户&quot;</td>
+<td>全部字段只读，仅&quot;关闭&quot;按钮</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R16</td>
+<td>联系人固定</td>
+<td>3行（公司负责人/物流联系人/财务负责人）</td>
+<td>不允许增删</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R17</td>
+<td>未指定合同对接人</td>
+<td>contractContact 为空</td>
+<td>阻止保存</td>
+<td>Toast &quot;请指定一名联系人作为合同对接人&quot;</td>
+</tr>
+<tr>
+<td>R18</td>
+<td>未指定系统账号接收人</td>
+<td>accountReceiver 为空</td>
+<td>阻止保存</td>
+<td>Toast &quot;请指定一名联系人作为系统账号接收人&quot;</td>
+</tr>
+<tr>
+<td>R19</td>
+<td>企业客户保存</td>
+<td>营业执照未上传</td>
+<td>阻止保存</td>
+<td>Toast &quot;企业客户必须上传营业执照&quot;</td>
+</tr>
+<tr>
+<td>R20</td>
+<td>保存并生成账户</td>
+<td>身份证正反面未完整上传</td>
+<td>阻止</td>
+<td>Toast &quot;请上传完整的身份证正反面照片&quot;</td>
+</tr>
+<tr>
+<td>R21</td>
+<td>保存并生成账户</td>
+<td>→ 生成账户 + 邮件通知 + 创建初始合同</td>
+<td>初始合同状态=未签署（所属公司=默认）</td>
+<td>Toast &quot;保存成功，并已为该客户生成系统账户！&quot;</td>
+</tr>
+<tr>
+<td>R22</td>
+<td>新增合同</td>
+<td>同客户同所属公司不可重复</td>
+<td>阻止创建</td>
+<td>Toast &quot;该客户已存在 [{所属公司}] 的合同&quot;</td>
+</tr>
+<tr>
+<td>R23</td>
+<td>合同管理Tab-签约</td>
+<td>已签署合同不显示&quot;签约&quot;按钮；已过期合同点&quot;签约&quot;=生成新合同</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R24</td>
+<td>大陆签约</td>
+<td>isSimple x isStandard 4分支 + 共有字段 contractCompany</td>
+<td>显示不同字段组合</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R25</td>
+<td>我司合同抬头</td>
+<td>根据域名 + 所属公司自动填充</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R26</td>
+<td>签约账期可选值</td>
+<td>根据域名和企业属地动态计算</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R27</td>
+<td>合同开始日期</td>
+<td>默认当天</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R28</td>
+<td>合同结束日期</td>
+<td>开始日期 + 合同期限(1/2/3年)</td>
+<td>自动计算</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R29</td>
+<td>签订日期</td>
+<td>默认当天</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R30</td>
+<td>发起签约</td>
+<td>调用飞书审批</td>
+<td>feishu_approval 创建</td>
+<td>审批类型根据合同自动路由(简易/墨线/美线)</td>
+</tr>
+<tr>
+<td>R31</td>
+<td>飞书审批通过</td>
+<td>调用E签宝生成合同</td>
+<td>esign_contract_id 回填</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R32</td>
+<td>E签宝签署完成</td>
+<td>esign_file_url 回填</td>
+<td>合同附件回传</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R33</td>
+<td>合同信息回写</td>
+<td>标准合同→取签约值自动写入 customer_contract；非标合同→手工维护</td>
+<td>customer_contract.sign_status=已签署</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R34</td>
+<td>香港签约</td>
+<td>上传合同附件+保存</td>
+<td>customer_contract.sign_status=已签署</td>
+<td>附件至少1个</td>
+</tr>
+<tr>
+<td>R36</td>
+<td>供应商大类切换</td>
+<td>supplierDetail 清空+联动</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R37</td>
+<td>明细含快递</td>
+<td>scac 必填</td>
+<td>—</td>
+<td>Toast &quot;选择快递时，此项必填&quot;</td>
+</tr>
+<tr>
+<td>R38</td>
+<td>等级唯一</td>
+<td>同一 level_type + level_code 不可重复</td>
+<td>—</td>
+<td>Toast &quot;该级别代码已存在&quot;</td>
+</tr>
+<tr>
+<td>R39</td>
+<td>主经营平台与业务国</td>
+<td>级联选择</td>
+<td>选业务国→平台下拉仅显示该国平台</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R40</td>
+<td>互转名称继承</td>
+<td>来源名称自动填充到目标</td>
+<td>—</td>
+<td>disabled不可修改</td>
+</tr>
+<tr>
+<td>R41</td>
+<td>等级冻结保护</td>
+<td>level.status 变更时检查 customer/supplier 表中引用数</td>
+<td>若 &gt; 0 则阻止冻结</td>
+<td>Toast &quot;该等级已被N个客户/供应商绑定，无法冻结&quot;</td>
+</tr>
+<tr>
+<td>R42</td>
+<td>供应商名称唯一</td>
+<td>supplier_name 全局唯一</td>
+<td>阻止保存</td>
+<td>Toast &quot;该供应商名称已存在&quot;</td>
+</tr>
+<tr>
+<td>R43</td>
+<td>供应商转客户-ROOT账号</td>
+<td>提交转客户后调用账户模块</td>
+<td>自动生成ROOT账户+邮件通知</td>
+<td>账户生成失败→Toast提示但不阻断客户创建</td>
+</tr>
+<tr>
+<td>R44</td>
+<td>供应商大类切换</td>
+<td>supplierCategory 变更 → supplierDetail 清空+联动</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R44</td>
+<td>供应商联系人</td>
+<td>必须指定合同对接人和系统账号接收人</td>
+<td>阻止保存</td>
+<td>Toast &quot;请指定合同对接人&quot; 或 &quot;请指定系统账号接收人&quot;</td>
+</tr>
+<tr>
+<td>R45</td>
+<td>等级查询接口</td>
+<td>GET /api/level/query</td>
+<td>返回指定level_type的等级列表</td>
+<td>供CRM/SRM调用，无权限校验</td>
+</tr>
+<tr>
+<td>R46</td>
+<td>全局唯一有效合同</td>
+<td>同一客户在租户下只能有一个&quot;已签约&quot;或&quot;签约中&quot;的合同</td>
+<td>阻止签约</td>
+<td>Toast &quot;该客户已存在有效合同，请先作废旧合同后再签新合同&quot;</td>
+</tr>
+<tr>
+<td>R47</td>
+<td>合同账期</td>
+<td>billingCycle固定→settlementType按月；不固定→settlementType按天</td>
+<td>自动推导</td>
+<td>切换周期→联动重置</td>
+</tr>
+<tr>
+<td>R48</td>
+<td>daysOrDate</td>
+<td>必须≥0整数</td>
+<td>—</td>
+<td>Toast &quot;必须为大于等于0的整数&quot;</td>
+</tr>
+<tr>
+<td>R49</td>
+<td>主合同标记</td>
+<td>Radio 单选互斥，同一客户同时仅一份生效主合同</td>
+<td>点击即切换</td>
+<td>无标记时默认第一份已签署合同为主合同</td>
+</tr>
+<tr>
+<td>R50</td>
+<td>当前生效主合同判定</td>
+<td>校验：① is_primary=true ② sign_status=30 ③ start_date ≤ today ≤ end_date ④ termination_date IS NULL OR today &lt; termination_date</td>
+<td>全部满足→该合同为当前生效；任一不满足→无生效合同（主合同身份保留，状态如实展示，信控决定能否登录）</td>
+<td>列表顶部Tag标注&quot;当前生效&quot;</td>
+</tr>
+<tr>
+<td>R51</td>
+<td>解约时间到期处理</td>
+<td>定时任务每日扫描：termination_date ≤ today AND sign_status=30</td>
+<td>sign_status → 50(已解约)</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R52</td>
+<td>删除解约时间恢复</td>
+<td>删除 termination_date → 判断 end_date vs today</td>
+<td>end_date &gt; today → 30(已签署)；end_date ≤ today → 40(已过期)</td>
+<td>实时处理</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>7. 计算公式</h2>
+<h3>7.1 合同结束日期自动计算</h3>
+<pre><code>变量定义:
+  contractYears = 签约时选择的合同期限（1/2/3）
+  contractStartDate = 用户选择或默认当天的开始日期
+
+公式:
+  contractEndDate = contractStartDate + contractYears 年
+
+示例:
+  开始日期 2026-06-06 + 1年 = 结束日期 2027-06-05
+  开始日期 2026-06-06 + 2年 = 结束日期 2028-06-05
+</code></pre>
+<h3>7.2 账期-结算类型自动推导</h3>
+<pre><code>IF billingCycle = 10 (固定) THEN
+    settlementType = 10 (按月)
+    IF paymentTerm = 101 THEN  月结
+    IF paymentTerm = 102 THEN  双月结
+    IF paymentTerm = 103 THEN  三月结
+ELSE IF billingCycle = 20 (不固定) THEN
+    settlementType = 20 (按天)
+</code></pre>
+<h3>7.3 签约弹窗分支逻辑</h3>
+<pre><code>IF enterpriseAttribute = &quot;中国香港&quot; THEN
+    显示 HK 线下签约弹窗
+ELSE
+    显示大陆线上签约弹窗
+    IF isSimple = false AND isStandard = true  → 分支1（标准非简易）
+    IF isSimple = false AND isStandard = false → 分支2（非标非简易）
+    IF isSimple = true AND isStandard = true   → 分支3（简易标准）
+    IF isSimple = true AND isStandard = false  → 分支4（简易非标）
+</code></pre>
+<h3>7.4 当前生效主合同判定</h3>
+<pre><code>输入：某客户的所有 customer_contract 记录
+输出：当前生效主合同 或 null
+
+判定流程（4 条件 AND）：
+  ① is_primary = true                    — 用户手动单选的主合同
+  ② sign_status = 30（已签署）             — 合同已签署
+  ③ contract_start_date ≤ today ≤ contract_end_date  — 在有效期内
+  ④ termination_date IS NULL OR today &lt; termination_date  — 未被解约
+
+  IF 全部满足 THEN 该合同 = 当前生效主合同
+  ELSE 无生效合同 → 主合同身份保留，状态如实展示，能否登录由信控决定
+</code></pre>
+<p><strong>示例</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>合同</th>
+<th>有效期</th>
+<th>解约时间</th>
+<th>is_primary</th>
+<th>今天</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A</td>
+<td>2025-05-01 ~ 2028-04-30</td>
+<td>2026-03-31</td>
+<td>false</td>
+<td>2026-06-22</td>
+<td>— (非主合同)</td>
+</tr>
+<tr>
+<td>B</td>
+<td>2026-04-01 ~ 2027-03-31</td>
+<td>—</td>
+<td>true</td>
+<td>2026-06-22</td>
+<td>✅ 当前生效</td>
+</tr>
+<tr>
+<td>B</td>
+<td>2026-04-01 ~ 2027-03-31</td>
+<td>—</td>
+<td>true</td>
+<td>2027-04-01</td>
+<td>❌ 无生效合同（已过期）</td>
+</tr>
+<tr>
+<td>A</td>
+<td>2027-05-01 ~ 2030-04-31</td>
+<td>2028-03-31</td>
+<td>true</td>
+<td>2028-04-01</td>
+<td>❌ 无生效合同（已解约）</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>8. 权限矩阵</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>销售代表</th>
+<th>客服代表</th>
+<th>销售助理</th>
+<th>供应商专员</th>
+<th>运营管理员</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户列表查看</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>仅查看</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>发送入驻链接</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>手工创建客户</td>
+<td>✅</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>编辑客户</td>
+<td>仅自己名下</td>
+<td>✅</td>
+<td>仅自己名下</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>保存并生成账户</td>
+<td>需权限</td>
+<td>需权限</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>冻结/启用客户</td>
+<td>—</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>合同签约</td>
+<td>✅</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>转供应商</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>供应商列表查看</td>
+<td>仅查看</td>
+<td>仅查看</td>
+<td>仅查看</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>新增/编辑供应商</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>冻结/启用供应商</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>转客户</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>等级管理</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>入驻</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>客户自助</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>9. 接口清单</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>触发页面</th>
+<th>请求参数</th>
+<th>返回</th>
+<th>失败处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>生成入驻链接</td>
+<td>POST</td>
+<td>/api/invitation-link/create</td>
+<td>入驻链接弹窗</td>
+<td>customerId, expireDays</td>
+<td>linkUrl + token</td>
+<td>Toast &quot;生成失败&quot;</td>
+</tr>
+<tr>
+<td>校验入驻链接</td>
+<td>GET</td>
+<td>/api/invitation-link/validate</td>
+<td>入驻档案页</td>
+<td>token</td>
+<td>isValid + profileType</td>
+<td>过期→提示；已使用→提示</td>
+</tr>
+<tr>
+<td>加载草稿</td>
+<td>GET</td>
+<td>/api/profile/draft/{token}</td>
+<td>入驻档案页</td>
+<td>token</td>
+<td>draftData</td>
+<td>无草稿→正常空表单</td>
+</tr>
+<tr>
+<td>暂存草稿</td>
+<td>POST</td>
+<td>/api/profile/draft/save</td>
+<td>入驻档案页</td>
+<td>token, profileType, draftData</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>企业入驻提交</td>
+<td>POST</td>
+<td>/api/profile/enterprise/submit</td>
+<td>企业客户档案</td>
+<td>全量表单字段</td>
+<td>profileId</td>
+<td>校验失败→Toast</td>
+</tr>
+<tr>
+<td>自然人入驻提交</td>
+<td>POST</td>
+<td>/api/profile/personal/submit</td>
+<td>自然人客户档案</td>
+<td>全量表单字段</td>
+<td>profileId</td>
+<td>校验失败→Toast</td>
+</tr>
+<tr>
+<td>OCR营业执照</td>
+<td>POST</td>
+<td>/api/ocr/business-license</td>
+<td>企业客户档案</td>
+<td>file</td>
+<td>companyName, registrationNo, creditCode</td>
+<td>识别失败→Toast手动填写</td>
+</tr>
+<tr>
+<td>OCR身份证</td>
+<td>POST</td>
+<td>/api/ocr/id-card</td>
+<td>自然人客户档案</td>
+<td>file</td>
+<td>fullName, idCardNo</td>
+<td>识别失败→Toast手动填写</td>
+</tr>
+<tr>
+<td>天眼查风险检查</td>
+<td>POST</td>
+<td>/api/tianyancha/risk-check</td>
+<td>入驻提交后</td>
+<td>creditCode, companyName</td>
+<td>riskPdfUrl</td>
+<td>失败→降级提示</td>
+</tr>
+<tr>
+<td>信用代码唯一校验</td>
+<td>GET</td>
+<td>/api/customer/check-credit-code</td>
+<td>入驻/创建客户</td>
+<td>creditCode</td>
+<td>exists</td>
+<td>—</td>
+</tr>
+<tr>
+<td>身份证号唯一校验</td>
+<td>GET</td>
+<td>/api/customer/check-id-card</td>
+<td>自然人入驻</td>
+<td>idCardNo</td>
+<td>exists</td>
+<td>—</td>
+</tr>
+<tr>
+<td>客户列表</td>
+<td>GET</td>
+<td>/api/customer/list</td>
+<td>客户管理列表</td>
+<td>搜索条件+tab+分页</td>
+<td>分页列表+17列</td>
+<td>Toast &quot;查询失败&quot;</td>
+</tr>
+<tr>
+<td>客户详情</td>
+<td>GET</td>
+<td>/api/customer/{id}</td>
+<td>编辑弹窗</td>
+<td>id</td>
+<td>客户全量+子表</td>
+<td>—</td>
+</tr>
+<tr>
+<td>创建客户</td>
+<td>POST</td>
+<td>/api/customer/create</td>
+<td>手工创建弹窗</td>
+<td>全量表单</td>
+<td>customerId</td>
+<td>Toast 错误信息</td>
+</tr>
+<tr>
+<td>创建客户并生成账户</td>
+<td>POST</td>
+<td>/api/customer/create-with-account</td>
+<td>手工创建弹窗</td>
+<td>全量+account字段</td>
+<td>customerId + accountId</td>
+<td>Toast 错误信息</td>
+</tr>
+<tr>
+<td>更新客户</td>
+<td>PUT</td>
+<td>/api/customer/{id}</td>
+<td>编辑弹窗</td>
+<td>可编辑字段</td>
+<td>—</td>
+<td>Toast 错误信息</td>
+</tr>
+<tr>
+<td>冻结客户</td>
+<td>POST</td>
+<td>/api/customer/{id}/freeze</td>
+<td>列表操作</td>
+<td>id</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>启用客户</td>
+<td>POST</td>
+<td>/api/customer/{id}/enable</td>
+<td>列表操作</td>
+<td>id</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>大陆签约</td>
+<td>POST</td>
+<td>/api/contract/sign-mainland</td>
+<td>大陆签约弹窗</td>
+<td>签约表单</td>
+<td>contractId</td>
+<td>—</td>
+</tr>
+<tr>
+<td>香港签约</td>
+<td>POST</td>
+<td>/api/contract/sign-hk</td>
+<td>HK签约弹窗</td>
+<td>签约表单+附件</td>
+<td>contractId</td>
+<td>—</td>
+</tr>
+<tr>
+<td>飞书审批回调</td>
+<td>POST</td>
+<td>/api/feishu/approval-callback</td>
+<td>飞书回调</td>
+<td>approvalResult</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>E签宝回调</td>
+<td>POST</td>
+<td>/api/esign/callback</td>
+<td>E签宝回调</td>
+<td>contractId, fileUrl</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>客户转供应商</td>
+<td>POST</td>
+<td>/api/supplier/transfer-from-customer</td>
+<td>转供应商弹窗</td>
+<td>customerId+补充字段</td>
+<td>supplierId</td>
+<td>—</td>
+</tr>
+<tr>
+<td>供应商列表</td>
+<td>GET</td>
+<td>/api/supplier/list</td>
+<td>供应商管理</td>
+<td>搜索条件</td>
+<td>分页列表</td>
+<td>—</td>
+</tr>
+<tr>
+<td>供应商CRUD</td>
+<td>POST/PUT</td>
+<td>/api/supplier</td>
+<td>供应商弹窗</td>
+<td>全量字段</td>
+<td>supplierId</td>
+<td>—</td>
+</tr>
+<tr>
+<td>供应商转客户</td>
+<td>POST</td>
+<td>/api/customer/transfer-from-supplier</td>
+<td>转客户弹窗</td>
+<td>supplierId+补充字段</td>
+<td>customerId</td>
+<td>—</td>
+</tr>
+<tr>
+<td>等级列表</td>
+<td>GET</td>
+<td>/api/level/list</td>
+<td>等级管理</td>
+<td>levelType, page, pageSize</td>
+<td>{list, total}</td>
+<td>—</td>
+</tr>
+<tr>
+<td>新增等级</td>
+<td>POST</td>
+<td>/api/level</td>
+<td>等级管理</td>
+<td>{levelType, levelCode, status}</td>
+<td>—</td>
+<td>Toast &quot;该级别代码已存在&quot;</td>
+</tr>
+<tr>
+<td>冻结等级</td>
+<td>POST</td>
+<td>/api/level/{id}/freeze</td>
+<td>等级管理</td>
+<td>id</td>
+<td>—</td>
+<td>绑定检查失败→Toast</td>
+</tr>
+<tr>
+<td>启用等级</td>
+<td>POST</td>
+<td>/api/level/{id}/enable</td>
+<td>等级管理</td>
+<td>id</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>等级查询(外部)</td>
+<td>GET</td>
+<td>/api/level/query</td>
+<td>CRM/SRM</td>
+<td>{levelType}</td>
+<td>[{levelCode, status}]</td>
+<td>无权限校验</td>
+</tr>
+<tr>
+<td>供应商列表</td>
+<td>GET</td>
+<td>/api/supplier/list</td>
+<td>供应商管理</td>
+<td>{supplierName, supplierCategory, supplierDetail, isPeer, status, page, pageSize}</td>
+<td>{list, total}</td>
+<td>—</td>
+</tr>
+<tr>
+<td>新增供应商</td>
+<td>POST</td>
+<td>/api/supplier</td>
+<td>供应商管理</td>
+<td>全量字段（基本信息+联系人+资料+打单服务）</td>
+<td>supplierId</td>
+<td>名称重复→Toast</td>
+</tr>
+<tr>
+<td>编辑供应商</td>
+<td>PUT</td>
+<td>/api/supplier/{id}</td>
+<td>供应商管理</td>
+<td>可编辑字段</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>冻结/启用供应商</td>
+<td>POST</td>
+<td>/api/supplier/{id}/freeze</td>
+<td>供应商管理</td>
+<td>id</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>供应商转客户</td>
+<td>POST</td>
+<td>/api/customer/transfer-from-supplier</td>
+<td>转客户弹窗</td>
+<td>supplierId + 客户独有字段 + 联系人/资料/通信</td>
+<td>customerId + accountId</td>
+<td>—</td>
+</tr>
+<tr>
+<td>供应商名称校验</td>
+<td>GET</td>
+<td>/api/supplier/check-name</td>
+<td>供应商管理</td>
+<td>supplierName</td>
+<td>exists</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>10. 错误提示文案汇总</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发条件</th>
+<th>文案</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E01</td>
+<td>链接过期</td>
+<td>&quot;链接已过期，请联系您的销售代表重新发送入驻邀请&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E02</td>
+<td>链接已使用</td>
+<td>&quot;该链接已被使用，如需重新入驻请联系销售代表&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E03</td>
+<td>信用代码重复</td>
+<td>&quot;该统一社会信用代码已被使用&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E04</td>
+<td>身份证号重复</td>
+<td>&quot;该身份证号已被使用&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E05</td>
+<td>企业未输入信用代码</td>
+<td>&quot;企业客户必须输入统一社会信用代码&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E06</td>
+<td>未指定合同对接人</td>
+<td>&quot;请指定一名联系人作为合同对接人&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E07</td>
+<td>未指定系统账号接收人</td>
+<td>&quot;请指定一名联系人作为系统账号接收人&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E08</td>
+<td>企业未上传营业执照</td>
+<td>&quot;企业客户必须上传营业执照&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E09</td>
+<td>身份证未上传完整</td>
+<td>&quot;请上传完整的身份证正反面照片&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E10</td>
+<td>暂存成功</td>
+<td>&quot;信息已暂存，您可在有效期内继续填写&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E11</td>
+<td>入驻提交成功</td>
+<td>&quot;您的入驻申请已提交，我们将在1-3个工作日内完成审核&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E12</td>
+<td>天眼查调用失败</td>
+<td>&quot;企业风险信息获取失败，不影响入驻提交，稍后系统将自动补采&quot;</td>
+<td>警告</td>
+</tr>
+<tr>
+<td>E13</td>
+<td>OCR识别成功</td>
+<td>&quot;营业执照上传成功，已自动识别信息，如有误可手动修改&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E14</td>
+<td>OCR身份证识别成功</td>
+<td>&quot;身份证人像面上传成功，已自动识别信息，如有误可手动修改&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E15</td>
+<td>返回确认</td>
+<td>&quot;返回后，当前已填写的数据将丢失。确认返回？&quot;</td>
+<td>警示</td>
+</tr>
+<tr>
+<td>E16</td>
+<td>冻结客户确认</td>
+<td>&quot;确定要冻结 [客户名称] 吗？关联的 [账户名] 等账户也会同步冻结，请谨慎操作。&quot;</td>
+<td>警示</td>
+</tr>
+<tr>
+<td>E17</td>
+<td>启用客户确认</td>
+<td>&quot;确定要启用 [客户名称] 吗？关联的 [账户名] 等账户也会同步启用，请谨慎操作。&quot;</td>
+<td>警示</td>
+</tr>
+<tr>
+<td>E18</td>
+<td>签约成功</td>
+<td>&quot;合同签约成功！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E19</td>
+<td>保存并生成账户成功</td>
+<td>&quot;保存成功，并已为该客户生成系统账户！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E20</td>
+<td>手工创建客户成功</td>
+<td>&quot;手工创建客户成功！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E21</td>
+<td>必填项未填</td>
+<td>&quot;请完善必填信息！&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E22</td>
+<td>daysOrDate负数</td>
+<td>&quot;必须为大于等于0的整数&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E23</td>
+<td>SCAC必填</td>
+<td>&quot;选择快递时，此项必填&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E24</td>
+<td>转供应商成功</td>
+<td>&quot;已成功将客户 [名称] 插入至供应商管理中！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E25</td>
+<td>级别代码重复</td>
+<td>&quot;该级别代码已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E26</td>
+<td>合同结束日期早于开始</td>
+<td>&quot;合同结束日期不可早于开始日期&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E27</td>
+<td>冻结成功</td>
+<td>&quot;客户 XX 及关联账户已冻结&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E28</td>
+<td>启用成功</td>
+<td>&quot;客户 XX 及关联账户已启用，转入正常状态&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E29</td>
+<td>等级已被绑定</td>
+<td>&quot;该等级已被{N}个客户/供应商绑定，无法冻结&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E30</td>
+<td>供应商名称已存在</td>
+<td>&quot;该供应商名称已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E31</td>
+<td>SCAC条件必填（快递）</td>
+<td>&quot;选择快递时，此项必填&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E32</td>
+<td>未指定供应商合同对接人</td>
+<td>&quot;请指定一名联系人作为合同对接人&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E33</td>
+<td>未指定供应商系统账号接收人</td>
+<td>&quot;请指定一名联系人作为系统账号接收人&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E34</td>
+<td>供应商保存成功</td>
+<td>&quot;供应商保存成功！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E35</td>
+<td>转客户成功</td>
+<td>&quot;已成功将供应商 [{名称}] 转换为客户，ROOT账户已生成并邮件通知！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E36</td>
+<td>等级查询接口</td>
+<td>&quot;该等级已被{N}个客户/供应商绑定，无法冻结&quot;</td>
+<td>阻断</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>11. 验收标准</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>验收项</th>
+<th>验收方式</th>
+<th>通过标准</th>
+<th>关联 AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A01</td>
+<td>入驻链接生成+过期+使用状态流转</td>
+<td>手动</td>
+<td>生成链接→14天后过期→客户点击验证</td>
+<td>AC0a AC0b</td>
+</tr>
+<tr>
+<td>A02</td>
+<td>暂存并退出+恢复</td>
+<td>手动</td>
+<td>填部分信息→暂存→关闭→重新打开链接→数据恢复</td>
+<td>AC0c</td>
+</tr>
+<tr>
+<td>A03</td>
+<td>入驻提交+页面置灰+天眼查</td>
+<td>手动</td>
+<td>提交→页面置灰+审核提示+天眼查PDF生成</td>
+<td>AC0d AC0e</td>
+</tr>
+<tr>
+<td>A04</td>
+<td>信用代码/身份证号唯一校验</td>
+<td>手动</td>
+<td>重复时阻止提交并提示</td>
+<td>AC4d AC5b</td>
+</tr>
+<tr>
+<td>A05</td>
+<td>营业执照OCR自动填充</td>
+<td>手动</td>
+<td>上传营业执照→公司名称/注册号/信用代码自动回填</td>
+<td>AC4a</td>
+</tr>
+<tr>
+<td>A06</td>
+<td>入驻提交→待签约数据生成</td>
+<td>手动</td>
+<td>提交后在用户管理-待签约中可查到数据</td>
+<td>AC0f</td>
+</tr>
+<tr>
+<td>A07</td>
+<td>客户列表17列+多条件筛选+Tab</td>
+<td>手动</td>
+<td>搜索条件+Tab过滤正确叠加，分页正常</td>
+<td>AC1a</td>
+</tr>
+<tr>
+<td>A08</td>
+<td>手工创建客户+7个Tab完整</td>
+<td>手动</td>
+<td>基本信息+7Tab完整填写→保存成功</td>
+<td>AC1b</td>
+</tr>
+<tr>
+<td>A09</td>
+<td>保存并生成账户→邮件通知+未签署</td>
+<td>手动</td>
+<td>点击按钮→校验身份证+执照→生成账户+邮件通知→合同状态=未签署</td>
+<td>AC1c</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>联系人固定3行+对接人指派</td>
+<td>手动</td>
+<td>不可增删行；未指派→阻止保存</td>
+<td>AC1d</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>冻结/启用关联账户同步</td>
+<td>手动</td>
+<td>冻结客户→关联账户状态同步变化</td>
+<td>AC1e</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>大陆签约4分支</td>
+<td>手动</td>
+<td>4种(isSimple x isStandard)组合展示正确字段</td>
+<td>AC2a</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>合同日期自动计算</td>
+<td>手动</td>
+<td>开始日期默认当天+结束日期=开始+期限</td>
+<td>AC2d</td>
+</tr>
+<tr>
+<td>A14</td>
+<td>飞书审批流程</td>
+<td>手动</td>
+<td>发起签约→飞书审批创建→审批类型正确路由</td>
+<td>AC2b</td>
+</tr>
+<tr>
+<td>A15</td>
+<td>E签宝回传</td>
+<td>手动</td>
+<td>审批通过→E签宝生成合同→回传附件</td>
+<td>AC2b</td>
+</tr>
+<tr>
+<td>A16</td>
+<td>合同信息回写：标准/非标</td>
+<td>手动</td>
+<td>标准合同→自动回写；非标→手工维护</td>
+<td>AC2c</td>
+</tr>
+<tr>
+<td>A17</td>
+<td>香港线下签约</td>
+<td>手动</td>
+<td>填写起止日期+上传附件→保存→状态=已签署</td>
+<td>AC2e</td>
+</tr>
+<tr>
+<td>A18</td>
+<td>供应商大类明细级联+SCAC</td>
+<td>手动</td>
+<td>大类切换→明细联动；含快递→SCAC必填</td>
+<td>AC3b</td>
+</tr>
+<tr>
+<td>A19</td>
+<td>客户转供应商+供应商转客户</td>
+<td>手动</td>
+<td>名称继承+独有字段补充→确认→目标列表出现新记录</td>
+<td>AC6b AC6c</td>
+</tr>
+</tbody></table></div>
+<hr>
+<hr>
+<h2>13. 数据融合：客商中心 × 货主端</h2>
+<blockquote>
+<p><strong>核心原则</strong>：客商中心是客户主数据的 System of Record，所有客户生命周期事件（创建/冻结/启用/等级变更）驱动货主端数据同步。货主端不直接写 <code>customer</code> 表。</p>
+</blockquote>
+<h3>13.1 融合业务规则</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发点</th>
+<th>条件/公式</th>
+<th>输出</th>
+<th>异常处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R-F01</td>
+<td>入驻审核通过</td>
+<td>enterprise_profile.status=30</td>
+<td>创建customer + 初始customer_contract(sign_status=未签署) + 调用货主端 <code>POST /api/shipper/sub-account/create-root</code> 创建ROOT子账号+ROOT角色+邮件通知</td>
+<td>创建失败→异步重试3次→告警运维</td>
+</tr>
+<tr>
+<td>R-F02</td>
+<td>手工创建+生成账户</td>
+<td>点击&quot;保存并生成账户&quot;</td>
+<td>同上</td>
+<td>失败→Toast提示但不阻断客户创建，进入pending_sync队列</td>
+</tr>
+<tr>
+<td>R-F03</td>
+<td>冻结客户</td>
+<td>customer.service_status: 10→20</td>
+<td>调用货主端 <code>POST /api/shipper/sub-account/batch-freeze</code> 批量冻结该客户下所有子账号</td>
+<td>部分失败→记录异常日志+告警运维</td>
+</tr>
+<tr>
+<td>R-F04</td>
+<td>启用客户</td>
+<td>customer.service_status: 20→10</td>
+<td>调用货主端 <code>POST /api/shipper/sub-account/batch-enable</code> 批量启用</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>R-F05</td>
+<td>供应商转客户</td>
+<td>转客户弹窗提交成功</td>
+<td>创建ROOT子账号+ROOT角色+邮件通知</td>
+<td>失败→Toast提示+记录日志</td>
+</tr>
+<tr>
+<td>R-F06</td>
+<td>货主端登录校验</td>
+<td>实时查询</td>
+<td>GET /api/customer/{id}/status → 返回service_status, sign_status</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F07</td>
+<td>客户等级变更</td>
+<td>customer_level 更新</td>
+<td>货主端仅展示</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F08</td>
+<td>ROOT账户初始密码</td>
+<td>入驻/创建时随机生成8位</td>
+<td>含大小写字母+数字</td>
+<td>邮件通知客户，首次登录建议修改</td>
+</tr>
+</tbody></table></div>
+<h3>13.2 跨模块接口清单（客商中心→货主端）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>触发时机</th>
+<th>请求参数</th>
+<th>返回</th>
+<th>幂等性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>创建ROOT子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/create-root</td>
+<td>入驻审核通过/手工创建+生成账户/转客户</td>
+<td>{customer_id, customer_name, contact_email, contact_phone}</td>
+<td>{sub_account_id, account, temp_password}</td>
+<td>✅ customer_id去重</td>
+</tr>
+<tr>
+<td>批量冻结子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-freeze</td>
+<td>客户冻结</td>
+<td>{customer_id}</td>
+<td>{frozen_count}</td>
+<td>✅ 已冻结跳过</td>
+</tr>
+<tr>
+<td>批量启用子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-enable</td>
+<td>客户启用</td>
+<td>{customer_id}</td>
+<td>{enabled_count}</td>
+<td>✅ 已启用跳过</td>
+</tr>
+</tbody></table></div>
+<h3>13.3 跨模块接口清单（货主端→客商中心）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>触发时机</th>
+<th>请求参数</th>
+<th>返回</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查询客户状态</td>
+<td>GET</td>
+<td>/api/customer/{id}/status</td>
+<td>货主端登录/Token刷新</td>
+<td>customer_id (path)</td>
+<td>{service_status, sign_status, customer_name}</td>
+</tr>
+<tr>
+<td>查询客户信息</td>
+<td>GET</td>
+<td>/api/customer/{id}/profile</td>
+<td>货主端首页加载</td>
+<td>customer_id (path)</td>
+<td>{customer_name, enterprise_attribute}</td>
+</tr>
+</tbody></table></div>
+<h3>13.4 融合验收标准</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>验收项</th>
+<th>验收方式</th>
+<th>通过标准</th>
+<th>关联 AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A-F01</td>
+<td>入驻→ROOT账户自动创建</td>
+<td>自动化/手动</td>
+<td>企业入驻审核通过→货主端 sub_account 表中出现 is_root=true 记录→邮件发送成功</td>
+<td>AC0f</td>
+</tr>
+<tr>
+<td>A-F02</td>
+<td>手工创建+生成账户→ROOT账户</td>
+<td>手动</td>
+<td>运营端点击&quot;保存并生成账户&quot;→货主端出现ROOT子账号+ROOT角色→Toast+邮件通知</td>
+<td>AC1c</td>
+</tr>
+<tr>
+<td>A-F03</td>
+<td>客户冻结→子账号同步冻结</td>
+<td>自动化</td>
+<td>运营端冻结客户→该客户下所有 sub_account.status 变为20(已冻结)→货主端登录被拒</td>
+<td>AC1e</td>
+</tr>
+<tr>
+<td>A-F04</td>
+<td>客户启用→子账号同步启用</td>
+<td>自动化</td>
+<td>运营端启用客户→该客户下所有 sub_account.status 变为10(正常)→货主端可正常登录</td>
+<td>AC1e</td>
+</tr>
+<tr>
+<td>A-F05</td>
+<td>转客户→ROOT账户创建</td>
+<td>手动</td>
+<td>供应商转客户→货主端出现ROOT子账号+邮件通知</td>
+<td>AC3e</td>
+</tr>
+<tr>
+<td>A-F06</td>
+<td>冻结失败不影响主流程</td>
+<td>自动化</td>
+<td>货主端接口超时/故障→客商中心冻结操作仍成功→异常日志记录→运维告警</td>
+<td>—</td>
+</tr>
+<tr>
+<td>A-F07</td>
+<td>ROOT账户创建幂等</td>
+<td>自动化</td>
+<td>重复调用 create-root 同一 customer_id→不创建重复记录→返回已有 sub_account_id</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<h3>13.5 失败降级策略</h3>
+<pre><code>创建ROOT账户失败:
+  T+0s: 首次调用失败 → 记录日志
+  T+10s: 第1次重试
+  T+30s: 第2次重试
+  T+60s: 第3次重试 → 仍失败 → 写入 pending_sync 表
+  T+5min: 定时任务扫描 pending_sync → 批量重试
+  T+1h: 仍未成功 → 运维告警（企微/邮件）
+
+冻结/启用联动失败:
+  不回滚客商中心操作
+  记录异常日志包含: customer_id, 操作类型, 失败reason, timestamp
+  运维告警触发条件: 连续失败≥3次 或 失败后1h内未恢复
+</code></pre>
+<hr>
+<h2>12. 附录</h2>
+<ul>
+<li>术语表：<ul>
+<li>客商中心：客户+供应商统一管理中心</li>
+<li>SCAC：Standard Carrier Alpha Code，美国海关承运人标准代码</li>
+<li>E签宝：电子签约第三方服务</li>
+<li>天眼查：企业工商信息查询平台</li>
+<li>飞书审批：飞书开放平台审批流</li>
+<li>入驻链接：销售生成发给客户的唯一注册链接</li>
+<li>ROOT账户：企业入驻时自动生成的主账号（account=&#39;admin&#39;），拥有货主端全部权限</li>
+<li>所属公司：每份合同挂靠的主体公司（广州飞点/深圳飞点/广东飞点/香港富力顿/墨链），一个客户可签多份对应不同公司的合同</li>
+</ul>
+</li>
+<li>用户需求(RDD)：<code>drafts/客商中心/2026-06-22-用户需求.md</code></li>
+<li>数据设计：<code>drafts/客商中心/2026-06-22-数据设计.md</code></li>
+</ul>
+
+  </div>
+</div>
+</body>
+</html>

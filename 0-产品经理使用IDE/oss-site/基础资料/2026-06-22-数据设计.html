@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据设计 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#059669}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#05966915;color:#059669;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #059669;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#059669;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">基础资料</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">数据设计</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>数据设计 — 基础资料</h1>
+<blockquote>
+<p><strong>版本</strong>: v2.3 | <strong>日期</strong>: 2026-06-22 | <strong>作者</strong>: AI PM<br><strong>上游文档</strong>: <a href="./2026-06-22-%E7%94%A8%E6%88%B7%E9%9C%80%E6%B1%82.md">2026-06-22-用户需求.md</a><br><strong>变更</strong>: v2.3 — shipping_address 新增 address_type 字段（10:收货地址 / 20:取件地址），收货地址管理升级为地址管理（双Tab）</p>
+</blockquote>
+<hr>
+<h2>一、实体清单 x 表映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>实体名称</th>
+<th>对应表/子表</th>
+<th>映射方式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Product</td>
+<td><code>product</code></td>
+<td>独立表</td>
+<td>商品聚合根，存储SKU核心信息</td>
+</tr>
+<tr>
+<td>ProductPrice</td>
+<td><code>product_price</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>product_id</code> 关联，存储多币种申报单价（币种取自业务国）</td>
+</tr>
+<tr>
+<td>ProductPackage</td>
+<td><code>product_package</code></td>
+<td>1:N 子表</td>
+<td><strong>二期</strong>。通过 <code>product_id</code> 关联，条件存在（need_package=true）</td>
+</tr>
+<tr>
+<td>ProductBarcode</td>
+<td><code>product_barcode</code></td>
+<td>1:N 子表</td>
+<td><strong>二期</strong>。通过 <code>product_id</code> 关联，产品条码管理（一期预留 <code>ean</code>/<code>other_barcode</code> 字段于主表）</td>
+</tr>
+<tr>
+<td>ShippingAddress</td>
+<td><code>shipping_address</code></td>
+<td>独立表</td>
+<td>地址统一实体，通过 address_type 区分 收货地址(10) / 取件地址(20)，租户隔离</td>
+</tr>
+<tr>
+<td>Tag</td>
+<td><code>tag</code></td>
+<td>独立表</td>
+<td>标识管理，用于运单/提单/附加费等业务打标</td>
+</tr>
+<tr>
+<td>Tenant/User</td>
+<td><code>tenant</code> / <code>user</code></td>
+<td>外部引用</td>
+<td>货主租户和用户数据，不在本模块管理</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>二、逐表字段清单</h2>
+<h3>2.1 商品主表</h3>
+<p><strong>表名</strong>: <code>product</code> | <strong>对应实体</strong>: Product</p>
+<blockquote>
+<p><strong>设计说明</strong>: 商品聚合根，承载SKU全生命周期数据。SKU创建后不可修改，同客户下唯一。product_weight 非必填。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">SaaS数据隔离，关联货主</td>
+</tr>
+<tr>
+<td align="left"><code>sku</code></td>
+<td align="left">商品SKU</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique(tenant_id)</strong></td>
+<td align="left">创建后不可修改，租户内唯一</td>
+</tr>
+<tr>
+<td align="left"><code>image_url</code></td>
+<td align="left">产品图片</td>
+<td align="left">String(512)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">图片URL，列表缩略图可预览大图</td>
+</tr>
+<tr>
+<td align="left"><code>cn_name</code></td>
+<td align="left">申报中文名</td>
+<td align="left">String(128)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">品名中文</td>
+</tr>
+<tr>
+<td align="left"><code>en_name</code></td>
+<td align="left">申报英文名</td>
+<td align="left">String(128)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">品名英文</td>
+</tr>
+<tr>
+<td align="left"><code>attributes</code></td>
+<td align="left">产品属性</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">多选数组，见枚举字典，至少选1个</td>
+</tr>
+<tr>
+<td align="left"><code>hs_code</code></td>
+<td align="left">海关编码</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">HS Code</td>
+</tr>
+<tr>
+<td align="left"><code>material</code></td>
+<td align="left">材质</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>brand</code></td>
+<td align="left">品牌</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>model</code></td>
+<td align="left">型号</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>usage</code></td>
+<td align="left">用途</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>sales_link</code></td>
+<td align="left">销售链接</td>
+<td align="left">String(512)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">非必填</td>
+</tr>
+<tr>
+<td align="left"><code>length</code></td>
+<td align="left">长(cm)</td>
+<td align="left">Decimal(10,2)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">非必填</td>
+</tr>
+<tr>
+<td align="left"><code>width</code></td>
+<td align="left">宽(cm)</td>
+<td align="left">Decimal(10,2)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">非必填</td>
+</tr>
+<tr>
+<td align="left"><code>height</code></td>
+<td align="left">高(cm)</td>
+<td align="left">Decimal(10,2)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">非必填</td>
+</tr>
+<tr>
+<td align="left"><code>weight</code></td>
+<td align="left">重量(KG)</td>
+<td align="left">Decimal(10,2)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">非必填</td>
+</tr>
+<tr>
+<td align="left"><code>need_package</code></td>
+<td align="left">是否需要包材</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false（二期功能，一期预留字段）</td>
+</tr>
+<tr>
+<td align="left"><code>ean</code></td>
+<td align="left">产品条码(EAN/UPC)</td>
+<td align="left">String(64)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">二期功能，一期预留字段</td>
+</tr>
+<tr>
+<td align="left"><code>other_barcode</code></td>
+<td align="left">其他条码</td>
+<td align="left">String(64)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">二期功能，一期预留字段</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">10:待审核, 20:已通过, 30:已拒绝</td>
+</tr>
+<tr>
+<td align="left"><code>default_currency</code></td>
+<td align="left">默认币种</td>
+<td align="left">String(8)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: &#39;USD&#39;，对应product_price中is_default=true的币种</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户ID</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户ID</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新+1</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>⚠ <strong>融合标注</strong>：Demo 表单分区四&quot;仓储包材与预警&quot;含库存/库龄预警阈值（invWarning / ageWarning），Excel 未提及此功能，本设计不建 product_warning 表，预警功能归属二期。</p>
+</blockquote>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>One-to-Many</code> with <code>product_price</code> (通过 <code>id</code> → <code>product_id</code>)</li>
+<li><code>One-to-Many</code> with <code>product_package</code> (通过 <code>id</code> → <code>product_id</code>) — 二期</li>
+<li><code>One-to-Many</code> with <code>product_barcode</code> (通过 <code>id</code> → <code>product_id</code>) — 二期</li>
+<li><code>Many-to-One</code> with <code>tenant</code> (通过 <code>tenant_id</code>)</li>
+</ul>
+<hr>
+<h3>2.2 申报单价子表</h3>
+<p><strong>表名</strong>: <code>product_price</code> | <strong>对应实体</strong>: ProductPrice</p>
+<blockquote>
+<p><strong>设计说明</strong>: 商品的多币种申报单价，一个商品可有多条记录，同一商品下币种不可重复。币种选项动态取自业务国币种配置。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>product_id</code></td>
+<td align="left">商品ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index(FK)</strong></td>
+<td align="left">关联 <code>product.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>currency</code></td>
+<td align="left">申报币种</td>
+<td align="left">String(8)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">取自业务国币种配置（默认含USD/EUR/CNY/GBP）</td>
+</tr>
+<tr>
+<td align="left"><code>price</code></td>
+<td align="left">申报单价</td>
+<td align="left">Decimal(20,6)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">精度6位小数，前端显示2位</td>
+</tr>
+<tr>
+<td align="left"><code>is_default</code></td>
+<td align="left">是否默认</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false，每商品仅1条=true</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>Many-to-One</code> with <code>product</code> (通过 <code>product_id</code>)</li>
+</ul>
+<p><strong>约束</strong>:</p>
+<ul>
+<li><code>[UNIQUE]</code> <code>product_id</code> + <code>currency</code> — 同一商品下币种不可重复</li>
+</ul>
+<hr>
+<h3>2.3 地址表</h3>
+<p><strong>表名</strong>: <code>shipping_address</code> | <strong>对应实体</strong>: ShippingAddress（收货地址 + 取件地址）</p>
+<blockquote>
+<p><strong>设计说明</strong>: 地址统一实体，通过 <code>address_type</code> 区分类型。收货地址走审核流程（待审核→通过/拒绝），取件地址无需审核（默认已通过）。货主端不区分root/子账户，同一tenant_id下所有用户共享地址池。取件地址数据来源：① 客户入驻时从客户档案物流联系人自动带入 ② 货主端手工新增。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">SaaS数据隔离，关联货主</td>
+</tr>
+<tr>
+<td align="left"><code>address_type</code></td>
+<td align="left">地址类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">10:收货地址, 20:取件地址</td>
+</tr>
+<tr>
+<td align="left"><code>contact</code></td>
+<td align="left">联系人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">取件地址初次入驻时从客户档案物流联系人自动带入</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">联系电话</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">数字格式，支持国际号码；取件地址初次入驻时从客户档案物流联系人自动带入</td>
+</tr>
+<tr>
+<td align="left"><code>country</code></td>
+<td align="left">国家</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">下拉选择，数据源：国家列表接口（GET /api/common/countries），取件地址默认&quot;中国&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>state</code></td>
+<td align="left">省/州</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">下拉选择（filterable），跟随国家联动，数据源：行政区划接口（GET /api/common/regions?country=xxx）</td>
+</tr>
+<tr>
+<td align="left"><code>city</code></td>
+<td align="left">城市</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">下拉选择（filterable），跟随省/州联动，数据源：行政区划接口（GET /api/common/regions?country=xxx&amp;state=xxx）</td>
+</tr>
+<tr>
+<td align="left"><code>zip</code></td>
+<td align="left">邮编</td>
+<td align="left">String(16)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">数字格式</td>
+</tr>
+<tr>
+<td align="left"><code>address</code></td>
+<td align="left">详细地址</td>
+<td align="left">String(256)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">街道门牌号等</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">10:待审核, 20:已通过, 30:已拒绝。取件地址(address_type=20)默认=20(已通过)，不走审核流程</td>
+</tr>
+<tr>
+<td align="left"><code>reject_reason</code></td>
+<td align="left">拒绝原因</td>
+<td align="left">String(256)</td>
+<td align="left">No</td>
+<td align="left">—</td>
+<td align="left">审核拒绝时填写（仅收货地址）</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户ID</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户ID</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">并发控制，每次更新+1</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>Many-to-One</code> with <code>tenant</code> (通过 <code>tenant_id</code>)</li>
+</ul>
+<p><strong>约束</strong>:</p>
+<ul>
+<li><code>[UNIQUE]</code> <code>tenant_id</code> + <code>address_type</code> + <code>contact</code> + <code>address</code> — 同客户同类型下&quot;联系人-详细地址&quot;拼接唯一</li>
+</ul>
+<p><strong>取件地址与客商中心关系</strong>:</p>
+<ul>
+<li>客户入驻时填写的取件地址（<code>pickup_address</code> 表，客商中心模块）同步写入本表，<code>address_type=20</code>，<code>status=20(已通过)</code></li>
+<li>联系人/电话从客户档案 <code>profile_contact</code>（物流联系人）自动带入</li>
+<li>客商中心 <code>pickup_address</code> 表保留作为入驻档案的原始记录，本表作为地址管理的统一视图</li>
+</ul>
+<hr>
+<h3>2.4 标识表</h3>
+<p><strong>表名</strong>: <code>tag</code> | <strong>对应实体</strong>: Tag</p>
+<blockquote>
+<p><strong>设计说明</strong>: 标识独立实体，用于运单、提单、附加费等业务场景的打标。支持自定义颜色和模块范围。<code>tag_type</code> 区分标识用途。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>name</code></td>
+<td align="left">标识名称</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;国内贴标费&quot;&quot;超重费&quot;&quot;粉末品名加收&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>color</code></td>
+<td align="left">颜色</td>
+<td align="left">String(7)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">HEX 色值，如 <code>#00FFFF</code></td>
+</tr>
+<tr>
+<td align="left"><code>tag_type</code></td>
+<td align="left">标识类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">10:自定义标识 20:附加费标识</td>
+</tr>
+<tr>
+<td align="left"><code>module_scope</code></td>
+<td align="left">模块范围</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;运单&quot;&quot;提单&quot;，标识应用场景</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index</strong></td>
+<td align="left">10:正常 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户ID</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前用户ID</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li><code>tag_type</code>=20（附加费标识）的标识可被附加费规则引用，<code>tag_type</code>=10（自定义标识）仅用于运单/提单人工打标</li>
+<li>标识名称全局唯一</li>
+<li>已被业务单据引用的标识不可删除，仅可冻结</li>
+</ul>
+<hr>
+<h3>2.5 二期 — 包材配置子表</h3>
+<p><strong>表名</strong>: <code>product_package</code> | <strong>对应实体</strong>: ProductPackage</p>
+<blockquote>
+<p><strong>设计说明</strong>: 二期功能。仅当 product.need_package=true 时有效，按仓库配置包材处理方式。一期不建此表，仅预留 product.need_package 字段。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>product_id</code></td>
+<td align="left">商品ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index(FK)</strong></td>
+<td align="left">关联 <code>product.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>warehouse</code></td>
+<td align="left">仓库名称</td>
+<td align="left">String(128)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>method</code></td>
+<td align="left">包材方式</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:常规纸箱, 20:木架加固, 30:气泡膜缠绕</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>2.6 二期 — 产品条码子表</h3>
+<p><strong>表名</strong>: <code>product_barcode</code> | <strong>对应实体</strong>: ProductBarcode</p>
+<blockquote>
+<p><strong>设计说明</strong>: 二期功能。产品条码独立管理，支持多类型条码。一期不建此表，仅在 product 表预留 <code>ean</code> / <code>other_barcode</code> 字段。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>product_id</code></td>
+<td align="left">商品ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index(FK)</strong></td>
+<td align="left">关联 <code>product.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>barcode_type</code></td>
+<td align="left">条码类型</td>
+<td align="left">String(16)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">EAN / UPC / INTERNAL</td>
+</tr>
+<tr>
+<td align="left"><code>barcode_value</code></td>
+<td align="left">条码值</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">条码数字/字符串</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">自动维护</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>三、ER 关系图</h2>
+<pre><code class="language-mermaid">erDiagram
+    PRODUCT ||--o{ PRODUCT_PRICE : &quot;1:N (product_id)&quot;
+    PRODUCT ||--o{ PRODUCT_PACKAGE : &quot;1:N (product_id) [二期]&quot;
+    PRODUCT ||--o{ PRODUCT_BARCODE : &quot;1:N (product_id) [二期]&quot;
+    PRODUCT }o--|| TENANT : &quot;N:1 (tenant_id)&quot;
+    SHIPPING_ADDRESS }o--|| TENANT : &quot;N:1 (tenant_id)&quot;
+
+    PRODUCT {
+        BigInt id PK
+        String tenant_id FK
+        String sku UK
+        String image_url
+        String cn_name
+        String en_name
+        JSON attributes
+        String hs_code
+        String material
+        String brand
+        String model
+        String usage
+        String sales_link
+        Decimal length
+        Decimal width
+        Decimal height
+        Decimal weight &quot;非必填&quot;
+        Boolean need_package
+        String ean
+        String other_barcode
+        TinyInt status
+        String default_currency
+        DateTime created_at
+        String created_by
+        DateTime updated_at
+        String updated_by
+        Boolean is_deleted
+        Int version
+    }
+
+    PRODUCT_PRICE {
+        BigInt id PK
+        BigInt product_id FK
+        String currency
+        Decimal price
+        Boolean is_default
+        DateTime created_at
+        DateTime updated_at
+    }
+
+    PRODUCT_PACKAGE {
+        BigInt id PK
+        BigInt product_id FK
+        String warehouse
+        TinyInt method
+        DateTime created_at
+        DateTime updated_at
+    }
+
+    PRODUCT_BARCODE {
+        BigInt id PK
+        BigInt product_id FK
+        String barcode_type
+        String barcode_value
+        DateTime created_at
+        DateTime updated_at
+    }
+
+    SHIPPING_ADDRESS {
+        BigInt id PK
+        String tenant_id FK
+        String contact
+        String phone
+        String country
+        String state
+        String city
+        String zip
+        String address
+        TinyInt status
+        String reject_reason
+        DateTime created_at
+        String created_by
+        DateTime updated_at
+        String updated_by
+        Boolean is_deleted
+        Int version
+    }
+
+    TAG {
+        BigInt id PK
+        String name UK
+        String color
+        TinyInt tag_type
+        String module_scope
+        TinyInt status
+        DateTime created_at
+        String created_by
+        DateTime updated_at
+        String updated_by
+        Boolean is_deleted
+    }
+
+    TENANT {
+        String id PK
+        String name
+        DateTime created_at
+    }
+</code></pre>
+<hr>
+<h2>四、关键设计说明</h2>
+<h3>软删除策略</h3>
+<ul>
+<li><code>product</code> 和 <code>shipping_address</code> 使用软删除（<code>is_deleted</code> = true），核心业务数据不可物理删除</li>
+<li>子表 <code>product_price</code> 随主表应用层级联软删除（Phase 1 在应用层处理，不依赖数据库级联）</li>
+<li>二期子表（<code>product_package</code> / <code>product_barcode</code>）同样遵循软删除策略</li>
+</ul>
+<h3>乐观锁</h3>
+<ul>
+<li><code>product</code> 和 <code>shipping_address</code> 需要 <code>version</code> 字段，防并发编辑冲突</li>
+<li>子表 <code>product_price</code> 通过主表的乐观锁保护，不单独设 version</li>
+</ul>
+<h3>JSON 字段使用场景</h3>
+<ul>
+<li><code>product.attributes</code>：产品属性为多选枚举（如&quot;普货+带电+易碎&quot;），使用 JSON Array 存储。原因：属性列表可能在运营中扩展，JSON 比逗号分隔字符串更结构化，比单独的关联表更轻量。</li>
+</ul>
+<h3>纯逻辑实体说明</h3>
+<ul>
+<li>Tenant（货主）：引用外部 <code>tenant</code> 表，本模块不管理租户数据，仅通过 <code>tenant_id</code> 做数据隔离</li>
+<li>User（用户）：引用外部 <code>user</code> 表，<code>created_by</code> / <code>updated_by</code> 记录操作人</li>
+</ul>
+<h3>关键约束</h3>
+<ul>
+<li><strong>SKU唯一性</strong>：<code>product.sku</code> + <code>product.tenant_id</code> 联合唯一，同客户下SKU不可重复</li>
+<li><strong>地址简称唯一性</strong>：<code>shipping_address.tenant_id</code> + <code>shipping_address.contact</code> + <code>shipping_address.address</code> 组合在应用层校验唯一（联系人-详细地址拼接），防止重复录入</li>
+<li><strong>标识名称唯一性</strong>：<code>tag.name</code> 全局唯一，防止重复创建同名标识</li>
+<li><strong>员工端地址编辑</strong>：员工端可编辑所有状态（待审核/已通过/已拒绝）的收货地址</li>
+<li><strong>币种不重复</strong>：<code>product_price.product_id</code> + <code>product_price.currency</code> 联合唯一</li>
+<li><strong>货主端子账户共享</strong>：<code>shipping_address</code> 不区分 root/子账户，同一 <code>tenant_id</code> 下所有用户共享地址数据；查询时仅按 <code>tenant_id</code> 过滤，不按 <code>created_by</code> 过滤</li>
+</ul>
+<h3>枚举字典</h3>
+<p><strong>商品状态 (product.status)</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10</td>
+<td>PENDING</td>
+<td>待审核</td>
+<td>货主提交后初始状态</td>
+</tr>
+<tr>
+<td>20</td>
+<td>APPROVED</td>
+<td>已通过</td>
+<td>员工审核通过</td>
+</tr>
+<tr>
+<td>30</td>
+<td>REJECTED</td>
+<td>已拒绝</td>
+<td>员工审核拒绝，可编辑后重提</td>
+</tr>
+</tbody></table></div>
+<p><strong>地址状态 (shipping_address.status)</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10</td>
+<td>PENDING</td>
+<td>待审核</td>
+<td>货主提交后初始状态</td>
+</tr>
+<tr>
+<td>20</td>
+<td>APPROVED</td>
+<td>已通过</td>
+<td>员工审核通过</td>
+</tr>
+<tr>
+<td>30</td>
+<td>REJECTED</td>
+<td>已拒绝</td>
+<td>员工审核拒绝，可编辑后重提</td>
+</tr>
+</tbody></table></div>
+<p><strong>申报币种 (product_price.currency)</strong> — 取自业务国币种配置：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>USD</td>
+<td>USD</td>
+<td>美元</td>
+</tr>
+<tr>
+<td>EUR</td>
+<td>EUR</td>
+<td>欧元</td>
+</tr>
+<tr>
+<td>CNY</td>
+<td>CNY</td>
+<td>人民币</td>
+</tr>
+<tr>
+<td>GBP</td>
+<td>GBP</td>
+<td>英镑</td>
+</tr>
+</tbody></table></div>
+<p><strong>产品属性 (product.attributes)</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>中文</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>普货</td>
+<td>普货</td>
+</tr>
+<tr>
+<td>内置电池 (可拆)</td>
+<td>内置电池 (可拆)</td>
+</tr>
+<tr>
+<td>内置电池 (不可拆)</td>
+<td>内置电池 (不可拆)</td>
+</tr>
+<tr>
+<td>纯电池</td>
+<td>纯电池</td>
+</tr>
+<tr>
+<td>带磁</td>
+<td>带磁</td>
+</tr>
+<tr>
+<td>危险品</td>
+<td>危险品</td>
+</tr>
+<tr>
+<td>液体</td>
+<td>液体</td>
+</tr>
+<tr>
+<td>粉末</td>
+<td>粉末</td>
+</tr>
+<tr>
+<td>膏体</td>
+<td>膏体</td>
+</tr>
+<tr>
+<td>木制品</td>
+<td>木制品</td>
+</tr>
+<tr>
+<td>纺织品</td>
+<td>纺织品</td>
+</tr>
+</tbody></table></div>
+<p><strong>包材方式 (product_package.method)</strong> — 二期：</p>
+<p><strong>标识类型 (tag.tag_type)</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10</td>
+<td>CUSTOM</td>
+<td>自定义标识</td>
+<td>用于运单/提单人工打标</td>
+</tr>
+<tr>
+<td>20</td>
+<td>SURCHARGE</td>
+<td>附加费标识</td>
+<td>可被附加费规则引用</td>
+</tr>
+</tbody></table></div>
+<p><strong>标识状态 (tag.status)</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10</td>
+<td>ACTIVE</td>
+<td>正常</td>
+<td>正常使用中</td>
+</tr>
+<tr>
+<td>20</td>
+<td>FROZEN</td>
+<td>已冻结</td>
+<td>冻结后不可新增引用</td>
+</tr>
+</tbody></table></div>
+<p><strong>包材方式 (product_package.method)</strong> — 二期：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>10</td>
+<td>CARTON</td>
+<td>方式1 — 常规纸箱</td>
+</tr>
+<tr>
+<td>20</td>
+<td>WOODEN</td>
+<td>方式2 — 木架加固</td>
+</tr>
+<tr>
+<td>30</td>
+<td>BUBBLE</td>
+<td>方式3 — 气泡膜缠绕</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>五、状态机</h2>
+<h3>5.1 商品状态流转</h3>
+<pre><code>                    ┌─── 货主提交 ───→ [待审核(10)]
+                    │                     │
+    [已拒绝(30)] ←──┘         员工审核通过 │ 员工审核拒绝
+        │                                  │
+        └── 货主编辑后重提 ──→ [待审核(10)] │
+                                           ↓
+                                    [已通过(20)]
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>(新建)</td>
+<td>提交</td>
+<td>待审核(10)</td>
+<td>货主</td>
+<td>必填字段完整</td>
+</tr>
+<tr>
+<td>待审核(10)</td>
+<td>审核通过</td>
+<td>已通过(20)</td>
+<td>员工</td>
+<td>二次确认</td>
+</tr>
+<tr>
+<td>待审核(10)</td>
+<td>审核拒绝</td>
+<td>已拒绝(30)</td>
+<td>员工</td>
+<td>拒绝原因不为空</td>
+</tr>
+<tr>
+<td>已拒绝(30)</td>
+<td>编辑后提交</td>
+<td>待审核(10)</td>
+<td>货主</td>
+<td>必填字段完整</td>
+</tr>
+</tbody></table></div>
+<h3>5.2 收货地址状态流转</h3>
+<pre><code>                    ┌─── 货主提交 ───→ [待审核(10)]
+                    │                     │
+    [已拒绝(30)] ←──┘         员工审核通过 │ 员工审核拒绝
+        │                                  │
+        └── 货主编辑后重提 ──→ [待审核(10)] │
+                                           ↓
+                                    [已通过(20)]
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>(新建)</td>
+<td>确定提交</td>
+<td>待审核(10)</td>
+<td>货主</td>
+<td>7个必填字段均有值；联系人-详细地址不重复</td>
+</tr>
+<tr>
+<td>待审核(10)</td>
+<td>审核通过</td>
+<td>已通过(20)</td>
+<td>员工</td>
+<td>二次确认</td>
+</tr>
+<tr>
+<td>待审核(10)</td>
+<td>审核拒绝</td>
+<td>已拒绝(30)</td>
+<td>员工</td>
+<td>拒绝原因不为空</td>
+</tr>
+<tr>
+<td>已拒绝(30)</td>
+<td>编辑后提交</td>
+<td>待审核(10)</td>
+<td>货主</td>
+<td>7个必填字段均有值；联系人-详细地址不重复</td>
+</tr>
+</tbody></table></div>
+<hr>
+
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RDD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#db2777}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#db277715;color:#db2777;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #db2777;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#db2777;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">邀请入驻</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">RDD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>需求定义卡片 (RDD) — 邀请入驻</h1>
+<blockquote>
+<p><strong>原始需求</strong>：销售通过链接或邮件向目标客户发送入驻邀请，客户点击后自助填写企业档案，提交后系统自动触发天眼查尽调并生成 PDF 报告。<br><strong>文档版本</strong>: v3.0 | <strong>日期</strong>: 2026-06-16 | <strong>作者</strong>: AI PM（v3.0: 流程重构——企业尽调从销售手工查询改为客户提交档案后系统自动触发）</p>
+</blockquote>
+<hr>
+<h2>1. 核心洞察 (Insight)</h2>
+<p><strong>真实痛点</strong>：</p>
+<p>当前飞点跨境供应链的客户入驻流程中，销售发送邀请链接后，客户填写档案并提交。但企业尽调（天眼查工商信息+风险扫描+PDF报告生成）应在<strong>客户提交档案时由系统自动触发</strong>，而非销售手动到第三方平台逐家查询。</p>
+<p><strong>JTBD</strong>：</p>
+<blockquote>
+<p><code>销售</code> 雇佣&quot;邀请入驻&quot;不是为了&quot;查企业信息&quot;，而是为了：<strong>生成专属邀请链接或邮件发送给客户，客户自助完成后系统自动完成尽调，无需人工介入。</strong></p>
+</blockquote>
+<blockquote>
+<p><code>客户</code> 雇佣&quot;邀请入驻&quot;不是为了&quot;配合销售做尽调&quot;，而是为了：<strong>收到链接后一次会话内完成档案填写和提交，剩下的审核流程由系统自动完成。</strong></p>
+</blockquote>
+<p><strong>业务价值</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>当前（手工）</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>企业尽调触发</td>
+<td>销售手工输入企业名称查询</td>
+<td>客户提交档案后系统自动触发</td>
+</tr>
+<tr>
+<td>尽调耗时</td>
+<td>15-30 分钟/家</td>
+<td>系统自动，无需人工等待</td>
+</tr>
+<tr>
+<td>报告生成</td>
+<td>销售手工截图摘抄</td>
+<td>系统自动生成 PDF，永久归档</td>
+</tr>
+<tr>
+<td>入驻邀请</td>
+<td>微信发送链接，无追踪</td>
+<td>链接+邮件双通道，状态可追踪</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>2. 业务全景图</h2>
+<h3>2.1 角色与工作节奏</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>核心任务</th>
+<th>频率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>销售代表</td>
+<td>生成入驻链接/发送邀请邮件，跟踪邀请状态</td>
+<td>日频</td>
+</tr>
+<tr>
+<td>客户（企业/自然人）</td>
+<td>点击邀请链接，填写档案并提交入驻</td>
+<td>一次性</td>
+</tr>
+<tr>
+<td>系统</td>
+<td>客户提交后自动触发 OCR、天眼查接口、生成 PDF 报告</td>
+<td>自动</td>
+</tr>
+</tbody></table></div>
+<h3>2.2 端到端业务链路</h3>
+<pre><code>【邀请触达】
+  销售生成专属邀请链接/发送邮件 → 链接含14天有效期
+      ↓
+【客户自助填写】（详见 客商中心 RDD §4）
+  客户点击链接 → 上传营业执照(触发OCR) → 填写取货地址+联系人+业务渠道
+  → 支持暂存退出，下次恢复
+      ↓
+【客户提交入驻】
+  客户点击&quot;入驻&quot; → 校验必填 → 页面置灰 + 审核提示
+      ↓
+【系统自动尽调】（本模块核心）
+  系统自动调用天眼查 API：企业工商信息 + 风险扫描 → 生成 PDF 报告
+  → 报告存入客户资料 → 待签约数据生成
+      ↓
+【后续流程】（详见 客商中心 RDD）
+  签约 → 开户 → 激活
+</code></pre>
+<h3>2.3 实体依赖关系</h3>
+<pre><code>邀请记录 (InvitationRecord) — 聚合根
+  ├── 1:1 专属邀请链接 (含token + 14天有效期)
+  ├── 1:1 邮件发送记录 (条件，仅邮件邀请时)
+  └── 1:1 邀请状态追踪
+
+企业客户档案 (EnterpriseProfile) — 详见 客商中心 RDD
+  ├── 营业执照 → OCR 自动填充公司名称/注册号/信用代码
+  ├── 取货地址 + 联系人 + 业务渠道
+  └── 提交入驻 → 触发天眼查自动尽调
+
+系统自动尽调结果
+  ├── 1:1 企业工商信息（天眼查 API 返回）
+  ├── 1:1 企业风险扫描结果（天眼查 API 返回）
+  └── 1:1 尽调 PDF 报告（系统自动生成，存入客户资料）
+</code></pre>
+<h3>2.4 核心业务流程图（泳道图）</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 销售
+        A1[&quot;生成入驻邀请&quot;] --&gt; A2{&quot;邀请方式?&quot;}
+        A2 --&gt;|链接邀请| A3[&quot;复制邀请链接发送给客户&quot;]
+        A2 --&gt;|邮件邀请| A4[&quot;填写客户邮箱 → 发送邮件&quot;]
+    end
+    subgraph 客户
+        B1[&quot;点击邀请链接&quot;] --&gt; B2[&quot;填写企业档案&quot;]
+        B2 --&gt; B3[&quot;上传营业执照 → OCR 自动识别&quot;]
+        B3 --&gt; B4[&quot;补充取货地址 + 联系人 + 业务渠道&quot;]
+        B4 --&gt; B5{&quot;暂存或提交?&quot;}
+        B5 --&gt;|暂存| B6[&quot;信息保留，下次继续&quot;]
+        B5 --&gt;|提交入驻| B7[&quot;校验必填 → 页面置灰 → 审核提示&quot;]
+    end
+    subgraph 系统自动尽调
+        C1[&quot;接收客户提交的档案&quot;] --&gt; C2[&quot;调用天眼查：企业工商信息查询&quot;]
+        C2 --&gt; C3[&quot;调用天眼查：企业风险扫描&quot;]
+        C3 --&gt; C4[&quot;组装报告数据&quot;]
+        C4 --&gt; C5[&quot;生成尽调 PDF 报告&quot;]
+        C5 --&gt; C6[&quot;报告存入客户资料 + 生成待签约数据&quot;]
+    end
+    A3 --&gt; B1
+    A4 --&gt; B1
+    B7 --&gt; C1
+</code></pre>
+<h3>2.5 核心数据流图</h3>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph 邀请层
+        INV[&quot;邀请链接 / 邀请邮件&quot;] --&gt; LINK[&quot;专属链接(含token+14天)&quot;]
+    end
+    subgraph 客户自助层
+        LINK --&gt; PROFILE[&quot;企业客户档案&quot;]
+        PROFILE --&gt; OCR[&quot;营业执照 OCR&quot;]
+        OCR --&gt; SUBMIT[&quot;客户提交入驻&quot;]
+    end
+    subgraph 系统尽调层
+        SUBMIT --&gt; API1[&quot;天眼查 - 企业工商 API&quot;]
+        SUBMIT --&gt; API2[&quot;天眼查 - 企业风险 API&quot;]
+        API1 --&gt; D1[&quot;工商信息对象&quot;]
+        API2 --&gt; D2[&quot;风险分类 + 明细列表&quot;]
+        D1 --&gt; PDF1[&quot;企业信息报告 PDF&quot;]
+        D2 --&gt; PDF2[&quot;企业风险报告 PDF&quot;]
+    end
+    subgraph 归档层
+        PDF1 --&gt; ARCHIVE[&quot;存入客户资料(customer_material)&quot;]
+        PDF2 --&gt; ARCHIVE
+    end
+</code></pre>
+<hr>
+<h2>3. 流程一：邀请触达（销售日频操作）</h2>
+<blockquote>
+<p><strong>触发</strong>：销售完成客户初步沟通后，向目标客户发送入驻邀请<br><strong>频率</strong>：日频<br><strong>前置依赖</strong>：目标客户已确认意向</p>
+</blockquote>
+<h3>3.1 专属邀请链接 (InvitationLink)</h3>
+<blockquote>
+<p><strong>As a</strong> 销售代表 <strong>I want to</strong> 生成专属入驻链接发送给客户 <strong>So that</strong> 客户能自助完成档案填写</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>受邀客户名称</td>
+<td>文本</td>
+<td>—</td>
+<td>目标客户企业名称</td>
+</tr>
+<tr>
+<td>专属邀请链接</td>
+<td>文本(URL)</td>
+<td>✅</td>
+<td>系统自动生成，含唯一token，格式 <code>{base_url}/invite/{uuid}</code></td>
+</tr>
+<tr>
+<td>链接有效期</td>
+<td>整数(天)</td>
+<td>✅</td>
+<td>固定 14 天</td>
+</tr>
+<tr>
+<td>过期时间</td>
+<td>日期时间</td>
+<td>✅</td>
+<td>生成时间 + 14 天</td>
+</tr>
+<tr>
+<td>邀请方式</td>
+<td>枚举</td>
+<td>✅</td>
+<td>链接邀请 / 邮件邀请</td>
+</tr>
+<tr>
+<td>邀请状态</td>
+<td>枚举</td>
+<td>✅</td>
+<td>待接受 / 已接受 / 已过期</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R01：链接首次生成后在 14 天有效期内保持不变，过期后需重新生成</li>
+<li>R02：过期后客户点击链接提示&quot;链接已过期，请联系您的销售代表重新发送入驻邀请&quot;</li>
+<li>R03：链接被使用后（客户已提交入驻），不可再次使用</li>
+<li>R04：销售可选择&quot;复制邀请链接&quot;或&quot;发送邮件&quot;两种触达方式</li>
+</ul>
+<h3>3.2 邮件邀请 (EmailInvitation)</h3>
+<blockquote>
+<p><strong>As a</strong> 销售代表 <strong>I want to</strong> 通过邮件方式向客户发送入驻邀请 <strong>So that</strong> 客户在邮箱中直接获取链接</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>受邀者邮箱</td>
+<td>邮箱</td>
+<td>✅</td>
+<td>客户邮箱地址</td>
+</tr>
+<tr>
+<td>发件人</td>
+<td>文本</td>
+<td>✅</td>
+<td>系统默认虚拟邮箱，不可编辑</td>
+</tr>
+<tr>
+<td>邮件主题</td>
+<td>文本</td>
+<td>✅</td>
+<td>根据域名自动切换：&quot;飞点跨境供应链入驻邀请&quot; 或 &quot;墨链跨境供应链入驻邀请&quot;</td>
+</tr>
+<tr>
+<td>邮件正文</td>
+<td>长文本</td>
+<td>✅</td>
+<td>含专属邀请链接的完整模板，占位符 <code>{邀请链接}</code> 发送前替换</td>
+</tr>
+</tbody></table></div>
+<p><strong>邮件正文模板</strong>：</p>
+<pre><code>尊敬的客户：
+      您好！
+      非常荣幸能邀请贵司入驻我们的供应链服务平台。
+      为了让您更便捷地完成入驻流程，我们为您准备了专属邀请链接：[邀请链接]
+      请您点击链接，按照页面指引填写企业信息、上传相关资质文件。我们已为您附上《客户档案表》，请参考填写以确保信息准确。
+      在入驻过程中，如您有任何疑问或需要协助，请勿直接在该邮件上回复，请联系您的专属销售：【发送邀请人的公司邮箱地址】
+      期待与贵司建立长期稳定的合作，携手拓展跨境业务，共创价值！
+      顺颂商祺！
+</code></pre>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R05：邮件主题中的品牌名（飞点/墨链）根据系统部署域名自动切换</li>
+<li>R06：<code>{邀请链接}</code> 占位符在邮件发送前替换为实际链接</li>
+<li>R07：复制链接时自动拼接前缀：<code>诚挚的邀请您入驻{飞点/墨链}跨境供应链系统，点击链接处理：{link}</code></li>
+</ul>
+<hr>
+<h2>4. 流程二：客户自助填写档案（客户一次性操作）</h2>
+<blockquote>
+<p><strong>触发</strong>：客户点击邀请链接进入<br><strong>频率</strong>：一次性<br><strong>前置依赖</strong>：有效的邀请链接<br><strong>详细字段定义</strong>：参见 客商中心 RDD §4（企业客户档案）和 §5（自然人客户档案）</p>
+</blockquote>
+<h3>4.1 客户操作概要</h3>
+<pre><code>客户点击链接
+  → 校验 token 有效性 + 14 天过期
+  → 如已有暂存草稿 → 恢复表单
+  → 企业客户：
+      上传营业执照 → OCR 自动识别（公司名称/注册号/信用代码）
+      补充：取货地址 + 联系人(3固定角色) + 业务渠道
+  → 自然人客户：
+      上传身份证 → OCR 自动识别（姓名/身份证号）
+      补充：联系地址 + 取货地址 + 联系人 + 业务渠道
+  → 支持&quot;暂存并退出&quot;（下次打开链接恢复）
+  → 点击&quot;入驻&quot; → 校验必填 → 提交
+</code></pre>
+<p><strong>业务规则</strong>（引用自 客商中心 RDD）：</p>
+<ul>
+<li>营业执照 OCR → 自动回填公司名称、注册号码、统一社会信用代码，可手动修改</li>
+<li>统一社会信用代码全局唯一校验，重复时提示</li>
+<li>身份证号全局唯一校验，重复时提示</li>
+<li>暂存并退出 = 信息暂存为草稿快照，下次打开链接恢复</li>
+<li>提交后页面置灰，显示&quot;您的入驻申请已提交，我们将在1-3个工作日内完成审核&quot;</li>
+</ul>
+<hr>
+<h2>5. 流程三：系统自动尽调（客户提交后自动触发）</h2>
+<blockquote>
+<p><strong>触发</strong>：客户在入驻端点击&quot;入驻&quot;提交企业档案<br><strong>频率</strong>：每次客户提交入驻时自动执行<br><strong>前置依赖</strong>：客户已提交企业档案（含营业执照/信用代码）</p>
+</blockquote>
+<h3>5.1 企业工商信息自动查询</h3>
+<blockquote>
+<p><strong>As a</strong> 系统 <strong>I want to</strong> 在客户提交入驻后自动调用天眼查 API 获取企业工商信息 <strong>So that</strong> 运营无需手动查询</p>
+</blockquote>
+<p>查询参数：客户档案中的<strong>企业名称</strong>或<strong>统一社会信用代码</strong>。</p>
+<p>返回字段（天眼查 API 自动返回）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>企业名称</td>
+<td>文本</td>
+<td>企业全称</td>
+</tr>
+<tr>
+<td>统一社会信用代码</td>
+<td>文本(18位)</td>
+<td>18位统一社会信用代码</td>
+</tr>
+<tr>
+<td>法定代表人</td>
+<td>文本</td>
+<td>法定代表人姓名</td>
+</tr>
+<tr>
+<td>企业状态</td>
+<td>枚举</td>
+<td>存续/在业/注销/吊销</td>
+</tr>
+<tr>
+<td>注册资本</td>
+<td>文本</td>
+<td>如&quot;20000万人民币&quot;</td>
+</tr>
+<tr>
+<td>成立日期</td>
+<td>日期</td>
+<td>企业成立日期</td>
+</tr>
+<tr>
+<td>注册地址</td>
+<td>文本</td>
+<td>完整注册地址</td>
+</tr>
+<tr>
+<td>经营范围</td>
+<td>长文本</td>
+<td>完整经营范围</td>
+</tr>
+<tr>
+<td>参保人数</td>
+<td>整数</td>
+<td>社保缴纳人数</td>
+</tr>
+<tr>
+<td>企业标签</td>
+<td>文本(数组)</td>
+<td>如&quot;高新技术企业,专精特新&quot;</td>
+</tr>
+<tr>
+<td>天眼评分</td>
+<td>整数</td>
+<td>万分制评分，展示时转为百分制</td>
+</tr>
+<tr>
+<td>数据来源</td>
+<td>文本</td>
+<td>固定&quot;天眼查API&quot;</td>
+</tr>
+<tr>
+<td>查询时间</td>
+<td>日期时间</td>
+<td>本次查询时间戳</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R08：企业状态为&quot;注销&quot;或&quot;吊销&quot;时，报告以不同颜色标签区分（蓝色=存续/在业，灰色=注销，红色=吊销）</li>
+<li>R09：天眼评分原始为万分制，报告中转为百分制（÷100，保留两位小数）</li>
+<li>R10：日期字段统一格式化为&quot;YYYY-MM-DD&quot;</li>
+<li>R11：天眼查 API 调用失败时降级处理：提示&quot;企业风险信息获取失败，不影响入驻提交，稍后系统将自动补采&quot;，入驻流程不阻断</li>
+</ul>
+<h3>5.2 企业风险自动扫描</h3>
+<blockquote>
+<p><strong>As a</strong> 系统 <strong>I want to</strong> 在客户提交入驻后自动调用天眼查风险 API <strong>So that</strong> 运营能基于统一的风险报告做入驻决策</p>
+</blockquote>
+<p>返回字段：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查询企业名称</td>
+<td>文本</td>
+<td>被查询企业</td>
+</tr>
+<tr>
+<td>风险总数</td>
+<td>整数</td>
+<td>所有风险类别合计条目数</td>
+</tr>
+<tr>
+<td>风险分类列表</td>
+<td>数组</td>
+<td>自身风险 / 周边风险 / 预警提醒 / 历史风险</td>
+</tr>
+</tbody></table></div>
+<p><strong>风险等级枚举</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>等级</th>
+<th>颜色</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>高风险</td>
+<td>红色 #cf1322</td>
+<td>严重法律/信用风险</td>
+</tr>
+<tr>
+<td>警示</td>
+<td>橙色 #faad14</td>
+<td>中等风险，需关注</td>
+</tr>
+<tr>
+<td>提示信息</td>
+<td>蓝色 #1890ff</td>
+<td>信息提示，风险较低</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R12：风险扫描与工商查询同步执行</li>
+<li>R13：风险分类按固定顺序展示：自身风险 → 周边风险 → 预警提醒 → 历史风险</li>
+<li>R14：每个分类下按风险等级排序（高风险 &gt; 警示 &gt; 提示信息）</li>
+<li>R15：全部风险总数为 0 时展示&quot;未查询到任何企业风险记录&quot;</li>
+<li>R16：某个分类无数据时展示空状态</li>
+</ul>
+<h3>5.3 尽调报告自动生成</h3>
+<blockquote>
+<p><strong>As a</strong> 系统 <strong>I want to</strong> 将天眼查返回数据自动生成 PDF 报告并存入客户资料 <strong>So that</strong> 运营和审批人员可在客户管理中直接查看</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>报告类型</td>
+<td>枚举</td>
+<td>企业信息报告 / 企业风险报告</td>
+</tr>
+<tr>
+<td>报告标题</td>
+<td>文本</td>
+<td>如&quot;企业信用信息报告&quot;</td>
+</tr>
+<tr>
+<td>生成时间</td>
+<td>日期时间</td>
+<td>报告生成时间戳</td>
+</tr>
+<tr>
+<td>数据来源</td>
+<td>文本</td>
+<td>固定&quot;天眼查API&quot;</td>
+</tr>
+<tr>
+<td>查询主体</td>
+<td>文本</td>
+<td>被查询企业全称</td>
+</tr>
+<tr>
+<td>页面尺寸</td>
+<td>枚举</td>
+<td>A4 竖版</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R17：尽调报告为静态 A4 PDF，可通过 CSS <code>@media print</code> 打印</li>
+<li>R18：企业信息报告页眉蓝色基调（#0066cc），风险报告红色基调（#d9363e）</li>
+<li>R19：报告生成后自动存入 <code>customer_material</code> 表（material_type=天眼查风险信息PDF）</li>
+<li>R20：报告永久归档，关联企业档案，审计可追溯</li>
+</ul>
+<hr>
+<h2>6. 验收标准总览 (AC)</h2>
+<p><strong>流程一：邀请触达</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC01-链接生成</strong>：销售可生成唯一入驻链接，含token + 14天有效期</li>
+<li><input disabled="" type="checkbox"> <strong>AC02-链接过期</strong>：过期链接点击提示&quot;链接已过期，请联系您的销售代表重新发送入驻邀请&quot;</li>
+<li><input disabled="" type="checkbox"> <strong>AC03-邮件邀请</strong>：销售可填写客户邮箱，发送含专属链接的入驻邀请邮件，主题根据域名自动切换</li>
+<li><input disabled="" type="checkbox"> <strong>AC04-复制链接</strong>：复制链接时自动拼接前缀文案，含品牌名</li>
+</ul>
+<p><strong>流程二：客户自助填写</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC05-暂存恢复</strong>：客户填写部分信息可暂存退出，再次打开链接自动恢复</li>
+<li><input disabled="" type="checkbox"> <strong>AC06-营业执照OCR</strong>：上传营业执照 → 自动识别公司名称/注册号/信用代码，可手动修改</li>
+<li><input disabled="" type="checkbox"> <strong>AC07-入驻提交</strong>：点击入驻 → 校验必填 → 页面置灰 + 审核提示</li>
+<li><input disabled="" type="checkbox"> <strong>AC08-唯一校验</strong>：信用代码/身份证号重复时阻止提交</li>
+</ul>
+<p><strong>流程三：系统自动尽调</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC09-自动触发</strong>：客户提交入驻后系统自动调用天眼查，无需销售手工操作</li>
+<li><input disabled="" type="checkbox"> <strong>AC10-工商信息</strong>：返回企业名称/信用代码/法人/状态/注册资本/成立日期/经营范围/参保人数/企业标签/天眼评分</li>
+<li><input disabled="" type="checkbox"> <strong>AC11-风险扫描</strong>：返回自身风险/周边风险/预警提醒/历史风险四类，按等级排序</li>
+<li><input disabled="" type="checkbox"> <strong>AC12-PDF报告</strong>：自动生成企业信息报告 + 风险报告两份 PDF，存入客户资料</li>
+<li><input disabled="" type="checkbox"> <strong>AC13-降级策略</strong>：天眼查 API 失败时提示但不阻断入驻，稍后自动补采</li>
+<li><input disabled="" type="checkbox"> <strong>AC14-报告归档</strong>：报告永久关联企业档案，审计可追溯</li>
+</ul>
+<hr>
+<h2>7. 功能清单</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A1</td>
+<td>专属邀请链接生成</td>
+<td>P0</td>
+<td>AC01</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>链接过期校验与提示</td>
+<td>P0</td>
+<td>AC02</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>邮件邀请发送</td>
+<td>P0</td>
+<td>AC03</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>复制链接（含前缀拼接）</td>
+<td>P0</td>
+<td>AC04</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>客户暂存并恢复</td>
+<td>P0</td>
+<td>AC05</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>营业执照OCR自动填充</td>
+<td>P0</td>
+<td>AC06</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>入驻提交+校验+置灰</td>
+<td>P0</td>
+<td>AC07</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>信用代码/身份证号唯一校验</td>
+<td>P0</td>
+<td>AC08</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>天眼查工商信息自动查询</td>
+<td>P0</td>
+<td>AC09 AC10</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>天眼查风险自动扫描</td>
+<td>P0</td>
+<td>AC11</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>尽调PDF报告自动生成</td>
+<td>P0</td>
+<td>AC12 AC14</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>天眼查降级策略</td>
+<td>P0</td>
+<td>AC13</td>
+</tr>
+</tbody></table></div>
+<hr>
+<blockquote>
+<p><strong>关联文档</strong>：企业客户档案字段详情见 <code>客商中心/2026-06-16-用户需求.md</code> §4；自然人客户档案见 §5。</p>
+</blockquote>
+
+  </div>
+</div>
+</body>
+</html>

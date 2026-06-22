@@ -1,0 +1,2341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#ca8a04}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#ca8a0415;color:#ca8a04;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #ca8a04;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#ca8a04;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">货主端</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">PRD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>产品需求文档 (PRD) -- 货主端</h1>
+<hr>
+<h2>0. 文档基础信息</h2>
+<ul>
+<li>文档标题：货主端（Shipper Portal）</li>
+<li>版本号：v1.2</li>
+<li>状态：草稿</li>
+<li>作者：AI PM（v1.2: 货主端×客商中心数据融合 — 跨模块接口+登录校验链+融合业务规则）</li>
+<li>评审人：产品/研发/测试/业务代表</li>
+<li>计划里程碑：评审待定 / 提测待定 / 上线待定</li>
+</ul>
+<h3>0.1 变更记录</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>变更日期</th>
+<th>变更内容</th>
+<th>变更人</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>v1.0</td>
+<td>2026-06-06</td>
+<td>初稿，基于 Demo 反向生成</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>v1.2</td>
+<td>2026-06-06</td>
+<td>货主端×客商中心数据融合：新增 §13 跨模块接口契约+登录校验链+融合业务规则(R-F01~R-F08)+融合验收标准+失败降级策略；登录/下单增加 customer.status 实时校验</td>
+<td>AI PM（融合）</td>
+</tr>
+</tbody></table></div>
+<h3>0.2 关联链接</h3>
+<ul>
+<li>用户需求(RDD)：<code>drafts/货主端/2026-06-06-用户需求.md</code></li>
+<li>数据设计：<code>drafts/货主端/2026-06-06-数据设计.md</code></li>
+<li>需求背景：无（货主端基于整体 TMS 架构规划）</li>
+<li>原型：<code>demo/货主端-demo/</code>（login.html / 首页.html / 查价订舱.html / 子账号管理.html / index.html）</li>
+</ul>
+<h3>0.3 评审记录</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>参会人</th>
+<th>主要问题/结论</th>
+<th>待办</th>
+</tr>
+</thead>
+</table></div>
+<hr>
+<h2>1. 需求定义</h2>
+<h3>1.1 背景与现状</h3>
+<p>当前货主（跨境卖家）的查价、订舱完全依赖人工沟通：在微信群询问销售报价，销售翻 Excel 查找后回复，货主确认后再口头下单。单次询价耗时 30 分钟到半天不等。货主无法自助获取报价，也无法自助管理企业内部的操作人员账号权限。</p>
+<p>货主端的目标是为跨境卖家提供一个自助门户：登录后可在线查价、下单订舱、管理企业内部子账号，大幅降低对客服/销售的依赖，提升下单效率。</p>
+<h3>1.2 目标与成功口径</h3>
+<ul>
+<li>目标：货主能在 30 秒内自助完成多渠道比价，企业管理员能自助管理子账号</li>
+<li>成功口径：<ul>
+<li>单次询价耗时从 30 分钟降至 30 秒（数据来源：询价日志分析，评估窗口：上线后 4 周）</li>
+<li>子账号自助管理覆盖率 100%（不再需要客服代创建账号）</li>
+</ul>
+</li>
+</ul>
+<h3>1.3 范围与边界</h3>
+<ul>
+<li>In Scope（本期 P0）：<ul>
+<li>登录认证（账号密码登录 + Token 校验 + 退出）</li>
+<li>首页工作台（指标卡片 + 快捷入口）</li>
+<li>查价订舱（货物参数输入 + 多渠道报价展示）</li>
+<li>子账号管理（列表/新增/编辑/冻结/分配角色）</li>
+<li>页面框架 Shell（侧边菜单 + iframe 路由 + 顶部导航 + 标签页）</li>
+</ul>
+</li>
+<li>Out of Scope：<ul>
+<li>订舱下单完整流程（依赖运单模块）</li>
+<li>询价历史记录（二期）</li>
+<li>忘记密码自助找回（MVP 通过客服重置）</li>
+<li>企业自助注册（MVP 通过员工端邀请入驻）</li>
+<li>商品管理/收货地址管理/VAT管理/角色管理（复用其他模块实体和接口，不在本 PRD 重复定义）</li>
+</ul>
+</li>
+</ul>
+<h3>1.4 影响范围</h3>
+<ul>
+<li>影响角色：货主运营、货主财务、企业管理员（货主侧）</li>
+<li>依赖系统：员工端-客商中心（企业客户数据）、员工端-超级运价（运价数据）、员工端-系统设置（角色定义）</li>
+</ul>
+<hr>
+<h2>2. 枚举字典</h2>
+<blockquote>
+<p>所有枚举字段的键值对集中定义，研发以此为准。与 数据设计 Schema 中的 TinyInt 值保持一致。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>枚举名</th>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>适用实体/字段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gender</td>
+<td>10</td>
+<td>MALE</td>
+<td>男</td>
+<td>sub_account.gender</td>
+</tr>
+<tr>
+<td>Gender</td>
+<td>20</td>
+<td>FEMALE</td>
+<td>女</td>
+<td>sub_account.gender</td>
+</tr>
+<tr>
+<td>SubAccountStatus</td>
+<td>10</td>
+<td>NORMAL</td>
+<td>正常</td>
+<td>sub_account.status</td>
+</tr>
+<tr>
+<td>SubAccountStatus</td>
+<td>20</td>
+<td>FROZEN</td>
+<td>已冻结</td>
+<td>sub_account.status</td>
+</tr>
+<tr>
+<td>BillingUnit</td>
+<td>10</td>
+<td>KG</td>
+<td>公斤</td>
+<td>查价参数 / 报价结果</td>
+</tr>
+<tr>
+<td>BillingUnit</td>
+<td>20</td>
+<td>CBM</td>
+<td>立方米</td>
+<td>查价参数 / 报价结果</td>
+</tr>
+<tr>
+<td>TransportMode</td>
+<td>SEA</td>
+<td>SEA</td>
+<td>海运</td>
+<td>查价参数.运输方式</td>
+</tr>
+<tr>
+<td>TransportMode</td>
+<td>AIR</td>
+<td>AIR</td>
+<td>空运</td>
+<td>查价参数.运输方式</td>
+</tr>
+<tr>
+<td>TaxMethod</td>
+<td>--</td>
+<td>TAX_INCLUDED</td>
+<td>包税</td>
+<td>查价参数.包税方式</td>
+</tr>
+<tr>
+<td>TaxMethod</td>
+<td>--</td>
+<td>TAX_EXCLUDED</td>
+<td>不包税</td>
+<td>查价参数.包税方式</td>
+</tr>
+<tr>
+<td>ProductType</td>
+<td>POWDER</td>
+<td>POWDER</td>
+<td>粉末</td>
+<td>查价参数.产品类型</td>
+</tr>
+<tr>
+<td>ProductType</td>
+<td>LIQUID</td>
+<td>LIQUID</td>
+<td>液体</td>
+<td>查价参数.产品类型</td>
+</tr>
+<tr>
+<td>ProductType</td>
+<td>BATTERY</td>
+<td>BATTERY</td>
+<td>带电</td>
+<td>查价参数.产品类型</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>3. 状态机</h2>
+<h3>3.1 子账号状态流转</h3>
+<pre><code>[正常] ──{冻结}──&gt; [已冻结]
+  ^                  |
+  └──{启用}──────────┘
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正常</td>
+<td>冻结</td>
+<td>已冻结</td>
+<td>企业管理员</td>
+<td>二次确认弹窗；不能冻结自己</td>
+</tr>
+<tr>
+<td>已冻结</td>
+<td>启用</td>
+<td>正常</td>
+<td>企业管理员</td>
+<td>二次确认弹窗</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>4. 功能清单与页面映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能点</th>
+<th>优先级</th>
+<th>对应页面</th>
+<th>页面类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>框架 Shell</td>
+<td>侧边菜单 + iframe 路由</td>
+<td>P0</td>
+<td>index.html</td>
+<td>Shell 框架</td>
+</tr>
+<tr>
+<td>框架 Shell</td>
+<td>顶部导航 + 面包屑 + 退出登录</td>
+<td>P0</td>
+<td>index.html</td>
+<td>Shell 框架</td>
+</tr>
+<tr>
+<td>框架 Shell</td>
+<td>Token 校验与登录拦截</td>
+<td>P0</td>
+<td>index.html</td>
+<td>Shell 框架</td>
+</tr>
+<tr>
+<td>登录认证</td>
+<td>账号密码登录</td>
+<td>P0</td>
+<td>login.html</td>
+<td>登录页</td>
+</tr>
+<tr>
+<td>登录认证</td>
+<td>记住密码 + 表单校验</td>
+<td>P0</td>
+<td>login.html</td>
+<td>登录页</td>
+</tr>
+<tr>
+<td>首页</td>
+<td>业务指标卡片（4个）</td>
+<td>P0</td>
+<td>首页.html</td>
+<td>工作台</td>
+</tr>
+<tr>
+<td>首页</td>
+<td>快捷入口网格（7个）</td>
+<td>P0</td>
+<td>首页.html</td>
+<td>工作台</td>
+</tr>
+<tr>
+<td>查价订舱</td>
+<td>货物参数输入表单</td>
+<td>P0</td>
+<td>查价订舱.html</td>
+<td>查询页</td>
+</tr>
+<tr>
+<td>查价订舱</td>
+<td>多渠道报价结果展示</td>
+<td>P0</td>
+<td>查价订舱.html</td>
+<td>查询页</td>
+</tr>
+<tr>
+<td>查价订舱</td>
+<td>未匹配渠道提示</td>
+<td>P0</td>
+<td>查价订舱.html</td>
+<td>查询页</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>子账号列表 + 搜索（4条件+7列，不展示ROOT）</td>
+<td>P0</td>
+<td>子账号管理.html</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>新增/编辑子账号（邮箱非必填+手机号数字校验）</td>
+<td>P0</td>
+<td>子账号管理.html</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>冻结/启用子账号（ROOT保护）</td>
+<td>P0</td>
+<td>子账号管理.html</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>分配角色资源（ROOT+启用角色范围）</td>
+<td>P0</td>
+<td>子账号管理.html</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>修改子账号密码</td>
+<td>P0</td>
+<td>子账号管理.html</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>角色管理</td>
+<td>角色列表 + 搜索（角色名称/角色类型，不展示ROOT）</td>
+<td>P0</td>
+<td>角色管理.html</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>角色管理</td>
+<td>新增/编辑角色（角色代码+角色名称）</td>
+<td>P0</td>
+<td>角色管理.html</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>角色管理</td>
+<td>分配资源（权限树，同员工端，ROOT范围上限）</td>
+<td>P0</td>
+<td>角色管理.html</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>角色管理</td>
+<td>冻结/启用角色（ROOT保护）</td>
+<td>P0</td>
+<td>角色管理.html</td>
+<td>列表页</td>
+</tr>
+</tbody></table></div>
+<h3>4.1 页面导航关系图</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 入口
+        L[login.html&lt;br&gt;登录页]
+    end
+    subgraph Shell框架
+        S[index.html&lt;br&gt;Shell框架&lt;br&gt;菜单+iframe+导航]
+    end
+    subgraph 核心页面
+        D[首页.html&lt;br&gt;工作台]
+        P[查价订舱.html&lt;br&gt;在线询价]
+        SA[子账号管理.html&lt;br&gt;子账号管理]
+    end
+    subgraph 复用页面_其他模块
+        O1[我的订单.html]
+        O2[账单管理.html]
+        O3[商品管理.html]
+        O4[收货地址管理.html]
+        O5[角色管理.html]
+    end
+
+    L --&gt;|登录成功+存token| S
+    S --&gt;|首屏加载| D
+    D --&gt;|快捷入口_查价订舱| P
+    D --&gt;|快捷入口_子账号管理| SA
+    D --&gt;|快捷入口_我的订单| O1
+    D --&gt;|快捷入口_账单管理| O2
+    D --&gt;|快捷入口_商品管理| O3
+    D --&gt;|快捷入口_收货地址管理| O4
+    D --&gt;|快捷入口_角色管理| O5
+    S --&gt;|菜单_查价订舱| P
+    S --&gt;|菜单_企业设置_子账号管理| SA
+    S --&gt;|退出登录| L
+    S --&gt;|无token| L
+</code></pre>
+<hr>
+<h2>5. 页面规格</h2>
+<h3>5.1 登录页 (login.html)</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：<code>/login.html</code></li>
+<li>类型：登录页</li>
+<li>访问角色：所有货主用户（含子账号）</li>
+</ul>
+<p><strong>布局</strong>：左右分栏</p>
+<ul>
+<li>左侧：品牌视觉区（背景图 + 品牌标语 + 数据看板装饰卡片）</li>
+<li>右侧：登录表单区（360px 宽，居中）</li>
+</ul>
+<p><strong>字段表</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>校验规则</th>
+<th>数据来源</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>username</td>
+<td>账号</td>
+<td>文本</td>
+<td>✅</td>
+<td>--</td>
+<td>必填；长度&gt;=3</td>
+<td>用户输入</td>
+<td>支持账号或邮箱</td>
+</tr>
+<tr>
+<td>password</td>
+<td>密码</td>
+<td>文本</td>
+<td>✅</td>
+<td>--</td>
+<td>必填；长度&gt;=6</td>
+<td>用户输入</td>
+<td>支持显示/隐藏切换</td>
+</tr>
+<tr>
+<td>rememberMe</td>
+<td>记住密码</td>
+<td>Boolean</td>
+<td>--</td>
+<td>false</td>
+<td>--</td>
+<td>前端 localStorage</td>
+<td>非敏感令牌，仅记住账号</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[登录]：点击&quot;立即登录&quot;按钮或回车键 -&gt; 前端表单校验 -&gt; 校验通过后调用登录接口 -&gt; Loading 状态 -&gt; 成功后：<ol>
+<li><code>localStorage.setItem(&#39;shipper_token&#39;, token)</code></li>
+<li><code>localStorage.setItem(&#39;shipper_username&#39;, username)</code></li>
+<li>Toast 提示&quot;登录成功！正在跳转...&quot;</li>
+<li>1 秒后跳转 <code>index.html</code></li>
+</ol>
+</li>
+<li>[登录失败]：接口返回错误 -&gt; Toast 提示错误信息（如&quot;账号或密码错误&quot;） -&gt; 不跳转</li>
+<li>[记住密码]：勾选后，下次访问自动填充账号（存在 localStorage）</li>
+<li>[忘记密码]：点击跳转忘记密码页（MVP 可暂时无功能，仅链接占位）</li>
+<li>[注册]：底部&quot;立即免费注册&quot;链接（MVP 可暂时无功能）</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>登录：<code>POST /api/shipper/auth/login</code> (body: {username, password}) -&gt; {token, username, customer_id}</li>
+</ul>
+<hr>
+<h3>5.2 首页工作台 (首页.html)</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：<code>/首页.html</code>（通过 index.html Shell 的 iframe 加载）</li>
+<li>类型：工作台</li>
+<li>访问角色：所有已登录货主用户</li>
+<li>前置条件：<code>localStorage.shipper_token</code> 存在</li>
+</ul>
+<p><strong>区域一：欢迎语</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>数据来源</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>username</td>
+<td>当前用户名</td>
+<td>文本</td>
+<td><code>localStorage.shipper_username</code></td>
+<td>展示&quot;欢迎回来，{username}！&quot;</td>
+</tr>
+<tr>
+<td>subtitle</td>
+<td>副标题</td>
+<td>文本</td>
+<td>静态</td>
+<td>&quot;这里是您的专属物流工作台。&quot;</td>
+</tr>
+</tbody></table></div>
+<p><strong>区域二：指标卡片（4 个）</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>卡片</th>
+<th>指标名</th>
+<th>数据来源</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>卡片1</td>
+<td>待发货订单</td>
+<td>后端统计接口</td>
+<td>数值 + 标签</td>
+</tr>
+<tr>
+<td>卡片2</td>
+<td>运输中订单</td>
+<td>后端统计接口</td>
+<td>数值 + 标签</td>
+</tr>
+<tr>
+<td>卡片3</td>
+<td>待付账单</td>
+<td>后端统计接口</td>
+<td>数值 + 标签</td>
+</tr>
+<tr>
+<td>卡片4</td>
+<td>本月发货量(KG)</td>
+<td>后端统计接口</td>
+<td>数值 + 标签</td>
+</tr>
+</tbody></table></div>
+<p><strong>区域三：快捷入口（7 个）</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>入口</th>
+<th>跳转目标</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查价订舱</td>
+<td><code>查价订舱.html</code></td>
+<td>核心功能，卡片可点击</td>
+</tr>
+<tr>
+<td>我的订单</td>
+<td><code>我的订单.html</code></td>
+<td>订单中心（其他模块）</td>
+</tr>
+<tr>
+<td>账单管理</td>
+<td><code>账单管理.html</code></td>
+<td>财务中心（其他模块）</td>
+</tr>
+<tr>
+<td>商品管理</td>
+<td><code>商品管理.html</code></td>
+<td>基础资料（引用）</td>
+</tr>
+<tr>
+<td>收货地址管理</td>
+<td><code>收货地址管理.html</code></td>
+<td>基础资料（引用）</td>
+</tr>
+<tr>
+<td>角色管理</td>
+<td><code>角色管理.html</code></td>
+<td>企业设置（引用）</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td><code>子账号管理.html</code></td>
+<td>企业设置（本期）</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[快捷入口点击]：通过 <code>window.parent.postMessage({ type: &#39;navigate&#39;, url: url }, &#39;*&#39;)</code> 通知 Shell 框架切换 iframe 页面</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>指标统计：<code>GET /api/shipper/dashboard/stats</code> -&gt; {pendingOrders, inTransitOrders, pendingBills, monthlyVolume}</li>
+</ul>
+<hr>
+<h3>5.3 查价订舱 (查价订舱.html) -- 核心功能</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：<code>/查价订舱.html</code></li>
+<li>类型：查询页（参数输入 + 结果展示）</li>
+<li>访问角色：所有已登录货主用户</li>
+<li>前置依赖：员工端已完成运价配置（当前周批次状态 = CURRENT）</li>
+</ul>
+<p><strong>区域一：查询参数表单</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>校验规则</th>
+<th>数据来源</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>destCountry</td>
+<td>目的国</td>
+<td>单选下拉</td>
+<td>✅</td>
+<td>US</td>
+<td>--</td>
+<td>系统可用国家列表</td>
+<td>如美国(US)/英国(UK)</td>
+</tr>
+<tr>
+<td>warehouse</td>
+<td>目的仓点</td>
+<td>单选下拉(可搜索)</td>
+<td>✅</td>
+<td>ONT8</td>
+<td>--</td>
+<td>FBA 仓点列表</td>
+<td>如 ONT8/LAX9/LGB8/SBD1</td>
+</tr>
+<tr>
+<td>pieces</td>
+<td>件数</td>
+<td>Integer</td>
+<td>✅</td>
+<td>3</td>
+<td>&gt;=1</td>
+<td>用户输入</td>
+<td>数字输入框</td>
+</tr>
+<tr>
+<td>unitWeight</td>
+<td>单件重量(kg)</td>
+<td>Decimal(10,1)</td>
+<td>✅</td>
+<td>60</td>
+<td>&gt;=0.1</td>
+<td>用户输入</td>
+<td>精度 0.1kg</td>
+</tr>
+<tr>
+<td>length</td>
+<td>长(cm)</td>
+<td>Integer</td>
+<td>✅</td>
+<td>60</td>
+<td>&gt;=1</td>
+<td>用户输入</td>
+<td>尺寸-长</td>
+</tr>
+<tr>
+<td>width</td>
+<td>宽(cm)</td>
+<td>Integer</td>
+<td>✅</td>
+<td>60</td>
+<td>&gt;=1</td>
+<td>用户输入</td>
+<td>尺寸-宽</td>
+</tr>
+<tr>
+<td>height</td>
+<td>高(cm)</td>
+<td>Integer</td>
+<td>✅</td>
+<td>60</td>
+<td>&gt;=1</td>
+<td>用户输入</td>
+<td>尺寸-高</td>
+</tr>
+<tr>
+<td>billingUnits</td>
+<td>计费方式</td>
+<td>多选复选框</td>
+<td>✅</td>
+<td>[&#39;KG&#39;]</td>
+<td>至少选一项</td>
+<td>系统枚举</td>
+<td>KG / CBM</td>
+</tr>
+<tr>
+<td>transportMode</td>
+<td>运输方式</td>
+<td>单选下拉</td>
+<td>--</td>
+<td>不限</td>
+<td>--</td>
+<td>系统枚举</td>
+<td>海运(sea)/空运(air)</td>
+</tr>
+<tr>
+<td>taxMethod</td>
+<td>包税方式</td>
+<td>单选下拉</td>
+<td>--</td>
+<td>不限</td>
+<td>--</td>
+<td>系统枚举</td>
+<td>包税/不包税</td>
+</tr>
+<tr>
+<td>pickupRegion</td>
+<td>交货地</td>
+<td>单选下拉</td>
+<td>✅</td>
+<td>珠三角</td>
+<td>--</td>
+<td>系统枚举</td>
+<td>珠三角/汕头/义乌</td>
+</tr>
+<tr>
+<td>productType</td>
+<td>产品类型</td>
+<td>单选下拉</td>
+<td>--</td>
+<td>选填</td>
+<td>--</td>
+<td>系统枚举</td>
+<td>粉末(powder)/液体(liquid)/带电(battery)</td>
+</tr>
+</tbody></table></div>
+<p><strong>区域二：报价结果表格</strong>（查询后展示）</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列名</th>
+<th>字段名</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>渠道</td>
+<td>channel</td>
+<td>文本</td>
+<td>如&quot;美森360&quot;、&quot;EX456&quot;</td>
+</tr>
+<tr>
+<td>计价</td>
+<td>billing</td>
+<td>文本</td>
+<td>&quot;KG&quot; 或 &quot;CBM&quot;</td>
+</tr>
+<tr>
+<td>公布价</td>
+<td>price</td>
+<td>文本</td>
+<td>基础运价单价，如&quot;10.0 元/KG&quot;</td>
+</tr>
+<tr>
+<td>附加费</td>
+<td>surcharges</td>
+<td>文本数组</td>
+<td>逐条展示，如&quot;粉末+1.5/KG(优惠后1.0)&quot;</td>
+</tr>
+<tr>
+<td>最终报价</td>
+<td>finalPrice</td>
+<td>文本(加粗)</td>
+<td>公布价 + 附加费 - 优惠，如&quot;11.0 元/KG&quot;</td>
+</tr>
+<tr>
+<td>船期</td>
+<td>sailing</td>
+<td>文本</td>
+<td>截关-&gt;开船 + 航程，如&quot;1/28-&gt;2/8 航程11天&quot;</td>
+</tr>
+<tr>
+<td>最快提取</td>
+<td>pickup</td>
+<td>文本</td>
+<td>预计最快提取日期，如&quot;2/10&quot;</td>
+</tr>
+</tbody></table></div>
+<p><strong>区域三：未匹配渠道提示</strong>（条件展示）</p>
+<ul>
+<li>展示条件：存在渠道无法匹配到当前仓点的报价</li>
+<li>展示形式：<code>el-alert</code> type=&quot;info&quot;，不可关闭</li>
+<li>文案：&quot;以下渠道暂无 {warehouse} 的报价记录：{渠道名列表}。如需询价请联系客服。&quot;</li>
+</ul>
+<p><strong>区域四：免责声明</strong>（查询后展示）</p>
+<ul>
+<li>文案：&quot;*本报价为预估参考，不含成本底价和盈亏标识。实际结算以运单为准。&quot;</li>
+</ul>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[查询报价]：点击按钮 -&gt; 前端必填校验（目的国/目的仓点/件数/单件重量/尺寸/交货地不能为空） -&gt; 调用后端查价接口 -&gt; 返回结果渲染表格</li>
+<li>[结果展示]：查询成功后显示报价结果卡片 + 未匹配渠道提示（如有）+ 免责声明</li>
+<li>[计费方式切换]：勾选 KG/CBM 影响后端匹配逻辑（KG 按实重+体积重取大，CBM 按材积）</li>
+<li>[产品类型选填]：选择粉末/液体/带电时，后端叠加对应的特殊货物附加费</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查价：<code>POST /api/shipper/inquiry/price</code> (body: 全部查询参数) -&gt; {results: [{channel, billing, price, surcharges, finalPrice, sailing, pickup, channelCode, batchNo}], unmatchedChannels: [string]}</li>
+</ul>
+<hr>
+<h3>5.4 子账号管理 (子账号管理.html)</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：<code>/子账号管理.html</code></li>
+<li>类型：列表页（搜索 + 表格 + 分页 + 弹窗）</li>
+<li>访问角色：企业管理员</li>
+<li>前置依赖：角色已在系统设置模块定义</li>
+<li><strong>列表过滤规则</strong>：默认不展示 ROOT 账号（<code>is_root=true</code>的记录）</li>
+</ul>
+<p><strong>区域一：搜索条件</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>account</td>
+<td>账号</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+<td>模糊搜索</td>
+</tr>
+<tr>
+<td>email</td>
+<td>邮箱</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+<td>模糊搜索</td>
+</tr>
+<tr>
+<td>name</td>
+<td>姓名</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+<td>模糊搜索</td>
+</tr>
+<tr>
+<td>phone</td>
+<td>手机号</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+<td>模糊搜索</td>
+</tr>
+</tbody></table></div>
+<p><strong>按钮</strong>：搜索、重置、新增子账号</p>
+<p><strong>区域二：子账号列表（7列）</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列名</th>
+<th>字段名</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>账号</td>
+<td>account</td>
+<td>文本</td>
+<td>登录用户名</td>
+</tr>
+<tr>
+<td>姓名</td>
+<td>name</td>
+<td>文本</td>
+<td>姓氏+名字</td>
+</tr>
+<tr>
+<td>性别</td>
+<td>gender</td>
+<td>文本</td>
+<td>男/女</td>
+</tr>
+<tr>
+<td>手机号</td>
+<td>phone</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>邮箱</td>
+<td>email</td>
+<td>文本</td>
+<td>超长省略 + tooltip</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>status</td>
+<td>标签</td>
+<td>正常(绿色tag) / 已冻结(红色tag)</td>
+</tr>
+<tr>
+<td>操作</td>
+<td>—</td>
+<td>按钮组</td>
+<td>编辑 / 分配资源 / 冻结或启用 / 修改密码</td>
+</tr>
+</tbody></table></div>
+<p><strong>弹窗一：新增/编辑子账号</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>默认值</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>account</td>
+<td>账号</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+<td>同企业内唯一</td>
+<td>登录用户名</td>
+</tr>
+<tr>
+<td>lastName</td>
+<td>姓</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>firstName</td>
+<td>名</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>gender</td>
+<td>性别</td>
+<td>单选</td>
+<td>✅</td>
+<td>男</td>
+<td>—</td>
+<td>男/女</td>
+</tr>
+<tr>
+<td>phone</td>
+<td>手机号</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+<td>仅限数字</td>
+<td>type=&quot;number&quot;</td>
+</tr>
+<tr>
+<td>email</td>
+<td>邮箱</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td>非必填</td>
+</tr>
+</tbody></table></div>
+<p><strong>弹窗二：分配资源（角色）</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>区域</th>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>账号信息(只读)</td>
+<td>账号 + 姓名</td>
+<td>确认操作对象</td>
+</tr>
+<tr>
+<td>角色选择</td>
+<td>多选下拉</td>
+<td>选项范围：ROOT角色 + 所有启用状态的角色</td>
+</tr>
+<tr>
+<td>提示文字</td>
+<td>&quot;子账号的系统权限将由所选角色的权限组合决定&quot;</td>
+<td>静态提示</td>
+</tr>
+</tbody></table></div>
+<p><strong>弹窗三：修改密码</strong>（新增）</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>newPassword</td>
+<td>新密码</td>
+<td>文本(password)</td>
+<td>✅</td>
+<td>长度&gt;=6</td>
+<td>支持显示/隐藏切换</td>
+</tr>
+<tr>
+<td>confirmPassword</td>
+<td>确认密码</td>
+<td>文本(password)</td>
+<td>✅</td>
+<td>与新密码一致</td>
+<td>不一致时标红提示</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[搜索]：输入搜索条件 -&gt; 点击搜索 -&gt; 列表过滤</li>
+<li>[重置]：清空所有搜索条件</li>
+<li>[新增]：点击&quot;新增子账号&quot; -&gt; 弹窗标题&quot;新增子账号&quot; -&gt; 表单置空 -&gt; 填写（邮箱非必填） -&gt; 确定 -&gt; 列表新增 -&gt; Toast &quot;新增子账号成功&quot;</li>
+<li>[编辑]：点击编辑 -&gt; 弹窗标题&quot;编辑子账号&quot; -&gt; 回填当前数据 -&gt; 修改 -&gt; 确定 -&gt; 列表更新 -&gt; Toast &quot;编辑子账号成功&quot;</li>
+<li>[冻结]：点击正常账号的&quot;冻结&quot; -&gt; <code>ElMessageBox.confirm</code>(type: warning) 二次确认：&quot;确定要冻结账号 [{account}] 吗？&quot; -&gt; 确认后状态变&quot;已冻结&quot; -&gt; 标签变红 -&gt; Toast 成功</li>
+<li>[启用]：点击已冻结账号的&quot;启用&quot; -&gt; 二次确认：&quot;确定要启用账号 [{account}] 吗？&quot; -&gt; 确认后状态变&quot;正常&quot; -&gt; 标签变绿 -&gt; Toast 成功</li>
+<li>[分配资源]：点击&quot;分配资源&quot; -&gt; 弹窗展示账号+姓名(只读) + 角色多选(ROOT+启用角色) -&gt; 选择角色 -&gt; 确定 -&gt; Toast &quot;成功为账号 [{account}] 分配角色&quot;</li>
+<li>[修改密码]：点击&quot;修改密码&quot; -&gt; 弹窗 -&gt; 输入新密码+确认 -&gt; 确定 -&gt; Toast &quot;密码修改成功&quot;</li>
+<li>[保存校验]：必填字段为空 -&gt; Toast 提示&quot;请完善必填信息&quot;</li>
+<li>[ROOT账号保护]：企业管理员不能冻结/删除自己（ROOT账号）</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>列表查询：<code>GET /api/shipper/sub-account/list</code> (params: {account, email, name, phone, page, pageSize}) -&gt; {list: [], total: N}</li>
+<li>新增：<code>POST /api/shipper/sub-account</code> (body: {account, lastName, firstName, gender, phone, email})</li>
+<li>编辑：<code>PUT /api/shipper/sub-account/{id}</code> (body: 同新增)</li>
+<li>冻结/启用：<code>PATCH /api/shipper/sub-account/{id}/status</code> (body: {status: 10|20})</li>
+<li>分配角色：<code>PUT /api/shipper/sub-account/{id}/roles</code> (body: {roleIds: [1,2,3]})</li>
+<li>修改密码：<code>PUT /api/shipper/sub-account/{id}/password</code> (body: {newPassword})</li>
+</ul>
+<hr>
+<h3>5.5 Shell 框架 (index.html)</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：<code>/index.html</code></li>
+<li>类型：Shell 框架（侧边菜单 + 顶部导航 + iframe 路由 + 标签页）</li>
+<li>访问角色：所有已登录货主用户</li>
+<li>加载首屏：<code>首页.html</code></li>
+</ul>
+<p><strong>侧边菜单结构</strong>：</p>
+<pre><code>首页（首页.html）
+查价订舱（查价订舱.html）
+订单中心
+  ├── 我的订单（我的订单.html）
+  ├── 草稿箱（草稿箱.html）
+  └── 异常订单（异常订单.html）
+财务中心
+  ├── 账单管理（账单管理.html）
+  ├── 发票管理（发票管理.html）
+  └── 充值与流水（充值与流水.html）
+基础资料
+  ├── 商品管理（商品管理.html）
+  ├── 收货地址管理（收货地址管理.html）
+  └── VAT管理（VAT管理.html）
+企业设置
+  ├── 角色管理（角色管理.html）
+  └── 子账号管理（子账号管理.html）
+</code></pre>
+<p><strong>顶部导航</strong>：</p>
+<ul>
+<li>左侧：折叠按钮 + 面包屑导航</li>
+<li>右侧：全屏按钮 + 通知图标(badge=3) + 用户下拉(个人中心/企业认证/退出登录)</li>
+</ul>
+<p><strong>标签页</strong>：</p>
+<ul>
+<li>当前打开页面名称（单标签页展示，后续可扩展为多标签）</li>
+</ul>
+<p><strong>Token 校验逻辑</strong>（研发重点）：</p>
+<ol>
+<li><code>index.html</code> 加载时，立即检查 <code>localStorage.getItem(&#39;shipper_token&#39;)</code></li>
+<li>若 token 不存在或为空 -&gt; <code>ElMessage.warning(&#39;请先登录&#39;)</code> -&gt; <code>window.location.href = &#39;login.html&#39;</code></li>
+<li>若 token 存在 -&gt; 正常渲染 Shell 框架，加载 <code>首页.html</code> 到 iframe</li>
+</ol>
+<p><strong>退出登录逻辑</strong>：</p>
+<ol>
+<li>点击&quot;退出登录&quot;</li>
+<li><code>localStorage.removeItem(&#39;shipper_token&#39;)</code></li>
+<li><code>localStorage.removeItem(&#39;shipper_username&#39;)</code></li>
+<li><code>ElMessage.success(&#39;已退出登录&#39;)</code></li>
+<li>500ms 后 <code>window.location.href = &#39;login.html&#39;</code></li>
+</ol>
+<p><strong>iframe 跨页面路由</strong>：</p>
+<ul>
+<li>Shell 框架监听 <code>window.message</code> 事件</li>
+<li>当收到 <code>{ type: &#39;navigate&#39;, url: &#39;...&#39; }</code> 时：<ol>
+<li>更新 <code>activeMenu</code> 为 url 的 base 部分</li>
+<li>更新 <code>currentIframeSrc</code> 为完整 url</li>
+</ol>
+</li>
+</ul>
+<hr>
+<h3>5.6 角色管理-货主端 (角色管理.html)</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：<code>/角色管理.html</code></li>
+<li>类型：列表页（搜索 + 表格 + 分页 + 弹窗）</li>
+<li>访问角色：企业管理员</li>
+<li>前置依赖：企业已完成入驻，ROOT角色已自动生成</li>
+<li><strong>列表过滤规则</strong>：默认不展示 ROOT 角色（系统内置，不可管理）</li>
+</ul>
+<p><strong>区域一：搜索条件</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>roleName</td>
+<td>角色名称</td>
+<td>文本</td>
+<td>—</td>
+<td>模糊搜索</td>
+</tr>
+<tr>
+<td>roleType</td>
+<td>角色类型</td>
+<td>Select(multiple)</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>按钮</strong>：搜索、重置、新增角色</p>
+<p><strong>区域二：角色列表（5列）</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列名</th>
+<th>字段名</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>角色名称</td>
+<td>roleName</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>角色代码</td>
+<td>roleCode</td>
+<td>文本</td>
+<td>唯一标识</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>status</td>
+<td>标签</td>
+<td>正常(绿色tag) / 已冻结(红色tag)</td>
+</tr>
+<tr>
+<td>备注</td>
+<td>remark</td>
+<td>文本</td>
+<td>超长省略+tooltip</td>
+</tr>
+<tr>
+<td>操作</td>
+<td>—</td>
+<td>按钮组</td>
+<td>编辑 / 分配资源 / 冻结或启用</td>
+</tr>
+</tbody></table></div>
+<p><strong>弹窗一：新增/编辑角色</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>roleCode</td>
+<td>角色代码</td>
+<td>文本</td>
+<td>✅</td>
+<td>同企业内唯一</td>
+<td>唯一标识</td>
+</tr>
+<tr>
+<td>roleName</td>
+<td>角色名称</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>弹窗二：分配资源</strong>（内容同员工端分配资源）</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>区域</th>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>角色信息(只读)</td>
+<td>角色名称 + 角色代码</td>
+<td>确认操作对象</td>
+</tr>
+<tr>
+<td>资源权限树</td>
+<td>三级权限树（菜单/页面/按钮）</td>
+<td>内容同员工端分配资源</td>
+</tr>
+<tr>
+<td>权限范围约束</td>
+<td>可选资源范围 = ROOT角色拥有的全部资源</td>
+<td>不可超出ROOT权限范围</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[搜索]：输入角色名称/角色类型 -&gt; 点击搜索 -&gt; 列表过滤</li>
+<li>[重置]：清空所有搜索条件</li>
+<li>[新增]：点击&quot;新增角色&quot; -&gt; 弹窗 -&gt; 填写角色代码+角色名称 -&gt; 确定 -&gt; 列表新增 -&gt; Toast &quot;新增角色成功&quot;</li>
+<li>[编辑]：点击编辑 -&gt; 弹窗回填 -&gt; 修改 -&gt; 确定 -&gt; 列表更新 -&gt; Toast &quot;编辑角色成功&quot;</li>
+<li>[分配资源]：点击&quot;分配资源&quot; -&gt; 弹窗展示角色信息(只读) + 资源权限树 -&gt; 勾选资源 -&gt; 确定 -&gt; Toast &quot;成功为角色 [{roleName}] 分配资源&quot;</li>
+<li>[冻结]：点击正常角色的&quot;冻结&quot; -&gt; <code>ElMessageBox.confirm</code>(type: warning) 二次确认 -&gt; ROOT角色不可冻结，返回错误提示 -&gt; 其他角色执行冻结</li>
+<li>[启用]：点击已冻结角色的&quot;启用&quot; -&gt; 二次确认 -&gt; 执行启用</li>
+<li>[角色资源上限]：分配资源时，可勾选的资源范围上限 = ROOT角色的资源权限，超出部分置灰不可选</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>列表查询：<code>GET /api/shipper/role/list</code> (params: {roleName, roleType, page, pageSize}) -&gt; {list: [], total: N}</li>
+<li>新增：<code>POST /api/shipper/role</code> (body: {roleCode, roleName})</li>
+<li>编辑：<code>PUT /api/shipper/role/{id}</code> (body: {roleName})</li>
+<li>冻结/启用：<code>PATCH /api/shipper/role/{id}/status</code> (body: {status: 10|20})</li>
+<li>分配资源：<code>PUT /api/shipper/role/{id}/resources</code> (body: {resourceIds: [1,2,3]})</li>
+<li>获取ROOT资源树：<code>GET /api/shipper/role/root-resources</code> -&gt; {resourceTree}</li>
+</ul>
+<hr>
+<h2>6. 业务规则</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发点</th>
+<th>条件/公式</th>
+<th>输出</th>
+<th>异常处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R01</td>
+<td>登录成功</td>
+<td>后端验证通过</td>
+<td>localStorage 存 token + username，跳转 index.html</td>
+<td>接口报错 -&gt; Toast 提示错误信息</td>
+</tr>
+<tr>
+<td>R02</td>
+<td>Shell 框架加载</td>
+<td><code>localStorage.shipper_token</code> 为空</td>
+<td>跳转 login.html</td>
+<td>--</td>
+</tr>
+<tr>
+<td>R03</td>
+<td>退出登录</td>
+<td>主动点击</td>
+<td>清除 token + username，跳转 login.html</td>
+<td>--</td>
+</tr>
+<tr>
+<td>R04</td>
+<td>查价-计费重量</td>
+<td>计费重量 = MAX(实际重量, 体积重)；体积重 = 长x宽x高 / 6000</td>
+<td>用于运价行重量段匹配</td>
+<td>--</td>
+</tr>
+<tr>
+<td>R05</td>
+<td>查价-渠道初筛</td>
+<td>transportMode 不为空 -&gt; 筛选匹配运输方式的渠道</td>
+<td>缩小匹配范围</td>
+<td>transportMode 为空 -&gt; 不限，全量渠道匹配</td>
+</tr>
+<tr>
+<td>R06</td>
+<td>查价-最终报价</td>
+<td>最终报价 = 公布价 + SUM(附加费) - SUM(运费优惠)</td>
+<td>展示在结果表格</td>
+<td>若计算异常 -&gt; 该渠道不返回或标记异常</td>
+</tr>
+<tr>
+<td>R07</td>
+<td>查价-未匹配渠道</td>
+<td>某渠道在当前仓点无运价行 -&gt; 归入 unmatchedChannels</td>
+<td>Alert 提示货主</td>
+<td>--</td>
+</tr>
+<tr>
+<td>R08</td>
+<td>查价-报价有效期</td>
+<td>报价基于当前周批次 (weekly_schedule_batch.status = CURRENT)</td>
+<td>页面底部标注&quot;本报价为预估参考&quot;</td>
+<td>周批次过期 -&gt; 无 CURRENT 批次 -&gt; 查价返回空或提示系统维护中</td>
+</tr>
+<tr>
+<td>R09</td>
+<td>子账号-新增校验</td>
+<td>account 同企业内唯一</td>
+<td>后端校验 -&gt; 重复则返回错误</td>
+<td>前端 Toast 提示&quot;账号已存在&quot;</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>子账号-冻结确认</td>
+<td>状态从&quot;正常&quot;变为&quot;已冻结&quot;</td>
+<td>二次确认弹窗</td>
+<td>用户取消 -&gt; 不执行</td>
+</tr>
+<tr>
+<td>R11</td>
+<td>子账号-权限</td>
+<td>子账号权限 = 所分配角色权限的并集</td>
+<td>后端鉴权中间件处理</td>
+<td>无权限操作 -&gt; 返回 403</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>登录-表单校验</td>
+<td>username 不为空且长度&gt;=3；password 不为空且长度&gt;=6</td>
+<td>前端 element-plus form rules</td>
+<td>校验失败 -&gt; 标红字段 + 提示信息</td>
+</tr>
+<tr>
+<td>R13</td>
+<td>子账号-ROOT保护</td>
+<td>is_root=true 的记录不在列表中展示</td>
+<td>后端查询默认过滤</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R14</td>
+<td>子账号-角色可选范围</td>
+<td>ROOT角色 + 所有 status=10 的角色</td>
+<td>分配角色下拉动态计算</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R15</td>
+<td>子账号-登录方式</td>
+<td>支持账号或邮箱登录</td>
+<td>后端登录接口同时匹配 account 和 email</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R16</td>
+<td>子账号-手机号校验</td>
+<td>phone 仅限数字</td>
+<td>前端 type=&quot;number&quot; + 后端正则</td>
+<td>非数字 -&gt; Toast</td>
+</tr>
+<tr>
+<td>R17</td>
+<td>角色-ROOT自动生成</td>
+<td>客户入驻时自动创建 role_code=&#39;ROOT&#39; 的角色</td>
+<td>拥有全部资源权限</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R18</td>
+<td>角色-ROOT保护</td>
+<td>ROOT角色不可冻结/删除/编辑角色代码</td>
+<td>列表不展示ROOT，接口层校验</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R19</td>
+<td>角色-资源上限</td>
+<td>新建角色的资源范围不可超出ROOT角色的资源</td>
+<td>分配资源弹窗中超出部分置灰</td>
+<td>后端保存时二次校验</td>
+</tr>
+<tr>
+<td>R20</td>
+<td>角色-冻结不影响已分配</td>
+<td>角色冻结后，已分配该角色的子账号权限不变</td>
+<td>冻结仅阻止新分配</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>7. 计算公式</h2>
+<h3>7.1 计费重量计算</h3>
+<pre><code>变量定义:
+  实际重量 = 单件重量(kg) x 件数（来源：查价参数.unitWeight x 查价参数.pieces）
+  体积重 = (长 x 宽 x 高) / 6000 x 件数（来源：查价参数.length/width/height/pieces）
+
+公式:
+  计费重量 = MAX(实际重量, 体积重)
+
+精度: 计费重量保留 1 位小数
+</code></pre>
+<h3>7.2 最终报价计算</h3>
+<pre><code>变量定义:
+  公布价单价 = 运价行公布价（来源：price_table_row.published_price）
+  附加费合计 = SUM(各附加费规则.费用) - SUM(各附加费优惠)（来源：surcharge_rule + surcharge_discount）
+  运费优惠合计 = SUM(各运费优惠规则.优惠金额)（来源：freight_discount）
+
+公式:
+  最终报价 = 公布价单价 + 附加费合计 - 运费优惠合计
+
+精度: Decimal(18,2)，单位：元/计价单位
+</code></pre>
+<hr>
+<h2>8. 权限矩阵</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>操作</th>
+<th align="center">企业管理员(货主)</th>
+<th align="center">货主运营</th>
+<th align="center">货主财务</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>登录</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>首页工作台</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td>查价订舱</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>角色管理（引用）</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>商品管理（引用）</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>收货地址管理（引用）</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>VAT管理（引用）</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>我的订单</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td>账单管理</td>
+<td align="center">✅</td>
+<td align="center">❌</td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>权限矩阵由角色定义驱动，上表为预置角色的默认权限。实际权限以系统设置模块的角色配置为准。</p>
+</blockquote>
+<hr>
+<h2>9. 接口清单</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>触发页面</th>
+<th>请求参数</th>
+<th>返回字段</th>
+<th>失败处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>登录</td>
+<td>POST</td>
+<td>/api/shipper/auth/login</td>
+<td>login.html</td>
+<td>{username, password}</td>
+<td>{token, username, customer_id}</td>
+<td>Toast 错误信息</td>
+</tr>
+<tr>
+<td>首页统计</td>
+<td>GET</td>
+<td>/api/shipper/dashboard/stats</td>
+<td>首页.html</td>
+<td>--</td>
+<td>{pendingOrders, inTransitOrders, pendingBills, monthlyVolume}</td>
+<td>卡片显示&quot;--&quot;</td>
+</tr>
+<tr>
+<td>查价</td>
+<td>POST</td>
+<td>/api/shipper/inquiry/price</td>
+<td>查价订舱.html</td>
+<td>{destCountry, warehouse, pieces, unitWeight, length, width, height, billingUnits, transportMode, taxMethod, pickupRegion, productType}</td>
+<td>{results: [{channel, billing, price, surcharges, finalPrice, sailing, pickup, channelCode, batchNo}], unmatchedChannels}</td>
+<td>Toast 提示系统异常</td>
+</tr>
+<tr>
+<td>子账号列表</td>
+<td>GET</td>
+<td>/api/shipper/sub-account/list</td>
+<td>子账号管理.html</td>
+<td>{account, email, name, phone, page, pageSize}</td>
+<td>{list: [{id, account, name, gender, phone, email, status}], total}</td>
+<td>Toast 提示查询失败</td>
+</tr>
+<tr>
+<td>新增子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account</td>
+<td>子账号管理.html</td>
+<td>{account, lastName, firstName, gender, phone, email}</td>
+<td>{id}</td>
+<td>Toast 提示失败原因</td>
+</tr>
+<tr>
+<td>编辑子账号</td>
+<td>PUT</td>
+<td>/api/shipper/sub-account/{id}</td>
+<td>子账号管理.html</td>
+<td>同新增</td>
+<td>--</td>
+<td>Toast 提示失败原因</td>
+</tr>
+<tr>
+<td>冻结/启用</td>
+<td>PATCH</td>
+<td>/api/shipper/sub-account/{id}/status</td>
+<td>子账号管理.html</td>
+<td>{status: 10|20}</td>
+<td>--</td>
+<td>Toast 提示失败原因</td>
+</tr>
+<tr>
+<td>分配角色</td>
+<td>PUT</td>
+<td>/api/shipper/sub-account/{id}/roles</td>
+<td>子账号管理.html</td>
+<td>{roleIds: [1,2,3]}</td>
+<td>--</td>
+<td>Toast 提示失败原因</td>
+</tr>
+<tr>
+<td>角色列表</td>
+<td>GET</td>
+<td>/api/shipper/role/list</td>
+<td>子账号管理.html, 角色管理.html</td>
+<td>{roleName, roleType, page, pageSize}</td>
+<td>{list: [{id, roleCode, roleName, status, remark}], total}</td>
+<td>默认过滤ROOT角色</td>
+</tr>
+<tr>
+<td>新增角色</td>
+<td>POST</td>
+<td>/api/shipper/role</td>
+<td>角色管理.html</td>
+<td>{roleCode, roleName}</td>
+<td>{id}</td>
+<td>角色代码重复-&gt;Toast</td>
+</tr>
+<tr>
+<td>编辑角色</td>
+<td>PUT</td>
+<td>/api/shipper/role/{id}</td>
+<td>角色管理.html</td>
+<td>{roleName}</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>冻结/启用角色</td>
+<td>PATCH</td>
+<td>/api/shipper/role/{id}/status</td>
+<td>角色管理.html</td>
+<td>{status: 10|20}</td>
+<td>—</td>
+<td>ROOT角色-&gt;拦截</td>
+</tr>
+<tr>
+<td>分配角色资源</td>
+<td>PUT</td>
+<td>/api/shipper/role/{id}/resources</td>
+<td>角色管理.html</td>
+<td>{resourceIds: [1,2,3]}</td>
+<td>—</td>
+<td>超出ROOT范围-&gt;拦截</td>
+</tr>
+<tr>
+<td>获取ROOT资源树</td>
+<td>GET</td>
+<td>/api/shipper/role/root-resources</td>
+<td>角色管理.html</td>
+<td>—</td>
+<td>{resourceTree}</td>
+<td>分配资源弹窗初始化</td>
+</tr>
+<tr>
+<td>修改子账号密码</td>
+<td>PUT</td>
+<td>/api/shipper/sub-account/{id}/password</td>
+<td>子账号管理.html</td>
+<td>{newPassword}</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>10. 错误提示文案汇总</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发条件</th>
+<th>文案</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E01</td>
+<td>账号为空</td>
+<td>&quot;请输入账号&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E02</td>
+<td>账号长度不足</td>
+<td>&quot;账号长度不能小于3位&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E03</td>
+<td>密码为空</td>
+<td>&quot;请输入密码&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E04</td>
+<td>密码长度不足</td>
+<td>&quot;密码长度不能小于6位&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E05</td>
+<td>登录失败（账号或密码错误）</td>
+<td>&quot;账号或密码错误&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E06</td>
+<td>未登录直接访问 index.html</td>
+<td>&quot;请先登录&quot;</td>
+<td>警告</td>
+</tr>
+<tr>
+<td>E07</td>
+<td>退出登录</td>
+<td>&quot;已退出登录&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E08</td>
+<td>查价参数不完整</td>
+<td>&quot;请完善必填字段&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E09</td>
+<td>子账号必填字段不完整</td>
+<td>&quot;请完善必填信息&quot;</td>
+<td>警告</td>
+</tr>
+<tr>
+<td>E10</td>
+<td>子账号密码必填（新增时）</td>
+<td>&quot;请输入密码&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E11</td>
+<td>账号已存在（新增时）</td>
+<td>&quot;账号已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E12</td>
+<td>冻结确认</td>
+<td>&quot;确定要冻结账号 [{account}] 吗？&quot;</td>
+<td>警告(二次确认)</td>
+</tr>
+<tr>
+<td>E13</td>
+<td>启用确认</td>
+<td>&quot;确定要启用账号 [{account}] 吗？&quot;</td>
+<td>警告(二次确认)</td>
+</tr>
+<tr>
+<td>E14</td>
+<td>登录成功</td>
+<td>&quot;登录成功！正在跳转...&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E15</td>
+<td>新增子账号成功</td>
+<td>&quot;新增子账号成功&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E16</td>
+<td>编辑子账号成功</td>
+<td>&quot;编辑子账号成功&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E17</td>
+<td>冻结/启用成功</td>
+<td>&quot;已{冻结/启用}该账号&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E18</td>
+<td>分配角色成功</td>
+<td>&quot;成功为账号 [{account}] 分配角色&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E19</td>
+<td>手机号格式错误</td>
+<td>&quot;手机号仅限数字&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E20</td>
+<td>密码修改成功</td>
+<td>&quot;密码修改成功&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E21</td>
+<td>确认密码不一致</td>
+<td>&quot;两次输入的密码不一致&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E22</td>
+<td>ROOT角色不可操作</td>
+<td>&quot;ROOT角色为系统内置，不可冻结/删除&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E23</td>
+<td>资源超出ROOT权限</td>
+<td>&quot;所选资源超出ROOT角色权限范围&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E24</td>
+<td>新增角色成功</td>
+<td>&quot;新增角色成功&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E25</td>
+<td>编辑角色成功</td>
+<td>&quot;编辑角色成功&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E26</td>
+<td>成功为角色分配资源</td>
+<td>&quot;成功为角色 [{roleName}] 分配资源&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E27</td>
+<td>角色代码已存在</td>
+<td>&quot;该角色代码已存在&quot;</td>
+<td>阻断</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>11. 验收标准</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>验收项</th>
+<th>验收方式</th>
+<th>通过标准</th>
+<th>关联 AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A01</td>
+<td>登录成功流程</td>
+<td>手动</td>
+<td>输入正确账号密码 -&gt; Toast&quot;登录成功&quot; -&gt; 跳转 index.html -&gt; 首页展示用户名</td>
+<td>AC-L1</td>
+</tr>
+<tr>
+<td>A02</td>
+<td>Token 拦截</td>
+<td>手动</td>
+<td>清除 localStorage token -&gt; 访问 index.html -&gt; 自动跳转 login.html</td>
+<td>AC-L3</td>
+</tr>
+<tr>
+<td>A03</td>
+<td>登录表单校验</td>
+<td>手动</td>
+<td>用户名为空 -&gt; 失去焦点提示&quot;请输入账号&quot;；密码为空 -&gt; 提示&quot;请输入密码&quot;</td>
+<td>AC-L5</td>
+</tr>
+<tr>
+<td>A04</td>
+<td>退出登录</td>
+<td>手动</td>
+<td>点击退出 -&gt; Toast -&gt; 清除 token -&gt; 跳转 login.html</td>
+<td>AC-L4</td>
+</tr>
+<tr>
+<td>A05</td>
+<td>首页指标展示</td>
+<td>手动 / 接口</td>
+<td>加载首页 -&gt; 4 张指标卡片均展示数值</td>
+<td>AC-D1</td>
+</tr>
+<tr>
+<td>A06</td>
+<td>查价正常流程</td>
+<td>手动 / 接口</td>
+<td>输入完整货物参数 -&gt; 点击查询 -&gt; 表格展示 N 条渠道报价（渠道/计价/公布价/附加费/最终报价/船期/最快提取）</td>
+<td>AC-P1</td>
+</tr>
+<tr>
+<td>A07</td>
+<td>查价必填校验</td>
+<td>手动</td>
+<td>目的国/仓点/件数/重量/尺寸/交货地任一为空 -&gt; 前端阻止查询</td>
+<td>AC-P2</td>
+</tr>
+<tr>
+<td>A08</td>
+<td>未匹配渠道提示</td>
+<td>手动</td>
+<td>某些渠道无当前仓点报价 -&gt; Alert 提示渠道名 + 仓点</td>
+<td>AC-P3</td>
+</tr>
+<tr>
+<td>A09</td>
+<td>附加费展示</td>
+<td>手动</td>
+<td>选择粉末产品类型 -&gt; 附加费列展示&quot;粉末+1.5/KG(优惠后1.0)&quot;</td>
+<td>AC-P4</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>子账号新增</td>
+<td>手动</td>
+<td>新增弹窗填写完整信息 -&gt; 确定 -&gt; 列表新增一行 -&gt; Toast 成功</td>
+<td>AC-S1</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>子账号搜索</td>
+<td>手动</td>
+<td>输入账号/姓名等 -&gt; 搜索 -&gt; 列表过滤</td>
+<td>AC-S2</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>子账号冻结</td>
+<td>手动</td>
+<td>点击冻结 -&gt; 二次确认 -&gt; 状态变&quot;已冻结&quot; -&gt; 标签变红</td>
+<td>AC-S3</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>分配角色</td>
+<td>手动</td>
+<td>点击分配资源 -&gt; 选择角色 -&gt; 确定 -&gt; Toast 成功</td>
+<td>AC-S4</td>
+</tr>
+</tbody></table></div>
+<hr>
+<hr>
+<h2>13. 数据融合：货主端 × 客商中心</h2>
+<blockquote>
+<p><strong>核心原则</strong>：客商中心是客户主数据的 System of Record，货主端通过 <code>customer_id</code> 外键关联，不冗余存储客户字段。客户状态变更由客商中心推送，货主端被动同步 + 登录时实时校验双重保障。</p>
+</blockquote>
+<h3>13.1 融合业务规则</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发点</th>
+<th>条件/公式</th>
+<th>输出</th>
+<th>异常处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R-F01</td>
+<td>货主端登录 Step3</td>
+<td>调用 GET /api/customer/{customer_id}/status</td>
+<td>service_status=20(已冻结)→拒绝登录，提示&quot;您的企业账户已被冻结，请联系客服&quot;</td>
+<td>接口超时(&gt;2s)→允许登录但记录告警</td>
+</tr>
+<tr>
+<td>R-F02</td>
+<td>货主端下单</td>
+<td>调用 GET /api/customer/{customer_id}/status</td>
+<td>sign_status=10(未签署)→提示&quot;请先完成合同签约&quot;；sign_status=40(已过期)→提示&quot;合同已过期，请联系销售续约&quot;</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F03</td>
+<td>接收 create-root</td>
+<td>POST /api/shipper/sub-account/create-root 被调用</td>
+<td>创建ROOT子账号(account=&#39;admin&#39;)+ROOT角色+邮件通知</td>
+<td>customer_id已存在→幂等返回已有记录</td>
+</tr>
+<tr>
+<td>R-F04</td>
+<td>接收 batch-freeze</td>
+<td>POST /api/shipper/sub-account/batch-freeze 被调用</td>
+<td>该customer下所有子账号 status→20(已冻结)</td>
+<td>已冻结跳过</td>
+</tr>
+<tr>
+<td>R-F05</td>
+<td>接收 batch-enable</td>
+<td>POST /api/shipper/sub-account/batch-enable 被调用</td>
+<td>该customer下所有子账号 status→10(正常)</td>
+<td>已启用跳过</td>
+</tr>
+<tr>
+<td>R-F06</td>
+<td>ROOT角色保护</td>
+<td>is_root=true</td>
+<td>货主端列表中不展示ROOT账号；前端隐藏冻结按钮；后端接口拦截</td>
+<td>返回错误 &quot;ROOT账号不可冻结&quot;</td>
+</tr>
+<tr>
+<td>R-F07</td>
+<td>ROOT权限范围</td>
+<td>ROOT角色拥有货主端全部资源</td>
+<td>新建角色资源范围不可超出ROOT</td>
+<td>分配资源弹窗中超出部分置灰</td>
+</tr>
+<tr>
+<td>R-F08</td>
+<td>首页欢迎语</td>
+<td>登录后调用 GET /api/customer/{customer_id}/profile</td>
+<td>展示&quot;欢迎回来，{customer_name}！&quot;</td>
+<td>接口失败→展示&quot;欢迎回来！&quot;（不含企业名）</td>
+</tr>
+</tbody></table></div>
+<h3>13.2 跨模块接口清单（货主端提供）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>调用方</th>
+<th>幂等性</th>
+<th>超时</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>创建ROOT子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/create-root</td>
+<td>客商中心</td>
+<td>✅ customer_id去重</td>
+<td>5s</td>
+<td>入驻审核通过/手工创建+生成账户/转客户时调用</td>
+</tr>
+<tr>
+<td>批量冻结子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-freeze</td>
+<td>客商中心</td>
+<td>✅ 已冻结跳过</td>
+<td>3s</td>
+<td>客户冻结时调用</td>
+</tr>
+<tr>
+<td>批量启用子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-enable</td>
+<td>客商中心</td>
+<td>✅ 已启用跳过</td>
+<td>3s</td>
+<td>客户启用时调用</td>
+</tr>
+</tbody></table></div>
+<h3>13.3 跨模块接口清单（货主端调用）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>提供方</th>
+<th>超时</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查询客户状态</td>
+<td>GET</td>
+<td>/api/customer/{id}/status</td>
+<td>客商中心</td>
+<td>2s</td>
+<td>登录/下单时实时校验 service_status + sign_status</td>
+</tr>
+<tr>
+<td>查询客户信息</td>
+<td>GET</td>
+<td>/api/customer/{id}/profile</td>
+<td>客商中心</td>
+<td>2s</td>
+<td>首页加载时获取企业名称</td>
+</tr>
+</tbody></table></div>
+<h3>13.4 完整登录校验链</h3>
+<pre><code>POST /api/shipper/auth/login { username, password }
+
+Step 1 — 本地认证:
+  SELECT * FROM sub_account WHERE (account = :username OR email = :username)
+  → 不存在 → 401 &quot;账号或密码错误&quot;
+  → bcrypt.compare(password, password_hash) → 不匹配 → 401 &quot;账号或密码错误&quot;
+
+Step 2 — 子账号状态:
+  sub_account.status != 10 → 403 &quot;账号已被冻结&quot;
+  sub_account.is_deleted = true → 401 &quot;账号不存在&quot;
+
+Step 3 — 跨模块校验（客商中心）:
+  GET /api/customer/{sub_account.customer_id}/status
+  → service_status != 10 → 403 &quot;您的企业账户已被冻结，请联系客服&quot;
+  → 超时(&gt;2s) → 降级: 允许登录，记录 warn 日志，但标记 session 为 &quot;degraded&quot;
+
+Step 4 — 签发 Token:
+  JWT payload: { sub: sub_account_id, customer_id, is_root, degraded: bool }
+  expire: 24h
+  返回: { token, username, customer_name }
+</code></pre>
+<h3>13.5 登录取 Token 后的下单校验</h3>
+<pre><code>POST /api/shipper/order/create { ... }
+
+Step 1 — Token 校验（JWT 中间件）:
+  → Token 无效/过期 → 401
+
+Step 2 — 子账号状态:
+  sub_account.status != 10 → 403 &quot;账号已被冻结&quot;
+
+Step 3 — 跨模块校验（客商中心）★ 必须同步校验:
+  GET /api/customer/{customer_id}/status
+  → service_status != 10 → 403 &quot;您的企业账户已被冻结，请联系客服&quot;
+  → sign_status = 10(未签署) → 403 &quot;请先完成合同签约后再下单&quot;
+  → sign_status = 40(已过期) → 403 &quot;合同已过期，请联系销售续约后再下单&quot;
+  → 超时(&gt;2s) → 拒绝下单 &quot;系统繁忙，请稍后重试&quot;
+  → sign_status = 30(已签署) AND service_status = 10 → 允许下单
+
+注意: 下单时不允许降级（登录可降级，下单必须同步校验通过）
+</code></pre>
+<h3>13.6 融合验收标准</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>验收项</th>
+<th>验收方式</th>
+<th>通过标准</th>
+<th>关联 AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A-F01</td>
+<td>ROOT账户自动创建</td>
+<td>自动化</td>
+<td>客商中心入驻审核通过→货主端 sub_account 表出现 is_root=true 记录→ROOT角色自动创建→邮件发送</td>
+<td>AC-L1</td>
+</tr>
+<tr>
+<td>A-F02</td>
+<td>客户冻结→登录阻断</td>
+<td>手动</td>
+<td>客商中心冻结客户→该客户子账号全部 status=20→货主端登录被拒(403)</td>
+<td>AC-S3</td>
+</tr>
+<tr>
+<td>A-F03</td>
+<td>客户启用→恢复登录</td>
+<td>手动</td>
+<td>客商中心启用客户→子账号 status 恢复为10→货主端可正常登录</td>
+<td>AC-S3</td>
+</tr>
+<tr>
+<td>A-F04</td>
+<td>未签署合同→下单被阻</td>
+<td>手动</td>
+<td>客户 sign_status=未签署→下单接口返回403+提示签约</td>
+<td>—</td>
+</tr>
+<tr>
+<td>A-F05</td>
+<td>已过期合同→下单被阻</td>
+<td>手动</td>
+<td>客户 sign_status=已过期→下单接口返回403+提示续约</td>
+<td>—</td>
+</tr>
+<tr>
+<td>A-F06</td>
+<td>已签署合同→下单正常</td>
+<td>手动</td>
+<td>客户 sign_status=已签署+service_status=正常→下单接口正常</td>
+<td>—</td>
+</tr>
+<tr>
+<td>A-F07</td>
+<td>登录降级策略</td>
+<td>自动化</td>
+<td>客商中心接口超时→允许登录但限制下单→记录告警日志</td>
+<td>—</td>
+</tr>
+<tr>
+<td>A-F08</td>
+<td>ROOT账户幂等</td>
+<td>自动化</td>
+<td>重复调用 create-root 同一 customer_id→不创建重复子账号→返回已有 account</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<h3>13.7 错误提示文案补充</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发条件</th>
+<th>文案</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E28</td>
+<td>企业已冻结（登录时）</td>
+<td>&quot;您的企业账户已被冻结，请联系客服&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E29</td>
+<td>未签署合同（下单时）</td>
+<td>&quot;请先完成合同签约后再下单&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E30</td>
+<td>合同已过期（下单时）</td>
+<td>&quot;合同已过期，请联系销售续约后再下单&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E31</td>
+<td>系统繁忙（跨模块超时）</td>
+<td>&quot;系统繁忙，请稍后重试&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E32</td>
+<td>ROOT账号不可冻结</td>
+<td>&quot;ROOT账号为系统内置，不可冻结&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E33</td>
+<td>首页欢迎语降级</td>
+<td>&quot;欢迎回来！&quot;（不含企业名，接口超时时使用）</td>
+<td>提示</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>12. 附录</h2>
+<ul>
+<li>术语表：<ul>
+<li><strong>货主端 (Shipper Portal)</strong>：面向跨境卖家的自助门户</li>
+<li><strong>Shell 框架</strong>：index.html，提供侧边菜单 + iframe 路由 + 顶部导航的统一容器</li>
+<li><strong>周批次</strong>：超级运价模块的概念，每周一个运价快照，状态 CURRENT 表示当前生效</li>
+<li><strong>FBA 仓点</strong>：Amazon Fulfillment Center 代码，如 ONT8/LAX9</li>
+<li><strong>ROOT账户</strong>：企业入驻时自动生成的主账号（account=&#39;admin&#39;），拥有货主端全部权限</li>
+</ul>
+</li>
+<li>原型链接：<code>demo/货主端-demo/</code></li>
+<li>用户需求(RDD)（完整业务流程+字段表）：<code>drafts/货主端/2026-06-06-用户需求.md</code></li>
+<li>数据设计（完整 Schema+ER 图）：<code>drafts/货主端/2026-06-06-数据设计.md</code></li>
+</ul>
+<hr>
+
+  </div>
+</div>
+</body>
+</html>

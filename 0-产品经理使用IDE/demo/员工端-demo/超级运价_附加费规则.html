@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -180,9 +180,23 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         </template>
       </div>
 
-      <!-- Step 3: 附加费优惠规则（可编辑） -->
+      <!-- Step 3: 附加费标识 -->
       <div class="form-section">
-        <span class="form-section-title">③ 附加费优惠 — 为此规则配置优惠</span>
+        <span class="form-section-title">③ 附加费标识 — 触发后为运单打标</span>
+        <el-form-item label="附加费标识">
+          <el-select v-model="f.tagIds" multiple collapse-tags placeholder="选择附加费标识（可选）" style="width:100%">
+            <el-option v-for="t in surchargeTags" :key="t.id" :label="t.label" :value="t.id">
+              <span :style="{display:'inline-block',width:'12px',height:'12px',borderRadius:'50%',backgroundColor:t.color,marginRight:'6px',verticalAlign:'middle'}"></span>
+              {{ t.label }}
+            </el-option>
+          </el-select>
+          <div style="font-size:11px;color:var(--text-secondary);margin-top:2px">仅展示类型为"附加费标识"且状态正常的标识。规则触发后自动为运单打上所选标识。</div>
+        </el-form-item>
+      </div>
+
+      <!-- Step 4: 附加费优惠规则（可编辑） -->
+      <div class="form-section">
+        <span class="form-section-title">④ 附加费优惠 — 为此规则配置优惠</span>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-size:12px;color:var(--text-secondary)">为此附加费规则配置优惠。客户特批优先级高于客户等级（高覆盖低）。同一对象类型+同一目标唯一。</span>
           <span style="display:flex;align-items:center;gap:8px"><el-button size="small" type="primary" plain @click="addDiscountRow">+ 添加规则</el-button></span>
@@ -257,6 +271,7 @@ var typeLabel={field:'字段匹配',formula:'公式阈值',manual:'人工添加'
     puLabel={ticket:'按票',box:'按箱',kg:'按KG',cbm:'按m³',unit:'按数量'},
     dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送方式',warehouse:'本地仓',user:'用户',userLevel:'用户等级',isFba:'是否FBA运单',customsMode:'报关方式',selfDelivery:'自送标识'};
 var enabledChannels=['美森360','美森432','EX456','洛杉矶600'];
+var surchargeTags=[{id:1,label:'超重费',color:'#FFC0CB'},{id:2,label:'粉末品名加收',color:'#FFA500'},{id:3,label:'易碎品',color:'#98FB98'}];
 var feeTypesAll=[{label:'海运费',dir:'r'},{label:'港杂费',dir:'r'},{label:'出口费用',dir:'r'},{label:'报关费',dir:'r'},{label:'派送费用',dir:'r'},{label:'增值服务',dir:'r'},{label:'国内存储费',dir:'r'},{label:'库内操作费',dir:'r'},{label:'干线运费',dir:'p'},{label:'尾程派送费',dir:'p'},{label:'清关服务费',dir:'p'},{label:'海外仓储费',dir:'p'}];
 var customerLevels=[{id:'SS',label:'SS'},{id:'S',label:'S'},{id:'A',label:'A'},{id:'B',label:'B'},{id:'C',label:'C'},{id:'D',label:'D'},{id:'E',label:'E'},{id:'F',label:'F'},{id:'G',label:'G'}];
 var customerList=[{id:'C001',name:'深圳市XX科技'},{id:'C002',name:'广州YY贸易'},{id:'C003',name:'杭州ZZ跨境'}];
@@ -265,7 +280,7 @@ var app=Vue.createApp({
 data:function(){
   return {
     showDialog:false, editMode:false, editIndex:-1, discountLocked:false, showBatchDiscount:false, selectedRules:[], batchForm:{targetType:'level',targetLevels:[],targetCustomers:[],mode:'fixed',val:0,validity:'permanent'},
-    customerLevels:customerLevels,customerList:customerList,
+    customerLevels:customerLevels,customerList:customerList,surchargeTags:surchargeTags,
     q:{type:'',action:'',node:'',status:''},enabledChannels:enabledChannels,feeTypesAll:feeTypesAll,
     rules:[
       {name:'粉末品名加收',type:'字段匹配',action:'加收',node:'运单创建',cond:'SKU属性=粉末 AND 尾程派送方式=卡派',pricing:'按KG 1.5元 / 按m³ 200元',feeLabel:'出口费用',direction:'应收',status:'正常',
@@ -285,11 +300,11 @@ data:function(){
       {name:'A-偏远邮编加收打折0.90',surchargeRule:'偏远邮编加收',targetTypeLabel:'客户等级',targetName:'A',modeLabel:'折扣率',val:'0.90',priorityLabel:'中（客户等级）',validityLabel:'固定期限 2026-01-01~2026-06-30',status:'已失效',
         _raw:{ruleId:'R004',targetType:'level',targetLevel:'A',targetCustomer:'',mode:'rate',val:0.90,priority:40,validity:'period',validFrom:'2026-01-01',validTo:'2026-06-30',approvalNo:''}}
     ],
-    f:{name:'',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',discountRules:[]}
+    f:{name:'',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagIds:[],discountRules:[]}
   }
 },
 computed:{
-  isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status !== '生效中'; },
+  isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status === '已冻结'; },
   filteredRules:function(){
     var self=this;
     return this.rules.filter(function(r){
@@ -306,7 +321,7 @@ methods:{
   reset:function(){this.q={type:'',action:'',node:'',status:''}},
   openAdd:function(){
     this.editMode=false;this.editIndex=-1;this.discountLocked=false;
-    this.f={name:'',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',discountRules:[]};
+    this.f={name:'',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagIds:[],discountRules:[]};
     this.showDialog=true;
   },
   openEdit:function(row,idx){

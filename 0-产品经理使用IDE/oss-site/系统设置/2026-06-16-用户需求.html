@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RDD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#dc2626}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#dc262615;color:#dc2626;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #dc2626;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#dc2626;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">系统设置</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">RDD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>需求定义卡片 (RDD) — 系统设置</h1>
+<blockquote>
+<p><strong>原始需求</strong>：飞点跨境供应链平台需要一套完整的系统设置模块，支撑客户入驻、员工管理和权限控制，从0到1搭建可运营的多租户后台。<br><strong>文档版本</strong>: v3.1 | <strong>日期</strong>: 2026-06-16 | <strong>作者</strong>: AI PM（v3.1: 英文字段全转中文+§3.2合同对齐客商中心签约+§3.5邮件通知模板更新）</p>
+</blockquote>
+<hr>
+<h3>1. 核心洞察 (Insight)</h3>
+<p><strong>真实痛点</strong>：</p>
+<p>当前飞点跨境供应链平台处于0到1阶段，缺少统一的客户入驻管理和权限管控能力。客户从接触到签约到开户全流程依赖线下沟通和Excel跟踪，信息散落在销售/客服/运营手中，缺乏统一的系统承载。具体痛点包括：</p>
+<ol>
+<li><strong>客户入驻链路断裂</strong>：从销售获取线索、合同签约、到后台开户审核，各环节割裂。大陆企业和香港企业走不同入驻路径（大陆需签约后开户；香港跳过签约直接开户），当前无系统自动分流，全靠人工判断。销售不知道签约后开户进度，运营不知道哪些客户待审核，管理层无法看到转化漏斗。</li>
+<li><strong>员工权限无管控</strong>：随着业务扩大和多分公司运营，员工账号管理混乱。谁有权限操作什么功能、谁的账号该禁用、新员工入职如何分配角色，全部靠口头沟通或手动配置。</li>
+<li><strong>角色与资源无体系化绑定</strong>：不同岗位（销售、财务、客服、管理员）需要不同的菜单和按钮权限，当前缺少角色-资源的灵活配置机制，要么权限过大有安全风险，要么权限不足影响效率。</li>
+</ol>
+<p><strong>JTBD</strong>：</p>
+<blockquote>
+<p><code>平台运营方</code> 雇佣&quot;系统设置&quot;不是为了&quot;管理页面和表单&quot;，而是为了：<strong>当新客户入驻时，能自动识别大陆/香港企业并走对应入驻路径，在一套系统内完成从线索到正常使用账号的全流程管控，同时自动发送邮件通知、生成虚拟账户、并在签约完成后提醒财务确认账期。</strong></p>
+</blockquote>
+<blockquote>
+<p><code>平台运营方</code> 雇佣&quot;系统设置&quot;不是为了&quot;建十几个后台页面&quot;，而是为了：<strong>在客户增长时，不需要额外招人盯Excel就能管理客户入驻，且入驻流程中的关键通知（邮件、代办）全部自动触发；在员工扩编时，不需要担心手滑删数据或越权操作。</strong></p>
+</blockquote>
+<p><strong>业务价值</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>当前</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户入驻周期</td>
+<td>数天~数周（线下沟通+Excel跟踪）</td>
+<td>1天内完成签约到开户全流程</td>
+</tr>
+<tr>
+<td>企业属地识别</td>
+<td>人工判断走哪条路径</td>
+<td>系统根据资料自动识别大陆/香港，分流入驻路径</td>
+</tr>
+<tr>
+<td>开户审核效率</td>
+<td>人工逐条沟通确认</td>
+<td>系统流转，一键审核，审核时可查看完整资料列表</td>
+</tr>
+<tr>
+<td>通知自动化</td>
+<td>人工发邮件、口头通知</td>
+<td>审批通过自动发邮件（含账号密码），签约完成后自动推送待办给财务</td>
+</tr>
+<tr>
+<td>员工权限分配</td>
+<td>口头沟通 + 手动逐账号配置</td>
+<td>分配角色 → 自动继承权限</td>
+</tr>
+<tr>
+<td>权限失控风险</td>
+<td>无法追踪谁做了什么操作</td>
+<td>角色-资源绑定，无权限不可见</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>2. 业务全景图</h3>
+<p><strong>2.1 角色与工作节奏</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>核心任务</th>
+<th>频率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>销售/客服</td>
+<td>为线索客户创建账号、提交客户档案、发起签约</td>
+<td>日频</td>
+</tr>
+<tr>
+<td>开户审核员</td>
+<td>审核客户开户申请（是否同行、资料是否齐全），审核时可查看客户档案/天眼查/营业执照/身份证/合同等资料</td>
+<td>日频</td>
+</tr>
+<tr>
+<td>财务</td>
+<td>收到签约代办后确认客户账期</td>
+<td>按需</td>
+</tr>
+<tr>
+<td>系统管理员</td>
+<td>管理员工账号、分配角色、维护角色-资源绑定，可直接新增正常状态账户</td>
+<td>按需（入职/离职/调岗）</td>
+</tr>
+<tr>
+<td>普通员工</td>
+<td>使用被分配功能的业务操作</td>
+<td>日频</td>
+</tr>
+</tbody></table></div>
+<p><strong>2.2 端到端业务链路</strong></p>
+<pre><code>【客户入驻链路 — 大陆企业】
+  销售发送邀请链接 → 客户提交档案 → 系统自动触发天眼查尽调+生成PDF报告（邀请入驻模块）
+    → 待签约 → 合同签约(支持多份合同/不同所属公司) → 待开户
+    → 提交开户申请(含客户昵称) → 待审核 → 审核通过 → 正常
+      ↓ 签约完成                                    ↓ 审核拒绝
+  触发代办给财务确认账期                          已拒绝 → 重新提交开户
+
+【客户入驻链路 — 香港企业】
+  销售发送邀请链接 → 客户提交档案 → 系统自动触发天眼查尽调
+    → 直接进入待开户 → 提交开户申请 → 待审核 → 审核通过 → 正常
+
+【直接新增账户】
+  管理员新增账号 → 直接进入正常（跳过签约和审核流程）
+
+【账户冻结与恢复】
+  正常 → 冻结 → 已冻结 → 启用 → 正常
+
+【内部员工管理链路】
+  同步员工 → 编辑员工信息 → 分配角色 → 员工获得对应菜单/按钮权限
+
+【角色权限配置链路】
+  创建角色 → 分配资源(菜单/按钮) → 角色关联员工 → 权限生效
+</code></pre>
+<blockquote>
+<p>V3.0：入驻前置链路（邀请触达 + 客户填档案 + 系统自动尽调）详见 邀请入驻 RDD。本模块聚焦从&quot;待签约&quot;开始的账号生命周期管理。<strong>合同约束</strong>：一个客户在飞点租户下只能有一个有效合同（已签约/签约中），过期后方可签新合同（详见 客商中心 RDD）。</p>
+</blockquote>
+<p><strong>2.3 实体依赖关系</strong></p>
+<pre><code>客户账号 — 聚合根
+  ├── 1:N 合同 — V3.0: 一个客户可签多份合同（不同所属公司），合同表含签约段+账期段
+  ├── 1:N 开户申请
+  │     └── 1:N 附件
+  ├── 1:N 邮件通知记录
+  └── 引用 客户主数据（外部）← 客户ID
+  └── 引用 员工（客服代表）← 外部引用
+  └── 引用 邀请记录（邀请入驻模块）← 邀请记录ID
+
+员工
+  └── N:N 角色 → 关联表 角色员工关联
+
+角色
+  └── N:N 资源 → 关联表 角色资源关联
+
+资源
+  └── 树形自引用（菜单/按钮两级）
+</code></pre>
+<p><strong>2.4 核心业务流程图（泳道图）</strong></p>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 销售/客服
+        A1[&quot;发送邀请链接 → 客户填档案&quot;] --&gt; A2{&quot;企业属地判断&quot;}
+        A2 --&gt;|大陆企业| A3[&quot;状态→待签约&quot;]
+        A2 --&gt;|香港企业| A4[&quot;状态→待开户&quot;]
+        A3 --&gt; A5[&quot;发起合同签约(支持多合同)&quot;]
+        A5 --&gt; A6[&quot;签约完成→待开户&quot;]
+    end
+    subgraph 系统自动
+        S0[&quot;客户提交档案→自动天眼查尽调→生成PDF报告&quot;]
+        S1[&quot;生成虚拟账户&quot;]
+        S2[&quot;签约完成→触发代办给财务确认账期&quot;]
+        S3[&quot;审核通过→客户管理插入正常数据+附件带入&quot;]
+        S4[&quot;审核通过→发送邮件含账号密码&quot;]
+    end
+    subgraph 客服
+        B1[&quot;提交开户申请(含客户昵称)&quot;] --&gt; B2[&quot;填写客户信息/业务信息&quot;]
+    end
+    subgraph 审核员
+        C1{&quot;审核开户申请&quot;}
+        C1 --&gt;|通过| C2[&quot;账户状态→正常&quot;]
+        C1 --&gt;|拒绝| C3[&quot;账户状态→已拒绝&quot;]
+    end
+    subgraph 管理员
+        D1[&quot;直接新增账户→正常&quot;] 
+        D2[&quot;冻结/启用账户&quot;]
+    end
+    subgraph 财务
+        F1[&quot;收到代办&quot;] --&gt; F2[&quot;确认客户账期&quot;]
+    end
+    A1 --&gt; S0
+    A3 --&gt; S1
+    A4 --&gt; S1
+    A5 --&gt; S2
+    A6 --&gt; B1
+    B2 --&gt; C1
+    C2 --&gt; S3
+    C2 --&gt; S4
+    D1 --&gt; S1
+</code></pre>
+<hr>
+<blockquote>
+<p>以下按 3 条业务流程组织，每条流程包含：流程概述 → 实体字段定义 → 业务规则 → 核心场景 → 相关 AC。</p>
+</blockquote>
+<h3>3. 流程一：客户入驻与账号生命周期（日频 / 按需）</h3>
+<blockquote>
+<p><strong>触发</strong>：销售获取新客户线索，在系统中提交客户档案并推进入驻流程<br><strong>频率</strong>：日频<br><strong>前置依赖</strong>：客户基础信息（公司名称、对接人、邮箱）+ 企业属地（大陆/香港）</p>
+</blockquote>
+<p><strong>3.1 客户账号</strong> — 客户在平台上的身份标识，承载从档案提交到正常使用的完整生命周期</p>
+<blockquote>
+<p><strong>As a</strong> 销售/客服 <strong>I want to</strong> 为客户创建账号并推进入驻全流程 <strong>So that</strong> 客户能顺利入驻并使用平台服务</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户名称</td>
+<td>文本</td>
+<td>✅</td>
+<td>客户公司名称，新增时从客户主数据接口选择</td>
+</tr>
+<tr>
+<td>客户昵称</td>
+<td>文本</td>
+<td>✅</td>
+<td>开户申请时必填，底纹&quot;举例：qyjskj&quot;</td>
+</tr>
+<tr>
+<td>虚拟账号</td>
+<td>文本</td>
+<td>✅</td>
+<td>系统自动生成，格式如 K10001_admin。生成规则：K + 客户ID + _admin</td>
+</tr>
+<tr>
+<td>账户状态</td>
+<td>单选</td>
+<td>✅</td>
+<td>生命周期状态：待签约 / 待开户 / 待审核 / 已拒绝 / 正常 / 已冻结</td>
+</tr>
+<tr>
+<td>客户属地</td>
+<td>单选</td>
+<td>✅</td>
+<td>大陆 / 香港</td>
+</tr>
+<tr>
+<td>注册时间</td>
+<td>日期时间</td>
+<td>✅</td>
+<td>账号创建时间</td>
+</tr>
+<tr>
+<td>合同数量</td>
+<td>关联</td>
+<td>—</td>
+<td>V3.0: 引用合同表的合同数量，点击展开 Popover（签约主体+合同状态+起止日期）</td>
+</tr>
+<tr>
+<td>邮箱</td>
+<td>文本</td>
+<td>✅</td>
+<td>账号接收邮箱，取客户联系人中系统账号接收人</td>
+</tr>
+<tr>
+<td>开通业务</td>
+<td>多选</td>
+<td>✅</td>
+<td>TMS / WMS</td>
+</tr>
+<tr>
+<td>用户类型</td>
+<td>单选</td>
+<td>✅</td>
+<td>当前仅支持：客户</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>V3.0：原 合同状态/合同开始日期/合同结束日期 字段从本表移除——合同信息由合同表管理（一个客户可签多份合同）。列表中以&quot;合同数量&quot;列替代。</p>
+</blockquote>
+<p><strong>Tab页签与列展示</strong></p>
+<p>各Tab页签展示的列不同：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Tab页签</th>
+<th>展示列</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>待签约</td>
+<td>用户名称、账户(虚拟账号)、账户状态、合同数量(点开展示签约主体+合同状态+起止日期)、操作</td>
+</tr>
+<tr>
+<td>待开户</td>
+<td>用户名称、账户、账户状态、合同数量(点开展示6字段)、操作</td>
+</tr>
+<tr>
+<td>待审核</td>
+<td>用户名称、账户、账户状态、合同数量、操作</td>
+</tr>
+<tr>
+<td>已拒绝</td>
+<td>用户名称、账户、账户状态、合同状态、操作</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>用户名称、账户、账户状态、合同状态、注册时间、合同开始日期、合同结束日期、操作</td>
+</tr>
+<tr>
+<td>已冻结</td>
+<td>用户名称、账户、账户状态、合同状态、注册时间、操作</td>
+</tr>
+</tbody></table></div>
+<p><strong>操作按钮矩阵</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>按钮</th>
+<th>显示条件</th>
+<th>行为说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>待签约</td>
+<td>签约</td>
+<td>合同状态 = 未签约</td>
+<td>弹出合同签约弹窗</td>
+</tr>
+<tr>
+<td>待签约</td>
+<td>删除</td>
+<td>合同状态 ≠ 签约中</td>
+<td>二次确认后删除账号</td>
+</tr>
+<tr>
+<td>待开户</td>
+<td>开户</td>
+<td>始终显示</td>
+<td>弹出开户申请弹窗</td>
+</tr>
+<tr>
+<td>待审核</td>
+<td>审核</td>
+<td>始终显示</td>
+<td>弹出审核弹窗（表单只读，展示资料列表）</td>
+</tr>
+<tr>
+<td>已拒绝</td>
+<td>开户-重新提交</td>
+<td>始终显示</td>
+<td>弹出开户申请弹窗，带出上一份申请内容</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>查看开户申请</td>
+<td>始终显示</td>
+<td>只读查看已提交的开户资料</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>编辑</td>
+<td>始终显示</td>
+<td>弹出编辑弹窗（用户名/账户只读，开通业务可改）</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>冻结</td>
+<td>始终显示</td>
+<td>二次确认后冻结</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>签约</td>
+<td>始终显示</td>
+<td>弹出合同签约弹窗</td>
+</tr>
+<tr>
+<td>正常</td>
+<td>启用</td>
+<td>— （此按钮在已冻结tab）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>已冻结</td>
+<td>查看开户申请</td>
+<td>始终显示</td>
+<td>只读查看已提交的开户资料</td>
+</tr>
+<tr>
+<td>已冻结</td>
+<td>编辑</td>
+<td>始终显示</td>
+<td>跳转客户管理打开客户编辑弹窗</td>
+</tr>
+<tr>
+<td>已冻结</td>
+<td>启用</td>
+<td>始终显示</td>
+<td>二次确认后启用</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R01: <strong>企业属地主路由</strong>：客户属地=大陆 → 提交档案后状态为&quot;待签约&quot;；客户属地=香港 → 提交档案后状态直接为&quot;待开户&quot;（合同状态=未签约）</li>
+<li>R02: <strong>虚拟账户生成</strong>：创建账号时系统自动生成虚拟账户编号，格式 K{客户ID}_admin</li>
+<li>R03: <strong>待签约操作约束</strong>：合同状态=&quot;签约中&quot;时隐藏&quot;签约&quot;按钮，仅显示&quot;删除&quot;</li>
+<li>R04: <strong>企业签约完成</strong>：客户状态从&quot;待签约&quot; → &quot;待开户&quot;，合同状态 → &quot;已签约&quot;</li>
+<li>R05: <strong>提交开户申请</strong>：待开户状态下，点击&quot;开户&quot;弹出开户申请弹窗，提交后状态流转为&quot;待审核&quot;</li>
+<li>R06: <strong>审核通过</strong>：客户状态从&quot;待审核&quot; → &quot;正常&quot;。同时触发：① 在客户管理模块插入一条正常状态数据（附件带入）；② 发送邮件通知（含账号密码）</li>
+<li>R07: <strong>审核拒绝</strong>：客户状态从&quot;待审核&quot; → &quot;已拒绝&quot;</li>
+<li>R08: <strong>重新开户</strong>：已拒绝状态下点击&quot;开户&quot;，带出上一份申请内容，可修改后重新提交 → 状态流转为&quot;待审核&quot;</li>
+<li>R09: <strong>审核时参考资料</strong>：审核弹窗中展示资料列表（客户档案表、天眼查风险信息PDF、营业执照、身份证正反面、服务合同），供审核员参考</li>
+<li>R10: <strong>直接新增正常账户</strong>：管理员可直接新增账号，跳过签约和审核，直接进入&quot;正常&quot;状态</li>
+<li>R11: <strong>正常→冻结</strong>：三种来源 — ① 客户冻结时关联账户冻结；② 人为操作冻结（二次确认）；③ 二期信控逾期自动冻结</li>
+<li>R12: <strong>已冻结→启用</strong>：二次确认后恢复为&quot;正常&quot;状态</li>
+<li>R13: <strong>合同过期自动判断</strong>：系统根据当前日期与合同结束日期对比，过期时合同状态展示为&quot;已过期&quot;且日期列标红（不持久化到数据库）</li>
+<li>R14: <strong>正常状态下签约</strong>：合同状态为&quot;未签约&quot;或&quot;已过期&quot;时，仍可发起签约</li>
+<li>R15: <strong>删除约束</strong>：仅在&quot;待签约&quot;Tab且合同状态非&quot;签约中&quot;时可删除</li>
+<li>R16: <strong>邮件通知</strong>：审核通过后自动发送邮件，发件箱（系统配置）、主题（模板）、内容含虚拟账号和初始密码</li>
+<li>R17: <strong>签约完成代办</strong>：签约完成后，系统自动推送待办给财务角色人员，确认客户账期（待工单系统）</li>
+</ul>
+<p><strong>3.2 合同签约</strong> — 客户与飞点签订的服务合同，详见 客商中心 RDD §7</p>
+<blockquote>
+<p>本模块合同签约复用客商中心的签约流程。一个客户在飞点租户下只能有一个有效合同（已签约/签约中），过期后方可签新合同。</p>
+</blockquote>
+<p><strong>签约表单字段</strong>（中国大陆客户）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>我司合同抬头</td>
+<td>单选</td>
+<td>✅</td>
+<td>广州飞点 / 深圳飞点 / 广东飞点 / 墨链。确定时校验：该客户在飞点租户下是否已有&quot;已签约&quot;或&quot;签约中&quot;的合同，若已有则阻止</td>
+</tr>
+<tr>
+<td>是否简易合同</td>
+<td>单选</td>
+<td>✅</td>
+<td>是 / 否</td>
+</tr>
+<tr>
+<td>是否标准合同</td>
+<td>单选</td>
+<td>✅</td>
+<td>是 / 否</td>
+</tr>
+<tr>
+<td>账期</td>
+<td>单选</td>
+<td>条件</td>
+<td>标准合同时必填，可选值根据域名和企业属地动态计算</td>
+</tr>
+<tr>
+<td>合同有效期限</td>
+<td>单选</td>
+<td>✅</td>
+<td>1年 / 2年 / 3年</td>
+</tr>
+<tr>
+<td>合同开始日期</td>
+<td>日期</td>
+<td>条件</td>
+<td>默认当天（非简易+非标准时必填）</td>
+</tr>
+<tr>
+<td>合同结束日期</td>
+<td>日期</td>
+<td>条件</td>
+<td>开始日期 + 合同期限自动计算（非简易+非标准时必填）</td>
+</tr>
+<tr>
+<td>签订日期</td>
+<td>日期</td>
+<td>条件</td>
+<td>默认当天（简易合同时必填）</td>
+</tr>
+<tr>
+<td>合同修改内容</td>
+<td>文本域</td>
+<td>条件</td>
+<td>非标准合同时必填</td>
+</tr>
+<tr>
+<td>附件</td>
+<td>文件</td>
+<td>条件</td>
+<td>非标准合同时上传，支持回显和删除</td>
+</tr>
+</tbody></table></div>
+<p><strong>签约表单字段</strong>（中国香港客户）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>我司合同抬头</td>
+<td>文本(只读)</td>
+<td>✅</td>
+<td>默认&quot;香港富力顿&quot;，置灰不可编辑</td>
+</tr>
+<tr>
+<td>合同开始日期</td>
+<td>日期</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>合同结束日期</td>
+<td>日期</td>
+<td>✅</td>
+<td>不可早于开始日期</td>
+</tr>
+<tr>
+<td>服务合同协议</td>
+<td>文件</td>
+<td>✅</td>
+<td>PDF/图片，至少1个附件</td>
+</tr>
+</tbody></table></div>
+<p><strong>4分支签约字段组合</strong>：</p>
+<blockquote>
+<p>所有分支共有字段：我司合同抬头。各分支差异字段见下表：</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>是否简易</th>
+<th>是否标准</th>
+<th>展示字段（除共有字段 我司合同抬头 外）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>否</td>
+<td>是</td>
+<td>账期 + 合同有效期限 + 合同开始日期 + 合同结束日期</td>
+</tr>
+<tr>
+<td>否</td>
+<td>否</td>
+<td>合同修改内容 + 附件</td>
+</tr>
+<tr>
+<td>是</td>
+<td>是</td>
+<td>账期 + 合同有效期限 + 签订日期</td>
+</tr>
+<tr>
+<td>是</td>
+<td>否</td>
+<td>合同有效期限 + 签订日期 + 合同修改内容 + 附件</td>
+</tr>
+</tbody></table></div>
+<p><strong>签约审批流程</strong>（中国大陆）：</p>
+<pre><code>发起签约 → 飞书审批（简易/墨线/美线三种审批流，根据合同类型路由）
+        → 审批通过 → E签宝生成合同 → 客户签署 → E签宝合同附件回传
+        → 合同信息回写至客户信息
+</code></pre>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R20-1：中国大陆企业支持线上签约（飞书审批+E签宝）</li>
+<li>R20-2：中国香港企业走线下签约流程，保存后合同状态直接更新为&quot;已签约&quot;</li>
+<li>R20-3：一个客户在飞点租户下有且仅能有一份处于&quot;已签约&quot;或&quot;签约中&quot;状态的有效合同</li>
+<li>R20-4：签约完成后，大陆企业状态从&quot;待签约&quot; → &quot;待开户&quot;</li>
+</ul>
+<p><strong>3.3 开户申请</strong> — 客户在待开户/已拒绝状态下提交的开户资料</p>
+<blockquote>
+<p>以下为开户申请表单字段：</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户昵称</td>
+<td>文本</td>
+<td>✅</td>
+<td>底纹提示”请填写客户昵称，举例：qyjskj”</td>
+</tr>
+<tr>
+<td>客户全称</td>
+<td>文本</td>
+<td>✅</td>
+<td>从客户账号自动带出，只读</td>
+</tr>
+<tr>
+<td>客户类型</td>
+<td>文本</td>
+<td>✅</td>
+<td>从客户主数据带出，只读</td>
+</tr>
+<tr>
+<td>客户属地</td>
+<td>单选</td>
+<td>✅</td>
+<td>大陆 / 香港，从客户账号带出，只读</td>
+</tr>
+<tr>
+<td>是否同行</td>
+<td>单选</td>
+<td>✅</td>
+<td>是 / 否</td>
+</tr>
+<tr>
+<td>公司规模</td>
+<td>文本</td>
+<td>✅</td>
+<td>公司规模描述，如”注册资本：500万人民币；社保参保人数：109人”</td>
+</tr>
+<tr>
+<td>公司类型</td>
+<td>单选</td>
+<td>✅</td>
+<td>初创企业（注册资金低于10万）/ 关联公司（注册资金低于10万）/ 注册资金大于等于10万 / 个人</td>
+</tr>
+<tr>
+<td>客服代表</td>
+<td>文本</td>
+<td>✅</td>
+<td>从员工列表多选</td>
+</tr>
+<tr>
+<td>销售线索来源</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>主营国家</td>
+<td>多选</td>
+<td>✅</td>
+<td>美国 / 英国 / 德国 / 法国 / 加拿大 / 日本 / 澳大利亚</td>
+</tr>
+<tr>
+<td>常发渠道</td>
+<td>文本</td>
+<td>✅</td>
+<td>客户常发渠道，如”空运, 海运”</td>
+</tr>
+<tr>
+<td>发货量</td>
+<td>文本</td>
+<td>✅</td>
+<td>发货量描述，如”500kg/月”</td>
+</tr>
+<tr>
+<td>发货产品</td>
+<td>文本</td>
+<td>✅</td>
+<td>发货产品描述，如”普货, 带电”</td>
+</tr>
+<tr>
+<td>价格敏感度</td>
+<td>单选</td>
+<td>✅</td>
+<td>高 / 中 / 低</td>
+</tr>
+<tr>
+<td>当前合作物流商</td>
+<td>文本</td>
+<td>✅</td>
+<td>目前客户合作的物流商，如”递四方”</td>
+</tr>
+<tr>
+<td>是否上门拜访</td>
+<td>单选</td>
+<td>✅</td>
+<td>是 / 否</td>
+</tr>
+<tr>
+<td>结识方式</td>
+<td>单选</td>
+<td>✅</td>
+<td>探迹 / 转介绍 / 展会 / 电销 / 公众号推广 / 陌拜 / 老板拉群 / 活动 / 其他</td>
+</tr>
+<tr>
+<td>备注</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>附件</td>
+<td>文件[]</td>
+<td>—</td>
+<td>支持多个文件上传</td>
+</tr>
+</tbody></table></div>
+<p><strong>审核时参考资料列表</strong>（审核弹窗中展示，不要求客户提交，系统从客户档案中聚合）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>资料名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户档案表</td>
+<td>客户主数据中的档案信息</td>
+</tr>
+<tr>
+<td>天眼查风险信息PDF</td>
+<td>第三方企业风险查询报告</td>
+</tr>
+<tr>
+<td>营业执照</td>
+<td>企业营业执照扫描件</td>
+</tr>
+<tr>
+<td>身份证正面</td>
+<td>法人/联系人身份证正面</td>
+</tr>
+<tr>
+<td>身份证反面</td>
+<td>法人/联系人身份证反面</td>
+</tr>
+<tr>
+<td>服务合同</td>
+<td>已签署的服务合同协议</td>
+</tr>
+</tbody></table></div>
+<p><strong>3.4 核心场景</strong></p>
+<pre><code>场景1：大陆企业正常入驻全流程
+  1. 销售提交客户档案（属地=大陆）→ 系统生成虚拟账户 → 状态 = &quot;待签约&quot;
+  2. 点击签约 → 选择合同类型和填写表单 → 确认 → 合同状态=&quot;已签约&quot;，状态流转为&quot;待开户&quot;
+  3. 签约完成 → 系统自动推送代办给财务确认账期
+  4. 点击开户 → 填写开户申请开户申请表单 → 提交 → 状态流转为&quot;待审核&quot;
+  5. 审核员查看开户申请+资料列表（客户档案/天眼查/营业执照/身份证/合同）→ 审核通过
+  6. 状态流转为&quot;正常&quot; → 系统自动：① 客户管理模块插入正常数据+附件带入 ② 发送邮件通知含账号密码
+
+场景2：香港企业入驻流程
+  1. 销售提交客户档案（属地=香港）→ 系统生成虚拟账户 → 状态直接为&quot;待开户&quot;（合同状态=未签约）
+  2. 点击开户 → 填写开户申请 → 提交 → 状态流转为&quot;待审核&quot;
+  3. 审核员审核 → 审核通过 → 状态流转为&quot;正常&quot; + 邮件通知 + 客户管理插入数据
+
+场景3：直接新增账户（管理后台操作）
+  1. 管理员点击&quot;新增账号&quot; → 选择客户名称 → 系统自动填充邮箱和开通业务 → 确认
+  2. 系统生成虚拟账户 → 状态直接 = &quot;正常&quot;（跳过签约和审核全流程）
+
+场景4：开户审核被拒与重新提交
+  1. 审核员审核开户资料 → 发现资料不全 → 拒绝 → 状态流转为&quot;已拒绝&quot;
+  2. 客服选择已拒绝的客户 → 点击&quot;开户-重新提交&quot; → 表单带出上一份申请内容
+  3. 修改补充 → 提交 → 状态流转为&quot;待审核&quot;
+
+场景5：客户冻结与恢复
+  1. 正常状态客户 → 点击&quot;冻结&quot;（二次确认） → 状态变为&quot;已冻结&quot;
+     （冻结来源：客户冻结关联 / 人为操作 / 二期信控逾期自动冻结）
+  2. 已冻结客户 → 点击&quot;启用&quot;（二次确认） → 状态变为&quot;正常&quot;
+
+场景6：合同过期后重新签约
+  1. 正常状态下，合同已过期（标红）→ 点击&quot;签约&quot;按钮 → 签约流程 → 合同状态更新为&quot;已签约&quot;
+</code></pre>
+<p><strong>3.5 通知与待办</strong></p>
+<p><strong>邮件通知（审核通过后触发）</strong>：</p>
+<p>开户申请审批通过后，通过邮箱形式发送账号密码。接收账号邮箱：取客户档案中&quot;系统账号接收人&quot;的邮箱。</p>
+<ul>
+<li>发件箱：注册虚拟邮箱</li>
+<li>邮件主题：<code>【入驻通知】欢迎使用【飞点/墨链】跨境供应链系统 - 账号已开通</code></li>
+<li>邮件内容：</li>
+</ul>
+<pre><code>尊敬的客户：
+
+    您好！
+
+    您的 【飞点/墨链】 跨境供应链系统账号已配置完成，现在您可以登录系统进行下单及轨迹查询。
+
+    登录凭证如下：
+    1、官网入口： [填入 URL]
+    2、用户账号： [填入账号]
+    3、初始密码： [填入密码]
+
+    快速开始：
+    1、您可以使用批量导入功能快速创建包含多箱、多商品的 FBA 运单。
+    2、系统已与亚马逊接口完成对接，您可以直接在后台监控货物的送达准时率。
+    3、在使用过程中，如您有任何疑问或需要协助，请勿直接在该邮件上回复，请联系您的专属销售：【发送邀请人的公司邮箱地址】
+
+    我们将持续优化系统体验，致力于为您提供更稳定、透明的跨境派送服务。
+</code></pre>
+<p><strong>代办推送（签约完成后触发）</strong>：</p>
+<ul>
+<li>触发时机：签约确认完成</li>
+<li>接收人：财务角色人员</li>
+<li>内容：确认客户 [客户名称] 的账期</li>
+<li>承接系统：待工单系统（一期可简化为系统内消息提醒）</li>
+</ul>
+<p><strong>相关 AC</strong>：AC01-AC22</p>
+<hr>
+<h3>4. 流程二：员工信息管理（按需 / 低频）</h3>
+<blockquote>
+<p><strong>触发</strong>：员工入职、离职、调岗、信息变更<br><strong>频率</strong>：按需（入职/离职/调岗时触发）<br><strong>前置依赖</strong>：外部HR系统提供员工基础数据（或手动同步）</p>
+</blockquote>
+<p><strong>4.1 员工</strong> — 平台内部员工账号，关联角色决定其可访问的功能范围</p>
+<blockquote>
+<p><strong>As a</strong> 系统管理员 <strong>I want to</strong> 管理员工信息和角色分配 <strong>So that</strong> 每个员工只能访问其岗位需要的功能</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>员工ID</td>
+<td>文本</td>
+<td>✅</td>
+<td>员工唯一标识，如 EMP10001</td>
+</tr>
+<tr>
+<td>用户名</td>
+<td>文本</td>
+<td>✅</td>
+<td>用户名/登录名</td>
+</tr>
+<tr>
+<td>员工姓名</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>邮箱</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>联系电话</td>
+<td>文本</td>
+<td>✅</td>
+<td>含区号，如 &quot;+86 13800138001&quot;</td>
+</tr>
+<tr>
+<td>所属租户</td>
+<td>文本</td>
+<td>✅</td>
+<td>如&quot;飞点科技&quot;/&quot;墨链科技&quot;</td>
+</tr>
+<tr>
+<td>部门</td>
+<td>单选</td>
+<td>✅</td>
+<td>研发部 / 产品部 / 设计部 / 市场部 / 销售部 / 人事部 / 财务部 / 运维部 / 客服部</td>
+</tr>
+<tr>
+<td>分公司</td>
+<td>单选</td>
+<td>✅</td>
+<td>广州飞点供应链管理有限公司 / 广东省飞点跨境供应链有限公司 / 飞点跨境供应链（深圳）有限公司 / 广东墨链跨境供应链有限公司</td>
+</tr>
+<tr>
+<td>职位</td>
+<td>文本</td>
+<td>—</td>
+<td>如&quot;前端工程师&quot;</td>
+</tr>
+<tr>
+<td>时区</td>
+<td>文本</td>
+<td>—</td>
+<td>如&quot;UTC+8&quot;</td>
+</tr>
+<tr>
+<td>语言偏好</td>
+<td>文本</td>
+<td>—</td>
+<td>如&quot;zh-CN&quot;</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>单选</td>
+<td>✅</td>
+<td>1（启用）/ 0（禁用）</td>
+</tr>
+<tr>
+<td>创建时间</td>
+<td>日期时间</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>最后更新时间</td>
+<td>日期时间</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R18: 支持从外部系统同步员工数据（&quot;同步员工&quot;按钮）</li>
+<li>R19: 编辑员工时，用户名不可修改</li>
+<li>R20: 手机号以&quot;区号 + 空格 + 号码&quot;格式存储，区号支持 +86 / +852 / +886 / +1</li>
+<li>R21: 员工可分配多个角色（多选复选框），保存时二次确认</li>
+<li>R22: 支持导出当前列表为Excel</li>
+</ul>
+<p><strong>4.2 角色分配</strong> — 员工与角色的多对多关联</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>员工ID</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>角色ID</td>
+<td>文本</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>核心场景</strong>：</p>
+<pre><code>场景：新员工入职配置
+  1. 管理员点击&quot;同步员工&quot; → 从HR系统拉取最新员工数据
+  2. 找到新员工 → 点击&quot;分配角色&quot; → 勾选对应角色 → 保存 → 员工获得角色对应的菜单/按钮权限
+
+场景：员工调岗
+  1. 管理员找到该员工 → 编辑 → 修改部门/分公司 → 保存
+  2. 重新分配角色 → 勾选新岗位角色 → 保存 → 权限切换
+</code></pre>
+<p><strong>相关 AC</strong>：AC23-AC29</p>
+<hr>
+<h3>5. 流程三：角色与权限管理（按需 / 低频）</h3>
+<blockquote>
+<p><strong>触发</strong>：新岗位设立、权限体系调整<br><strong>频率</strong>：按需（低频，建一次很少动）<br><strong>前置依赖</strong>：菜单/按钮资源已在系统中定义</p>
+</blockquote>
+<p><strong>5.1 角色</strong> — 权限的集合体，是员工与资源之间的桥梁</p>
+<blockquote>
+<p><strong>As a</strong> 系统管理员 <strong>I want to</strong> 创建角色并为其分配菜单和按钮权限 <strong>So that</strong> 不同岗位的员工只能看到和操作被授权的功能</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>角色ID</td>
+<td>整数</td>
+<td>✅</td>
+<td>系统生成</td>
+</tr>
+<tr>
+<td>角色名称</td>
+<td>文本</td>
+<td>✅</td>
+<td>如&quot;超级管理员&quot;、&quot;财务管理员&quot;</td>
+</tr>
+<tr>
+<td>角色代码</td>
+<td>文本</td>
+<td>✅</td>
+<td>如&quot;super&quot;、&quot;finance&quot;、&quot;service&quot;</td>
+</tr>
+<tr>
+<td>所属租户</td>
+<td>文本</td>
+<td>✅</td>
+<td>飞点 / 墨链</td>
+</tr>
+<tr>
+<td>类型</td>
+<td>单选</td>
+<td>✅</td>
+<td>超级管理员 / 管理员 / 员工</td>
+</tr>
+<tr>
+<td>是否系统内置</td>
+<td>单选</td>
+<td>✅</td>
+<td>是（不可删除）/ 否（可删除）</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>单选</td>
+<td>✅</td>
+<td>正常 / 冻结</td>
+</tr>
+<tr>
+<td>备注</td>
+<td>文本</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R23: 系统内置角色不可删除</li>
+<li>R24: 角色状态为&quot;冻结&quot;时，关联该角色的员工权限立即失效</li>
+<li>R25: 角色支持批量删除（非内置角色），需二次确认</li>
+<li>R26: 新增角色时默认状态为&quot;正常&quot;</li>
+</ul>
+<p><strong>5.2 资源</strong> — 系统中的菜单和按钮，以树形结构组织</p>
+<blockquote>
+<p><strong>As a</strong> 系统管理员 <strong>I want to</strong> 看到菜单-按钮的树形结构 <strong>So that</strong> 能按层级勾选要分配给角色的权限范围</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>资源ID</td>
+<td>整数</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>资源名称</td>
+<td>文本</td>
+<td>✅</td>
+<td>如&quot;用户管理&quot;、&quot;新增账号&quot;</td>
+</tr>
+<tr>
+<td>资源类型</td>
+<td>单选</td>
+<td>✅</td>
+<td>菜单 / 按钮</td>
+</tr>
+<tr>
+<td>父级资源ID</td>
+<td>整数</td>
+<td>—</td>
+<td>根节点为空</td>
+</tr>
+<tr>
+<td>子资源列表</td>
+<td>数组</td>
+<td>—</td>
+<td>树形结构</td>
+</tr>
+</tbody></table></div>
+<p><strong>5.3 角色资源分配</strong> — 角色与资源的多对多关联</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>角色ID</td>
+<td>整数</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+<tr>
+<td>资源ID</td>
+<td>整数</td>
+<td>✅</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>核心场景</strong>：</p>
+<pre><code>场景：新建角色并分配权限
+  1. 管理员点击&quot;新增角色&quot; → 填写角色名称/代码/类型 → 确定
+  2. 点击&quot;分配资源&quot; → 在树形结构中勾选该角色可访问的菜单和按钮 → 确定
+  3. 在员工管理中为员工分配该角色 → 权限生效
+
+场景：调整已有角色权限
+  1. 找到目标角色 → 点击&quot;分配资源&quot; → 重新勾选/取消勾选 → 确定
+  2. 所有已分配该角色的员工权限即时更新
+</code></pre>
+<p><strong>相关 AC</strong>：AC30-AC37</p>
+<hr>
+<h3>6. 验收标准总览 (AC)</h3>
+<p><strong>流程一：客户入驻与账号生命周期</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC01-提交档案分流</strong>：提交客户档案时，系统根据客户属地自动路由：大陆→待签约；香港→待开户（合同状态=未签约）</li>
+<li><input disabled="" type="checkbox"> <strong>AC02-虚拟账户生成</strong>：创建账号时自动生成虚拟账户编号，格式 K{客户ID}_admin</li>
+<li><input disabled="" type="checkbox"> <strong>AC03-新增账号</strong>：点击&quot;新增账号&quot;，弹出表单：用户类型(固定&quot;客户&quot;)、用户名称(选择客户)、邮箱(自动带出)、开通业务(自动带出多选)，确认后开通</li>
+<li><input disabled="" type="checkbox"> <strong>AC04-直接新增正常账户</strong>：管理员新增账号 → 确认后状态直接为&quot;正常&quot;，跳过签约和审核</li>
+<li><input disabled="" type="checkbox"> <strong>AC05-Tab页签切换</strong>：6个Tab（待签约/待开户/待审核/已拒绝/正常/已冻结），各Tab展示不同列组合，点击Tab按状态过滤</li>
+<li><input disabled="" type="checkbox"> <strong>AC06-签约流程</strong>：待签约Tab中，未签约的客户显示&quot;签约&quot;按钮，弹出合同签约弹窗（4种组合动态表单），确认后合同状态→已签约、大陆企业状态→待开户</li>
+<li><input disabled="" type="checkbox"> <strong>AC07-签约中状态</strong>：合同状态=&quot;签约中&quot;时，隐藏&quot;签约&quot;按钮，仅显示&quot;删除&quot;</li>
+<li><input disabled="" type="checkbox"> <strong>AC08-开户申请提交</strong>：待开户/已拒绝状态下，点击&quot;开户&quot;弹出开户申请弹窗（开户申请表单），提交后状态→待审核</li>
+<li><input disabled="" type="checkbox"> <strong>AC09-开户审核通过</strong>：审核员点击&quot;审核&quot;，弹窗展示开户申请（只读）+ 资料列表（客户档案/天眼查/营业执照/身份证/合同），点击&quot;通过&quot;→状态→正常</li>
+<li><input disabled="" type="checkbox"> <strong>AC10-开户审核拒绝</strong>：审核员点击&quot;拒绝&quot;→状态→已拒绝</li>
+<li><input disabled="" type="checkbox"> <strong>AC11-重新开户带出数据</strong>：已拒绝状态下点击&quot;开户-重新提交&quot;，表单自动带出上一份申请内容</li>
+<li><input disabled="" type="checkbox"> <strong>AC12-审核通过后客户管理插入</strong>：审核通过→自动在客户管理模块插入正常状态数据，附件带入</li>
+<li><input disabled="" type="checkbox"> <strong>AC13-审核通过后邮件通知</strong>：审核通过→自动发送邮件通知，含虚拟账号和初始密码</li>
+<li><input disabled="" type="checkbox"> <strong>AC14-查看开户申请</strong>：正常/已冻结状态下，点击&quot;查看开户申请&quot;以只读模式查看</li>
+<li><input disabled="" type="checkbox"> <strong>AC15-编辑账号</strong>：正常/已冻结状态下，点击&quot;编辑&quot;：用户名称(只读)、账户(只读)、开通业务(多选可改)，保存</li>
+<li><input disabled="" type="checkbox"> <strong>AC16-冻结账户</strong>：正常状态下，点击&quot;冻结&quot;弹出二次确认，确认后状态→已冻结</li>
+<li><input disabled="" type="checkbox"> <strong>AC17-启用账户</strong>：已冻结状态下，点击&quot;启用&quot;弹出二次确认，确认后状态→正常</li>
+<li><input disabled="" type="checkbox"> <strong>AC18-签约按钮</strong>：正常Tab中签约按钮始终可见（服务状态=正常），点击弹出签约弹窗（大陆选我司合同抬头/HK默认香港富力顿），确定时校验签约主体唯一</li>
+<li><input disabled="" type="checkbox"> <strong>AC19-删除账号</strong>：待签约Tab中显示&quot;删除&quot;按钮，二次确认后删除</li>
+<li><input disabled="" type="checkbox"> <strong>AC20-合同数量Popover</strong>：列表展示合同数量，点击弹出合同明细（签约主体+合同状态+合同开始日期+合同结束日期+账期+天数号）</li>
+<li><input disabled="" type="checkbox"> <strong>AC21-签约后代办推送</strong>：签约完成→自动推送待办给财务人员确认账期</li>
+<li><input disabled="" type="checkbox"> <strong>AC22-审核参考资料展示</strong>：审核弹窗中聚合展示客户档案、天眼查风险信息PDF（客户提交档案后系统自动生成）、营业执照、身份证正反面、服务合同</li>
+<li><input disabled="" type="checkbox"> <strong>AC23-客户昵称必填</strong>：开户申请时客户昵称必填，底纹&quot;举例：qyjskj&quot;</li>
+</ul>
+<p><strong>流程二：员工信息管理</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC23-员工列表查询</strong>：支持按用户名、邮箱、手机号、状态进行搜索，支持高级筛选（部门、职位），支持按创建时间排序</li>
+<li><input disabled="" type="checkbox"> <strong>AC24-同步员工</strong>：点击&quot;同步员工&quot;按钮弹出二次确认，确认后从外部系统拉取最新员工数据并刷新列表</li>
+<li><input disabled="" type="checkbox"> <strong>AC25-编辑员工</strong>：点击&quot;编辑&quot;弹出编辑弹窗，用户名不可修改，可编辑邮箱、联系电话（区号+号码分离）、部门、租户、分公司，保存后二次确认</li>
+<li><input disabled="" type="checkbox"> <strong>AC26-分配角色</strong>：点击&quot;分配角色&quot;弹出分配弹窗，展示员工姓名和部门（只读），以复选框组形式列出所有可选角色，勾选后保存并二次确认</li>
+<li><input disabled="" type="checkbox"> <strong>AC27-导出Excel</strong>：点击&quot;导出Excel&quot;弹出二次确认，确认后导出当前列表数据为xlsx文件</li>
+<li><input disabled="" type="checkbox"> <strong>AC28-状态标签</strong>：状态列以标签显示，启用=绿色，禁用=灰色</li>
+<li><input disabled="" type="checkbox"> <strong>AC29-分页</strong>：支持分页（默认20条/页），支持切换每页条数（10/20/50）</li>
+</ul>
+<p><strong>流程三：角色与权限管理</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC30-角色列表查询</strong>：支持按角色名称、类型进行搜索和重置</li>
+<li><input disabled="" type="checkbox"> <strong>AC31-新增角色</strong>：点击&quot;新增角色&quot;弹出新增弹窗，填写角色名称、角色代码、租户代码、类型、是否系统内置、备注，保存后创建成功</li>
+<li><input disabled="" type="checkbox"> <strong>AC32-编辑角色</strong>：点击&quot;编辑&quot;弹出编辑弹窗，可修改所有字段，保存后更新</li>
+<li><input disabled="" type="checkbox"> <strong>AC33-分配资源</strong>：点击&quot;分配资源&quot;弹出分配弹窗，显示角色名称和代码（只读），以树形结构展示所有菜单和按钮（复选框），勾选后保存</li>
+<li><input disabled="" type="checkbox"> <strong>AC34-资源树结构</strong>：资源树以菜单-按钮两层结构展示，每个节点标注类型标签（菜单=蓝色/按钮=橙色），默认全部展开</li>
+<li><input disabled="" type="checkbox"> <strong>AC35-批量删除</strong>：勾选多个角色后点击&quot;批量删除&quot;，弹出二次确认，确认后删除非内置角色</li>
+<li><input disabled="" type="checkbox"> <strong>AC36-角色状态</strong>：列表显示角色状态（正常=绿色/冻结=红色）</li>
+<li><input disabled="" type="checkbox"> <strong>AC37-角色类型筛选</strong>：搜索区域支持按类型（超级管理员/管理员/员工）下拉筛选</li>
+</ul>
+<hr>
+<h3>7. NFR（非功能性需求）</h3>
+<ul>
+<li><strong>性能</strong>：列表页查询响应 &lt; 2s；开户申请提交 &lt; 3s；邮件发送异步处理不阻塞主流程</li>
+<li><strong>并发</strong>：支持50个管理员同时操作</li>
+<li><strong>数据保留</strong>：客户账号和合同数据永久保留，软删除；邮件通知记录保留2年</li>
+<li><strong>安全</strong>：角色-资源权限控制覆盖所有管理页面；敏感操作（冻结/启用/删除/批量删除）均需二次确认</li>
+<li><strong>多租户</strong>：角色数据按租户隔离，员工按租户归属</li>
+<li><strong>通知可靠性</strong>：邮件发送失败需记录日志并支持手动重发；代办推送失败需记录并告警</li>
+</ul>
+<hr>
+<h3>8. 功能清单</h3>
+<blockquote>
+<p>基于 3 条业务流程，共 <strong>3 个模块、25 项功能</strong>。P0 = MVP，P1 = 二期，P2 = 三期。</p>
+</blockquote>
+<p><strong>模块 A：用户管理（客户入驻）</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A1</td>
+<td>提交客户档案与属地主路由</td>
+<td>P0</td>
+<td>AC01</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>虚拟账户自动生成</td>
+<td>P0</td>
+<td>AC02</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>新增客户账号</td>
+<td>P0</td>
+<td>AC03</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>直接新增正常账户</td>
+<td>P0</td>
+<td>AC04</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>6 Tab页签状态筛选（动态列组合）</td>
+<td>P0</td>
+<td>AC05</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>合同签约（4种组合方式）</td>
+<td>P0</td>
+<td>AC06, AC07</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>开户申请提交（18字段）</td>
+<td>P0</td>
+<td>AC08</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>开户审核（通过/拒绝+参考资料列表）</td>
+<td>P0</td>
+<td>AC09, AC10, AC22</td>
+</tr>
+<tr>
+<td>A9</td>
+<td>重新开户（带出历史数据）</td>
+<td>P0</td>
+<td>AC11</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>审核通过后客户管理自动插入</td>
+<td>P0</td>
+<td>AC12</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>审核通过后邮件通知</td>
+<td>P0</td>
+<td>AC13</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>查看开户申请（只读）</td>
+<td>P0</td>
+<td>AC14</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>编辑账号（开通业务修改）</td>
+<td>P0</td>
+<td>AC15</td>
+</tr>
+<tr>
+<td>A14</td>
+<td>冻结/启用账户</td>
+<td>P0</td>
+<td>AC16, AC17</td>
+</tr>
+<tr>
+<td>A15</td>
+<td>正常状态下签约/续约</td>
+<td>P0</td>
+<td>AC18</td>
+</tr>
+<tr>
+<td>A16</td>
+<td>删除账号</td>
+<td>P0</td>
+<td>AC19</td>
+</tr>
+<tr>
+<td>A17</td>
+<td>合同过期自动判断与标红</td>
+<td>P0</td>
+<td>AC20</td>
+</tr>
+<tr>
+<td>A18</td>
+<td>签约后代办推送财务</td>
+<td>P1</td>
+<td>AC21</td>
+</tr>
+</tbody></table></div>
+<p><strong>模块 B：员工管理</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>B1</td>
+<td>员工列表查询与排序</td>
+<td>P0</td>
+<td>AC23</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>同步员工（从外部HR系统）</td>
+<td>P0</td>
+<td>AC24</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>编辑员工信息</td>
+<td>P0</td>
+<td>AC25</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>分配角色</td>
+<td>P0</td>
+<td>AC26</td>
+</tr>
+<tr>
+<td>B5</td>
+<td>导出Excel</td>
+<td>P1</td>
+<td>AC27</td>
+</tr>
+<tr>
+<td>B6</td>
+<td>状态标签展示</td>
+<td>P0</td>
+<td>AC28</td>
+</tr>
+<tr>
+<td>B7</td>
+<td>分页（含每页条数切换）</td>
+<td>P0</td>
+<td>AC29</td>
+</tr>
+</tbody></table></div>
+<p><strong>模块 C：角色管理</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>C1</td>
+<td>角色列表查询与筛选</td>
+<td>P0</td>
+<td>AC30, AC37</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>新增角色</td>
+<td>P0</td>
+<td>AC31</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>编辑角色</td>
+<td>P0</td>
+<td>AC32</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>分配资源（菜单+按钮树形勾选）</td>
+<td>P0</td>
+<td>AC33, AC34</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>批量删除角色</td>
+<td>P0</td>
+<td>AC35</td>
+</tr>
+<tr>
+<td>C6</td>
+<td>角色状态显示</td>
+<td>P0</td>
+<td>AC36</td>
+</tr>
+</tbody></table></div>
+<p><strong>分期汇总</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>分期</th>
+<th>模块范围</th>
+<th>功能数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Phase 1 (MVP)</strong></td>
+<td>用户管理(17项) + 员工管理(5项) + 角色管理(6项)</td>
+<td><strong>28</strong></td>
+</tr>
+<tr>
+<td><strong>Phase 2</strong></td>
+<td>签约后代办推送 + 导出Excel + 香港特殊签约流程</td>
+<td>+3</td>
+</tr>
+<tr>
+<td><strong>Phase 3</strong></td>
+<td>操作审计日志 + 角色模板 + 数据看板</td>
+<td>+3</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>9. MVP 方案与建议</h3>
+<p><strong>MVP 方案（Phase 1 — 客户入驻 + 员工权限管控核心闭环）</strong></p>
+<pre><code>系统设置
+├── 用户管理（日频）
+│   ├── 客户入驻全流程（属地主路由 → 签约 → 开户 → 审核 → 正常）
+│   ├── 6 Tab页签（动态列组合 + 操作按钮矩阵）
+│   ├── 虚拟账户自动生成
+│   ├── 审核通过邮件通知 + 客户管理自动插入
+│   └── 冻结/启用/编辑/删除
+├── 员工管理（按需）
+│   ├── 员工列表与搜索
+│   ├── 同步员工 / 编辑信息
+│   └── 分配角色
+└── 角色管理（低频）
+    ├── 角色 CRUD
+    ├── 资源树分配（菜单+按钮）
+    └── 批量删除
+</code></pre>
+<p><strong>MVP 明确不做</strong>：</p>
+<ul>
+<li>签约后代办推送给财务（P1，待工单系统就绪）</li>
+<li>香港特殊签约流程（P1）</li>
+<li>Excel导出功能（P1，MVP阶段数据量小，手动查看即可）</li>
+</ul>
+<p><strong>理想方案（Phase 2-3）</strong>：</p>
+<ul>
+<li><strong>Phase 2</strong>：签约代办推送 + 香港特殊签约 + Excel导出</li>
+<li><strong>Phase 3</strong>：操作审计日志 + 角色模板 + 数据看板</li>
+</ul>
+<p><strong>专家建议</strong>：</p>
+<ol>
+<li><p><strong>属地主路由是核心分流器</strong>：大陆和香港企业走不同入驻路径，系统必须在提交档案时准确识别属地主并自动分流。建议属地字段在客户主数据中维护，用户管理模块引用。</p>
+</li>
+<li><p><strong>虚拟账户生成规则要可追溯</strong>：账户格式 K{客户ID}_admin 清晰但需确保客户ID全局唯一。建议用客户主数据的唯一标识而非自增ID，避免ID空洞导致账户号不连续。</p>
+</li>
+<li><p><strong>开户申请18字段已有客户画像基础</strong>：公司类型、主营国家、价格敏感度、常发渠道等字段是未来运价推荐和客户分层的基础数据，建议结构化存储（非纯文本），便于后续数据分析。</p>
+</li>
+<li><p><strong>审核资料列表宜采用聚合视图</strong>：审核时展示的6项资料（档案表、天眼查、营业执照等）来自不同数据源（客户管理、文件存储），建议在审核弹窗中做聚合视图，而非要求审核员去多个页面翻找。</p>
+</li>
+<li><p><strong>邮件通知和代办推送建议异步解耦</strong>：审核通过后的邮件发送和客户管理数据插入应异步执行，不阻塞审核流程。异步失败时记录日志并支持手动重试。</p>
+</li>
+<li><p><strong>直接新增正常账户有风险，建议加审计日志</strong>：跳过签约和审核直接创建正常账户属于高权限操作，建议至少记录操作人和时间，Phase 2-3 补审计日志。</p>
+</li>
+</ol>
+<h3>下一步</h3>
+<p>当前已根据 Excel 原始需求完成 RDD v2.0 更新，下一步重新生成 数据设计 和 PRD 的用户管理部分。</p>
+<hr>
+
+  </div>
+</div>
+</body>
+</html>

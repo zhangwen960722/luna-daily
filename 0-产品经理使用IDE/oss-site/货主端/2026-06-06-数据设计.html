@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据设计 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#ca8a04}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#ca8a0415;color:#ca8a04;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #ca8a04;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#ca8a04;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">货主端</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">数据设计</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>核心方案设计草稿 -- 货主端模块</h1>
+<blockquote>
+<p>Phase 2：方案架构 | 基于 RDD v1.2 | 2026-06-06（v1.2: 货主端×客商中心数据融合 — 跨模块接口契约+登录校验链+同步机制）</p>
+</blockquote>
+<hr>
+<h2>1. 实体 x 表映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>RDD 实体</th>
+<th>表名</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>子账号</td>
+<td><code>sub_account</code></td>
+<td>主表</td>
+<td>企业内子账号管理</td>
+</tr>
+<tr>
+<td>2</td>
+<td>子账号-角色关联</td>
+<td><code>sub_account_role</code></td>
+<td>关联表</td>
+<td>N:N，子账号与角色的关联</td>
+</tr>
+<tr>
+<td>3</td>
+<td>询价记录</td>
+<td><code>price_inquiry_log</code></td>
+<td>主表</td>
+<td>二期，记录每次货主询价</td>
+</tr>
+<tr>
+<td>4</td>
+<td>询价结果行</td>
+<td><code>price_inquiry_result</code></td>
+<td>主表</td>
+<td>二期，记录每次询价返回的报价行</td>
+</tr>
+<tr>
+<td>--</td>
+<td>企业/客户</td>
+<td><code>customer</code></td>
+<td>引用</td>
+<td>客商中心模块，不在本模块建表</td>
+</tr>
+<tr>
+<td>--</td>
+<td>商品</td>
+<td><code>product</code></td>
+<td>引用</td>
+<td>基础资料模块，不在本模块建表</td>
+</tr>
+<tr>
+<td>--</td>
+<td>收货地址</td>
+<td><code>shipping_address</code></td>
+<td>引用</td>
+<td>基础资料模块，不在本模块建表</td>
+</tr>
+<tr>
+<td>--</td>
+<td>VAT 记录</td>
+<td><code>vat_record</code></td>
+<td>引用</td>
+<td>头程管理模块，不在本模块建表</td>
+</tr>
+<tr>
+<td>--</td>
+<td>角色</td>
+<td><code>role</code></td>
+<td>引用</td>
+<td>系统设置模块，不在本模块建表</td>
+</tr>
+<tr>
+<td>--</td>
+<td>服务渠道</td>
+<td><code>service_channel</code></td>
+<td>引用</td>
+<td>超级运价模块，查价时关联</td>
+</tr>
+<tr>
+<td>--</td>
+<td>服务组合</td>
+<td><code>service_combination</code></td>
+<td>引用</td>
+<td>超级运价模块，查价时关联</td>
+</tr>
+<tr>
+<td>--</td>
+<td>运价行</td>
+<td><code>price_table_row</code></td>
+<td>引用</td>
+<td>超级运价模块，查价时关联</td>
+</tr>
+<tr>
+<td>--</td>
+<td>附加费规则</td>
+<td><code>surcharge_rule</code></td>
+<td>引用</td>
+<td>超级运价模块，查价时关联</td>
+</tr>
+<tr>
+<td>--</td>
+<td>运费优惠规则</td>
+<td><code>freight_discount</code></td>
+<td>引用</td>
+<td>超级运价模块，查价时关联</td>
+</tr>
+<tr>
+<td>--</td>
+<td>周船期批次</td>
+<td><code>weekly_schedule_batch</code></td>
+<td>引用</td>
+<td>超级运价模块，查价时关联</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>2. 逐表字段清单</h2>
+<h3>2.1 子账号 <code>sub_account</code></h3>
+<blockquote>
+<p><strong>设计说明</strong>：货主企业内部的员工登录账号。每个子账号属于一个企业（customer），可分配多个角色。登录认证通过 <code>sub_account</code> + 密码完成。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">所属企业ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index, FK -&gt; customer.id</strong></td>
+<td align="left">关联客商中心的企业客户</td>
+</tr>
+<tr>
+<td align="left"><code>account</code></td>
+<td align="left">账号</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Unique (customer_id + account)</strong></td>
+<td align="left">登录用户名，同企业内唯一。支持账号或邮箱登录</td>
+</tr>
+<tr>
+<td align="left"><code>is_root</code></td>
+<td align="left">是否ROOT账号</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false。客户入驻时自动生成的admin账号为true，列表不展示</td>
+</tr>
+<tr>
+<td align="left"><code>password_hash</code></td>
+<td align="left">密码哈希</td>
+<td align="left">String(128)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">bcrypt 哈希，不存明文</td>
+</tr>
+<tr>
+<td align="left"><code>last_name</code></td>
+<td align="left">姓</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>first_name</code></td>
+<td align="left">名</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>full_name</code></td>
+<td align="left">姓名（全名）</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">姓+名拼接，冗余存储便于搜索和展示</td>
+</tr>
+<tr>
+<td align="left"><code>gender</code></td>
+<td align="left">性别</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">10:男, 20:女</td>
+</tr>
+<tr>
+<td align="left"><code>phone</code></td>
+<td align="left">手机号</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>email</code></td>
+<td align="left">邮箱</td>
+<td align="left">String(128)</td>
+<td align="left">No</td>
+<td align="left">--</td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:正常, 20:已冻结</td>
+</tr>
+<tr>
+<td align="left"><code>last_login_at</code></td>
+<td align="left">最后登录时间</td>
+<td align="left">DateTime</td>
+<td align="left">No</td>
+<td align="left">--</td>
+<td align="left">记录最近一次登录</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">当前用户（企业管理员）</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">自动维护</td>
+</tr>
+<tr>
+<td align="left"><code>updated_by</code></td>
+<td align="left">更新人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">当前用户</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">Default: false</td>
+</tr>
+<tr>
+<td align="left"><code>version</code></td>
+<td align="left">乐观锁版本</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">并发控制，每次更新 +1</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>Many-to-One</code> with <code>customer</code> (通过 <code>customer_id</code> -&gt; <code>customer.id</code>)</li>
+<li><code>One-to-Many</code> with <code>sub_account_role</code> (通过 <code>id</code> -&gt; <code>sub_account_id</code>)</li>
+</ul>
+<h3>2.2 子账号-角色关联 <code>sub_account_role</code></h3>
+<blockquote>
+<p><strong>设计说明</strong>：N:N 关联表，记录每个子账号被分配了哪些角色。子账号权限 = 所分配角色权限的并集。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>sub_account_id</code></td>
+<td align="left">子账号ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index, FK -&gt; sub_account.id</strong></td>
+<td align="left">关联子账号</td>
+</tr>
+<tr>
+<td align="left"><code>role_id</code></td>
+<td align="left">角色ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index, FK -&gt; role.id</strong></td>
+<td align="left">关联系统设置模块的角色</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">自动生成</td>
+</tr>
+<tr>
+<td align="left"><code>created_by</code></td>
+<td align="left">创建人</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">当前用户</td>
+</tr>
+</tbody></table></div>
+<p><strong>关联关系</strong>:</p>
+<ul>
+<li><code>Many-to-One</code> with <code>sub_account</code> (通过 <code>sub_account_id</code>)</li>
+<li><code>Many-to-One</code> with <code>role</code> (通过 <code>role_id</code>)</li>
+</ul>
+<h3>2.3 询价记录 <code>price_inquiry_log</code>（二期）</h3>
+<blockquote>
+<p><strong>设计说明</strong>：记录货主每次询价的参数和匹配结果概要，用于趋势分析和热门渠道统计。本期 MVP 不建表。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">货主企业ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">关联企业客户</td>
+</tr>
+<tr>
+<td align="left"><code>sub_account_id</code></td>
+<td align="left">操作人ID</td>
+<td align="left">BigInt</td>
+<td align="left">No</td>
+<td align="left">--</td>
+<td align="left">哪个子账号发起的询价</td>
+</tr>
+<tr>
+<td align="left"><code>inquiry_params</code></td>
+<td align="left">查询参数</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">快照所有输入参数（目的国/仓点/件数/重量/尺寸/计费方式等）</td>
+</tr>
+<tr>
+<td align="left"><code>result_count</code></td>
+<td align="left">返回结果数</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">匹配到的渠道数量</td>
+</tr>
+<tr>
+<td align="left"><code>unmatched_channels</code></td>
+<td align="left">未匹配渠道</td>
+<td align="left">JSON</td>
+<td align="left">No</td>
+<td align="left">--</td>
+<td align="left">记录未匹配的渠道列表</td>
+</tr>
+<tr>
+<td align="left"><code>inquiry_at</code></td>
+<td align="left">询价时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">自动生成</td>
+</tr>
+</tbody></table></div>
+<h3>2.4 询价结果行 <code>price_inquiry_result</code>（二期）</h3>
+<blockquote>
+<p><strong>设计说明</strong>：记录每次询价返回的每条渠道报价明细，用于追溯&quot;当时给货主报了什么价&quot;。本期 MVP 不建表。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>inquiry_id</code></td>
+<td align="left">询价记录ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>Index, FK -&gt; price_inquiry_log.id</strong></td>
+<td align="left">--</td>
+</tr>
+<tr>
+<td align="left"><code>channel_code</code></td>
+<td align="left">渠道编码</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">关联 service_channel</td>
+</tr>
+<tr>
+<td align="left"><code>channel_name</code></td>
+<td align="left">渠道名称</td>
+<td align="left">String(128)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">快照，如&quot;美森360&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>billing_unit</code></td>
+<td align="left">计价单位</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">10:KG, 20:CBM</td>
+</tr>
+<tr>
+<td align="left"><code>base_price</code></td>
+<td align="left">公布价</td>
+<td align="left">Decimal(18,2)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">基础运价单价（元/单位）</td>
+</tr>
+<tr>
+<td align="left"><code>surcharge_detail</code></td>
+<td align="left">附加费明细</td>
+<td align="left">JSON</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">逐条快照附加费名称+原始单价+优惠后单价</td>
+</tr>
+<tr>
+<td align="left"><code>final_price</code></td>
+<td align="left">最终报价</td>
+<td align="left">Decimal(18,2)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">公布价 + 附加费 - 优惠</td>
+</tr>
+<tr>
+<td align="left"><code>sailing_info</code></td>
+<td align="left">船期信息</td>
+<td align="left">String(256)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">快照&quot;截关日-&gt;开船日 + 航程天数&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>pickup_date</code></td>
+<td align="left">最快提取</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">预计最快提取日期</td>
+</tr>
+<tr>
+<td align="left"><code>batch_no</code></td>
+<td align="left">运价批次号</td>
+<td align="left">String(64)</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">关联 weekly_schedule_batch</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">--</td>
+<td align="left">自动生成</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>3. ER 关系图</h2>
+<pre><code class="language-mermaid">erDiagram
+    customer ||--o{ sub_account : &quot;1:N (customer_id)&quot;
+    sub_account ||--o{ sub_account_role : &quot;1:N (sub_account_id)&quot;
+    role ||--o{ sub_account_role : &quot;1:N (role_id)&quot;
+
+    customer ||--o{ price_inquiry_log : &quot;1:N (customer_id)&quot; 
+    sub_account ||--o{ price_inquiry_log : &quot;1:N (sub_account_id)&quot;
+    price_inquiry_log ||--o{ price_inquiry_result : &quot;1:N (inquiry_id)&quot;
+
+    sub_account }o--|| customer : &quot;N:1 所属企业&quot;
+    sub_account_role }o--|| sub_account : &quot;N:1 关联子账号&quot;
+    sub_account_role }o--|| role : &quot;N:1 关联角色&quot;
+    price_inquiry_log }o--|| customer : &quot;N:1 发起企业&quot;
+    price_inquiry_result }o--|| price_inquiry_log : &quot;N:1 所属询价&quot;
+</code></pre>
+<hr>
+<h2>4. 关键设计说明</h2>
+<h3>4.1 软删除策略</h3>
+<ul>
+<li><code>sub_account</code> 采用软删除（<code>is_deleted</code>），冻结不等于删除，冻结是状态变更</li>
+<li><code>sub_account_role</code> 不需软删除，分配/取消分配直接物理删除行（关联表无业务依赖）</li>
+<li><code>price_inquiry_log</code> / <code>price_inquiry_result</code>（二期）不软删除，按保留期限定时清理</li>
+</ul>
+<h3>4.2 乐观锁</h3>
+<ul>
+<li><code>sub_account</code> 需要 <code>version</code> 字段：企业管理员 A 编辑子账号的同时，管理员 B 也可能操作</li>
+<li><code>sub_account_role</code> 不需要乐观锁：角色分配是覆盖式操作，不存在并发冲突问题</li>
+</ul>
+<h3>4.3 JSON 字段使用场景</h3>
+<ul>
+<li><code>price_inquiry_log.inquiry_params</code>：查询参数为可变结构（计费方式是多选、产品类型可选等），用 JSON 快照比建多个可空字段更灵活</li>
+<li><code>price_inquiry_log.unmatched_channels</code>：未匹配渠道列表，JSON 数组即可</li>
+<li><code>price_inquiry_result.surcharge_detail</code>：附加费明细包含名称+原始价格+优惠后价格，结构灵活，用 JSON 快照</li>
+</ul>
+<h3>4.4 纯逻辑实体说明</h3>
+<ul>
+<li>登录凭证（LoginCredential）：无独立表，基于 <code>sub_account</code> + 密码哈希 + 后端 token 机制</li>
+<li>货物查询参数（InquiryParams）：无独立表，前端表单 -&gt; 后端接口参数，仅二期 <code>price_inquiry_log</code> 中做 JSON 快照</li>
+<li>报价结果行（PriceInquiryResult）：一期无独立表，后端实时计算返回，不持久化。二期 <code>price_inquiry_result</code> 表落地</li>
+</ul>
+<h3>4.5 查价接口的运价数据来源</h3>
+<p>查价订舱接口需要跨模块查询超级运价的数据，依赖关系如下：</p>
+<ul>
+<li>渠道/组合匹配：查询 <code>service_channel</code> + <code>service_combination</code></li>
+<li>运价行匹配：查询 <code>price_table_row</code>（当前周批次 <code>weekly_schedule_batch.status = CURRENT</code>）</li>
+<li>附加费匹配：查询 <code>surcharge_rule</code> + <code>surcharge_discount</code></li>
+<li>运费优惠：查询 <code>freight_discount</code></li>
+<li>以上均为<strong>只读查询</strong>，货主端不写入运价相关表</li>
+</ul>
+<h3>4.6 与共享实体的引用关系</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>货主端页面</th>
+<th>引用实体</th>
+<th>来源表</th>
+<th>来源模块</th>
+<th>引用方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>商品管理</td>
+<td>商品</td>
+<td><code>product</code></td>
+<td>基础资料</td>
+<td>按 <code>customer_id</code> 过滤，CRUD</td>
+</tr>
+<tr>
+<td>收货地址管理</td>
+<td>收货地址</td>
+<td><code>shipping_address</code></td>
+<td>基础资料</td>
+<td>按 <code>customer_id</code> 过滤，CRUD</td>
+</tr>
+<tr>
+<td>VAT管理</td>
+<td>VAT 记录</td>
+<td><code>vat_record</code></td>
+<td>头程管理</td>
+<td>按 <code>customer_id</code> 过滤，CRUD</td>
+</tr>
+<tr>
+<td>角色管理</td>
+<td>角色</td>
+<td><code>role</code></td>
+<td>系统设置</td>
+<td>按 <code>customer_id</code> 过滤，定义角色权限</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>子账号</td>
+<td><code>sub_account</code></td>
+<td>货主端（本期新建）</td>
+<td>本模块主表</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>角色</td>
+<td><code>role</code></td>
+<td>系统设置</td>
+<td>分配角色时引用 <code>role.id</code></td>
+</tr>
+</tbody></table></div>
+<h3>4.7 密码与认证设计</h3>
+<ul>
+<li>密码存储：<code>sub_account.password_hash</code> 使用 bcrypt 哈希，不存明文</li>
+<li>Token 机制：登录成功后后端签发 JWT token，前端存 <code>localStorage.shipper_token</code></li>
+<li>Token 有效期：24 小时，过期后自动跳转登录页</li>
+<li>企业管理员（主账号）的登录凭证通过 <code>customer</code> 表关联的账号体系管理（客商中心模块），与子账号体系分离</li>
+<li>子账号支持账号或邮箱登录：登录接口同时匹配 <code>account</code> 和 <code>email</code> 字段</li>
+<li>企业管理员可为子账号修改密码：<code>PUT /api/shipper/sub-account/{id}/password</code></li>
+</ul>
+<h3>4.8 ROOT 账号与 ROOT 角色（新增）</h3>
+<ul>
+<li><strong>ROOT 账号</strong>：客户入驻时自动生成，<code>account=&#39;admin&#39;</code>，<code>is_root=true</code>，不可冻结/删除</li>
+<li><strong>ROOT 角色</strong>：客户入驻时自动生成，<code>role_code=&#39;ROOT&#39;</code>，拥有货主端全部资源权限，不可冻结/删除</li>
+<li><strong>列表过滤</strong>：子账号列表查询时默认过滤 <code>is_root=true</code> 的记录，ROOT 账号不展示在管理列表</li>
+<li><strong>角色可选范围</strong>：分配角色时，可选角色 = ROOT角色 + 所有 <code>status=正常(10)</code> 的角色</li>
+<li><strong>资源范围上限</strong>：新建角色的资源范围不可超出 ROOT 角色拥有的资源（后端校验）</li>
+<li><strong>角色表复用</strong>：货主端角色与员工端角色共用 <code>role</code> 表，通过 <code>tenant_id</code> 隔离；货主端的角色 <code>customer_id</code> 指向所属企业</li>
+</ul>
+<h3>4.9 角色表补充说明（货主端视角）</h3>
+<ul>
+<li>货主端角色管理直接使用系统设置的 <code>role</code> 表</li>
+<li>角色资源权限树内容与员工端分配资源一致（菜单/页面/按钮三级）</li>
+<li>角色冻结不影响已分配该角色的子账号——冻结仅阻止新分配，已有权限保持不变</li>
+</ul>
+<hr>
+<h2>5. 枚举值集中定义</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>枚举名</th>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>适用实体</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gender</td>
+<td>10</td>
+<td>MALE</td>
+<td>男</td>
+<td>sub_account</td>
+</tr>
+<tr>
+<td>Gender</td>
+<td>20</td>
+<td>FEMALE</td>
+<td>女</td>
+<td>sub_account</td>
+</tr>
+<tr>
+<td>SubAccountStatus</td>
+<td>10</td>
+<td>NORMAL</td>
+<td>正常</td>
+<td>sub_account</td>
+</tr>
+<tr>
+<td>SubAccountStatus</td>
+<td>20</td>
+<td>FROZEN</td>
+<td>已冻结</td>
+<td>sub_account</td>
+</tr>
+<tr>
+<td>BillingUnit</td>
+<td>10</td>
+<td>KG</td>
+<td>公斤</td>
+<td>price_inquiry_result</td>
+</tr>
+<tr>
+<td>BillingUnit</td>
+<td>20</td>
+<td>CBM</td>
+<td>立方米</td>
+<td>price_inquiry_result</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>6. 跨模块数据融合：货主端 × 客商中心</h2>
+<blockquote>
+<p><strong>设计原则</strong>：货主端是客户主数据的 Consumer，不冗余存储客户字段（仅通过 <code>customer_id</code> 外键关联）。所有客户生命周期事件由客商中心通过接口推送到货主端。货主端登录时实时校验客户状态作为双重保障。</p>
+</blockquote>
+<h3>6.1 数据归属与引用关系</h3>
+<pre><code>客商中心（System of Record）
+  customer                          ← 客户主数据唯一源
+    ├── customer_name               → 货主端首页欢迎语
+    ├── service_status (10/20)      → 货主端登录准入校验
+    ├── sign_status (10/20/30/40)   → 货主端下单准入校验
+    └── customer_level (SS~G)       → 货主端展示（暂不控制权限）
+
+货主端（Consumer）
+  sub_account.customer_id ──FK──→ customer.id
+    ├── is_root = true            → 由客商中心入驻事件触发创建
+    ├── status (10=正常/20=已冻结) → 与 customer.service_status 联动
+    └── 不存储 customer_name      → 通过接口实时查询
+
+  角色 (role) — 引用系统设置模块
+    └── role_code = &#39;ROOT&#39;        → 由客商中心入驻事件触发创建
+</code></pre>
+<h3>6.2 跨模块同步数据流</h3>
+<p><strong>SF1 — ROOT账户创建（接收方）</strong>：</p>
+<pre><code>客商中心调用: POST /api/shipper/sub-account/create-root
+  body: { customer_id, customer_name, contact_email, contact_phone }
+
+货主端处理:
+  1. 幂等检查: SELECT * FROM sub_account WHERE customer_id=X AND is_root=true
+     → 已存在 → 返回已有记录（不重复创建）
+  2. 创建 ROOT 子账号:
+     INSERT INTO sub_account (
+       customer_id, account=&#39;admin&#39;, is_root=true,
+       password_hash=bcrypt(random_password),
+       last_name=&#39;管理员&#39;, first_name=&#39;&#39;,
+       full_name=&#39;管理员&#39;, gender=10, phone=contact_phone,
+       email=contact_email, status=10
+     )
+  3. 创建 ROOT 角色（若不存在）:
+     INSERT INTO role (role_code=&#39;ROOT&#39;, role_name=&#39;主账号默认角色&#39;, ...)
+     ON CONFLICT (tenant_id, role_code) DO NOTHING
+  4. 关联 ROOT 角色:
+     INSERT INTO sub_account_role (sub_account_id, role_id)
+  5. 发送邮件: 账号+密码+登录地址
+  6. 返回: { sub_account_id, account, temp_password }
+</code></pre>
+<p><strong>SF2 — 批量冻结（接收方）</strong>：</p>
+<pre><code>客商中心调用: POST /api/shipper/sub-account/batch-freeze
+  body: { customer_id }
+
+货主端处理:
+  UPDATE sub_account SET status = 20, updated_at = NOW()
+  WHERE customer_id = X AND is_deleted = false AND status = 10
+  → 返回 { frozen_count: N }
+</code></pre>
+<p><strong>SF3 — 批量启用（接收方）</strong>：</p>
+<pre><code>同 SF2，status: 20→10
+</code></pre>
+<p><strong>SF4 — 登录状态校验（调用方）</strong>：</p>
+<pre><code>货主端登录时:
+  1. 校验 sub_account 是否存在且未冻结
+  2. 调用 GET /api/customer/{customer_id}/status
+     → 返回: { service_status, sign_status, customer_name }
+  3. service_status = 20 (已冻结) → 拒绝登录
+  4. 缓存 customer_name 到 Redis (TTL=1h)，减少重复调用
+</code></pre>
+<h3>6.3 跨模块接口契约</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>提供方</th>
+<th>调用方</th>
+<th>幂等性</th>
+<th>超时</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>创建ROOT子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/create-root</td>
+<td>货主端</td>
+<td>客商中心</td>
+<td>✅ customer_id去重</td>
+<td>5s</td>
+</tr>
+<tr>
+<td>批量冻结子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-freeze</td>
+<td>货主端</td>
+<td>客商中心</td>
+<td>✅ 已冻结跳过</td>
+<td>3s</td>
+</tr>
+<tr>
+<td>批量启用子账号</td>
+<td>POST</td>
+<td>/api/shipper/sub-account/batch-enable</td>
+<td>货主端</td>
+<td>客商中心</td>
+<td>✅ 已启用跳过</td>
+<td>3s</td>
+</tr>
+<tr>
+<td>查询客户状态</td>
+<td>GET</td>
+<td>/api/customer/{id}/status</td>
+<td>客商中心</td>
+<td>货主端</td>
+<td>—</td>
+<td>2s</td>
+</tr>
+<tr>
+<td>查询客户信息</td>
+<td>GET</td>
+<td>/api/customer/{id}/profile</td>
+<td>客商中心</td>
+<td>货主端</td>
+<td>—</td>
+<td>2s</td>
+</tr>
+</tbody></table></div>
+<h3>6.4 登录校验链（完整）</h3>
+<pre><code>货主端登录 POST /api/shipper/auth/login
+  ↓
+Step 1: 验证账号密码
+  → 匹配 sub_account.account 或 sub_account.email
+  → bcrypt.compare(password, password_hash)
+  → 失败 → 401 &quot;账号或密码错误&quot;
+  ↓
+Step 2: 校验子账号状态
+  → sub_account.status != 10 → 403 &quot;账号已被冻结&quot;
+  → sub_account.is_deleted = true → 401 &quot;账号不存在&quot;
+  ↓
+Step 3: 校验企业客户状态（跨模块调用）
+  → GET /api/customer/{customer_id}/status
+  → service_status != 10 → 403 &quot;您的企业账户已被冻结，请联系客服&quot;
+  → 超时(&gt;2s) → 降级: 允许登录但记录告警日志
+  ↓
+Step 4: 签发 JWT token
+  → payload: { sub_account_id, customer_id, is_root }
+  → expire: 24h
+  → 返回: { token, username, customer_name }
+</code></pre>
+<h3>6.5 失败降级策略</h3>
+<ul>
+<li><strong>create-root 调用失败</strong>（客商中心侧）：客商中心异步重试3次(10s/30s/60s)，仍失败进入 pending_sync 队列，定时任务补推</li>
+<li><strong>batch-freeze/enable 调用失败</strong>：不回滚客商中心操作，记录异常日志+运维告警</li>
+<li><strong>GET /api/customer/{id}/status 超时</strong>：允许登录（降级），但限制下单（必须同步校验通过才能下单），记录告警日志</li>
+</ul>
+<h3>6.6 共享实体字段变更同步</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>客商中心变更</th>
+<th>货主端影响</th>
+<th>同步机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>客户名称变更</td>
+<td>customer.customer_name 更新</td>
+<td>首页欢迎语需反映最新名称</td>
+<td>货主端每次登录/刷新时实时查询</td>
+</tr>
+<tr>
+<td>客户冻结</td>
+<td>customer.service_status: 10→20</td>
+<td>所有子账号冻结+禁止登录</td>
+<td>batch-freeze 推送 + 登录时实时校验</td>
+</tr>
+<tr>
+<td>客户启用</td>
+<td>customer.service_status: 20→10</td>
+<td>所有子账号恢复登录</td>
+<td>batch-enable 推送 + 登录时实时校验</td>
+</tr>
+<tr>
+<td>合同签约完成</td>
+<td>customer.sign_status: 20→30</td>
+<td>下单限制解除</td>
+<td>下单时实时查询 sign_status</td>
+</tr>
+<tr>
+<td>合同过期</td>
+<td>customer.sign_status: 30→40</td>
+<td>下单时提示续约</td>
+<td>下单时实时查询 sign_status</td>
+</tr>
+<tr>
+<td>客户等级变更</td>
+<td>customer_level 更新</td>
+<td>暂不联动</td>
+<td>未来如需按等级差异化定价，再补充</td>
+</tr>
+</tbody></table></div>
+<hr>
+<blockquote>
+<p>执行完成后，若修改了任何设计文件，自动执行 project-rule 文件联动规则，确保关联文件一致性。</p>
+</blockquote>
+
+  </div>
+</div>
+</body>
+</html>

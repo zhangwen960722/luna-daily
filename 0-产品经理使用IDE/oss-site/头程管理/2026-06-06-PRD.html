@@ -1,0 +1,2145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#d97706}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#d9770615;color:#d97706;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #d97706;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#d97706;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">头程管理</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">PRD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>PRD -- 头程管理</h1>
+<hr>
+<h2>0. 文档基础信息</h2>
+<ul>
+<li>文档标题：头程管理</li>
+<li>版本号：v2.1</li>
+<li>状态：草稿</li>
+<li>作者：飞点跨境产品经理</li>
+<li>评审人：待定（产品/研发/测试/业务代表）</li>
+<li>计划里程碑：评审 / 提测 / 上线 待定</li>
+</ul>
+<h3>0.1 变更记录</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>版本</th>
+<th>变更日期</th>
+<th>变更内容</th>
+<th>变更人</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>v0.1</td>
+<td>2026-06-06</td>
+<td>初稿，基于 Demo 反向生成</td>
+<td>飞点跨境产品经理</td>
+</tr>
+<tr>
+<td>v2.0</td>
+<td>2026-06-06</td>
+<td>基于 Excel 源数据完整重写：修正 VAT 唯一约束/员工权限/国家差异化附件、费用类型同方向唯一、物流事件名称唯一+Ship Track集成、亚马逊物流事件状态启停+查询接口、标识查询接口</td>
+<td>飞点跨境产品经理</td>
+</tr>
+<tr>
+<td>v2.1</td>
+<td>2026-06-06</td>
+<td>Demo + Excel + Draft 三方数据融合：标记3个待确认项、1个Demo内部BUG、标识模块范围确认(舱单/运单)、异常处理池归属判定</td>
+<td>飞点跨境产品经理</td>
+</tr>
+<tr>
+<td>v2.1-final</td>
+<td>2026-06-06</td>
+<td>确认3个待确认项：(1) event_template notify=否时不必填；(2) 物流事件名称全局唯一跨租户不重复；(3) 标识模块范围舱单/运单。同步更新R11/R13/R19/R21等业务规则及所有⚠️标记</td>
+<td>飞点跨境产品经理</td>
+</tr>
+</tbody></table></div>
+<h3>0.2 关联链接</h3>
+<ul>
+<li>用户需求(RDD)：<code>drafts/头程管理/2026-06-06-用户需求.md</code> (v2.1)</li>
+<li>数据设计：<code>drafts/头程管理/2026-06-06-数据设计.md</code> (v2.1)</li>
+<li>需求背景：待补充</li>
+<li>原型：待更新</li>
+</ul>
+<h3>0.3 评审记录</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>日期</th>
+<th>参会人</th>
+<th>主要问题/结论</th>
+<th>待办</th>
+</tr>
+</thead>
+</table></div>
+<hr>
+<h2>1. 需求定义</h2>
+<h3>1.1 背景与现状</h3>
+<p>跨境头程物流涉及多个基础配置的维护：VAT/EORI税务资料的提交与审核、费用类型定义（用于运单应收应付流水）、物流事件模板（用于运单跟踪通知+Ship Track对接）、亚马逊标准物流事件代码以及标识体系（用于舱单/运单打标）。当前这些配置缺乏统一的结构化管理和系统间调用接口。</p>
+<h3>1.2 目标与成功口径</h3>
+<ul>
+<li>目标：为TMS平台上线头程管理5个基础配置子模块，提供标准化的配置维护和下游查询接口</li>
+<li>成功口径：VAT审核周期从3-5个工作日缩短至2个工作日内；下游模块（运单/提单/Ship Track/计费）可通过接口实时获取配置数据</li>
+</ul>
+<h3>1.3 范围与边界</h3>
+<ul>
+<li>In Scope（本期 P0）：VAT管理（货主端+员工端，含国家差异化附件）、费用类型管理（同方向唯一）、物流事件管理（名称唯一+Ship Track绑定+查询接口）、亚马逊物流事件管理（状态启停+查询接口）、标识管理（查询接口供舱单/运单打标）</li>
+<li>Out of Scope：物流事件触发到运单/提单路由（二期）、Ship Track联调对接（二期）、标识动态分配（二期）、VAT第三方API校验（三期）</li>
+</ul>
+<h3>1.4 影响范围</h3>
+<ul>
+<li>影响角色：运营员工、货主</li>
+<li>依赖系统：用户模块（VAT引用 user_id）、运单模块（调用查询接口）、Ship Track（调用亚马逊事件代码）</li>
+</ul>
+<hr>
+<h2>2. 枚举字典</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>枚举名</th>
+<th>值</th>
+<th>常量名</th>
+<th>中文</th>
+<th>适用实体</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NotifyCustomer</td>
+<td>10</td>
+<td>YES</td>
+<td>是</td>
+<td>LogisticsEvent</td>
+</tr>
+<tr>
+<td>NotifyCustomer</td>
+<td>20</td>
+<td>NO</td>
+<td>否</td>
+<td>LogisticsEvent</td>
+</tr>
+<tr>
+<td>EventStatus</td>
+<td>10</td>
+<td>ACTIVE</td>
+<td>正常</td>
+<td>LogisticsEvent, FeeType, Tag, AmazonLogisticsEvent</td>
+</tr>
+<tr>
+<td>EventStatus</td>
+<td>20</td>
+<td>FROZEN</td>
+<td>已冻结</td>
+<td>LogisticsEvent, FeeType, Tag, AmazonLogisticsEvent</td>
+</tr>
+<tr>
+<td>AuditStatus</td>
+<td>10</td>
+<td>PENDING</td>
+<td>待审核</td>
+<td>VATRegistration</td>
+</tr>
+<tr>
+<td>AuditStatus</td>
+<td>20</td>
+<td>APPROVED</td>
+<td>已通过</td>
+<td>VATRegistration</td>
+</tr>
+<tr>
+<td>AuditStatus</td>
+<td>30</td>
+<td>REJECTED</td>
+<td>已拒绝</td>
+<td>VATRegistration</td>
+</tr>
+<tr>
+<td>FeeDirection</td>
+<td>10</td>
+<td>RECEIVABLE</td>
+<td>应收</td>
+<td>FeeType</td>
+</tr>
+<tr>
+<td>FeeDirection</td>
+<td>20</td>
+<td>PAYABLE</td>
+<td>应付</td>
+<td>FeeType</td>
+</tr>
+<tr>
+<td>ModuleScope</td>
+<td>10</td>
+<td>MANIFEST</td>
+<td>舱单</td>
+<td>Tag（⚠️ Demo误用&quot;提单&quot;，以本表为准）</td>
+</tr>
+<tr>
+<td>ModuleScope</td>
+<td>20</td>
+<td>WAYBILL</td>
+<td>运单</td>
+<td>Tag</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>10</td>
+<td>VAT_CERT</td>
+<td>VAT证书</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>20</td>
+<td>EORI_CERT</td>
+<td>EORI证书</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>30</td>
+<td>POA</td>
+<td>POA授权文件</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>40</td>
+<td>PVA</td>
+<td>PVA授权文件</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>50</td>
+<td>BUSINESS_LICENSE</td>
+<td>营业执照</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>60</td>
+<td>ID_CARD</td>
+<td>法人身份证/护照</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>70</td>
+<td>TAX_PROOF</td>
+<td>缴税证明</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>AttachmentType</td>
+<td>80</td>
+<td>OTHER</td>
+<td>其他文件</td>
+<td>VATAttachment</td>
+</tr>
+<tr>
+<td>Country</td>
+<td>GB</td>
+<td>GB</td>
+<td>英国</td>
+<td>VATRegistration</td>
+</tr>
+<tr>
+<td>Country</td>
+<td>DE</td>
+<td>DE</td>
+<td>德国</td>
+<td>VATRegistration</td>
+</tr>
+<tr>
+<td>Country</td>
+<td>FR</td>
+<td>FR</td>
+<td>法国</td>
+<td>VATRegistration</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>3. 状态机</h2>
+<h3>3.1 物流事件 / 费用类型 / 标识 / 亚马逊物流事件 通用状态流转</h3>
+<blockquote>
+<p>⚠️ <strong>Demo差异</strong>：亚马逊物流事件在Demo中无状态字段。草案按标准配置治理设计增加状态启停。</p>
+</blockquote>
+<pre><code>[正常] --{冻结}--&gt; [已冻结] --{启用}--&gt; [正常]
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正常</td>
+<td>冻结</td>
+<td>已冻结</td>
+<td>运营员工</td>
+<td>二次确认弹窗 (ElMessageBox.confirm, type: warning)</td>
+</tr>
+<tr>
+<td>已冻结</td>
+<td>启用</td>
+<td>正常</td>
+<td>运营员工</td>
+<td>二次确认弹窗 (ElMessageBox.confirm, type: warning)</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>附加规则：编辑已冻结实体时，弹窗自动切换只读模式（标题变为&quot;查看XX&quot;，确定按钮隐藏，仅显示关闭/取消）。</p>
+</blockquote>
+<h3>3.2 VAT资料审核状态流转</h3>
+<pre><code>[待审核] --{审核通过}--&gt; [已通过]
+   |                       
+   +--{审核拒绝}--&gt; [已拒绝] --{货主重新提交}--&gt; [待审核]
+</code></pre>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>当前状态</th>
+<th>操作</th>
+<th>目标状态</th>
+<th>触发角色</th>
+<th>校验条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>待审核</td>
+<td>审核通过</td>
+<td>已通过</td>
+<td>运营员工</td>
+<td>二次确认弹窗</td>
+</tr>
+<tr>
+<td>待审核</td>
+<td>审核拒绝</td>
+<td>已拒绝</td>
+<td>运营员工</td>
+<td>拒绝原因不能为空 (/\S+/)</td>
+</tr>
+<tr>
+<td>已拒绝</td>
+<td>编辑保存</td>
+<td>待审核</td>
+<td>货主</td>
+<td>所有必填项+按国家附件校验通过</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>补充规则：员工端可修改VAT资料的全部字段，修改操作不改变审核状态。</p>
+</blockquote>
+<hr>
+<h2>4. 功能清单与页面映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>功能点</th>
+<th>优先级</th>
+<th>对应页面</th>
+<th>页面类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VAT管理(货主端)</td>
+<td>列表+Tab搜索+新增/编辑/查看</td>
+<td>P0</td>
+<td>VAT管理 (货主端)</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>VAT资料新增(货主端)</td>
+<td>表单+国家差异化附件+提交审核</td>
+<td>P0</td>
+<td>VAT资料新增 (货主端)</td>
+<td>编辑页</td>
+</tr>
+<tr>
+<td>VAT管理(员工端)</td>
+<td>列表+Tab搜索+审核/查看/编辑</td>
+<td>P0</td>
+<td>VAT管理_主列表 (员工端)</td>
+<td>列表页</td>
+</tr>
+<tr>
+<td>VAT资料审核/编辑(员工端)</td>
+<td>只读审核+全字段编辑</td>
+<td>P0</td>
+<td>VAT资料审核/编辑 (员工端)</td>
+<td>编辑页</td>
+</tr>
+<tr>
+<td>费用类型</td>
+<td>列表+搜索+新增/编辑+冻结启用</td>
+<td>P0</td>
+<td>费用类型_主列表</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>物流事件</td>
+<td>列表+搜索+新增/编辑(含占位符)+冻结启用</td>
+<td>P0</td>
+<td>物流事件_主列表</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>亚马逊物流事件</td>
+<td>列表+新增/编辑+冻结启用</td>
+<td>P0</td>
+<td>亚马逊物流事件_主列表</td>
+<td>列表页+弹窗</td>
+</tr>
+<tr>
+<td>标识管理</td>
+<td>列表+搜索+新增/编辑(含颜色选择器)+冻结启用</td>
+<td>P0</td>
+<td>标识管理</td>
+<td>列表页+弹窗</td>
+</tr>
+</tbody></table></div>
+<h3>4.1 页面导航关系图</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 员工端_头程管理
+        C1[亚马逊物流事件_主列表]
+        C2[物流事件_主列表]
+        C3[费用类型_主列表]
+        C4[标识管理]
+        C5[VAT管理_主列表]
+        C6[VAT资料审核/编辑]
+    end
+    subgraph 货主端_头程管理
+        S1[VAT管理]
+        S2[VAT资料新增]
+    end
+    C5 --&gt;|审核| C6
+    C5 --&gt;|查看/编辑| C6
+    S1 --&gt;|查看/编辑| S2
+    S1 --&gt;|新增| S2
+    C2 -.-&gt;|绑定引用| C1
+</code></pre>
+<hr>
+<h2>5. 页面规格</h2>
+<h3>5.1 VAT管理（货主端）</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：货主端 &gt; VAT管理</li>
+<li>类型：列表页</li>
+<li>访问角色：货主（仅查看自己的数据，按 user_id 隔离）</li>
+</ul>
+<p><strong>字段表（列表）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vat_no</td>
+<td>VAT号</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>eori_no</td>
+<td>EORI号</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>legal_person</td>
+<td>法人姓名</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>country</td>
+<td>注册国家</td>
+<td>文本</td>
+<td>GB-英国 / DE-德国 / FR-法国</td>
+</tr>
+<tr>
+<td>company_name</td>
+<td>公司名称</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>audit_status</td>
+<td>审核状态</td>
+<td>标签</td>
+<td>待审核=warning, 已通过=success, 已拒绝=danger</td>
+</tr>
+</tbody></table></div>
+<p><strong>搜索条件</strong>：VAT号（文本输入）、EORI号（文本输入）</p>
+<p><strong>Tab页签</strong>：待审核 / 已通过 / 已拒绝 / 全部</p>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[新增]：点击&quot;新增VAT&quot; → 跳转 VAT资料新增.html</li>
+<li>[查看]：已通过/待审核行显示&quot;查看&quot;按钮 → 跳转 VAT资料新增.html?mode=view</li>
+<li>[编辑]：已拒绝行显示&quot;编辑&quot;按钮 → 跳转 VAT资料新增.html?mode=edit</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查询：<code>GET /api/vat-registrations</code> (params: vatNo, eoriNo, auditStatus, page, pageSize) -- 自动过滤当前 user_id</li>
+</ul>
+<hr>
+<h3>5.2 VAT资料新增（货主端）</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：货主端 &gt; VAT管理 &gt; VAT资料新增/编辑/查看</li>
+<li>类型：编辑页</li>
+<li>访问角色：货主</li>
+</ul>
+<p><strong>字段表（基本信息）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vat_no</td>
+<td>VAT号</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空，同客户下VAT号+EORI号联合唯一</td>
+<td>—</td>
+</tr>
+<tr>
+<td>eori_no</td>
+<td>EORI号</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空，同客户下VAT号+EORI号联合唯一</td>
+<td>—</td>
+</tr>
+<tr>
+<td>business_license_no</td>
+<td>营业执照编码</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+<tr>
+<td>legal_person</td>
+<td>公司法人</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+<tr>
+<td>company_name</td>
+<td>公司名</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+<tr>
+<td>company_en_name</td>
+<td>公司英文名</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+<tr>
+<td>country</td>
+<td>注册国家</td>
+<td>下拉选择</td>
+<td>是</td>
+<td>必选</td>
+<td>GB/DE/FR，选择后动态切换附件必填规则</td>
+</tr>
+<tr>
+<td>province</td>
+<td>注册省份</td>
+<td>文本输入</td>
+<td>否</td>
+<td>—</td>
+<td>英文</td>
+</tr>
+<tr>
+<td>city</td>
+<td>注册城市</td>
+<td>文本输入</td>
+<td>否</td>
+<td>—</td>
+<td>英文</td>
+</tr>
+<tr>
+<td>zip_code</td>
+<td>注册邮编</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+<tr>
+<td>address</td>
+<td>注册地址</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>字段表（电商平台信息）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>amazon_shop_link</td>
+<td>亚马逊店铺链接</td>
+<td>文本输入</td>
+<td>是</td>
+<td>—</td>
+</tr>
+<tr>
+<td>shop_vat_screenshot</td>
+<td>电商店铺绑定VAT截图</td>
+<td>文件上传</td>
+<td>是</td>
+<td>限制1个文件，需清晰展示店铺名称及VAT税号</td>
+</tr>
+</tbody></table></div>
+<p><strong>资料附件（按注册国家差异化展示）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>附件类型</th>
+<th align="center">英国(GB) 必填</th>
+<th align="center">其他欧洲国家(DE/FR等) 必填</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VAT证书</td>
+<td align="center">是</td>
+<td align="center">是</td>
+</tr>
+<tr>
+<td>EORI证书</td>
+<td align="center">是</td>
+<td align="center">是</td>
+</tr>
+<tr>
+<td>POA授权文件</td>
+<td align="center">是</td>
+<td align="center">是</td>
+</tr>
+<tr>
+<td>PVA授权文件</td>
+<td align="center">是</td>
+<td align="center">—</td>
+</tr>
+<tr>
+<td>营业执照</td>
+<td align="center">—</td>
+<td align="center">是</td>
+</tr>
+<tr>
+<td>法人身份证/护照</td>
+<td align="center">—</td>
+<td align="center">是</td>
+</tr>
+<tr>
+<td>缴税证明</td>
+<td align="center">—</td>
+<td align="center">是</td>
+</tr>
+<tr>
+<td>其他文件</td>
+<td align="center">否</td>
+<td align="center">否</td>
+</tr>
+</tbody></table></div>
+<p><strong>签署日期</strong>：日期选择器，必填，格式 YYYY-MM-DD</p>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[新增模式]：表单可编辑，底部&quot;取消&quot;+ &quot;提交审核&quot;，提交后 Toast&quot;VAT资料提交成功，请等待平台审核！&quot;，跳转回列表</li>
+<li>[查看模式]（mode=view）：整个表单 <code>:disabled=&quot;true&quot;</code>，底部&quot;返回列表&quot;按钮</li>
+<li>[编辑模式]（mode=edit）：已拒绝状态可编辑，底部&quot;取消&quot;+ &quot;提交审核&quot;</li>
+<li>[注册国家切换]：选择不同国家时，附件区域动态显示对应的必传项（红色星号标记），非必传项隐藏或灰色标记&quot;该国家不需要此项&quot;</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>新增：<code>POST /api/vat-registrations</code> (body: 完整表单数据)</li>
+<li>编辑：<code>PUT /api/vat-registrations/{id}</code> (body: 完整表单数据)</li>
+<li>附件上传：<code>POST /api/vat-attachments/upload</code> (multipart/form-data)</li>
+</ul>
+<hr>
+<h3>5.3 VAT管理_主列表（员工端）</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：员工端 &gt; 头程管理 &gt; VAT管理</li>
+<li>类型：列表页</li>
+<li>访问角色：运营员工（可查看和操作所有货主的VAT资料，无权限管控）</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>Demo UX BUG</strong>：Demo中已通过/已拒绝行的&quot;查看&quot;按钮实际跳转 <code>mode=edit</code>（编辑模式），按钮标签与行为不一致。本PRD中正确区分&quot;查看&quot;(mode=view)和&quot;编辑&quot;(mode=edit)。Demo需修正按钮标签。</p>
+</blockquote>
+<p><strong>字段表（列表）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>vat_no</td>
+<td>VAT号</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>eori_no</td>
+<td>EORI号</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>legal_person</td>
+<td>法人姓名</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>country</td>
+<td>注册国家</td>
+<td>文本</td>
+<td>GB-英国 / DE-德国 / FR-法国</td>
+</tr>
+<tr>
+<td>company_name</td>
+<td>公司名称</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>customer_name</td>
+<td>用户名称</td>
+<td>文本</td>
+<td>货主用户名称（员工端特有列）</td>
+</tr>
+<tr>
+<td>audit_status</td>
+<td>审核状态</td>
+<td>标签</td>
+<td>待审核=warning, 已通过=success, 已拒绝=danger</td>
+</tr>
+</tbody></table></div>
+<p><strong>搜索条件</strong>：用户名称（文本输入）、VAT号（文本输入）、EORI号（文本输入）</p>
+<p><strong>Tab页签</strong>：待审核 / 已通过 / 已拒绝 / 全部</p>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[审核]：待审核行显示&quot;审核&quot;按钮（warning色） → 跳转 VAT资料审核/编辑.html?mode=audit</li>
+<li>[查看]：已通过/已拒绝行显示&quot;查看&quot;按钮 → 跳转 VAT资料审核/编辑.html?mode=view</li>
+<li>[编辑]：已通过/已拒绝行显示&quot;编辑&quot;按钮 → 跳转 VAT资料审核/编辑.html?mode=edit（员工可修改全部字段）</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查询：<code>GET /api/vat-registrations/all</code> (params: customerName, vatNo, eoriNo, auditStatus, page, pageSize) -- 返回所有货主数据，无 user_id 过滤</li>
+</ul>
+<hr>
+<h3>5.4 VAT资料审核/编辑（员工端）</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：员工端 &gt; 头程管理 &gt; VAT管理 &gt; VAT资料审核/查看/编辑</li>
+<li>类型：编辑页</li>
+<li>访问角色：运营员工</li>
+</ul>
+<p><strong>字段表</strong>：与 5.2 货主端表单字段完全一致</p>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[审核模式]（mode=audit）：所有字段只读展示；底部&quot;取消&quot;+ &quot;审核通过&quot;（success色）+ &quot;审核拒绝&quot;（danger色）<ul>
+<li>审核通过：<code>ElMessageBox.confirm</code>（&quot;确认该VAT资料信息无误并审核通过？&quot;）→ 确认后 Toast &quot;审核已通过！&quot;，跳转回列表</li>
+<li>审核拒绝：<code>ElMessageBox.prompt</code>（&quot;请输入拒绝原因&quot;，校验 <code>/\S+/</code>，不能为空）→ 确认后 Toast &quot;已拒绝该VAT申请，原因：{reason}&quot;，跳转回列表</li>
+</ul>
+</li>
+<li>[查看模式]（mode=view）：所有字段只读，底部只有&quot;返回列表&quot;按钮</li>
+<li>[编辑模式]（mode=edit）：所有字段可编辑（员工可修改全部信息），修改不改变审核状态；底部&quot;取消&quot;+ &quot;保存&quot;，保存后 Toast &quot;保存成功&quot;，返回列表</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>审核：<code>PATCH /api/vat-registrations/{id}/audit</code> (body: action=pass/reject, rejectReason)</li>
+<li>编辑保存：<code>PUT /api/vat-registrations/{id}</code> (body: 完整表单数据)</li>
+</ul>
+<hr>
+<h3>5.5 费用类型_主列表</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：员工端 &gt; 头程管理 &gt; 费用类型</li>
+<li>类型：列表页</li>
+<li>访问角色：运营员工（无权限管控）</li>
+</ul>
+<p><strong>搜索条件</strong>：费用名称（文本输入）、费用方向（下拉：应收/应付）</p>
+<p><strong>字段表（列表）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>fee_name</td>
+<td>费用名称</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>fee_direction</td>
+<td>费用方向</td>
+<td>标签</td>
+<td>应收=success绿色, 应付=warning橙色</td>
+</tr>
+<tr>
+<td>status</td>
+<td>状态</td>
+<td>标签</td>
+<td>正常=success, 已冻结=danger</td>
+</tr>
+<tr>
+<td>operator</td>
+<td>操作人</td>
+<td>文本</td>
+<td>最后操作人</td>
+</tr>
+</tbody></table></div>
+<p><strong>字段表（新增/编辑弹窗）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>fee_name</td>
+<td>费用名称</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空 + 同方向名称唯一</td>
+<td>—</td>
+</tr>
+<tr>
+<td>fee_direction</td>
+<td>费用方向</td>
+<td>下拉选择</td>
+<td>是</td>
+<td>必选</td>
+<td>应收 / 应付</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[查询]：支持按费用名称+费用方向组合搜索</li>
+<li>[重置]：清空搜索条件</li>
+<li>[新增]：弹窗&quot;新增费用类型&quot;，费用名称+费用方向均为必填</li>
+<li>[编辑]：弹窗&quot;编辑费用类型&quot;；若状态=已冻结→&quot;查看费用类型&quot;只读模式（确定按钮隐藏）</li>
+<li>[冻结/启用]：二次确认弹窗 <code>ElMessageBox.confirm</code>（type: warning），确认后切换状态并Toast提示</li>
+<li>[保存校验]：提交时校验&quot;同方向费用名称唯一&quot;——相同费用方向下不允许重复名称，不同方向之间允许同名</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查询：<code>GET /api/fee-types</code> (params: feeName, feeDirection, page, pageSize)</li>
+<li>新增：<code>POST /api/fee-types</code> (body: feeName, feeDirection)</li>
+<li>编辑：<code>PUT /api/fee-types/{id}</code> (body: feeName, feeDirection)</li>
+<li>切换状态：<code>PATCH /api/fee-types/{id}/toggle-status</code></li>
+</ul>
+<hr>
+<h3>5.6 物流事件_主列表</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：员工端 &gt; 头程管理 &gt; 物流事件</li>
+<li>类型：列表页</li>
+<li>访问角色：运营员工（无权限管控）</li>
+</ul>
+<p><strong>搜索条件</strong>：物流事件名称（文本输入）、绑定亚马逊物流事件（下拉选择）</p>
+<p><strong>字段表（列表）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>event_name</td>
+<td>物流事件名称</td>
+<td>文本</td>
+<td>全局唯一</td>
+</tr>
+<tr>
+<td>amazon_event_name</td>
+<td>绑定亚马逊物流事件</td>
+<td>关联显示</td>
+<td>logistics_event -&gt; amazon_logistics_event.event_name，可空</td>
+</tr>
+<tr>
+<td>notify_customer</td>
+<td>是否需要通知客户</td>
+<td>标签</td>
+<td>是=success绿色, 否=info灰色</td>
+</tr>
+<tr>
+<td>status</td>
+<td>状态</td>
+<td>标签</td>
+<td>正常=success, 已冻结=danger</td>
+</tr>
+<tr>
+<td>created_at</td>
+<td>创建时间</td>
+<td>DateTime</td>
+<td>—</td>
+</tr>
+<tr>
+<td>updated_at</td>
+<td>更新时间</td>
+<td>DateTime</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<p><strong>字段表（新增/编辑弹窗）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>默认值</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>event_name</td>
+<td>物流事件名称</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空 + 全局唯一</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>amazon_event_id</td>
+<td>绑定亚马逊物流事件</td>
+<td>下拉选择</td>
+<td>否</td>
+<td>—</td>
+<td>—</td>
+<td>选项来自 amazon_logistics_event 查询接口（仅正常状态）</td>
+</tr>
+<tr>
+<td>notify_customer</td>
+<td>是否需要通知客户</td>
+<td>下拉选择</td>
+<td>是</td>
+<td>必选</td>
+<td>是</td>
+<td>是/否</td>
+</tr>
+<tr>
+<td>event_template</td>
+<td>事件话术模板</td>
+<td>多行文本</td>
+<td>条件必填</td>
+<td>notify_customer=是时必填</td>
+<td>—</td>
+<td>支持占位符</td>
+</tr>
+<tr>
+<td>event_placeholders</td>
+<td>事件占位符可选项</td>
+<td>复选框组</td>
+<td>否</td>
+<td>—</td>
+<td>—</td>
+<td>本地仓名称/海外仓代码/预计到港时间等</td>
+</tr>
+<tr>
+<td>notify_template</td>
+<td>通知话术模板</td>
+<td>多行文本</td>
+<td>条件必填</td>
+<td>notify_customer=是时必填</td>
+<td>—</td>
+<td>支持占位符</td>
+</tr>
+<tr>
+<td>notify_placeholders</td>
+<td>通知占位符可选项</td>
+<td>复选框组</td>
+<td>否</td>
+<td>—</td>
+<td>—</td>
+<td>客户名称/订单号/本地仓名称/海外仓代码等</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[查询]：支持按物流事件名称+绑定亚马逊物流事件搜索</li>
+<li>[重置]：清空搜索条件</li>
+<li>[新增]：点击&quot;新增&quot;按钮 → 弹窗，标题&quot;新增物流事件&quot;</li>
+<li>[编辑]：点击行&quot;编辑&quot; → 弹窗；若 status=已冻结，弹窗标题变为&quot;查看物流事件&quot;，所有字段只读，隐藏&quot;确定&quot;按钮，仅显示&quot;关闭&quot;</li>
+<li>[冻结/启用]：点击行&quot;冻结&quot;/&quot;启用&quot; → <code>ElMessageBox.confirm</code>（type: warning）→ 确认后切换状态并 Toast</li>
+<li>[占位符]：勾选复选框时自动将 <code>[占位符名]</code> 追加到对应模板文本框末尾，重复勾选需判断避免重复追加</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查询：<code>GET /api/logistics-events</code> (params: eventName, amazonEventId, page, pageSize)</li>
+<li>新增：<code>POST /api/logistics-events</code></li>
+<li>编辑：<code>PUT /api/logistics-events/{id}</code></li>
+<li>切换状态：<code>PATCH /api/logistics-events/{id}/toggle-status</code></li>
+<li>供下游查询：<code>GET /api/logistics-events/query</code> (params: eventName, amazonEventId) -- 运单/提单路由更新时调用</li>
+</ul>
+<hr>
+<h3>5.7 亚马逊物流事件_主列表</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：员工端 &gt; 头程管理 &gt; 亚马逊物流事件</li>
+<li>类型：列表页</li>
+<li>访问角色：运营员工（无权限管控）</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>Demo差异</strong>：Demo中此页面无状态列、无搜索功能（仅新增+编辑+分页）。本PRD按标准配置治理设计增加状态启停和搜索功能。Demo需补充。</p>
+</blockquote>
+<p><strong>字段表（列表）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>event_name</td>
+<td>亚马逊物流事件名称</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>event_code</td>
+<td>亚马逊物流事件代码</td>
+<td>文本</td>
+<td>全局唯一，如 K1/O1, D1</td>
+</tr>
+<tr>
+<td>status</td>
+<td>状态</td>
+<td>标签</td>
+<td>正常=success, 已冻结=danger</td>
+</tr>
+</tbody></table></div>
+<p><strong>字段表（新增/编辑弹窗）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>校验规则</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>event_name</td>
+<td>亚马逊物流事件名称</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空</td>
+<td>—</td>
+</tr>
+<tr>
+<td>event_code</td>
+<td>亚马逊物流事件代码</td>
+<td>文本输入</td>
+<td>是</td>
+<td>非空 + 全局唯一</td>
+<td>如 K1/O1</td>
+</tr>
+</tbody></table></div>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[新增]：点击&quot;新增&quot;按钮 → 弹窗，标题&quot;新增亚马逊物流事件&quot;</li>
+<li>[编辑]：点击行&quot;编辑&quot; → 弹窗，标题&quot;编辑亚马逊物流事件&quot;；若 status=已冻结→&quot;查看亚马逊物流事件&quot;只读模式</li>
+<li>[冻结/启用]：二次确认弹窗 → 确认后切换状态并 Toast</li>
+<li>保存：校验 event_name 和 event_code 非空、event_code 全局唯一</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查询：<code>GET /api/amazon-logistics-events</code> (params: eventName, eventCode, status, page, pageSize)</li>
+<li>新增：<code>POST /api/amazon-logistics-events</code> (body: eventName, eventCode)</li>
+<li>编辑：<code>PUT /api/amazon-logistics-events/{id}</code> (body: eventName, eventCode)</li>
+<li>切换状态：<code>PATCH /api/amazon-logistics-events/{id}/toggle-status</code></li>
+<li>供下游查询：<code>GET /api/amazon-logistics-events/query</code> (params: eventCode, status) -- 物流事件模块和Ship Track调用</li>
+</ul>
+<hr>
+<h3>5.8 标识管理</h3>
+<p><strong>页面信息</strong>：</p>
+<ul>
+<li>路径：员工端 &gt; 头程管理 &gt; 标识管理</li>
+<li>类型：列表页</li>
+<li>访问角色：运营员工（无权限管控）</li>
+</ul>
+<blockquote>
+<p>⚠️ <strong>Demo差异</strong>：Demo中模块范围下拉选项为&quot;运单/提单&quot;，本PRD按Excel需求使用&quot;舱单/运单&quot;。舱单(Manifest)是物流专业术语。Demo需修正。</p>
+</blockquote>
+<p><strong>搜索条件</strong>：标识名称（文本输入）、模块范围（下拉：舱单/运单）</p>
+<p><strong>字段表（列表）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tag_name</td>
+<td>标识名称</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>color</td>
+<td>颜色</td>
+<td>色块圆点</td>
+<td>显示为圆形色块，颜色来自 HEX 色值</td>
+</tr>
+<tr>
+<td>module_scope</td>
+<td>模块范围</td>
+<td>文本</td>
+<td>舱单 / 运单</td>
+</tr>
+<tr>
+<td>updated_at</td>
+<td>更新时间</td>
+<td>DateTime</td>
+<td>—</td>
+</tr>
+<tr>
+<td>created_by</td>
+<td>创建人</td>
+<td>文本</td>
+<td>—</td>
+</tr>
+<tr>
+<td>status</td>
+<td>状态</td>
+<td>标签</td>
+<td>正常=success, 已冻结=danger</td>
+</tr>
+</tbody></table></div>
+<p><strong>字段表（新增/编辑弹窗）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>中文名</th>
+<th>类型</th>
+<th>必填</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>tag_name</td>
+<td>标识名称</td>
+<td>文本输入</td>
+<td>是</td>
+<td>—</td>
+</tr>
+<tr>
+<td>module_scope</td>
+<td>模块范围</td>
+<td>下拉选择</td>
+<td>是</td>
+<td>舱单 / 运单</td>
+</tr>
+<tr>
+<td>color</td>
+<td>颜色</td>
+<td>颜色选择器</td>
+<td>是</td>
+<td>10个预设色块 + 自定义取色器</td>
+</tr>
+</tbody></table></div>
+<p><strong>预设颜色</strong>：<code>#00FFFF</code>(青), <code>#FFC0CB</code>(粉), <code>#FFFF00</code>(黄), <code>#FFA500</code>(橙), <code>#D3D3D3</code>(灰), <code>#98FB98</code>(绿), <code>#DDA0DD</code>(紫), <code>#FF6B6B</code>(红), <code>#2DA44E</code>(深蓝), <code>#CD853F</code>(棕)</p>
+<p><strong>交互行为</strong>：</p>
+<ul>
+<li>[查询]：支持按标识名称+模块范围搜索</li>
+<li>[搜索/重置]：查询按钮+重置按钮</li>
+<li>[新增]：弹窗&quot;标识新增&quot;</li>
+<li>[编辑]：弹窗&quot;标识编辑&quot;；若已冻结→&quot;查看标识&quot;只读模式</li>
+<li>[颜色选择]：点击预设色块选中（加粗边框高亮），或使用 <code>el-color-picker</code> 自定义取色</li>
+<li>[冻结/启用]：二次确认弹窗 → Toast 反馈</li>
+</ul>
+<p><strong>关联接口</strong>：</p>
+<ul>
+<li>查询：<code>GET /api/tags</code> (params: tagName, moduleScope, page, pageSize)</li>
+<li>新增：<code>POST /api/tags</code> (body: tagName, color, moduleScope)</li>
+<li>编辑：<code>PUT /api/tags/{id}</code> (body: tagName, color, moduleScope)</li>
+<li>切换状态：<code>PATCH /api/tags/{id}/toggle-status</code></li>
+<li>供下游查询：<code>GET /api/tags/query</code> (params: moduleScope, status) -- 舱单/运单打标调用</li>
+</ul>
+<hr>
+<h2>6. 业务规则</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发点</th>
+<th>条件/公式</th>
+<th>输出</th>
+<th>异常处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R01</td>
+<td>VAT货主新增/编辑</td>
+<td>同客户(user_id)下 VAT号+EORI号联合唯一</td>
+<td>保存成功</td>
+<td>重复时提示&quot;该客户下VAT号+EORI号已存在&quot;</td>
+</tr>
+<tr>
+<td>R02</td>
+<td>VAT货主提交</td>
+<td>注册国家=英国时，必传附件: VAT证书+EORI证书+POA+PVA</td>
+<td>提交成功，audit_status=待审核</td>
+<td>缺少任一必传附件时阻断并提示</td>
+</tr>
+<tr>
+<td>R03</td>
+<td>VAT货主提交</td>
+<td>注册国家=其他欧洲国家(DE/FR等)时，必传附件: VAT证书+EORI证书+POA+营业执照+法人身份证/护照+缴税证明</td>
+<td>提交成功，audit_status=待审核</td>
+<td>缺少任一必传附件时阻断并提示</td>
+</tr>
+<tr>
+<td>R04</td>
+<td>VAT货主端数据隔离</td>
+<td>查询时自动追加 user_id=当前用户</td>
+<td>仅返回自己的VAT资料</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R05</td>
+<td>VAT员工端查询</td>
+<td>不过滤 user_id，返回全部货主数据</td>
+<td>全量数据</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R06</td>
+<td>VAT员工端编辑</td>
+<td>可修改全部字段（基本信息+电商信息+附件+签署日期），保存不改变审核状态</td>
+<td>保存成功</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R07</td>
+<td>VAT员工审核通过</td>
+<td>二次确认弹窗&quot;确认该VAT资料信息无误并审核通过？&quot;</td>
+<td>audit_status=已通过, audited_at=now</td>
+<td>取消时不做任何变更</td>
+</tr>
+<tr>
+<td>R08</td>
+<td>VAT员工审核拒绝</td>
+<td>拒绝原因不能为空 (/\S+/)</td>
+<td>audit_status=已拒绝, reject_reason=输入值</td>
+<td>为空时阻断并提示&quot;拒绝原因不能为空&quot;</td>
+</tr>
+<tr>
+<td>R09</td>
+<td>VAT货主重新提交</td>
+<td>已拒绝状态可编辑 → 保存后 audit_status 重置为待审核</td>
+<td>audit_status=待审核</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R10</td>
+<td>费用类型新增/编辑</td>
+<td>同费用方向(fee_direction)下 fee_name 唯一；不同方向可同名</td>
+<td>保存成功</td>
+<td>重复时提示&quot;该费用方向下费用名称已存在&quot;</td>
+</tr>
+<tr>
+<td>R11</td>
+<td>物流事件新增/编辑</td>
+<td>event_name 全局唯一，跨租户不重复</td>
+<td>保存成功</td>
+<td>重复时提示&quot;物流事件名称已存在&quot;</td>
+</tr>
+<tr>
+<td>R12</td>
+<td>物流事件新增/编辑</td>
+<td>notify_customer=是 时，event_template 和 notify_template 均不可为空</td>
+<td>保存成功</td>
+<td>任一为空时阻断并提示</td>
+</tr>
+<tr>
+<td>R13</td>
+<td>物流事件新增/编辑</td>
+<td>notify_customer=否 时，event_template 不必填</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R14</td>
+<td>物流事件/费用类型/标识/亚马逊事件 状态切换</td>
+<td>二次确认弹窗 <code>ElMessageBox.confirm</code>(type: warning) 确认后执行</td>
+<td>状态取反</td>
+<td>取消时不做任何变更</td>
+</tr>
+<tr>
+<td>R15</td>
+<td>编辑已冻结实体（全部子模块通用）</td>
+<td>status=已冻结 → 弹窗标题变&quot;查看XX&quot;，所有字段只读，确定按钮隐藏</td>
+<td>只读弹窗</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R16</td>
+<td>亚马逊物流事件新增/编辑</td>
+<td>event_code 在 tenant 内全局唯一</td>
+<td>保存成功</td>
+<td>重复时提示&quot;事件代码已存在&quot;</td>
+</tr>
+<tr>
+<td>R17</td>
+<td>占位符复选框点击</td>
+<td>勾选时自动追加 <code>[占位符名]</code> 到对应模板文本框末尾</td>
+<td>模板文本更新</td>
+<td>重复勾选需判断避免重复追加</td>
+</tr>
+<tr>
+<td>R18</td>
+<td>标识颜色选择</td>
+<td>预设10色 或 自定义取色器 HEX色值</td>
+<td>color 字段更新</td>
+<td>—</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>7. 计算公式</h2>
+<blockquote>
+<p>头程管理模块不涉及金额计算，此章节暂无内容。（待二期计费模块接入后补充费用计算公式）</p>
+</blockquote>
+<hr>
+<h2>8. 权限矩阵</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>操作</th>
+<th>运营员工</th>
+<th>货主</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>亚马逊物流事件 -- 查看</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>亚马逊物流事件 -- 新增/编辑/冻结启用</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>物流事件 -- 查看</td>
+<td>是</td>
+<td>否</td>
+</tr>
+<tr>
+<td>物流事件 -- 新增/编辑/冻结启用</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>VAT管理 -- 查看自己的资料</td>
+<td>—</td>
+<td>是</td>
+</tr>
+<tr>
+<td>VAT管理 -- 提交/编辑（仅已拒绝）</td>
+<td>—</td>
+<td>是</td>
+</tr>
+<tr>
+<td>VAT管理 -- 查看全部货主资料</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>VAT管理 -- 修改全部字段</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>VAT管理 -- 审核（通过/拒绝）</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>费用类型 -- 查看/新增/编辑/冻结启用</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+<tr>
+<td>标识管理 -- 查看/新增/编辑/冻结启用</td>
+<td>是（无权限管控）</td>
+<td>否</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>9. 接口清单</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>接口</th>
+<th>方法</th>
+<th>路径</th>
+<th>触发页面</th>
+<th>请求参数</th>
+<th>返回字段</th>
+<th>失败处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>查亚马逊物流事件列表</td>
+<td>GET</td>
+<td>/api/amazon-logistics-events</td>
+<td>亚马逊物流事件_主列表</td>
+<td>eventName, eventCode, status, page, pageSize</td>
+<td>分页列表</td>
+<td>Toast 错误信息</td>
+</tr>
+<tr>
+<td>新增亚马逊物流事件</td>
+<td>POST</td>
+<td>/api/amazon-logistics-events</td>
+<td>弹窗</td>
+<td>eventName, eventCode</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>编辑亚马逊物流事件</td>
+<td>PUT</td>
+<td>/api/amazon-logistics-events/{id}</td>
+<td>弹窗</td>
+<td>eventName, eventCode</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>切换亚马逊事件状态</td>
+<td>PATCH</td>
+<td>/api/amazon-logistics-events/{id}/toggle-status</td>
+<td>列表行</td>
+<td>—</td>
+<td>新状态</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查亚马逊事件（下游）</td>
+<td>GET</td>
+<td>/api/amazon-logistics-events/query</td>
+<td>物流事件/Ship Track</td>
+<td>eventCode, status</td>
+<td>事件列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查物流事件列表</td>
+<td>GET</td>
+<td>/api/logistics-events</td>
+<td>物流事件_主列表</td>
+<td>eventName, amazonEventId, page, pageSize</td>
+<td>分页列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>新增物流事件</td>
+<td>POST</td>
+<td>/api/logistics-events</td>
+<td>弹窗</td>
+<td>全部字段</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>编辑物流事件</td>
+<td>PUT</td>
+<td>/api/logistics-events/{id}</td>
+<td>弹窗</td>
+<td>全部字段</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>切换物流事件状态</td>
+<td>PATCH</td>
+<td>/api/logistics-events/{id}/toggle-status</td>
+<td>列表行</td>
+<td>—</td>
+<td>新状态</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查物流事件（下游）</td>
+<td>GET</td>
+<td>/api/logistics-events/query</td>
+<td>运单/提单路由</td>
+<td>eventName, amazonEventId</td>
+<td>事件模板列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查VAT列表（货主端）</td>
+<td>GET</td>
+<td>/api/vat-registrations</td>
+<td>VAT管理(货主端)</td>
+<td>vatNo, eoriNo, auditStatus, page, pageSize</td>
+<td>分页列表（仅当前用户）</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查VAT列表（员工端）</td>
+<td>GET</td>
+<td>/api/vat-registrations/all</td>
+<td>VAT管理_主列表(员工端)</td>
+<td>customerName, vatNo, eoriNo, auditStatus, page, pageSize</td>
+<td>分页列表（全部货主）</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>新增VAT资料</td>
+<td>POST</td>
+<td>/api/vat-registrations</td>
+<td>VAT资料新增</td>
+<td>完整表单数据</td>
+<td>实体</td>
+<td>Toast + 跳转</td>
+</tr>
+<tr>
+<td>编辑VAT资料</td>
+<td>PUT</td>
+<td>/api/vat-registrations/{id}</td>
+<td>VAT资料新增/编辑/员工编辑</td>
+<td>完整表单数据</td>
+<td>实体</td>
+<td>Toast + 跳转</td>
+</tr>
+<tr>
+<td>审核VAT资料</td>
+<td>PATCH</td>
+<td>/api/vat-registrations/{id}/audit</td>
+<td>VAT资料审核</td>
+<td>action(pass/reject), rejectReason(拒绝时)</td>
+<td>实体</td>
+<td>Toast + 跳转</td>
+</tr>
+<tr>
+<td>上传VAT附件</td>
+<td>POST</td>
+<td>/api/vat-attachments/upload</td>
+<td>VAT资料新增/编辑</td>
+<td>multipart file + attachment_type</td>
+<td>file_url</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查费用类型列表</td>
+<td>GET</td>
+<td>/api/fee-types</td>
+<td>费用类型_主列表</td>
+<td>feeName, feeDirection, page, pageSize</td>
+<td>分页列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>新增费用类型</td>
+<td>POST</td>
+<td>/api/fee-types</td>
+<td>弹窗</td>
+<td>feeName, feeDirection</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>编辑费用类型</td>
+<td>PUT</td>
+<td>/api/fee-types/{id}</td>
+<td>弹窗</td>
+<td>feeName, feeDirection</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>切换费用类型状态</td>
+<td>PATCH</td>
+<td>/api/fee-types/{id}/toggle-status</td>
+<td>列表行</td>
+<td>—</td>
+<td>新状态</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查费用类型（下游）</td>
+<td>GET</td>
+<td>/api/fee-types/query</td>
+<td>运单计费</td>
+<td>feeDirection, status</td>
+<td>费用类型列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查标识列表</td>
+<td>GET</td>
+<td>/api/tags</td>
+<td>标识管理</td>
+<td>tagName, moduleScope, page, pageSize</td>
+<td>分页列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>新增标识</td>
+<td>POST</td>
+<td>/api/tags</td>
+<td>弹窗</td>
+<td>tagName, color, moduleScope</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>编辑标识</td>
+<td>PUT</td>
+<td>/api/tags/{id}</td>
+<td>弹窗</td>
+<td>tagName, color, moduleScope</td>
+<td>实体</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>切换标识状态</td>
+<td>PATCH</td>
+<td>/api/tags/{id}/toggle-status</td>
+<td>列表行</td>
+<td>—</td>
+<td>新状态</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查标识（下游）</td>
+<td>GET</td>
+<td>/api/tags/query</td>
+<td>舱单/运单打标</td>
+<td>moduleScope, status</td>
+<td>标识列表</td>
+<td>Toast</td>
+</tr>
+<tr>
+<td>查VAT（下游）</td>
+<td>GET</td>
+<td>/api/vat-registrations/query</td>
+<td>运单查询</td>
+<td>vatNo, eoriNo, userId</td>
+<td>VAT信息</td>
+<td>Toast</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>10. 错误提示文案汇总</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发条件</th>
+<th>文案</th>
+<th>类型</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E01</td>
+<td>VAT号+EORI号在同客户下重复</td>
+<td>&quot;该客户下VAT号+EORI号已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E02</td>
+<td>VAT英国提交 -- 缺少必传附件(VAT/EORI/POA/PVA)</td>
+<td>&quot;注册国家为英国时，VAT证书、EORI证书、POA授权文件、PVA授权文件为必传项&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E03</td>
+<td>VAT其他欧洲国家提交 -- 缺少必传附件</td>
+<td>&quot;注册国家为{国家}时，VAT证书、EORI证书、POA授权文件、营业执照、法人身份证/护照、缴税证明为必传项&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E04</td>
+<td>VAT货主提交未填必填项</td>
+<td>&quot;请检查必填项及相关资料是否上传完整&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E05</td>
+<td>VAT审核拒绝 -- 拒绝原因为空</td>
+<td>&quot;拒绝原因不能为空&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E06</td>
+<td>VAT审核通过确认</td>
+<td>&quot;确认该VAT资料信息无误并审核通过？&quot;</td>
+<td>提示(二次确认)</td>
+</tr>
+<tr>
+<td>E07</td>
+<td>VAT货主提交成功</td>
+<td>&quot;VAT资料提交成功，请等待平台审核！&quot;</td>
+<td>提示</td>
+</tr>
+<tr>
+<td>E08</td>
+<td>费用类型 -- 同方向费用名称重复</td>
+<td>&quot;该费用方向下费用名称已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E09</td>
+<td>费用类型 -- 费用名称/方向为空</td>
+<td>&quot;请输入费用名称&quot; / &quot;请选择费用方向&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E10</td>
+<td>物流事件 -- 名称重复</td>
+<td>&quot;物流事件名称已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E11</td>
+<td>物流事件 -- event_name 为空</td>
+<td>&quot;请输入物流事件名称&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E12</td>
+<td>物流事件 -- notify_customer 未选</td>
+<td>&quot;请选择是否需要通知客户&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E13</td>
+<td>物流事件 -- notify_customer=是且event_template为空</td>
+<td>&quot;当【是否需要通知客户】为是时，【事件话术模板】必填&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E14</td>
+<td>物流事件 -- notify_customer=是且notify_template为空</td>
+<td>&quot;当【是否需要通知客户】为是时，【通知话术模板】必填&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E15</td>
+<td>亚马逊物流事件 -- 代码重复</td>
+<td>&quot;事件代码已存在&quot;</td>
+<td>阻断</td>
+</tr>
+<tr>
+<td>E16</td>
+<td>冻结/启用操作</td>
+<td>&quot;确定要{冻结/启用}该{实体名}吗？&quot;</td>
+<td>警告(二次确认)</td>
+</tr>
+<tr>
+<td>E17</td>
+<td>标识名称/颜色为空</td>
+<td>&quot;请输入标识名称&quot; / &quot;请选择颜色&quot;</td>
+<td>阻断</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>11. 验收标准</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>验收项</th>
+<th>验收方式</th>
+<th>通过标准</th>
+<th>关联 AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A01</td>
+<td>货主端VAT Tab过滤</td>
+<td>手动</td>
+<td>4个Tab正确过滤对应状态数据</td>
+<td>AC01-VS01</td>
+</tr>
+<tr>
+<td>A02</td>
+<td>货主端VAT新增 -- 国家差异化附件</td>
+<td>手动</td>
+<td>选择英国时仅显示4项必传；选择德国时显示7项必传；非必传项隐藏或灰色标记</td>
+<td>AC01-VS02</td>
+</tr>
+<tr>
+<td>A03</td>
+<td>货主端VAT新增 -- 联合唯一校验</td>
+<td>手动</td>
+<td>同客户下VAT号+EORI号重复时阻断并提示</td>
+<td>AC01-VS03</td>
+</tr>
+<tr>
+<td>A04</td>
+<td>货主端查看模式只读</td>
+<td>手动</td>
+<td>表单disabled，仅显示&quot;返回列表&quot;</td>
+<td>AC01-VS04</td>
+</tr>
+<tr>
+<td>A05</td>
+<td>员工端VAT全量查看</td>
+<td>手动</td>
+<td>列表展示所有货主资料，&quot;用户名称&quot;列和搜索条件正常</td>
+<td>AC02-VE01</td>
+</tr>
+<tr>
+<td>A06</td>
+<td>员工端VAT全字段编辑</td>
+<td>手动</td>
+<td>编辑模式下所有字段可修改，保存不改变审核状态</td>
+<td>AC02-VE02</td>
+</tr>
+<tr>
+<td>A07</td>
+<td>员工端审核拒绝含原因</td>
+<td>手动</td>
+<td>拒绝原因不能为空校验生效 /\S+/</td>
+<td>AC02-VE03</td>
+</tr>
+<tr>
+<td>A08</td>
+<td>员工端审核通过确认</td>
+<td>手动</td>
+<td>二次确认弹窗正确显示和交互</td>
+<td>AC02-VE03</td>
+</tr>
+<tr>
+<td>A09</td>
+<td>费用类型同方向唯一校验</td>
+<td>手动</td>
+<td>相同方向+同名→阻断；不同方向+同名→通过</td>
+<td>AC03-FT02</td>
+</tr>
+<tr>
+<td>A10</td>
+<td>费用类型冻结后只读</td>
+<td>手动</td>
+<td>弹窗标题变为&quot;查看费用类型&quot;，确定按钮隐藏</td>
+<td>AC03-FT03</td>
+</tr>
+<tr>
+<td>A11</td>
+<td>物流事件名称唯一校验</td>
+<td>手动</td>
+<td>重复名称新增时阻断并提示</td>
+<td>AC04-LE02</td>
+</tr>
+<tr>
+<td>A12</td>
+<td>物流事件条件必填</td>
+<td>手动</td>
+<td>notify_customer=是时event_template+notify_template均必填</td>
+<td>AC04-LE02</td>
+</tr>
+<tr>
+<td>A13</td>
+<td>物流事件占位符自动追加</td>
+<td>手动</td>
+<td>勾选占位符复选框时自动追加[占位符名]到模板末尾</td>
+<td>AC04-LE03</td>
+</tr>
+<tr>
+<td>A14</td>
+<td>物流事件冻结后只读</td>
+<td>手动</td>
+<td>同 A10</td>
+<td>AC04-LE04</td>
+</tr>
+<tr>
+<td>A15</td>
+<td>亚马逊物流事件代码唯一校验</td>
+<td>手动</td>
+<td>重复代码新增时阻断</td>
+<td>AC05-AE02</td>
+</tr>
+<tr>
+<td>A16</td>
+<td>亚马逊物流事件状态启停</td>
+<td>手动</td>
+<td>冻结/启用操作二级确认</td>
+<td>AC05-AE02</td>
+</tr>
+<tr>
+<td>A17</td>
+<td>亚马逊事件查询接口</td>
+<td>手动</td>
+<td>GET /api/amazon-logistics-events/query 按code/status返回</td>
+<td>AC05-AE03</td>
+</tr>
+<tr>
+<td>A18</td>
+<td>标识颜色选择器</td>
+<td>手动</td>
+<td>预设10色+自定义取色器均可正常使用</td>
+<td>AC06-TG02</td>
+</tr>
+<tr>
+<td>A19</td>
+<td>标识查询接口</td>
+<td>手动</td>
+<td>GET /api/tags/query 按moduleScope/status返回</td>
+<td>AC06-TG03</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>12. 附录</h2>
+<ul>
+<li>术语表：<ul>
+<li><strong>头程 (First Mile)</strong>：货物从国内本地仓到海外目的港/仓的运输过程</li>
+<li><strong>VAT</strong> (Value Added Tax)：欧盟增值税，清关必需</li>
+<li><strong>EORI</strong> (Economic Operators Registration and Identification)：欧盟经济运营商注册识别号</li>
+<li><strong>FBA</strong> (Fulfilled by Amazon)：亚马逊物流，商家将货物发至亚马逊仓库由亚马逊配送</li>
+<li><strong>POA</strong> (Power of Attorney)：海关授权委托书</li>
+<li><strong>PVA</strong> (Postponed VAT Accounting)：延期增值税核算</li>
+<li><strong>Ship Track</strong>：亚马逊物流轨迹跟踪系统</li>
+<li><strong>舱单 (Manifest)</strong>：海运/空运货物清单（⚠️ 区别于提单 B/L：提单是运输合同凭证，舱单是货物清单）</li>
+<li><strong>提单 (B/L, Bill of Lading)</strong>：海运提单，货物运输合同的凭证</li>
+<li><strong>运单 (Waybill)</strong>：物流运输单据</li>
+</ul>
+</li>
+<li>原型链接：见 0.2 关联链接</li>
+<li>用户需求(RDD)（完整业务流程+字段表）：<code>drafts/头程管理/2026-06-06-用户需求.md</code></li>
+<li>数据设计（完整 Schema+ER 图）：<code>drafts/头程管理/2026-06-06-数据设计.md</code></li>
+</ul>
+<hr>
+<h2>13. 数据融合附录：Demo vs PRD 差异总览</h2>
+<blockquote>
+<p>v2.1 融合日期：2026-06-06 | 覆盖9个Demo页面 | 融合原则：Demo字段名/交互为真相源，Excel业务规则为需求源</p>
+</blockquote>
+<h3>13.1 Demo 页面与 PRD 页面映射</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Demo 页面</th>
+<th>PRD 章节</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VAT管理_主列表.html (员工端)</td>
+<td>5.3 VAT管理_主列表（员工端）</td>
+<td>已对齐，标注1个UX BUG</td>
+</tr>
+<tr>
+<td>VAT资料新增-优化版.html (员工端)</td>
+<td>5.4 VAT资料审核/编辑（员工端）</td>
+<td>已对齐</td>
+</tr>
+<tr>
+<td>VAT管理.html (货主端)</td>
+<td>5.1 VAT管理（货主端）</td>
+<td>已对齐</td>
+</tr>
+<tr>
+<td>VAT资料新增.html (货主端)</td>
+<td>5.2 VAT资料新增（货主端）</td>
+<td>已对齐</td>
+</tr>
+<tr>
+<td>费用类型_主列表.html</td>
+<td>5.5 费用类型_主列表</td>
+<td>已对齐</td>
+</tr>
+<tr>
+<td>物流事件_主列表.html</td>
+<td>5.6 物流事件_主列表</td>
+<td>已对齐（event_template条件已确认：notify=否时不必填）</td>
+</tr>
+<tr>
+<td>亚马逊物流事件_主列表.html</td>
+<td>5.7 亚马逊物流事件_主列表</td>
+<td>Demo缺失status/搜索，PRD已补充</td>
+</tr>
+<tr>
+<td>标识管理.html</td>
+<td>5.8 标识管理</td>
+<td>Demo module_scope值偏差(提单→舱单)，已标注</td>
+</tr>
+<tr>
+<td>异常处理池.html</td>
+<td><strong>无对应</strong></td>
+<td>归入运单管理模块，非头程管理范畴</td>
+</tr>
+</tbody></table></div>
+<h3>13.2 Demo 中需修正的已知问题</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">#</th>
+<th>问题</th>
+<th>位置</th>
+<th>影响</th>
+<th>修正建议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">BUG-1</td>
+<td>Vue模板 <code>formData.amazonLink</code> 与 JS data model <code>shopLink</code> 变量名不一致</td>
+<td>VAT资料新增-优化版.html / VAT资料新增.html</td>
+<td>运行时字段数据无法绑定，输入值丢失</td>
+<td>统一为 <code>amazonLink</code> 或 <code>shopLink</code></td>
+</tr>
+<tr>
+<td align="left">BUG-2</td>
+<td>员工端VAT列表&quot;查看&quot;按钮实际跳转编辑模式 (<code>mode=edit</code>)</td>
+<td>VAT管理_主列表.html (员工端)</td>
+<td>按钮标签误导用户，应拆分为&quot;查看&quot;和&quot;编辑&quot;两个按钮</td>
+<td>待审核→&quot;审核&quot;；已通过/已拒绝→&quot;查看&quot;+&quot;编辑&quot;</td>
+</tr>
+<tr>
+<td align="left">FIX-1</td>
+<td>标识模块范围下拉选项为&quot;运单/提单&quot;</td>
+<td>标识管理.html</td>
+<td>&quot;提单&quot;应为&quot;舱单&quot;(Manifest)，与Excel需求不一致</td>
+<td>改为&quot;舱单/运单&quot;</td>
+</tr>
+<tr>
+<td align="left">FIX-2</td>
+<td>亚马逊物流事件列表缺少状态列和搜索</td>
+<td>亚马逊物流事件_主列表.html</td>
+<td>无法冻结/启停事件，无法按条件搜索</td>
+<td>增加status列、搜索区</td>
+</tr>
+</tbody></table></div>
+<h3>13.3 待确认项（已全部确认，v2.1-final）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">#</th>
+<th>原待确认内容</th>
+<th>涉及实体</th>
+<th>决议</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">Q1</td>
+<td>物流事件 <code>event_template</code> 是否始终必填？</td>
+<td>物流事件</td>
+<td>notify=否时不必填，notify=是时必填</td>
+</tr>
+<tr>
+<td align="left">Q2</td>
+<td>物流事件名称是否全局唯一？</td>
+<td>物流事件</td>
+<td>全局唯一，跨租户不重复</td>
+</tr>
+<tr>
+<td align="left">Q3</td>
+<td>标识模块范围&quot;舱单&quot;vs&quot;提单&quot;</td>
+<td>标识</td>
+<td>采用&quot;舱单/运单&quot;</td>
+</tr>
+</tbody></table></div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RDD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#ca8a04}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#ca8a0415;color:#ca8a04;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #ca8a04;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#ca8a04;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">货主端</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">RDD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>需求定义卡片 (RDD) -- 货主端</h1>
+<blockquote>
+<p><strong>原始需求</strong>：货主（跨境卖家）需要一个自助门户，能在线查价、下单订舱、管理子账号，减少对客服/销售的依赖，提升下单效率。<br><strong>文档版本</strong>: v1.2 | <strong>日期</strong>: 2026-06-06 | <strong>作者</strong>: AI PM（货主端×客商中心数据融合：客户状态准入+冻结联动+ROOT账户自动接收+合同签约门禁）</p>
+</blockquote>
+<hr>
+<h2>1. 核心洞察 (Insight)</h2>
+<h3>真实痛点</h3>
+<p>货主（跨境卖家）当前查价和订舱完全依赖人工沟通：在微信群问销售&quot;ONT8 这周什么价&quot;，销售翻 Excel 回复，货主再口头确认下单。一个询价到成交的闭环耗时 30 分钟到半天不等。货主无法自助获取报价，也无法自助管理企业内部谁有权限操作（子账号）。</p>
+<p>更深层的痛点是：<strong>货主看不到报价的构成</strong>。公布价、附加费、最终报价的计算逻辑对货主是黑盒，导致信任成本高。货主需要知道&quot;这个价格是怎么算出来的&quot;才能放心下单。</p>
+<p>作为企业的管理员，货主还需要管理内部谁可以查价、谁可以下单，而不是所有人都用同一个账号登录。</p>
+<h3>JTBD（待办任务）</h3>
+<blockquote>
+<p>**货主（跨境卖家运营）**雇佣&quot;货主端&quot;不是为了&quot;看一个网页&quot;，而是为了：<strong>当需要发货到 FBA 仓库时，能在 30 秒内获得所有可用渠道的完整报价，直接下单订舱，不用在微信等销售回复。</strong></p>
+</blockquote>
+<blockquote>
+<p><strong>企业管理员</strong>雇佣&quot;子账号管理&quot;不是为了&quot;创建账号&quot;，而是为了：<strong>让团队里不同职能的人（运营/财务/客服）各用各的账号，操作权限可控，离职即冻结。</strong></p>
+</blockquote>
+<h3>业务价值：<strong>HIGH</strong></h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>当前</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单次询价耗时</td>
+<td>30 分钟（微信群 -&gt; 销售翻 Excel -&gt; 回复）</td>
+<td>30 秒（自助输入货物参数 -&gt; 即时返回多渠道报价）</td>
+</tr>
+<tr>
+<td>报价透明度</td>
+<td>黑盒（货主看不到附加费和计算过程）</td>
+<td>透明（公布价 + 附加费 + 最终报价明细展示）</td>
+</tr>
+<tr>
+<td>子账号管理</td>
+<td>无（多人共用一个账号或找客服代操作）</td>
+<td>企业管理员自助创建/冻结/分配角色</td>
+</tr>
+<tr>
+<td>下单转化率</td>
+<td>低（沟通成本高，货主可能流失到竞对）</td>
+<td>高（自助查价 -&gt; 一键订舱，路径短）</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>2. 业务全景图</h2>
+<h3>2.1 角色与工作节奏</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>核心任务</th>
+<th>频率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>货主运营</strong></td>
+<td>在线查价、下单订舱、查看订单状态、管理商品/地址/VAT</td>
+<td>日频（多次）</td>
+</tr>
+<tr>
+<td><strong>货主财务</strong></td>
+<td>查看账单、发票、充值流水</td>
+<td>周频</td>
+</tr>
+<tr>
+<td><strong>企业管理员（货主侧）</strong></td>
+<td>管理子账号、分配角色、企业认证</td>
+<td>低频（建一次，人员变动时维护）</td>
+</tr>
+<tr>
+<td><strong>客服/销售（员工端）</strong></td>
+<td>处理异常订单、确认订舱、对接货主需求</td>
+<td>日频</td>
+</tr>
+</tbody></table></div>
+<h3>2.2 端到端业务链路</h3>
+<pre><code>【登录认证】
+  货主登录 -&gt; token 校验 -&gt; 企业信息加载 -&gt; 首页工作台
+      |
+【查价订舱】（高频核心）
+  输入货物参数 -&gt; 系统匹配渠道/组合/运价行 -&gt; 多渠道路由报价 -&gt; 货主比价 -&gt; 下单订舱
+      |
+【订单跟踪】（本期引用，页面入口已预留）
+  我的订单 -&gt; 查看运单状态 -&gt; 异常订单处理
+      |
+【财务管理】（本期引用，页面入口已预留）
+  账单管理 -&gt; 发票管理 -&gt; 充值流水
+      |
+【企业设置】
+  子账号管理 -&gt; 新增/编辑/冻结/分配角色
+  角色管理（引用系统设置模块）
+</code></pre>
+<h3>2.3 实体依赖关系</h3>
+<pre><code>企业/货主 (聚合根 -- 引用客户管理模块)
+  ├── 1:N 子账号 (sub_account) -- 本期新建
+  │     └── N:N 角色 (引用系统设置模块 -- role)
+  ├── 1:N 商品 (引用基础资料模块 -- product)
+  ├── 1:N 收货地址 (引用基础资料模块 -- shipping_address)
+  ├── 1:N VAT 记录 (引用头程管理模块 -- vat_record)
+  └── 1:N 询价记录 (price_inquiry) -- 本期新建
+        └── 1:N 报价结果行 (price_inquiry_result) -- 本期新建
+</code></pre>
+<h3>2.4 查价订舱核心流程图（泳道图）</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 货主端
+        A1[登录货主端] --&gt; A2[进入查价订舱页]
+        A2 --&gt; A3[输入货物参数]
+        A3 --&gt; A4[点击查询报价]
+    end
+    subgraph 系统自动
+        S1[接收查询参数]
+        S1 --&gt; S2{匹配可用渠道}
+        S2 --&gt;|匹配成功| S3[匹配服务组合]
+        S3 --&gt; S4[匹配运价行: 当前周批次+当前周船期]
+        S4 --&gt; S5[匹配附加费规则]
+        S5 --&gt; S6[叠加运费优惠]
+        S6 --&gt; S7[计算最终报价]
+        S2 --&gt;|无匹配| S8[返回未匹配渠道提示]
+    end
+    subgraph 货主端结果
+        R1[展示多渠道报价结果]
+        R1 --&gt; R2{货主操作}
+        R2 --&gt;|比价后下单| R3[跳转订舱/下单页]
+        R2 --&gt;|询价结果不满意| R4[联系客服]
+    end
+    A4 --&gt; S1
+    S7 --&gt; R1
+    S8 --&gt; R1
+</code></pre>
+<h3>2.5 核心数据流图 -- 查价报价链路</h3>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph 输入参数
+        I1[目的国 + 目的仓点]
+        I2[件数 + 单件重量 + 尺寸]
+        I3[计费方式: KG/CBM]
+        I4[运输方式/包税/交货地/产品类型]
+    end
+    subgraph 匹配引擎
+        M1[渠道初筛: 运输方式+目的国]
+        M1 --&gt; M2[组合匹配: 目的仓点+包税方式+交货地]
+        M2 --&gt; M3[运价行匹配: 周批次+船期+重量段]
+        M3 --&gt; M4[附加费叠加: 产品类型特殊费+优惠]
+    end
+    subgraph 输出结果
+        O1[渠道名称 + 计价单位]
+        O2[公布价: 基础运价]
+        O3[附加费: 特殊货物+其他]
+        O4[最终报价 = 公布价 + 附加费 - 优惠]
+        O5[船期 + 最快提取日期]
+    end
+    I1 --&gt; M1
+    I2 --&gt; M3
+    I3 --&gt; M2
+    I4 --&gt; M1
+    I4 --&gt; M4
+    M4 --&gt; O3
+    M3 --&gt; O2
+    M4 --&gt; O4
+</code></pre>
+<hr>
+<blockquote>
+<p>以下按 <strong>4 条业务流程</strong> 组织，每条流程包含：流程概述 -&gt; 实体字段定义 -&gt; 业务规则 -&gt; 核心场景 -&gt; 相关 AC。</p>
+</blockquote>
+<h3>3. 流程一：登录认证（一次性 / 每次会话）</h3>
+<blockquote>
+<p><strong>触发</strong>：货主访问货主端任何页面 <strong>频率</strong>：每次会话 <strong>前置依赖</strong>：企业已在员工端完成入驻和客户建档</p>
+</blockquote>
+<p><strong>3.1 登录凭证 (LoginCredential)</strong> -- 货主端登录认证信息</p>
+<blockquote>
+<p><strong>As a</strong> 货主 <strong>I want to</strong> 用账号密码登录货主端 <strong>So that</strong> 安全访问企业专属的物流工作台</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用户名/邮箱</td>
+<td>文本</td>
+<td>✅</td>
+<td>支持账号或邮箱登录</td>
+</tr>
+<tr>
+<td>密码</td>
+<td>文本</td>
+<td>✅</td>
+<td>最少6位</td>
+</tr>
+<tr>
+<td>记住密码</td>
+<td>Boolean</td>
+<td>--</td>
+<td>前端 localStorage 存储，非敏感令牌</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R01：登录成功后，后端返回 token，前端存入 <code>localStorage</code>（key: <code>shipper_token</code>）</li>
+<li>R02：<code>index.html</code>（Shell 框架）加载时检查 <code>localStorage.shipper_token</code>，不存在则跳转 <code>login.html</code></li>
+<li>R03：登录成功后存储 <code>shipper_username</code> 到 localStorage，首页和 Shell 框架展示用户名</li>
+<li>R04：退出登录时清除 <code>shipper_token</code> 和 <code>shipper_username</code>，跳回登录页</li>
+<li>R05：登录失败 3 次后锁定账号 15 分钟（本期 MVP 可简化为前端提示）</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC-L1</code> <code>AC-L2</code> <code>AC-L3</code></p>
+<h3>4. 流程二：首页工作台（每次登录后首屏）</h3>
+<blockquote>
+<p><strong>触发</strong>：登录后自动跳转 <strong>频率</strong>：每次登录 <strong>前置依赖</strong>：登录认证通过</p>
+</blockquote>
+<p><strong>4.1 工作台首页 (Dashboard)</strong> -- 货主登录后的导航枢纽</p>
+<blockquote>
+<p><strong>As a</strong> 货主 <strong>I want to</strong> 登录后看到业务概览和快捷入口 <strong>So that</strong> 快速了解待办事项，一键跳转到常用功能</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>区域</th>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>欢迎语</td>
+<td>&quot;欢迎回来，{企业名称}&quot;</td>
+<td>从 localStorage 读取</td>
+</tr>
+<tr>
+<td>指标卡片 ×4</td>
+<td>待发货订单 / 运输中订单 / 待付账单 / 本月发货量(KG)</td>
+<td>数据来自后端统计接口</td>
+</tr>
+<tr>
+<td>快捷入口 ×7</td>
+<td>查价订舱 / 我的订单 / 账单管理 / 商品管理 / 收货地址管理 / 角色管理 / 子账号管理</td>
+<td>点击跳转到对应页面</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R06：指标卡片数据从后端实时查询（非 Mock 硬编码）</li>
+<li>R07：快捷入口点击通过 <code>postMessage</code> 通知 Shell 框架切换 iframe 页面</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC-D1</code> <code>AC-D2</code></p>
+<h3>5. 流程三：查价订舱（日频 -- 核心功能）</h3>
+<blockquote>
+<p><strong>触发</strong>：货主有发货需求时主动查询 <strong>频率</strong>：日频（多次） <strong>前置依赖</strong>：员工端已完成运价配置（渠道/组合/运价行/附加费/优惠），且当前周批次已发布</p>
+</blockquote>
+<p><strong>5.1 货物查询参数 (InquiryParams)</strong> -- 货主输入的货物信息，用于匹配运价</p>
+<blockquote>
+<p><strong>As a</strong> 货主运营 <strong>I want to</strong> 输入货物参数后一键查询所有可用渠道报价 <strong>So that</strong> 快速比价并选择最优渠道下单</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>目的国</td>
+<td>Enum(单选)</td>
+<td>✅</td>
+<td>美国(US)/英国(UK) 等，来自系统可用国家列表</td>
+</tr>
+<tr>
+<td>目的仓点</td>
+<td>Enum(单选，可搜索)</td>
+<td>✅</td>
+<td>FBA 仓点代码如 ONT8/LAX9/LGB8/SBD1</td>
+</tr>
+<tr>
+<td>件数</td>
+<td>Integer</td>
+<td>✅</td>
+<td>&gt;=1，本次发货箱数</td>
+</tr>
+<tr>
+<td>单件重量(kg)</td>
+<td>Decimal(10,1)</td>
+<td>✅</td>
+<td>&gt;=0.1，单箱重量，精度0.1kg</td>
+</tr>
+<tr>
+<td>尺寸-长(cm)</td>
+<td>Integer</td>
+<td>✅</td>
+<td>&gt;=1</td>
+</tr>
+<tr>
+<td>尺寸-宽(cm)</td>
+<td>Integer</td>
+<td>✅</td>
+<td>&gt;=1</td>
+</tr>
+<tr>
+<td>尺寸-高(cm)</td>
+<td>Integer</td>
+<td>✅</td>
+<td>&gt;=1</td>
+</tr>
+<tr>
+<td>计费方式</td>
+<td>Enum(多选)</td>
+<td>✅</td>
+<td>KG/CBM，默认勾选 KG</td>
+</tr>
+<tr>
+<td>运输方式</td>
+<td>Enum(单选)</td>
+<td>--</td>
+<td>海运(sea)/空运(air)，不限时传空</td>
+</tr>
+<tr>
+<td>包税方式</td>
+<td>Enum(单选)</td>
+<td>--</td>
+<td>包税/不包税，不限时传空</td>
+</tr>
+<tr>
+<td>交货地</td>
+<td>Enum(单选)</td>
+<td>✅</td>
+<td>珠三角/汕头/义乌 等</td>
+</tr>
+<tr>
+<td>产品类型</td>
+<td>Enum(单选)</td>
+<td>--</td>
+<td>粉末(powder)/液体(liquid)/带电(battery)，普通货物不选</td>
+</tr>
+</tbody></table></div>
+<p><strong>5.2 报价结果行 (PriceInquiryResult)</strong> -- 系统匹配后返回的单条渠道报价</p>
+<blockquote>
+<p><strong>As a</strong> 系统 <strong>I want to</strong> 根据货物参数自动匹配可用渠道并计算报价 <strong>So that</strong> 货主看到完整的多渠道比价结果</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>渠道名称</td>
+<td>文本</td>
+<td>✅</td>
+<td>如&quot;美森360&quot;、&quot;EX456&quot;</td>
+</tr>
+<tr>
+<td>计价单位</td>
+<td>Enum</td>
+<td>✅</td>
+<td>KG / CBM</td>
+</tr>
+<tr>
+<td>公布价</td>
+<td>Decimal(18,2)</td>
+<td>✅</td>
+<td>基础运价单价，如&quot;10.0 元/KG&quot;</td>
+</tr>
+<tr>
+<td>附加费明细</td>
+<td>JSON数组</td>
+<td>✅</td>
+<td>逐条列出附加费项，含名称+单价+优惠后单价</td>
+</tr>
+<tr>
+<td>最终报价</td>
+<td>Decimal(18,2)</td>
+<td>✅</td>
+<td>公布价 + 附加费 - 优惠，如&quot;11.0 元/KG&quot;</td>
+</tr>
+<tr>
+<td>船期</td>
+<td>文本</td>
+<td>✅</td>
+<td>截关日-&gt;开船日 + 航程天数，如&quot;1/28-&gt;2/8 航程11天&quot;</td>
+</tr>
+<tr>
+<td>最快提取</td>
+<td>文本</td>
+<td>✅</td>
+<td>预计最快提取日期，如&quot;2/10&quot;</td>
+</tr>
+<tr>
+<td>渠道编码</td>
+<td>文本</td>
+<td>✅</td>
+<td>内部渠道唯一标识，用于下单时关联</td>
+</tr>
+<tr>
+<td>运价批次号</td>
+<td>文本</td>
+<td>✅</td>
+<td>当前报价引用的周批次，用于追溯</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R08：查询时系统根据目的国+运输方式初筛可用渠道</li>
+<li>R09：渠道匹配后，按目的仓点+包税方式+交货地进一步匹配服务组合</li>
+<li>R10：匹配运价行时，取当前生效的周批次（status=CURRENT）下的运价行</li>
+<li>R11：计费重量 = MAX(实际重量, 体积重)。体积重 = 长×宽×高 / 6000（cm³/kg）。当用户勾选 CBM 时，按材积计费</li>
+<li>R12：附加费匹配：如果货主选择了产品类型（粉末/液体/带电），叠加对应的特殊货物附加费，并应用附加费优惠</li>
+<li>R13：最终报价 = 公布价单价 + SUM(附加费单价) - SUM(适用的运费优惠)</li>
+<li>R14：匹配不到的渠道在结果区顶部以 Alert 提示，列出未匹配渠道名称，建议联系客服</li>
+<li>R15：报价结果标注&quot;本报价为预估参考，实际结算以运单为准&quot;</li>
+<li>R16：报价有效期为当前周批次生效期间（本周）</li>
+</ul>
+<p><strong>5.3 询价记录 (PriceInquiryLog)</strong> -- 记录每次货主询价的参数和结果（二期）</p>
+<blockquote>
+<p><strong>As a</strong> 运营主管 <strong>I want to</strong> 查看货主询价历史 <strong>So that</strong> 分析热门渠道/目的仓的询价趋势</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>询价时间</td>
+<td>DateTime</td>
+<td>✅</td>
+<td>查询时间</td>
+</tr>
+<tr>
+<td>货主ID</td>
+<td>String</td>
+<td>✅</td>
+<td>关联企业/货主</td>
+</tr>
+<tr>
+<td>查询参数</td>
+<td>JSON</td>
+<td>✅</td>
+<td>快照所有输入参数</td>
+</tr>
+<tr>
+<td>返回结果数</td>
+<td>Integer</td>
+<td>✅</td>
+<td>匹配到的渠道数量</td>
+</tr>
+<tr>
+<td>未匹配渠道</td>
+<td>JSON</td>
+<td>--</td>
+<td>记录未匹配的渠道列表</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p><strong>标记</strong>：二期功能，本期 MVP 仅展示即时报价，不记录历史。</p>
+</blockquote>
+<p><strong>核心场景</strong>：</p>
+<pre><code>场景：正常查价
+  1. 货主输入货物参数 -&gt; 点击&quot;查询报价&quot; -&gt; 系统返回3条渠道报价
+  2. 货主对比 公布价/附加费/最终报价/船期 -&gt; 选择最优渠道 -&gt; 点击下单（跳转订舱页）
+
+场景：部分渠道不匹配
+  1. 货主查询 ONT8 仓点 -&gt; 系统匹配到美森360/美森432/EX456
+  2. 快船600、奥克兰744 无 ONT8 报价 -&gt; Alert 提示未匹配渠道
+  3. 货主可选择现有的3条，或联系客服咨询未匹配渠道
+
+场景：查询参数不完整
+  1. 货主未填必填字段 -&gt; 前端校验阻止查询 -&gt; 标红未填字段
+</code></pre>
+<p><strong>相关 AC</strong>：<code>AC-P1</code> <code>AC-P2</code> <code>AC-P3</code> <code>AC-P4</code> <code>AC-P5</code></p>
+<h3>6. 流程四：子账号管理（低频 -- 企业管理员）</h3>
+<blockquote>
+<p><strong>触发</strong>：企业需要新增/调整/冻结员工账号 <strong>频率</strong>：人员变动时 <strong>前置依赖</strong>：企业已在员工端完成入驻，角色已在系统设置模块定义</p>
+</blockquote>
+<p><strong>6.1 子账号列表 (SubAccountList)</strong> -- 企业内部的员工登录账号管理</p>
+<blockquote>
+<p><strong>As a</strong> 企业管理员 <strong>I want to</strong> 创建和管理子账号 <strong>So that</strong> 团队成员各用各的账号，权限可控，离职即冻结</p>
+</blockquote>
+<p><strong>查询条件</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>account</td>
+<td>文本输入</td>
+<td>账号（模糊搜索）</td>
+</tr>
+<tr>
+<td>email</td>
+<td>文本输入</td>
+<td>邮箱（模糊搜索）</td>
+</tr>
+<tr>
+<td>name</td>
+<td>文本输入</td>
+<td>姓名（模糊搜索）</td>
+</tr>
+<tr>
+<td>phone</td>
+<td>文本输入</td>
+<td>手机号（模糊搜索）</td>
+</tr>
+</tbody></table></div>
+<p><strong>按钮</strong>：搜索、重置、新增子账号</p>
+<p><strong>主列表字段（7列）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>账号</td>
+<td>登录用户名</td>
+</tr>
+<tr>
+<td>2</td>
+<td>姓名</td>
+<td>姓+名拼接</td>
+</tr>
+<tr>
+<td>3</td>
+<td>性别</td>
+<td>男 / 女</td>
+</tr>
+<tr>
+<td>4</td>
+<td>手机号</td>
+<td>—</td>
+</tr>
+<tr>
+<td>5</td>
+<td>邮箱</td>
+<td>超长省略+tooltip</td>
+</tr>
+<tr>
+<td>6</td>
+<td>状态</td>
+<td>正常 / 已冻结</td>
+</tr>
+<tr>
+<td>7</td>
+<td>操作</td>
+<td>编辑 / 分配资源 / 冻结或启用</td>
+</tr>
+</tbody></table></div>
+<p><strong>6.2 新增/编辑子账号弹窗</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>账号</td>
+<td>文本</td>
+<td>✅</td>
+<td>唯一，登录用户名（同企业内不重复）</td>
+</tr>
+<tr>
+<td>姓</td>
+<td>文本</td>
+<td>✅</td>
+<td>姓氏</td>
+</tr>
+<tr>
+<td>名</td>
+<td>文本</td>
+<td>✅</td>
+<td>名字</td>
+</tr>
+<tr>
+<td>性别</td>
+<td>Enum(单选)</td>
+<td>✅</td>
+<td>男 / 女</td>
+</tr>
+<tr>
+<td>手机号</td>
+<td>文本</td>
+<td>✅</td>
+<td>手机号码（仅限数字）</td>
+</tr>
+<tr>
+<td>邮箱</td>
+<td>文本</td>
+<td>—</td>
+<td>电子邮箱（非必填）</td>
+</tr>
+</tbody></table></div>
+<p><strong>6.3 分配资源弹窗</strong>：</p>
+<ul>
+<li>展示当前账号信息（账号+姓名，只读）</li>
+<li>角色多选下拉（可选范围：ROOT角色 + 所有启用状态的角色）</li>
+<li>提示文字：&quot;子账号的系统权限将由所选角色的权限组合决定&quot;</li>
+</ul>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R17：子账号搜索支持：账号、邮箱、姓名、手机号模糊搜索</li>
+<li>R18：新增子账号时，账号唯一性校验（同企业内不重复）</li>
+<li>R19：新增子账号时，账号+姓+名+性别+手机号为必填，邮箱非必填</li>
+<li>R20：冻结子账号需二次确认弹窗（<code>ElMessageBox.confirm</code>，type: warning）</li>
+<li>R21：冻结后子账号无法登录，状态标签变红显示&quot;已冻结&quot;</li>
+<li>R22：启用冻结账号同样需二次确认</li>
+<li>R23：分配资源弹窗展示当前选中账号信息（账号+姓名），角色多选</li>
+<li>R24：子账号权限 = 所分配角色的权限并集</li>
+<li>R25：角色列表来自系统设置模块的角色管理（<code>role</code> 实体），货主端只做引用和分配</li>
+<li>R26：企业管理员不能冻结自己</li>
+<li>R27：列表中不展示ROOT账号（ROOT账号由系统在客户入驻时自动创建，不可删除/冻结）</li>
+<li>R28：角色可选范围 = ROOT角色 + 所有启用状态的角色</li>
+<li>R29：子账号登录支持账号或邮箱两种方式</li>
+<li>R30：企业管理员可为子账号修改密码</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC-S1</code> <code>AC-S2</code> <code>AC-S3</code> <code>AC-S4</code> <code>AC-S5</code> <code>AC-S6</code></p>
+<h3>7. 流程五：角色管理 — 货主端（低频 — 企业管理员）</h3>
+<blockquote>
+<p><strong>触发</strong>：企业需要定义内部角色的权限范围 <strong>频率</strong>：人员变动时（建立一次，很少改动）<strong>前置依赖</strong>：企业已完成入驻，ROOT角色已自动生成</p>
+</blockquote>
+<p><strong>7.1 角色列表 (ShipperRoleList)</strong> -- 货主端企业管理员定义的角色</p>
+<blockquote>
+<p><strong>As a</strong> 企业管理员 <strong>I want to</strong> 管理企业内部角色 <strong>So that</strong> 为不同职能的子账号分配差异化权限</p>
+</blockquote>
+<p><strong>查询条件</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>roleName</td>
+<td>文本输入</td>
+<td>角色名称（模糊搜索）</td>
+</tr>
+<tr>
+<td>roleType</td>
+<td>多选</td>
+<td>角色类型</td>
+</tr>
+</tbody></table></div>
+<p><strong>按钮</strong>：搜索、重置、新增角色</p>
+<p><strong>主列表字段（5列）</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>列</th>
+<th>字段</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>角色名称</td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td>角色代码</td>
+<td>唯一标识</td>
+</tr>
+<tr>
+<td>3</td>
+<td>状态</td>
+<td>正常 / 已冻结</td>
+</tr>
+<tr>
+<td>4</td>
+<td>备注</td>
+<td>超长省略+tooltip</td>
+</tr>
+<tr>
+<td>5</td>
+<td>操作</td>
+<td>编辑 / 分配资源 / 冻结或启用</td>
+</tr>
+</tbody></table></div>
+<p><strong>7.2 新增/编辑角色弹窗</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>roleCode</td>
+<td>文本</td>
+<td>✅</td>
+<td>角色代码，唯一</td>
+</tr>
+<tr>
+<td>roleName</td>
+<td>文本</td>
+<td>✅</td>
+<td>角色名称</td>
+</tr>
+</tbody></table></div>
+<p><strong>7.3 分配资源弹窗</strong>：</p>
+<ul>
+<li>展示当前角色信息（角色名称+角色代码，只读）</li>
+<li>资源权限树（内容同员工端分配资源，包含菜单/页面/按钮级别权限）</li>
+<li>货主端角色资源范围由ROOT账号角色决定——ROOT角色拥有全部资源，新建角色资源范围不可超出ROOT权限</li>
+</ul>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R31：每家客户入驻时，系统自动生成ROOT账户（账号=admin）和ROOT角色（角色代码=ROOT）</li>
+<li>R32：ROOT角色拥有货主端全部资源权限，不可删除、不可冻结</li>
+<li>R33：新建角色的资源范围不可超出ROOT角色拥有的资源</li>
+<li>R34：角色代码全局唯一（同企业内）</li>
+<li>R35：冻结角色需二次确认，被冻结角色不影响已分配的子账号权限</li>
+<li>R36：分配资源弹窗内容同员工端分配资源（菜单/页面/按钮三级权限树）</li>
+<li>R37：角色列表不展示ROOT角色（ROOT角色为系统内置，不可管理）</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC-R1</code> <code>AC-R2</code> <code>AC-R3</code> <code>AC-R4</code></p>
+<h3>8. 共享实体引用（本期不重复定义）</h3>
+<blockquote>
+<p>以下实体已在其他模块中完整定义。货主端复用同一套实体和后端接口，仅在前端提供操作入口。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>实体</th>
+<th>所属模块</th>
+<th>货主端页面</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>商品 (product)</td>
+<td>基础资料</td>
+<td>商品管理</td>
+<td>货主维护自有商品库</td>
+</tr>
+<tr>
+<td>收货地址 (shipping_address)</td>
+<td>基础资料</td>
+<td>收货地址管理</td>
+<td>货主维护发货/退货地址</td>
+</tr>
+<tr>
+<td>VAT 记录 (vat_record)</td>
+<td>头程管理</td>
+<td>VAT管理</td>
+<td>货主自助管理 VAT 税号</td>
+</tr>
+<tr>
+<td>角色 (role)</td>
+<td>系统设置</td>
+<td>角色管理</td>
+<td>货主管理员定义子账号角色权限</td>
+</tr>
+<tr>
+<td>企业/客户 (customer)</td>
+<td>客商中心</td>
+<td>--</td>
+<td>货主所属企业的基本信息</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h3>8. 验收标准总览 (AC)</h3>
+<p><strong>流程一：登录认证</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC-L1-登录成功</strong>：输入正确账号密码 -&gt; 点击登录 -&gt; 后端验证通过 -&gt; 返回 token -&gt; 前端存 localStorage -&gt; 跳转 index.html -&gt; 首页展示用户名</li>
+<li><input disabled="" type="checkbox"> <strong>AC-L2-登录失败</strong>：输入错误账号密码 -&gt; 前端提示&quot;账号或密码错误&quot; -&gt; 不跳转</li>
+<li><input disabled="" type="checkbox"> <strong>AC-L3-Token校验</strong>：直接访问 index.html -&gt; 检查 localStorage.shipper_token -&gt; 无 token -&gt; 自动跳转 login.html</li>
+<li><input disabled="" type="checkbox"> <strong>AC-L4-退出登录</strong>：点击退出登录 -&gt; 清除 token 和 username -&gt; 跳回 login.html</li>
+<li><input disabled="" type="checkbox"> <strong>AC-L5-表单校验</strong>：用户名为空或长度&lt;3 -&gt; 失去焦点时提示；密码为空或长度&lt;6 -&gt; 失去焦点时提示</li>
+</ul>
+<p><strong>流程二：首页工作台</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC-D1-指标卡片</strong>：首页展示 4 张指标卡片（待发货订单/运输中订单/待付账单/本月发货量） -&gt; 数据来自后端统计接口</li>
+<li><input disabled="" type="checkbox"> <strong>AC-D2-快捷入口</strong>：7 个快捷入口卡片可点击 -&gt; 跳转到对应页面（查价订舱/我的订单/账单管理/商品管理/收货地址管理/角色管理/子账号管理）</li>
+</ul>
+<p><strong>流程三：查价订舱</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC-P1-正常查价</strong>：输入完整货物参数 -&gt; 点击查询报价 -&gt; 返回 N 条渠道报价结果 -&gt; 展示渠道/计价/公布价/附加费/最终报价/船期/最快提取</li>
+<li><input disabled="" type="checkbox"> <strong>AC-P2-必填校验</strong>：目的国/目的仓点/件数/单件重量/尺寸/交货地任一为空 -&gt; 前端阻止查询 -&gt; 标红未填字段</li>
+<li><input disabled="" type="checkbox"> <strong>AC-P3-部分渠道未匹配</strong>：查询 ONT8 仓点 -&gt; 某些渠道无此仓点报价 -&gt; Alert 提示&quot;以下渠道暂无 {仓点} 的报价记录：{渠道名}。如需询价请联系客服&quot;</li>
+<li><input disabled="" type="checkbox"> <strong>AC-P4-附加费透明展示</strong>：选择粉末产品类型 -&gt; 报价结果中附加费列展示&quot;粉末+1.5/KG(优惠后1.0)&quot; -&gt; 货主看到附加费明细和优惠后金额</li>
+<li><input disabled="" type="checkbox"> <strong>AC-P5-报价免责声明</strong>：报价结果区底部有文字：&quot;*本报价为预估参考，不含成本底价和盈亏标识。实际结算以运单为准&quot;</li>
+</ul>
+<p><strong>流程四：子账号管理</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC-S1-新增子账号</strong>：点击新增 -&gt; 弹窗填写账号/姓/名/性别/手机号/邮箱(非必填) -&gt; 点击确定 -&gt; 列表新增一行 -&gt; 状态为&quot;正常&quot;</li>
+<li><input disabled="" type="checkbox"> <strong>AC-S2-搜索子账号</strong>：输入账号/邮箱/姓名/手机号任一条件 -&gt; 点击搜索 -&gt; 列表过滤匹配项</li>
+<li><input disabled="" type="checkbox"> <strong>AC-S3-冻结子账号</strong>：点击正常账号的冻结按钮 -&gt; 弹窗二次确认 -&gt; 确认后状态变为&quot;已冻结&quot; -&gt; 标签变红</li>
+<li><input disabled="" type="checkbox"> <strong>AC-S4-分配资源</strong>：点击分配资源 -&gt; 弹窗展示账号信息 + 角色多选(ROOT角色+所有启用角色) -&gt; 选择角色 -&gt; 确定 -&gt; 提示成功</li>
+<li><input disabled="" type="checkbox"> <strong>AC-S5-编辑子账号</strong>：点击编辑 -&gt; 弹窗回填当前信息 -&gt; 修改字段 -&gt; 确定 -&gt; 列表更新</li>
+<li><input disabled="" type="checkbox"> <strong>AC-S6-ROOT账号保护</strong>：列表中不展示ROOT账号，ROOT账号不可被冻结/删除</li>
+</ul>
+<p><strong>流程五：角色管理-货主端</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC-R1-新增角色</strong>：点击新增 -&gt; 弹窗填写角色代码+角色名称 -&gt; 确定 -&gt; 列表新增</li>
+<li><input disabled="" type="checkbox"> <strong>AC-R2-角色列表</strong>：支持角色名称/角色类型搜索，列表展示角色名称/角色代码/状态/备注/操作</li>
+<li><input disabled="" type="checkbox"> <strong>AC-R3-分配资源</strong>：点击分配资源 -&gt; 弹窗展示角色信息+资源权限树(同员工端) -&gt; 选择资源 -&gt; 确定</li>
+<li><input disabled="" type="checkbox"> <strong>AC-R4-角色冻结</strong>：冻结角色需二次确认，ROOT角色不可冻结</li>
+</ul>
+<hr>
+<h3>9. NFR（非功能性需求）</h3>
+<ul>
+<li><strong>性能</strong>：查价接口响应时间 &lt; 2 秒（含多渠道匹配+报价计算）</li>
+<li><strong>并发</strong>：支持 50 个货主同时查价</li>
+<li><strong>数据保留</strong>：询价记录（二期）保留 90 天，子账号记录长期保留</li>
+<li><strong>精度</strong>：金额精度 Decimal(18,2)，重量精度 Decimal(10,1)，尺寸整数 cm</li>
+<li><strong>安全</strong>：登录 token 有效期 24 小时，超时自动退出；子账号权限隔离（只能看自己企业的数据）</li>
+</ul>
+<h3>10. 功能清单</h3>
+<blockquote>
+<p>基于 5 条业务流程，共 <strong>5 个页面、21 项功能</strong>。P0 = MVP，P1 = 二期。</p>
+</blockquote>
+<p><strong>页面 A：登录页</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A1</td>
+<td>账号密码登录</td>
+<td>P0</td>
+<td>AC-L1, AC-L2, AC-L5</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Token 校验 + 自动跳转</td>
+<td>P0</td>
+<td>AC-L3</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>记住密码</td>
+<td>P0</td>
+<td>--</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>退出登录</td>
+<td>P0</td>
+<td>AC-L4</td>
+</tr>
+</tbody></table></div>
+<p><strong>页面 B：首页工作台</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>B1</td>
+<td>业务指标卡片（4个）</td>
+<td>P0</td>
+<td>AC-D1</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>快捷入口网格（7个）</td>
+<td>P0</td>
+<td>AC-D2</td>
+</tr>
+</tbody></table></div>
+<p><strong>页面 C：查价订舱</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>C1</td>
+<td>货物参数输入表单</td>
+<td>P0</td>
+<td>AC-P2</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>多渠道报价结果展示</td>
+<td>P0</td>
+<td>AC-P1, AC-P4</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>未匹配渠道提示</td>
+<td>P0</td>
+<td>AC-P3</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>报价免责声明</td>
+<td>P0</td>
+<td>AC-P5</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>询价历史记录</td>
+<td>P1</td>
+<td>--</td>
+</tr>
+</tbody></table></div>
+<p><strong>页面 D：子账号管理</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D1</td>
+<td>子账号列表 + 搜索（4条件+7列）</td>
+<td>P0</td>
+<td>AC-S2</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>新增子账号（邮箱非必填+数字手机号）</td>
+<td>P0</td>
+<td>AC-S1, AC-S5</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>冻结/启用子账号</td>
+<td>P0</td>
+<td>AC-S3</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>分配角色资源（ROOT+启用角色范围）</td>
+<td>P0</td>
+<td>AC-S4</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>ROOT账号保护（列表不展示+不可操作）</td>
+<td>P0</td>
+<td>AC-S6</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>修改子账号密码</td>
+<td>P0</td>
+<td>--</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>子账号支持账号/邮箱登录</td>
+<td>P0</td>
+<td>--</td>
+</tr>
+</tbody></table></div>
+<p><strong>页面 E：角色管理-货主端</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>E1</td>
+<td>角色列表 + 搜索（角色名称/角色类型）</td>
+<td>P0</td>
+<td>AC-R2</td>
+</tr>
+<tr>
+<td>E2</td>
+<td>新增角色（角色代码+角色名称）</td>
+<td>P0</td>
+<td>AC-R1</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>编辑角色</td>
+<td>P0</td>
+<td>--</td>
+</tr>
+<tr>
+<td>E4</td>
+<td>分配资源（资源权限树，同员工端）</td>
+<td>P0</td>
+<td>AC-R3</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>冻结/启用角色（ROOT不可冻结）</td>
+<td>P0</td>
+<td>AC-R4</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>ROOT角色自动生成+保护</td>
+<td>P0</td>
+<td>--</td>
+</tr>
+</tbody></table></div>
+<p><strong>分期汇总</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>分期</th>
+<th>页面范围</th>
+<th>功能数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Phase 1 (MVP)</strong></td>
+<td>登录 / 首页 / 查价订舱 / 子账号管理 / 角色管理-货主端</td>
+<td><strong>21</strong></td>
+</tr>
+<tr>
+<td><strong>Phase 2</strong></td>
+<td>询价历史记录</td>
+<td>+1</td>
+</tr>
+</tbody></table></div>
+<h3>11. MVP 方案与建议</h3>
+<p><strong>MVP 方案（Phase 1 -- 货主自助查价 + 子账号管理）</strong></p>
+<pre><code>货主端
+├── 登录认证
+│   ├── 账号密码登录
+│   ├── Token 校验与自动跳转
+│   └── 退出登录
+├── 首页工作台
+│   ├── 4指标卡片
+│   └── 7快捷入口（含本期新页面 + 复用页面）
+├── 查价订舱 ★ 核心
+│   ├── 货物参数表单（11个字段）
+│   ├── 多渠道报价结果（7列）
+│   └── 未匹配渠道提示
+└── 企业设置
+    ├── 子账号管理（列表7列/新增邮箱非必填/编辑/冻结/分配角色(ROOT+启用角色范围)/修改密码/列表不展示ROOT账号）
+    └── 角色管理-货主端（列表5列/新增角色代码+名称/编辑/分配资源树/冻结(ROOT保护)/ROOT角色自动生成）
+</code></pre>
+<p><strong>MVP 明确不做</strong>：</p>
+<ul>
+<li>询价历史记录（二期，需要日志存储 + 趋势分析）</li>
+<li>订舱下单完整流程（本期仅查价，下单链路依赖运单模块）</li>
+<li>忘记密码自助找回（MVP 可通过客服重置）</li>
+<li>企业自助注册（MVP 通过员工端邀请入驻）</li>
+<li>商品管理/收货地址管理/VAT管理（已有 Demo 页面，复用其他模块实体，不在此重复生成文档）</li>
+</ul>
+<p><strong>专家建议</strong>：</p>
+<ol>
+<li><p><strong>查价页是货主端&quot;首页之后的第一个按钮&quot;</strong>：建议在首页工作台将查价订舱卡片放在第一个位置（左上角），并用强调色突出，降低核心路径的点击成本。Demo 中已按此设计。</p>
+</li>
+<li><p><strong>报价有效期明确标注</strong>：货主需要知道&quot;这个报价能用多久&quot;。Demo 中已标注&quot;报价有效期为本周&quot;，正式上线后建议关联周批次生效时间，如&quot;本报价有效期至 2026-06-13（周日）&quot;。</p>
+</li>
+<li><p><strong>附加费透明化是信任基石</strong>：Demo 中附加费展示了&quot;粉末+1.5/KG(优惠后1.0)&quot;的格式，既展示了原始价格也展示了优惠后价格，货主能感受到&quot;公开透明&quot;。建议后端计算时保留原始附加费和优惠后金额两个字段。</p>
+</li>
+<li><p><strong>子账号角色粒度建议先粗后细</strong>：MVP 提供&quot;财务角色/业务角色/客服角色&quot;三个预置角色即可，后续根据货主反馈再细化权限粒度。角色定义在系统设置模块完成，货主端只做分配。</p>
+</li>
+</ol>
+<h3>下一步</h3>
+<p>当前阶段：Phase 1（需求洞察）已完成 + Phase 1.5（数据融合）已完成。下一步进入 Phase 2（方案架构），生成融合后的数据设计文档。</p>
+<hr>
+<h2>12. 数据融合：货主端 × 客商中心</h2>
+<blockquote>
+<p><strong>融合原则</strong>：客商中心是客户主数据的唯一真相源（System of Record），货主端作为客户自助操作端，通过 <code>customer_id</code> 关联客户主数据，不冗余存储客户字段。所有客户生命周期事件由客商中心驱动，货主端被动同步。</p>
+</blockquote>
+<h3>12.1 融合角色定位</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>模块</th>
+<th>角色</th>
+<th>数据职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>客商中心</strong></td>
+<td>System of Record</td>
+<td>客户主数据唯一源：创建/冻结/启用/签约状态/等级变更均在此发起</td>
+</tr>
+<tr>
+<td><strong>货主端</strong></td>
+<td>Consumer</td>
+<td>接收客户主数据变更，提供自助服务入口；子账号/角色管理在本模块</td>
+</tr>
+</tbody></table></div>
+<h3>12.2 关键融合链路</h3>
+<p><strong>链路F1 — 客户入驻→ROOT账户自动接收</strong>：</p>
+<pre><code>客商中心: 入驻审核通过 → 创建 customer 记录
+  → 调用货主端 POST /api/shipper/sub-account/create-root
+  → 货主端:
+    1. 创建 ROOT 子账号 (is_root=true, account=&#39;admin&#39;)
+    2. 创建 ROOT 角色 (role_code=&#39;ROOT&#39;, 拥有全部权限)
+    3. 发送邮件通知客户（含账号+密码+登录地址）
+  → 客户可使用 ROOT 账户登录货主端
+</code></pre>
+<p><strong>链路F2 — 客户冻结→货主端登录阻断</strong>：</p>
+<pre><code>客商中心: 冻结客户 (service_status: 正常→已冻结)
+  → 调用货主端 POST /api/shipper/sub-account/batch-freeze
+  → 货主端: 该客户下所有 sub_account.status → 已冻结
+  → 货主端登录时实时校验:
+    - GET /api/customer/{id}/status → service_status=已冻结 → 拒绝登录
+    - sub_account.status=已冻结 → 拒绝登录
+  → 双重校验确保安全
+</code></pre>
+<p><strong>链路F3 — 客户启用→货主端恢复访问</strong>：</p>
+<pre><code>客商中心: 启用客户 → 调用 batch-enable → 子账号恢复 → 可正常登录
+</code></pre>
+<p><strong>链路F4 — 合同签约状态→下单准入</strong>：</p>
+<pre><code>货主端查价订舱/下单时校验:
+  - GET /api/customer/{id}/status → sign_status
+  - sign_status = 未签署 → 可登录+查价，但下单时提示&quot;请先完成合同签约&quot;
+  - sign_status = 已签署 → 全功能可用
+  - sign_status = 已过期 → 可查价，下单时提示&quot;合同已过期，请联系销售续约&quot;
+</code></pre>
+<p><strong>链路F5 — 转客户→ROOT账户接收</strong>：</p>
+<pre><code>客商中心: 供应商转客户 → 创建 customer 记录
+  → 调用 create-root → 货主端创建 ROOT 账户
+  → 邮件通知（含账号密码）
+</code></pre>
+<h3>12.3 融合业务规则</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>触发点</th>
+<th>条件/公式</th>
+<th>输出</th>
+<th>异常处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>R-F01</td>
+<td>货主端登录</td>
+<td>校验 customer.service_status</td>
+<td>service_status=已冻结→拒绝登录，提示&quot;您的企业账户已被冻结，请联系客服&quot;</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F02</td>
+<td>货主端登录</td>
+<td>校验 customer.sign_status</td>
+<td>均可登录（查价不限制）</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F03</td>
+<td>货主端下单</td>
+<td>校验 customer.sign_status</td>
+<td>sign_status=未签署→提示&quot;请先完成合同签约&quot;；sign_status=已过期→提示&quot;合同已过期，请联系销售续约&quot;</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F04</td>
+<td>接收客商中心冻结指令</td>
+<td>batch-freeze 接口调用</td>
+<td>该 customer 下所有 sub_account.status→已冻结</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F05</td>
+<td>接收客商中心启用指令</td>
+<td>batch-enable 接口调用</td>
+<td>该 customer 下所有 sub_account.status→正常</td>
+<td>—</td>
+</tr>
+<tr>
+<td>R-F06</td>
+<td>接收ROOT账户创建指令</td>
+<td>create-root 接口调用</td>
+<td>创建子账号+ROOT角色+邮件通知</td>
+<td>customer_id 已存在→幂等返回已有记录</td>
+</tr>
+<tr>
+<td>R-F07</td>
+<td>ROOT角色资源范围</td>
+<td>ROOT角色拥有货主端全部资源权限</td>
+<td>新建角色的资源范围不可超出ROOT</td>
+<td>分配资源弹窗中超出部分置灰</td>
+</tr>
+<tr>
+<td>R-F08</td>
+<td>企业管理员不可冻结ROOT</td>
+<td>is_root=true + 当前登录用户</td>
+<td>前端隐藏冻结按钮 + 后端接口校验</td>
+<td>返回错误 &quot;ROOT账号不可冻结&quot;</td>
+</tr>
+</tbody></table></div>
+<h3>12.4 跨模块接口依赖（货主端视角）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>方向</th>
+<th>接口</th>
+<th>提供方</th>
+<th>触发时机</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IF1</td>
+<td>接收</td>
+<td><code>POST /api/shipper/sub-account/create-root</code></td>
+<td>客商中心</td>
+<td>入驻审核通过/手工创建+生成账户/转客户</td>
+<td>创建ROOT子账号+ROOT角色+邮件通知</td>
+</tr>
+<tr>
+<td>IF2</td>
+<td>接收</td>
+<td><code>POST /api/shipper/sub-account/batch-freeze</code></td>
+<td>客商中心</td>
+<td>客户冻结</td>
+<td>按customer_id批量冻结子账号</td>
+</tr>
+<tr>
+<td>IF3</td>
+<td>接收</td>
+<td><code>POST /api/shipper/sub-account/batch-enable</code></td>
+<td>客商中心</td>
+<td>客户启用</td>
+<td>按customer_id批量启用子账号</td>
+</tr>
+<tr>
+<td>IF4</td>
+<td>调用</td>
+<td><code>GET /api/customer/{id}/status</code></td>
+<td>客商中心</td>
+<td>货主端登录/下单</td>
+<td>实时查询customer.service_status+sign_status</td>
+</tr>
+<tr>
+<td>IF5</td>
+<td>调用</td>
+<td><code>GET /api/customer/{id}/profile</code></td>
+<td>客商中心</td>
+<td>货主端首页加载</td>
+<td>获取企业名称用于欢迎语</td>
+</tr>
+</tbody></table></div>
+<h3>12.5 不一致处理标注</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>不一致点</th>
+<th>客商中心</th>
+<th>货主端</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>D1</td>
+<td>联系人邮箱必填</td>
+<td>客户联系人.email 为必填</td>
+<td>子账号.email 为非必填</td>
+<td><strong>待确认</strong>：ROOT账户的邮箱来自客户联系人（is_account_receiver=true），该邮箱必填；手动创建的子账号邮箱非必填</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>ROOT冻结</td>
+<td>R25说&quot;关联账户同步冻结&quot;</td>
+<td>货主端说ROOT不可冻结</td>
+<td><strong>已解决</strong>：ROOT不可被企业管理员<strong>单独</strong>冻结（前端隐藏按钮），但随客户冻结联动是系统级操作，不受此限制</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>角色表归属</td>
+<td>客商中心不管理角色</td>
+<td>货主端角色表引用系统设置模块</td>
+<td><strong>已对齐</strong>：角色统一由系统设置模块管理，货主端只做引用和分配</td>
+</tr>
+</tbody></table></div>
+<hr>
+<blockquote>
+<p><strong>输出原则</strong>：先搭结构再填内容。数据实体是骨架，Epic 是血肉，功能清单是索引。</p>
+</blockquote>
+
+  </div>
+</div>
+</body>
+</html>

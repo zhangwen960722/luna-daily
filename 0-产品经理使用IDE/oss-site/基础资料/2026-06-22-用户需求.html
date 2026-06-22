@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RDD - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#059669}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#05966915;color:#059669;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #059669;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#059669;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">基础资料</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">RDD</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>需求定义卡片 (RDD) — 基础资料</h1>
+<blockquote>
+<p><strong>原始需求</strong>：为跨境物流TMS系统搭建基础资料模块，支撑货主自助维护商品信息和地址（收货地址+取件地址），员工端统一审核管理<br><strong>版本</strong>: v2.4 | <strong>日期</strong>: 2026-06-22<br><strong>V2.4 变更</strong>: 收货地址管理升级为地址管理（双Tab），新增取件地址（无需审核），取件地址数据来源为入驻带入+手工新增</p>
+</blockquote>
+<hr>
+<h2>1. 核心洞察 (Insight)</h2>
+<p><strong>真实痛点</strong>：</p>
+<p>当前跨境物流业务中，货主的商品资料（SKU、海关编码、申报单价、重量）和收货地址分散在邮件、Excel、微信中传递，员工需要反复沟通确认信息完整性。商品资料缺失导致报关被退回，地址错误导致妥投失败。员工端缺乏统一的审核入口，货主端缺乏自助维护能力。</p>
+<p>货主每次新增商品或更换收货地址都需要联系客服/运营人员代为录入系统，沟通成本高、信息传递易出错、变更无留痕。员工在后台需要逐个处理，无集中审核能力，效率低下。</p>
+<p><strong>JTBD</strong>：</p>
+<blockquote>
+<p><code>货主</code> 雇佣&quot;基础资料&quot;不是为了&quot;填表单&quot;，而是为了：<strong>当有新商品需要入库或新地址需要发货时，能自助提交资料并在可预期的时间内获得审核结果，不用反复在微信上催运营。</strong></p>
+</blockquote>
+<blockquote>
+<p><code>员工/运营</code> 雇佣&quot;基础资料&quot;不是为了&quot;看列表&quot;，而是为了：<strong>当货主提交了商品或地址申请时，能集中审核、快速通过合规的资料、驳回不合规的并说明原因，不用逐单跟货主来回确认缺失字段。</strong></p>
+</blockquote>
+<p><strong>业务价值</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>当前</th>
+<th>目标</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>商品资料提交方式</td>
+<td>微信/邮件发送 Excel</td>
+<td>货主端自助提交，结构化管理</td>
+</tr>
+<tr>
+<td>审核效率</td>
+<td>逐单人工沟通确认</td>
+<td>统一审核列表，一键通过/驳回</td>
+</tr>
+<tr>
+<td>信息完整性</td>
+<td>申报信息经常缺失海关编码/材质/重量</td>
+<td>必填校验保证核心字段完整</td>
+</tr>
+<tr>
+<td>地址变更留痕</td>
+<td>无记录可查</td>
+<td>全生命周期状态可追溯</td>
+</tr>
+<tr>
+<td>沟通成本</td>
+<td>每单至少2-3次来回</td>
+<td>驳回原因一并填写，货主端可查看后修改重提</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>2. 业务全景图</h2>
+<h3>2.1 角色与工作节奏</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>核心任务</th>
+<th>频率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>货主</td>
+<td>新增/编辑商品SKU，新增/编辑收货地址，查看审核结果</td>
+<td>按需（每周数次）</td>
+</tr>
+<tr>
+<td>员工/运营</td>
+<td>审核货主提交的商品和地址，编辑已通过资料，驳回不合规申请</td>
+<td>日频</td>
+</tr>
+</tbody></table></div>
+<h3>2.2 端到端业务链路</h3>
+<pre><code>【货主自助录入 — 按需】
+  新增商品SKU → 提交审核 → 状态=待审核
+  新增收货地址 → 提交审核 → 状态=待审核
+       ↓
+【员工集中审核 — 日频】
+  审核列表(待审核Tab) → 打开详情 → 通过/驳回
+       ↓
+【货主查看结果 — 事件驱动】
+  已通过 → 可用于后续业务（运价计算/发货）
+  已拒绝 → 查看驳回原因 → 编辑后重新提交
+       ↓
+【员工维护治理 — 按需】
+  编辑已通过资料 → 修正信息 → 保存（SKU除外）
+</code></pre>
+<h3>2.3 实体依赖关系</h3>
+<pre><code>货主(Tenant/User) — 外部引用
+  ├── 1:N 商品(Product) → 聚合根
+  │     ├── 1:N 申报单价(ProductPrice) → 子表（币种取自业务国币种）
+  │     ├── 1:N 包材配置(ProductPackage) → 子表（二期，条件：need_package=true）
+  │     └── 1:N 产品条码(ProductBarcode) → 子表（二期）
+  ├── 1:N 收货地址(ShippingAddress) → 独立实体
+  └── 标识(Tag) → 独立实体（员工端维护，用于运单/提单/附加费打标）
+</code></pre>
+<h3>2.4 核心业务流程图（泳道图）</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 货主
+        A1[新增商品/地址] --&gt; A2[填写资料提交]
+        A3[查看审核结果] --&gt; A4{状态?}
+        A4 --&gt;|已通过| A5[资料可用于业务]
+        A4 --&gt;|已拒绝| A6[编辑后重新提交]
+        A6 --&gt; A2
+    end
+    subgraph 员工运营
+        B1[打开审核列表] --&gt; B2{查看详情}
+        B2 --&gt;|合规| B3[审核通过]
+        B2 --&gt;|不合规| B4[填写拒绝原因 → 审核拒绝]
+        B5[编辑已通过资料] --&gt; B6[保存（SKU除外）]
+    end
+    A2 --&gt; B1
+    B3 --&gt; A3
+    B4 --&gt; A3
+</code></pre>
+<h3>2.5 核心数据流图</h3>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph 货主端
+        D1[商品SKU + 申报单价] --&gt; C1[提交审核]
+        D2[收货地址] --&gt; C2[提交审核]
+    end
+    subgraph 员工端
+        C1 --&gt; O1[商品审核]
+        C2 --&gt; O2[地址审核]
+    end
+    subgraph 共享数据
+        O1 --&gt; S1[(商品主数据)]
+        O2 --&gt; S2[(收货地址主数据)]
+    end
+    S1 --&gt; U1[运价计算引用]
+    S2 --&gt; U2[发货/报关引用]
+</code></pre>
+<hr>
+<h2>3. 流程一：商品管理（按需 + 日频审核）</h2>
+<blockquote>
+<p><strong>触发</strong>：货主有新SKU需要入库，或已有商品信息需修正<br><strong>频率</strong>：货主按需录入，员工日频审核<br><strong>前置依赖</strong>：货主已注册并登录系统；业务国币种已在系统中配置</p>
+</blockquote>
+<h3>3.1 商品 (Product) — 核心聚合根，承载商品全生命周期数据</h3>
+<blockquote>
+<p><strong>As a</strong> 货主 <strong>I want to</strong> 提交商品SKU资料（含图片、HS编码、申报单价、重量） <strong>So that</strong> 商品可被系统识别并用于后续运价计算和报关</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>sku</td>
+<td>文本</td>
+<td>✅</td>
+<td>商品SKU，同客户下唯一，创建后不可修改</td>
+</tr>
+<tr>
+<td>image_url</td>
+<td>图片URL</td>
+<td>✅</td>
+<td>产品图片，列表可预览，新增表单上传</td>
+</tr>
+<tr>
+<td>cn_name</td>
+<td>文本</td>
+<td>✅</td>
+<td>申报中文名称</td>
+</tr>
+<tr>
+<td>en_name</td>
+<td>文本</td>
+<td>✅</td>
+<td>申报英文名称</td>
+</tr>
+<tr>
+<td>attributes</td>
+<td>多选枚举</td>
+<td>✅</td>
+<td>产品属性，可多选，至少选1个</td>
+</tr>
+<tr>
+<td>hs_code</td>
+<td>文本</td>
+<td>✅</td>
+<td>海关HS编码</td>
+</tr>
+<tr>
+<td>material</td>
+<td>文本</td>
+<td>✅</td>
+<td>材质</td>
+</tr>
+<tr>
+<td>brand</td>
+<td>文本</td>
+<td>✅</td>
+<td>品牌</td>
+</tr>
+<tr>
+<td>model</td>
+<td>文本</td>
+<td>✅</td>
+<td>型号</td>
+</tr>
+<tr>
+<td>usage</td>
+<td>文本</td>
+<td>✅</td>
+<td>用途</td>
+</tr>
+<tr>
+<td>sales_link</td>
+<td>文本</td>
+<td>—</td>
+<td>销售链接，非必填</td>
+</tr>
+<tr>
+<td>length</td>
+<td>Decimal(10,2)</td>
+<td>—</td>
+<td>长(cm)，非必填</td>
+</tr>
+<tr>
+<td>width</td>
+<td>Decimal(10,2)</td>
+<td>—</td>
+<td>宽(cm)，非必填</td>
+</tr>
+<tr>
+<td>height</td>
+<td>Decimal(10,2)</td>
+<td>—</td>
+<td>高(cm)，非必填</td>
+</tr>
+<tr>
+<td>weight</td>
+<td>Decimal(10,2)</td>
+<td>—</td>
+<td>产品重量(KG)，非必填</td>
+</tr>
+<tr>
+<td>default_currency</td>
+<td>String(8)</td>
+<td>✅</td>
+<td>默认申报币种，初始USD，对应prices中is_default=true的行</td>
+</tr>
+<tr>
+<td>need_package</td>
+<td>Boolean</td>
+<td>—</td>
+<td>是否需要额外包材处理（二期），默认false</td>
+</tr>
+<tr>
+<td>status</td>
+<td>枚举</td>
+<td>✅</td>
+<td>10:待审核, 20:已通过, 30:已拒绝</td>
+</tr>
+<tr>
+<td>tenant_id</td>
+<td>String</td>
+<td>✅</td>
+<td>所属货主(租户)</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R01：SKU在同客户下唯一，创建后不可修改，作为商品唯一标识</li>
+<li>R03：产品属性为必填多选，至少选1个</li>
+<li>R04：申报单价至少保留1条记录（默认USD），支持多币种但不能重复币种，币种选项取自业务国币种</li>
+<li>R05：货主端仅可编辑状态=已拒绝的商品，其他状态仅可查看</li>
+<li>R06：员工端可编辑任何状态的商品（SKU除外）；审核中/通过后的商品员工可编辑，SKU字段不可修改</li>
+<li>⚠ <strong>融合标注</strong>：Demo 表单分区四&quot;仓储包材与预警&quot;含库存/库龄预警阈值设置，Excel 未提及此功能，已在 RDD 中归属二期</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC01</code>, <code>AC02</code>, <code>AC03</code>, <code>AC04</code>, <code>AC05</code>, <code>AC06</code></p>
+<h3>3.2 申报单价 (ProductPrice) — 商品的多币种申报单价子表</h3>
+<blockquote>
+<p><strong>As a</strong> 货主 <strong>I want to</strong> 为商品设置多种申报币种的单价 <strong>So that</strong> 不同目的国报关时使用对应币种单价</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>product_id</td>
+<td>String</td>
+<td>✅</td>
+<td>关联商品ID</td>
+</tr>
+<tr>
+<td>currency</td>
+<td>枚举</td>
+<td>✅</td>
+<td>币种，取自业务国币种（默认USD）</td>
+</tr>
+<tr>
+<td>price</td>
+<td>Decimal(20,6)</td>
+<td>✅</td>
+<td>申报单价</td>
+</tr>
+<tr>
+<td>is_default</td>
+<td>Boolean</td>
+<td>✅</td>
+<td>是否默认币种，每商品仅1条为true</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R07：同一商品下币种不可重复</li>
+<li>R08：默认币种通过Radio单选切换，初始默认USD</li>
+<li>R09：删除默认币种行时，系统回退默认币种为USD</li>
+<li>R10：币种选项动态取自业务国配置的币种列表，不硬编码固定4种</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC02a</code>, <code>AC02b</code></p>
+<h3>3.3 二期 — 仓储包材 (ProductPackage)</h3>
+<blockquote>
+<p>二期功能，详见 <code>drafts/二期功能/</code>。一期仅在商品表中预留 <code>need_package</code> 字段。</p>
+</blockquote>
+<p><strong>相关 AC</strong>：<code>AC07</code></p>
+<h3>3.4 二期 — 产品条码 (ProductBarcode)</h3>
+<blockquote>
+<p>二期功能，详见 <code>drafts/二期功能/</code>。一期在商品表中预留 <code>ean</code> / <code>other_barcode</code> 字段。</p>
+</blockquote>
+<h3>3.5 核心场景</h3>
+<pre><code>场景：货主新增商品并提交审核
+  1. 货主点击&quot;新增商品&quot; → 弹窗打开，5个分区表单
+  2. 核心基础信息区：填写SKU/产品属性/中英文名/上传图片/选择默认币种/添加申报币种+单价
+  3. 详细属性与海关信息区：填写HS编码/材质/品牌/型号/用途/销售链接
+  4. 规格与重量区：选填长宽高，选填重量
+  5. 点击&quot;提交&quot; → 校验必填项 → 商品状态=待审核
+
+场景：员工审核商品
+  1. 员工打开商品管理 → 默认&quot;待审核&quot;Tab → 看到各货主待审核商品列表
+  2. 点击某商品的&quot;审核&quot; → 弹窗展示全部信息（可编辑，SKU除外）
+  3. 审核通过 → 二次确认弹窗 → 状态=已通过
+  4. 审核拒绝 → 输入拒绝原因 → 状态=已拒绝
+
+场景：货主修改被拒绝的商品
+  1. 货主切换到&quot;已拒绝&quot;Tab → 找到被拒商品 → 点击&quot;编辑&quot;
+  2. 修正问题字段 → 提交 → 状态重新变为待审核
+</code></pre>
+<p><strong>相关 AC</strong>：<code>AC01</code>, <code>AC05</code>, <code>AC06</code></p>
+<hr>
+<h2>4. 流程二：地址管理 — 收货地址 + 取件地址（按需 + 日频审核）</h2>
+<blockquote>
+<p><strong>触发</strong>：货主新增收货地址或取件地址<br><strong>频率</strong>：货主按需录入，员工日频审核<br><strong>前置依赖</strong>：货主已注册并登录系统</p>
+</blockquote>
+<p>地址管理统一承载两类地址：</p>
+<ul>
+<li><strong>收货地址</strong>（address_type=10）：海外仓/本地仓收货地址，走审核流程（待审核→通过/拒绝）</li>
+<li><strong>取件地址</strong>（address_type=20）：客户取件地址，无需审核（默认已通过），数据来源为 ① 客户入驻时自动带入 ② 货主端手工新增</li>
+</ul>
+<h3>4.1 地址实体 (ShippingAddress) — 统一实体，address_type 区分类型</h3>
+<blockquote>
+<p><strong>As a</strong> 货主 <strong>I want to</strong> 维护收货地址和取件地址 <strong>So that</strong> 后续发货/取件时可直接选择</p>
+</blockquote>
+<p><strong>共有字段</strong>（收货地址 &amp; 取件地址）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>address_type</td>
+<td>枚举</td>
+<td>✅</td>
+<td>10:收货地址, 20:取件地址</td>
+</tr>
+<tr>
+<td>contact</td>
+<td>文本</td>
+<td>✅</td>
+<td>联系人姓名。取件地址初次入驻时从客户档案物流联系人自动带入</td>
+</tr>
+<tr>
+<td>phone</td>
+<td>文本</td>
+<td>✅</td>
+<td>联系电话，数字格式。取件地址初次入驻时从客户档案物流联系人自动带入</td>
+</tr>
+<tr>
+<td>country</td>
+<td>文本</td>
+<td>✅</td>
+<td>国家，取自业务国配置</td>
+</tr>
+<tr>
+<td>state</td>
+<td>文本</td>
+<td>✅</td>
+<td>省/州，来自行政区划数据</td>
+</tr>
+<tr>
+<td>city</td>
+<td>文本</td>
+<td>✅</td>
+<td>城市，来自行政区划数据</td>
+</tr>
+<tr>
+<td>zip</td>
+<td>文本</td>
+<td>✅</td>
+<td>邮编，数字格式</td>
+</tr>
+<tr>
+<td>address</td>
+<td>文本</td>
+<td>✅</td>
+<td>详细地址（街道门牌号）</td>
+</tr>
+<tr>
+<td>status</td>
+<td>枚举</td>
+<td>✅</td>
+<td>10:待审核, 20:已通过, 30:已拒绝。取件地址默认=已通过(20)，不走审核</td>
+</tr>
+<tr>
+<td>tenant_id</td>
+<td>String</td>
+<td>✅</td>
+<td>所属货主(租户)</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R11：同客户同类型下地址唯一（address_type + 联系人 + 详细地址拼接），防止重复录入</li>
+<li>R12：货主端不区分root/子账户，同一客户下所有子账户共享地址数据</li>
+<li>R13：货主端仅可编辑状态=已拒绝的收货地址，其他状态仅可查看；取件地址始终可编辑（无需审核，无已拒绝状态）</li>
+<li>R14：员工端可编辑任何状态的收货地址，并可执行审核操作；取件地址员工端可直接编辑</li>
+<li>R15：员工审核拒绝时需填写拒绝原因，拒绝原因不能为空（仅收货地址）</li>
+<li>R16：员工审核通过时需二次确认（仅收货地址）</li>
+<li>R17：新增收货地址点击&quot;确定&quot;流转至待审核；新增取件地址点击&quot;确定&quot;直接已通过</li>
+<li>R18：取件地址无需审核（status 默认=已通过），不走审核流程</li>
+<li>R19：客户入驻时取件地址自动同步：联系人/电话取自客户档案物流联系人，其余字段取自入驻表单取件地址信息</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC08</code>, <code>AC09</code>, <code>AC10</code>, <code>AC11</code>, <code>AC12</code>, <code>AC13</code></p>
+<h3>4.2 核心场景</h3>
+<pre><code>场景：货主新增收货地址
+  1. 货主在&quot;收货地址管理&quot;Tab点击&quot;新增收货地址&quot; → 弹窗表单打开
+  2. 填写联系人/电话/国家/省州/城市/邮编/详细地址 → 全部必填
+  3. 点击&quot;确定&quot; → 状态=待审核，出现在员工审核列表
+  4. 点击&quot;返回&quot; → 二次确认&quot;确定要放弃编辑吗？&quot; → 确认后关闭弹窗
+
+场景：货主新增取件地址
+  1. 货主在&quot;取件地址管理&quot;Tab点击&quot;新增取件地址&quot; → 弹窗表单打开
+  2. 填写联系人/电话/国家/省州/城市/邮编/详细地址 → 全部必填
+  3. 点击&quot;确定&quot; → 状态直接=已通过，出现在取件地址列表
+  4. 点击&quot;返回&quot; → 二次确认后关闭弹窗
+
+场景：员工审核收货地址
+  1. 员工打开地址管理 → &quot;收货地址管理&quot;Tab → 默认&quot;待审核&quot;子Tab
+  2. 点击&quot;审核&quot; → 弹窗展示详情（可编辑）
+  3. 审核通过 → 二次确认 → 状态=已通过
+  4. 审核拒绝 → 输入拒绝原因 → 状态=已拒绝
+
+场景：员工查看取件地址
+  1. 员工打开地址管理 → &quot;取件地址管理&quot;Tab
+  2. 取件地址平铺列表，可编辑，无需审核
+</code></pre>
+<p><strong>相关 AC</strong>：<code>AC08</code>, <code>AC09</code>, <code>AC10</code>, <code>AC11</code>, <code>AC12</code>, <code>AC13</code></p>
+<hr>
+<h2>5. 流程三：标识管理（按需维护）</h2>
+<blockquote>
+<p><strong>触发</strong>：员工需要为运单、提单、附加费等业务场景配置新的标识<br><strong>频率</strong>：运维低频（新增标识类型/模块范围时）<br><strong>前置依赖</strong>：员工已登录系统</p>
+</blockquote>
+<h3>5.1 标识 (Tag) — 独立实体，用于业务打标</h3>
+<blockquote>
+<p><strong>As a</strong> 运营人员 <strong>I want to</strong> 维护标识库（含名称、颜色、类型、模块范围） <strong>So that</strong> 运单打标、附加费规则引用等场景可使用统一标识</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>必填</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>name</td>
+<td>文本</td>
+<td>✅</td>
+<td>标识名称，全局唯一，如&quot;国内贴标费&quot;&quot;超重费&quot;</td>
+</tr>
+<tr>
+<td>color</td>
+<td>文本</td>
+<td>✅</td>
+<td>标识颜色，HEX色值如 <code>#00FFFF</code>，用于列表/运单上的视觉区分</td>
+</tr>
+<tr>
+<td>tag_type</td>
+<td>枚举</td>
+<td>✅</td>
+<td>10:自定义标识 20:附加费标识。自定义标识用于运单/提单人工打标；附加费标识可被超级运价附加费规则引用</td>
+</tr>
+<tr>
+<td>module_scope</td>
+<td>枚举</td>
+<td>✅</td>
+<td>模块范围，如&quot;运单&quot;&quot;提单&quot;，决定标识在哪些业务场景下可选</td>
+</tr>
+<tr>
+<td>status</td>
+<td>枚举</td>
+<td>✅</td>
+<td>10:正常 20:已冻结</td>
+</tr>
+</tbody></table></div>
+<p><strong>业务规则</strong>：</p>
+<ul>
+<li>R19：标识名称全局唯一，新增时校验</li>
+<li>R20：<code>tag_type</code>=附加费标识(20)的标识可被超级运价附加费规则引用，自定义标识(10)仅用于运单/提单人工打标</li>
+<li>R21：已被业务单据引用的标识不可删除，仅可冻结</li>
+<li>R22：冻结后的标识在新增引用下拉中不可选，已有引用不受影响</li>
+</ul>
+<p><strong>相关 AC</strong>：<code>AC15</code>, <code>AC16</code>, <code>AC17</code></p>
+<h3>5.2 核心场景</h3>
+<pre><code>场景：员工新增标识
+  1. 员工打开标识管理 → 点击&quot;新增&quot;
+  2. 填写标识名称、选择标识类型（自定义/附加费）、选择模块范围、选择颜色
+  3. 保存 → 标识创建成功，状态=正常
+
+场景：附加费规则引用标识
+  1. 运价管理员编辑附加费规则 → 在&quot;附加费标识&quot;下拉中选择 tag_type=附加费标识 的标识
+  2. 规则触发时 → 运单自动打上对应标识（动作类型=标识提醒 时）
+</code></pre>
+<p><strong>相关 AC</strong>：<code>AC15</code>, <code>AC16</code>, <code>AC17</code></p>
+<hr>
+<h2>6. 验收标准总览 (AC)</h2>
+<p><strong>流程一：商品管理</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC01-新增商品(货主端)</strong>：货主点击&quot;新增商品&quot;，填写SKU/图片/中英文名/HS编码/属性/材质/品牌/型号/用途后可提交，成功后状态=待审核</li>
+<li><input disabled="" type="checkbox"> <strong>AC02-申报单价管理</strong>：支持添加多币种单价（币种取自业务国币种），同币种不可重复，可切换默认币种，可删除非默认行</li>
+<li><input disabled="" type="checkbox"> <strong>AC02a-默认币种</strong>：默认币种初始为USD，用户可通过Radio切换；删除默认币种行时系统回退默认币种为USD</li>
+<li><input disabled="" type="checkbox"> <strong>AC02b-币种去重</strong>：已选币种在下拉选项中不重复出现；所有可用币种添加完毕后按钮提示无可用币种</li>
+<li><input disabled="" type="checkbox"> <strong>AC03-图片上传与预览</strong>：新增商品时上传产品图片；列表页图片展示为缩略图（60x60），点击可预览大图</li>
+<li><input disabled="" type="checkbox"> <strong>AC04-SKU唯一性</strong>：同客户下SKU不可重复，创建后不可修改（前端disabled + 后端拒绝修改）</li>
+<li><input disabled="" type="checkbox"> <strong>AC05-员工审核商品</strong>：员工可查看/编辑待审核商品详情（SKU不可修改），点击&quot;审核通过&quot;二次确认后状态变为已通过；点击&quot;审核拒绝&quot;输入原因后状态变为已拒绝</li>
+<li><input disabled="" type="checkbox"> <strong>AC06-货主查看和编辑商品</strong>：货主端待审核/已通过商品仅可&quot;查看&quot;（只读），已拒绝商品可&quot;编辑&quot;后重新提交</li>
+<li><input disabled="" type="checkbox"> <strong>AC07-二期包材与条码</strong>：包材配置和产品条码为二期功能，一期表单中对应区域标注&quot;二期&quot;标识，字段可跳过不影响提交</li>
+</ul>
+<p><strong>流程二：收货地址管理</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC08-新增收货地址(货主端)</strong>：货主新增地址填写联系人/电话/国家/省州/城市/邮编/详细地址（全部必填），点击&quot;确定&quot;提交后状态=待审核；点击&quot;返回&quot;二次确认&quot;确定要放弃编辑吗？&quot;后关闭弹窗</li>
+<li><input disabled="" type="checkbox"> <strong>AC09-地址简称唯一性</strong>：同客户下&quot;联系人-详细地址&quot;拼接值不可重复，重复时阻断提示</li>
+<li><input disabled="" type="checkbox"> <strong>AC10-员工审核地址</strong>：员工点击&quot;审核&quot;查看地址详情，通过/拒绝流程同商品审核（拒绝需原因，通过需二次确认）</li>
+<li><input disabled="" type="checkbox"> <strong>AC11-货主端查看和编辑地址</strong>：待审核/已通过仅可&quot;查看&quot;（只读），已拒绝可&quot;编辑&quot;后重新提交；同一客户下root/子账户共享地址数据</li>
+</ul>
+<p><strong>通用</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC12-货主端数据隔离</strong>：货主仅能查看/操作自己租户的商品和地址（tenant_id隔离）</li>
+<li><input disabled="" type="checkbox"> <strong>AC13-员工端无隔离</strong>：员工可查看所有货主的数据，列表含&quot;用户名称&quot;列标识货主</li>
+<li><input disabled="" type="checkbox"> <strong>AC14-分Tab筛选</strong>：待审核/已通过/已拒绝/全部4个Tab，切换后列表按status正确筛选，默认激活&quot;待审核&quot;</li>
+</ul>
+<p><strong>流程三：标识管理</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC15-新增标识</strong>：员工新增标识，填写名称/选择类型（自定义标识/附加费标识）/选择模块范围/选择颜色后保存，标识出现在列表</li>
+<li><input disabled="" type="checkbox"> <strong>AC16-标识类型筛选</strong>：附加费规则编辑页中&quot;附加费标识&quot;下拉仅展示 <code>tag_type</code>=附加费标识(20) 的正常标识</li>
+<li><input disabled="" type="checkbox"> <strong>AC17-标识冻结保护</strong>：已被业务单据引用的标识 → [删除]按钮隐藏，仅显示[冻结]</li>
+</ul>
+<hr>
+<h2>6. NFR（非功能性需求）</h2>
+<ul>
+<li><strong>性能</strong>：列表查询 &lt; 1s，弹窗打开 &lt; 500ms</li>
+<li><strong>并发</strong>：同时操作员工数 ≤ 50</li>
+<li><strong>数据保留</strong>：商品和地址数据长期保留，软删除</li>
+<li><strong>精度</strong>：申报单价 Decimal(20,6)，重量 Decimal(10,2)，尺寸 Decimal(10,2)</li>
+<li><strong>安全</strong>：货主仅能查看/操作自己的数据（tenant_id隔离）；员工可查看所有货主的数据</li>
+<li><strong>图片</strong>：商品图片支持预览，单张图片 ≤ 5MB，支持常见格式（JPG/PNG/WebP）</li>
+</ul>
+<hr>
+<h2>7. 功能清单</h2>
+<blockquote>
+<p>基于 2 条业务流程，共 <strong>2 个模块、14 项功能</strong>。P0 = MVP，P1 = 二期。</p>
+</blockquote>
+<p><strong>模块 A：商品管理</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A1</td>
+<td>货主端商品列表（分Tab：待审核/已通过/已拒绝/全部）</td>
+<td>P0</td>
+<td>AC06, AC14</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>货主端新增商品（含5大分区表单 + 图片上传）</td>
+<td>P0</td>
+<td>AC01, AC03</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>货主端查看商品详情（只读）</td>
+<td>P0</td>
+<td>AC06</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>货主端编辑已拒绝商品并重新提交</td>
+<td>P0</td>
+<td>AC06</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>员工端商品列表（含搜索：用户名称/SKU/中英文名 + 用户名称列）</td>
+<td>P0</td>
+<td>AC13, AC14</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>员工端审核商品（通过/拒绝+原因）</td>
+<td>P0</td>
+<td>AC05</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>员工端编辑商品（SKU不可修改）</td>
+<td>P0</td>
+<td>AC05</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>多币种申报单价管理（币种取自业务国）</td>
+<td>P0</td>
+<td>AC02, AC02a, AC02b</td>
+</tr>
+</tbody></table></div>
+<p><strong>模块 B：收货地址管理</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>B1</td>
+<td>货主端地址列表（分Tab：待审核/已通过/已拒绝/全部）</td>
+<td>P0</td>
+<td>AC11, AC14</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>货主端新增收货地址（返回二次确认/确定提交）</td>
+<td>P0</td>
+<td>AC08, AC09</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>货主端查看地址详情（只读）</td>
+<td>P0</td>
+<td>AC11</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>货主端编辑已拒绝地址并重新提交</td>
+<td>P0</td>
+<td>AC11</td>
+</tr>
+<tr>
+<td>B5</td>
+<td>员工端地址列表（含搜索：用户名称/联系人/电话 + 用户名称列）</td>
+<td>P0</td>
+<td>AC13, AC14</td>
+</tr>
+<tr>
+<td>B6</td>
+<td>员工端审核地址（通过/拒绝+原因）</td>
+<td>P0</td>
+<td>AC10</td>
+</tr>
+<tr>
+<td>B7</td>
+<td>员工端编辑地址</td>
+<td>P0</td>
+<td>AC10</td>
+</tr>
+</tbody></table></div>
+<p><strong>模块 C：标识管理</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>优先级</th>
+<th>AC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>C1</td>
+<td>标识列表（搜索+状态筛选）</td>
+<td>P0</td>
+<td>AC15, AC14</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>新增/编辑标识（名称+类型+模块范围+颜色）</td>
+<td>P0</td>
+<td>AC15</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>冻结/启用标识</td>
+<td>P0</td>
+<td>AC17</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>附加费规则引用附加费标识</td>
+<td>P0</td>
+<td>AC16</td>
+</tr>
+</tbody></table></div>
+<p><strong>分期汇总</strong></p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>分期</th>
+<th>模块范围</th>
+<th>功能数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Phase 1 (MVP)</strong></td>
+<td>商品管理(A1-A8) + 收货地址管理(B1-B7) + 标识管理(C1-C4)</td>
+<td><strong>18</strong></td>
+</tr>
+<tr>
+<td><strong>Phase 2</strong></td>
+<td>包材配置 + 产品条码 + 库存预警 + 批量审核 + Excel导入</td>
+<td>待规划</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>8. MVP 方案与建议</h2>
+<p><strong>MVP 方案（Phase 1 — 基础资料核心CRUD+审核流程）</strong></p>
+<pre><code>货主端
+├── 商品管理
+│   ├── 新增商品（5分区表单：核心基础信息/详细属性/规格重量/二期包材/二期条码）
+│   ├── 分Tab列表（待审核/已通过/已拒绝/全部）
+│   ├── 商品图片预览
+│   ├── 查看（只读）/ 编辑（已拒绝）
+│   └── 多币种申报单价（币种取自业务国）
+├── 收货地址管理
+│   ├── 新增地址（返回二次确认/确定提交）
+│   ├── 分Tab列表（待审核/已通过/已拒绝/全部）
+│   └── 查看（只读）/ 编辑（已拒绝）
+
+员工端
+├── 商品管理
+│   ├── 分Tab列表 + 用户名称/SKU/中英文名搜索 + 用户名称列
+│   ├── 审核商品（通过/拒绝+原因）
+│   └── 编辑商品（SKU不可修改）
+├── 收货地址管理
+│   ├── 分Tab列表 + 用户名称/联系人/电话搜索 + 用户名称列
+│   ├── 审核地址（通过/拒绝+原因）
+│   └── 编辑地址
+└── 标识管理
+    ├── 列表（名称/模块范围搜索 + 状态筛选）
+    ├── 新增/编辑标识（名称+类型+模块范围+颜色）
+    └── 冻结/启用标识
+</code></pre>
+<p><strong>MVP 明确不做</strong>：</p>
+<ul>
+<li>包材方式配置（P1 — 仓储模块未上线，表单标注&quot;二期&quot;）</li>
+<li>产品条码管理（P1 — 表单标注&quot;二期&quot;，一期仅预留字段）</li>
+<li>库存与库龄预警阈值设置（P1 — 仓储模块未上线）</li>
+<li>批量审核（P1）</li>
+<li>Excel批量导入商品（P1）</li>
+<li>操作审计日志（P2）</li>
+</ul>
+<p><strong>二期表单区处理</strong>：一期新增商品表单中，&quot;仓储包材&quot;和&quot;产品条码&quot;两个分区正常展示但标注&quot;二期&quot;标识，字段非必填、可跳过，不影响商品提交。</p>
+<p><strong>专家建议</strong>：</p>
+<ul>
+<li><strong>S01 — 频次驱动设计</strong>：商品新增和地址新增是货主高频操作（每周数次），应放在一级菜单；员工的审核操作是日频操作，也应独立入口、待审核Tab默认激活。两个模块按角色拆分菜单项。</li>
+<li><strong>S02 — SKU不可修改</strong>：SKU作为跨境物流核心标识贯穿全链路，创建后不可修改，避免下游数据关联断裂。员工端编辑商品时SKU字段disabled。</li>
+<li><strong>S03 — 地址唯一性约束</strong>：联系人+详细地址拼接作为业务唯一键，防止同一货主重复录入相同地址。此约束在应用层校验，不依赖数据库唯一索引（因拼接逻辑属于业务规则）。</li>
+<li><strong>S04 — 货主端子账户共享</strong>：收货地址不区分root/子账户，同一tenant_id下所有用户共享地址池。这降低了地址维护成本，子账户无需重复录入。</li>
+<li><strong>S05 — 币种动态获取</strong>：申报币种选项取自业务国币种配置，避免硬编码固定币种列表。当业务扩展到新国家时无需改代码。</li>
+</ul>
+<hr>
+<h3>下一步</h3>
+<p>Phase 1 需求洞察完成，进入 Phase 2 方案架构（数据建模 + 边界探测）。</p>
+<hr>
+
+  </div>
+</div>
+</body>
+</html>

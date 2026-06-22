@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026-06-13-箱唛要求 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#d97706}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#d9770615;color:#d97706;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #d97706;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#d97706;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">头程管理</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">2026-06-13-箱唛要求</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <p>﻿# 箱唛设计要求（v2.0）</p>
+<blockquote>
+<p><strong>文档编号</strong>: PRD-20260610<br><strong>创建日期</strong>: 2026-06-10 | <strong>修订日期</strong>: 2026-06-13<br><strong>适用范围</strong>: 跨境物流TMS系统 · 运单箱唛打印  </p>
+</blockquote>
+<hr>
+<h2>1. 概述</h2>
+<p>箱唛（箱贴/Box Label）是贴在货物外箱上的识别标签。本 PRD 定义 TMS 系统中运单箱唛的视觉设计方案、内容层级和字段取值逻辑。</p>
+<p><strong>关键变更</strong>：箱唛标识不再按&quot;FBA/非FBA&quot;定性，而是根据仓库所属平台代码动态显示。平台仓显示对应平台标识，私人地址显示通用标识。</p>
+<hr>
+<h2>2. 两种分类</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="center">分类</th>
+<th align="left">说明</th>
+<th align="left">标识来源</th>
+<th align="center">示例标识</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">🏭 <strong>平台仓</strong></td>
+<td align="left">发往平台仓库（Amazon FBA / Walmart / Mercado 等）的货物</td>
+<td align="left">仓库绑定的所属平台代码</td>
+<td align="center"><code>Amazon</code> / <code>WALMART</code> / <code>Mercado</code></td>
+</tr>
+<tr>
+<td align="center">🏠 <strong>私人地址</strong></td>
+<td align="left">发往个人/私人地址的货物</td>
+<td align="left">固定为&quot;非亚马逊运单&quot;</td>
+<td align="center"><code>Personal</code></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>3. 视觉层级规范</h2>
+<p>箱唛统一采用 <strong>10cm x 10cm</strong> 方形尺寸，黑白打印，<strong>不依赖颜色</strong>区分信息层级。</p>
+<h3>3.1 高突出项（视觉权重最高）</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段</th>
+<th align="left">表现手法</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">平台标识</td>
+<td align="left">左上角显示(12px, 700字重)</td>
+<td align="left">如 FBA · AMAZON / WALMART / Mercado</td>
+</tr>
+<tr>
+<td align="left">运单号</td>
+<td align="left">右上角显示(20px, 800字重)</td>
+<td align="left">如 FD260615479832</td>
+</tr>
+<tr>
+<td align="left">箱数</td>
+<td align="left">居中显示(32px, 900字重)</td>
+<td align="left">如 1/10</td>
+</tr>
+<tr>
+<td align="left">目的国</td>
+<td align="left">目的地区块(26px, 800字重)</td>
+<td align="left">如 US、MX、JP</td>
+</tr>
+<tr>
+<td align="left">收件人</td>
+<td align="left">目的地区块(32px, 800字重)</td>
+<td align="left">如 MQJ1、FTW1、Stephany</td>
+</tr>
+</tbody></table></div>
+<p><strong>表现手法</strong>: 区域化布局，按区域分层组织</p>
+<h3>3.2 中突出项</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段</th>
+<th align="left">表现手法</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">渠道名称</td>
+<td align="left">(20px, 600字重)</td>
+<td align="left">如 美国海派快线</td>
+</tr>
+<tr>
+<td align="left">昵称</td>
+<td align="left">(20px, 800字重)</td>
+<td align="left">如 jysj、qy-abfd</td>
+</tr>
+<tr>
+<td align="left">邮编</td>
+<td align="left">加粗显示(20px, 800字重)</td>
+<td align="left">如 91761</td>
+</tr>
+<tr>
+<td align="left">原产地</td>
+<td align="left">标准字号(16px, 600字重)</td>
+<td align="left">默认 MADE IN CHINA</td>
+</tr>
+<tr>
+<td align="left">报关方式</td>
+<td align="left">(16px, 800字重)</td>
+<td align="left">如 商业报关</td>
+</tr>
+<tr>
+<td align="left">内部追踪条码</td>
+<td align="left">不等宽条码(46px高度)</td>
+<td align="left">1px窄条 / 3px宽条 交替</td>
+</tr>
+<tr>
+<td align="left">运单箱号</td>
+<td align="left">系统字体(18px, 600字重)</td>
+<td align="left">如 FD260612478684U001</td>
+</tr>
+<tr>
+<td align="left">客户单号</td>
+<td align="left">系统字体(18px, 600字重)</td>
+<td align="left">如 FBA19G240SPVU</td>
+</tr>
+<tr>
+<td align="left">扩展箱号</td>
+<td align="left">系统字体(18px, 600字重)</td>
+<td align="left">如 FBA19G240SPVU000001</td>
+</tr>
+</tbody></table></div>
+<p><strong>表现手法</strong>: 按区域划分，区域4下划线标注，区域5等宽字体</p>
+<p>低突出项</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段</th>
+<th align="left">表现手法</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">（无）</td>
+<td align="left">—</td>
+<td align="left">所有字段已归入中突出项</td>
+</tr>
+</tbody></table></div>
+<p><strong>表现手法</strong>: —</p>
+<hr>
+<h2>4. 字段取值逻辑</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段</th>
+<th align="left">取值来源</th>
+<th align="left">说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>昵称</strong></td>
+<td align="left">客户关联的昵称</td>
+<td align="left">取客户资料中的昵称字段，如 jysj</td>
+</tr>
+<tr>
+<td align="left"><strong>渠道名称</strong></td>
+<td align="left">运单关联的渠道名称</td>
+<td align="left">取运单主数据中的渠道名称字段</td>
+</tr>
+<tr>
+<td align="left"><strong>目的国</strong></td>
+<td align="left">运单地址信息</td>
+<td align="left">取运单收货地址中的国家代码</td>
+</tr>
+<tr>
+<td align="left"><strong>收件人</strong></td>
+<td align="left">运单关联的收件人</td>
+<td align="left">取运单收货地址中的收件人名称，如 MQJ1、FTW1、Stephany</td>
+</tr>
+<tr>
+<td align="left"><strong>平台标识</strong></td>
+<td align="left">仓库绑定的所属平台代码</td>
+<td align="left">根据仓库代码关联的平台配置表，映射为显示标识：FBA → <code>Amazon</code>、WALMART → <code>WALMART</code>、Mercado → <code>Mercado</code> 等；若仓库未绑定平台，默认显示仓库代码</td>
+</tr>
+<tr>
+<td align="left"><strong>场景行</strong></td>
+<td align="left">仓库绑定的平台代码 + 地址类型</td>
+<td align="left">平台仓根据平台代码映射场景描述：FBA <code>Amazon FBA Shipment</code>、WALMART <code>Walmart Fulfillment</code>、Mercado <code>Mercado Libre Fulfillment</code>；私人地址 <code>Personal Address Shipment</code></td>
+</tr>
+<tr>
+<td align="left"><strong>邮编</strong></td>
+<td align="left">运单地址信息</td>
+<td align="left">取运单收货地址中的邮政编码</td>
+</tr>
+<tr>
+<td align="left"><strong>箱数</strong></td>
+<td align="left">运单装箱单</td>
+<td align="left">分子为当前箱号，分母为总箱数，如 1/10</td>
+</tr>
+<tr>
+<td align="left"><strong>原产地标识</strong></td>
+<td align="left">系统默认</td>
+<td align="left">默认为&quot;Made in China&quot;</td>
+</tr>
+<tr>
+<td align="left"><strong>报关方式</strong></td>
+<td align="left">运单报关信息</td>
+<td align="left">取运单报关信息模块中的报关方式字段</td>
+</tr>
+<tr>
+<td align="left"><strong>箱唛标识逻辑</strong></td>
+<td align="left">平台代码 + 地址类型</td>
+<td align="left"><strong>平台仓</strong>：根据仓库绑定的平台代码显示对应标识；<strong>私人地址</strong>：固定显示&quot;非亚马逊运单&quot;</td>
+</tr>
+<tr>
+<td align="left"><strong>内部追踪条码</strong></td>
+<td align="left">系统自动生成</td>
+<td align="left">系统根据运单号/箱号自动生成追踪码，呈现为Code39风格条码</td>
+</tr>
+<tr>
+<td align="left"><strong>运单箱号</strong></td>
+<td align="left">装箱单</td>
+<td align="left">取装箱单中的运单箱号字段</td>
+</tr>
+<tr>
+<td align="left"><strong>客户单号</strong></td>
+<td align="left">运单关联的客户单号</td>
+<td align="left">取运单主数据中的客户单号字段，如 7339751WFA</td>
+</tr>
+<tr>
+<td align="left"><strong>扩展箱号</strong></td>
+<td align="left">运单关联的扩展箱号</td>
+<td align="left">取装箱单中的扩展箱号字段，如 FBA19G240SPVU000001</td>
+</tr>
+</tbody></table></div>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">操作</th>
+<th align="left">说明</th>
+<th align="left">处理方式</th>
+</tr>
+</thead>
+</table></div>
+<p>箱唛上的箱数格式为 BOX x/y，其中：</p>
+<hr>
+<h2>5. 箱唛重新生成逻辑</h2>
+<p>当运单的货箱数量发生变更时，箱唛需要重新生成并重新贴标。</p>
+<h3>5.1 触发条件</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">操作</th>
+<th align="left">说明</th>
+<th align="left">处理方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">新增货箱</td>
+<td align="left">运单增加一个或多个货箱</td>
+<td align="left">重新生成该运单关联的 <strong>全部</strong> FD 箱唛</td>
+</tr>
+<tr>
+<td align="left">移除货箱</td>
+<td align="left">运单移除一个或多个货箱，剩余箱号出现断层</td>
+<td align="left">重新生成该运单关联的 <strong>全部</strong> FD 箱唛</td>
+</tr>
+</tbody></table></div>
+<h3>5.2 原因说明</h3>
+<p>箱唛上的箱数格式为 <code>BOX x/y</code>，其中：</p>
+<ul>
+<li>x — 当前箱号（第几箱）</li>
+<li>y — 总箱数</li>
+</ul>
+<p>当新增或移除货箱时：</p>
+<ol>
+<li><strong>总箱数</strong> — y 发生变化</li>
+<li><strong>当前箱号</strong> — 被移除货箱之后的所有箱号向前递补（如移除第2箱后，原第3箱变为第2箱），x 发生变化</li>
+</ol>
+<p>因此运单关联的所有 FD 箱唛需要全部重新生成，确保箱唛信息与实际货箱一致。</p>
+<h3>5.3 重新贴标流程</h3>
+<ol>
+<li>触发加箱/减箱操作</li>
+<li>系统自动重新生成该运单所有关联的 FD 箱唛</li>
+<li>原箱唛作废，仓库人员按新箱唛重新贴标</li>
+<li>新箱唛的条形码（内部追踪码）保持不变，仍关联原运单号</li>
+</ol>
+<h2>6. 布局规范</h2>
+<h3>6.1 画布尺寸</h3>
+<ul>
+<li><strong>尺寸</strong>: 10cm x 10cm（方形标签）</li>
+<li><strong>打印适配</strong>: 打印时自动缩放至 10cm x 10cm</li>
+<li><strong>分辨率像素</strong>: 屏幕预览 378px x 378px（对应96dpi）</li>
+</ul>
+<h3>6.2 内容布局（从上到下）</h3>
+<p>箱唛从上到下共 5 个区域：</p>
+<p><strong>区域1：运单号 + 箱数</strong><br>左边显示运单号（20px），右边显示箱数（32px），同行左右分布。<br>案例：FD260615479839    1/10</p>
+<p><strong>区域2：服务渠道 + 昵称</strong><br>渠道名称与昵称左右并排（20px）。<br>案例：美国海派快线    jysj</p>
+<p><strong>区域3：国家 + 收件人 + 邮编</strong><br>目的国（26px）+ 收件人（32px）+ 邮编（20px），左对齐排列，粗边框容器。<br>案例：US    MQJ1    91761</p>
+<p><strong>区域4：原产地 + 报关方式</strong><br>原产地标识 Made in China（16px）+ 报关方式（16px）。</p>
+<p><strong>区域5：条形码 + 箱号信息</strong></p>
+<ul>
+<li>Code39 风格条码（46px高度）</li>
+<li>运单箱号（18px）</li>
+<li>扩展箱号（18px）</li>
+<li>客户单号（18px）</li>
+</ul>
+<h3>6.3 布局原则</h3>
+<ul>
+<li>使用 justify-content: space-between 自动均分垂直空间</li>
+<li>条形码区域不设 flex-grow，保持固定高度</li>
+<li>所有文字不使用底色填充，避免热敏打印糊墨</li>
+<li>高突出项通过 <strong>描边</strong> + <strong>粗边框</strong> + <strong>大字号</strong> 实现</li>
+</ul>
+<hr>
+<h2>7. 打印规范</h2>
+<ul>
+<li><strong>打印机</strong>: 支持热敏标签打印机（如 Zebra、TSC 等）</li>
+<li><strong>颜色模式</strong>: 纯黑白（灰度0-100%）</li>
+<li><strong>标签纸尺寸</strong>: 10cm x 10cm（可定制）</li>
+<li><strong>页面设置</strong>: 无边距打印</li>
+<li><strong>含 print CSS</strong>: 打印时自动去除阴影、圆角、背景色</li>
+</ul>
+<hr>
+<h2>8. 平台代码对照表</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="center">平台</th>
+<th align="center">平台代码</th>
+<th align="center">箱唛显示标识</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">Amazon</td>
+<td align="center">Amazon</td>
+<td align="center"><code>Amazon</code></td>
+</tr>
+<tr>
+<td align="center">Walmart</td>
+<td align="center">WALMART</td>
+<td align="center"><code>WALMART</code></td>
+</tr>
+<tr>
+<td align="center">Mercado Libre</td>
+<td align="center">Mercado</td>
+<td align="center"><code>Mercado</code></td>
+</tr>
+<tr>
+<td align="center">其他平台</td>
+<td align="center">(按实际)</td>
+<td align="center"><code>{平台代码}</code></td>
+</tr>
+<tr>
+<td align="center">私人地址</td>
+<td align="center">-</td>
+<td align="center"><code>Personal</code></td>
+</tr>
+<tr>
+<td align="center"><em>以上平台列表动态扩展，平台代码由基础资料中的仓库配置模块维护。</em></td>
+<td align="center"></td>
+<td align="center"></td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>9. 变更记录</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="center">日期</th>
+<th align="center">版本</th>
+<th align="left">变更内容</th>
+<th align="center">作者</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">2026-06-10</td>
+<td align="center">v1.0</td>
+<td align="left">初始版本，定义三种场景、视觉层级、字段取值逻辑</td>
+<td align="center">-</td>
+</tr>
+<tr>
+<td align="center">2026-06-13</td>
+<td align="center">v2.0</td>
+<td align="left">重构分类逻辑：场景3种→分类2类（平台仓/私人地址），标识根据平台代码动态显示，新增平台代码对照表</td>
+<td align="center">-</td>
+</tr>
+</tbody></table></div>
+
+  </div>
+</div>
+</body>
+</html>

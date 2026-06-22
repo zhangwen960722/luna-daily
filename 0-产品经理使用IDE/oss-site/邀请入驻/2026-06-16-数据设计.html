@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据设计 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#db2777}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#db277715;color:#db2777;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #db2777;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#db2777;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">邀请入驻</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">数据设计</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>数据设计 — 邀请入驻</h1>
+<blockquote>
+<p><strong>文档版本</strong>: v3.0 | <strong>日期</strong>: 2026-06-16 | <strong>作者</strong>: AI PM（v3.0: 企业尽调从手工查询表改为客户提交档案后自动触发的快照表）<br><strong>上游文档</strong>: <code>2026-06-16-用户需求.md</code>（v3.0，邀请触达 + 系统自动尽调）</p>
+</blockquote>
+<hr>
+<h2>一、实体清单 x 表映射</h2>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>实体名称</th>
+<th>对应表/子表</th>
+<th>映射方式</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>邀请记录</td>
+<td><code>invitation_record</code></td>
+<td>独立表</td>
+<td>销售生成的邀请链接/邮件记录，含token、过期时间、状态</td>
+</tr>
+<tr>
+<td>邀请链接</td>
+<td><code>invitation_link</code></td>
+<td>独立表</td>
+<td>与客商中心共用，详见客商中心数据设计 §表13</td>
+</tr>
+<tr>
+<td>企业工商信息</td>
+<td><code>enterprise_info</code></td>
+<td>独立表</td>
+<td>客户提交入驻后系统自动调用天眼查返回的工商数据快照</td>
+</tr>
+<tr>
+<td>企业风险报告</td>
+<td><code>enterprise_risk_report</code></td>
+<td>独立表</td>
+<td>一次尽调对应一条风险报告汇总</td>
+</tr>
+<tr>
+<td>风险分类</td>
+<td><code>enterprise_risk_category</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>report_id</code> 关联报告</td>
+</tr>
+<tr>
+<td>风险明细</td>
+<td><code>enterprise_risk_detail</code></td>
+<td>1:N 子表</td>
+<td>通过 <code>category_id</code> 关联分类</td>
+</tr>
+<tr>
+<td>尽调触发记录</td>
+<td><code>due_diligence_log</code></td>
+<td>聚合根表</td>
+<td>客户提交入驻时自动创建，关联工商信息和风险报告，记录触发来源（profile_id）</td>
+</tr>
+<tr>
+<td>报告文件</td>
+<td><code>enterprise_report_file</code></td>
+<td>独立表</td>
+<td>尽调 PDF 文件存储，关联触发记录 + 存入 customer_material</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>二、逐表字段清单</h2>
+<h3>表1: <code>invitation_record</code> | 对应实体: 邀请记录 (InvitationRecord)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: 与客商中心 <code>invitation_link</code> 表关联。记录每次邀请操作（链接邀请/邮件邀请），含邀请方式、邮件内容、状态追踪。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>link_id</code></td>
+<td align="left">关联链接ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 <code>invitation_link.id</code></td>
+</tr>
+<tr>
+<td align="left"><code>invite_method</code></td>
+<td align="left">邀请方式</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:链接邀请, 20:邮件邀请</td>
+</tr>
+<tr>
+<td align="left"><code>recipient_email</code></td>
+<td align="left">受邀者邮箱</td>
+<td align="left">String(200)</td>
+<td align="left">条件</td>
+<td align="left">—</td>
+<td align="left">邮件邀请时必填</td>
+</tr>
+<tr>
+<td align="left"><code>sender</code></td>
+<td align="left">发送人</td>
+<td align="left">String(100)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">当前销售账号</td>
+</tr>
+<tr>
+<td align="left"><code>email_subject</code></td>
+<td align="left">邮件主题</td>
+<td align="left">String(200)</td>
+<td align="left">条件</td>
+<td align="left">—</td>
+<td align="left">根据域名自动切换</td>
+</tr>
+<tr>
+<td align="left"><code>email_body</code></td>
+<td align="left">邮件正文</td>
+<td align="left">Text</td>
+<td align="left">条件</td>
+<td align="left">—</td>
+<td align="left">含邀请链接模板</td>
+</tr>
+<tr>
+<td align="left"><code>status</code></td>
+<td align="left">邀请状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">10:待接受, 20:已接受, 30:已过期, 40:已取消</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">生成时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>expire_time</code></td>
+<td align="left">过期时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">创建时间 + 14天</td>
+</tr>
+<tr>
+<td align="left"><code>updated_at</code></td>
+<td align="left">更新时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表2: <code>due_diligence_log</code> | 对应实体: 尽调触发记录 (DueDiligenceLog)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: V3.0 重构。客户提交入驻档案时系统自动创建此记录，替代旧版手工查询日志。关联 <code>enterprise_profile.id</code> 或 <code>personal_profile.id</code> 作为触发来源。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">SaaS 数据隔离</td>
+</tr>
+<tr>
+<td align="left"><code>profile_type</code></td>
+<td align="left">档案类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:企业档案, 20:自然人档案</td>
+</tr>
+<tr>
+<td align="left"><code>profile_id</code></td>
+<td align="left">档案ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">关联 enterprise_profile.id 或 personal_profile.id</td>
+</tr>
+<tr>
+<td align="left"><code>customer_id</code></td>
+<td align="left">客户ID</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">关联 customer.id（入驻审核通过后回填）</td>
+</tr>
+<tr>
+<td align="left"><code>company_name</code></td>
+<td align="left">企业名称</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">查询企业全称</td>
+</tr>
+<tr>
+<td align="left"><code>credit_code</code></td>
+<td align="left">信用代码</td>
+<td align="left">String(18)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">企业查询时使用</td>
+</tr>
+<tr>
+<td align="left"><code>lookup_status</code></td>
+<td align="left">查询状态</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:成功, 20:部分成功, 30:失败</td>
+</tr>
+<tr>
+<td align="left"><code>trigger_source</code></td>
+<td align="left">触发来源</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">固定: 10:客户提交入驻（V3.0）</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">触发时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表3: <code>enterprise_info</code> | 对应实体: 企业工商信息 (EnterpriseInfo)</h3>
+<blockquote>
+<p><strong>设计说明</strong>: 存储天眼查 API 返回的企业工商数据快照。通过 <code>diligence_id</code> 关联尽调触发记录。数据不可编辑，仅供查阅。</p>
+</blockquote>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>diligence_id</code></td>
+<td align="left">尽调记录ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, <strong>Unique</strong></td>
+<td align="left">1:1 关联 due_diligence_log.id</td>
+</tr>
+<tr>
+<td align="left"><code>company_name</code></td>
+<td align="left">企业名称</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>credit_code</code></td>
+<td align="left">统一社会信用代码</td>
+<td align="left">String(18)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>legal_person</code></td>
+<td align="left">法定代表人</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>company_status</code></td>
+<td align="left">企业状态</td>
+<td align="left">String(20)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">存续/在业/注销/吊销</td>
+</tr>
+<tr>
+<td align="left"><code>registered_capital</code></td>
+<td align="left">注册资本</td>
+<td align="left">String(50)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">如&quot;20000万人民币&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>established_date</code></td>
+<td align="left">成立日期</td>
+<td align="left">Date</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>registered_address</code></td>
+<td align="left">注册地址</td>
+<td align="left">String(500)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>business_scope</code></td>
+<td align="left">经营范围</td>
+<td align="left">Text</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>insured_count</code></td>
+<td align="left">参保人数</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>enterprise_tags</code></td>
+<td align="left">企业标签</td>
+<td align="left">JSON</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">如[&quot;高新技术企业&quot;,&quot;专精特新&quot;]</td>
+</tr>
+<tr>
+<td align="left"><code>tianyan_score</code></td>
+<td align="left">天眼评分</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">万分制原始值，展示时÷100</td>
+</tr>
+<tr>
+<td align="left"><code>data_source</code></td>
+<td align="left">数据来源</td>
+<td align="left">String(50)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">固定&quot;天眼查API&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>queried_at</code></td>
+<td align="left">查询时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表4: <code>enterprise_risk_report</code> | 对应实体: 企业风险报告 (EnterpriseRiskReport)</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>diligence_id</code></td>
+<td align="left">尽调记录ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, <strong>Unique</strong></td>
+<td align="left">1:1 关联 due_diligence_log.id</td>
+</tr>
+<tr>
+<td align="left"><code>company_name</code></td>
+<td align="left">查询企业名称</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>total_risk_count</code></td>
+<td align="left">风险总数</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">所有风险类别合计条目数</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表5: <code>enterprise_risk_category</code> | 对应实体: 风险分类</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>report_id</code></td>
+<td align="left">报告ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 enterprise_risk_report.id</td>
+</tr>
+<tr>
+<td align="left"><code>category_name</code></td>
+<td align="left">分类名称</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:自身风险, 20:周边风险, 30:预警提醒, 40:历史风险</td>
+</tr>
+<tr>
+<td align="left"><code>category_count</code></td>
+<td align="left">分类计数</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">该分类下风险条目总数</td>
+</tr>
+<tr>
+<td align="left"><code>sort_order</code></td>
+<td align="left">排序</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">固定顺序: 自身→周边→预警→历史</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表6: <code>enterprise_risk_detail</code> | 对应实体: 风险明细</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>category_id</code></td>
+<td align="left">分类ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 enterprise_risk_category.id</td>
+</tr>
+<tr>
+<td align="left"><code>risk_level</code></td>
+<td align="left">风险等级</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:高风险, 20:警示, 30:提示信息</td>
+</tr>
+<tr>
+<td align="left"><code>risk_type</code></td>
+<td align="left">风险类型</td>
+<td align="left">Int</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">详见枚举字典（失信被执行人/行政处罚/经营异常等）</td>
+</tr>
+<tr>
+<td align="left"><code>seq_no</code></td>
+<td align="left">序号</td>
+<td align="left">Int</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">明细序号</td>
+</tr>
+<tr>
+<td align="left"><code>related_company</code></td>
+<td align="left">关联公司</td>
+<td align="left">String(200)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">自身风险时为空</td>
+</tr>
+<tr>
+<td align="left"><code>title</code></td>
+<td align="left">标题</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">风险事件标题/案由</td>
+</tr>
+<tr>
+<td align="left"><code>description</code></td>
+<td align="left">描述</td>
+<td align="left">Text</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">含案号、金额、日期等</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">创建时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<h3>表7: <code>enterprise_report_file</code> | 对应实体: 报告文件</h3>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">字段名 (En)</th>
+<th align="left">字段名 (Cn)</th>
+<th align="left">类型 (Type)</th>
+<th align="left">必填</th>
+<th align="left">约束/索引</th>
+<th align="left">枚举/备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><code>id</code></td>
+<td align="left">主键</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>PK</strong></td>
+<td align="left">雪花ID</td>
+</tr>
+<tr>
+<td align="left"><code>tenant_id</code></td>
+<td align="left">租户ID</td>
+<td align="left">String(32)</td>
+<td align="left">Yes</td>
+<td align="left">Index</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>diligence_id</code></td>
+<td align="left">尽调记录ID</td>
+<td align="left">BigInt</td>
+<td align="left">Yes</td>
+<td align="left"><strong>FK</strong>, Index</td>
+<td align="left">关联 due_diligence_log.id</td>
+</tr>
+<tr>
+<td align="left"><code>material_id</code></td>
+<td align="left">客户资料ID</td>
+<td align="left">BigInt</td>
+<td align="left">—</td>
+<td align="left">Index</td>
+<td align="left">关联 customer_material.id，报告自动存入客户资料</td>
+</tr>
+<tr>
+<td align="left"><code>report_type</code></td>
+<td align="left">报告类型</td>
+<td align="left">TinyInt</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">10:企业信息报告, 20:企业风险报告</td>
+</tr>
+<tr>
+<td align="left"><code>file_name</code></td>
+<td align="left">文件名</td>
+<td align="left">String(200)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">如&quot;企业信用信息报告_XX公司.pdf&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>file_url</code></td>
+<td align="left">文件地址</td>
+<td align="left">String(500)</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>page_size</code></td>
+<td align="left">页面尺寸</td>
+<td align="left">String(20)</td>
+<td align="left">—</td>
+<td align="left">—</td>
+<td align="left">固定&quot;A4竖版&quot;</td>
+</tr>
+<tr>
+<td align="left"><code>created_at</code></td>
+<td align="left">生成时间</td>
+<td align="left">DateTime</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">—</td>
+</tr>
+<tr>
+<td align="left"><code>is_deleted</code></td>
+<td align="left">软删除标识</td>
+<td align="left">Boolean</td>
+<td align="left">Yes</td>
+<td align="left">—</td>
+<td align="left">Default: false</td>
+</tr>
+</tbody></table></div>
+<hr>
+<h2>三、ER 关系图</h2>
+<pre><code class="language-mermaid">erDiagram
+    invitation_link ||--o| invitation_record : &quot;1:0..1&quot;
+    
+    enterprise_profile ||--o| due_diligence_log : &quot;1:0..1 (提交入驻触发)&quot;
+    personal_profile ||--o| due_diligence_log : &quot;1:0..1 (提交入驻触发)&quot;
+    
+    due_diligence_log ||--|| enterprise_info : &quot;1:1&quot;
+    due_diligence_log ||--|| enterprise_risk_report : &quot;1:1&quot;
+    due_diligence_log ||--o{ enterprise_report_file : &quot;1:N&quot;
+    
+    enterprise_risk_report ||--o{ enterprise_risk_category : &quot;1:N&quot;
+    enterprise_risk_category ||--o{ enterprise_risk_detail : &quot;1:N&quot;
+    
+    enterprise_report_file }o--|| customer_material : &quot;N:1 (报告存入客户资料)&quot;
+</code></pre>
+<hr>
+<h2>四、关键设计说明</h2>
+<h3>触发机制（V3.0 重构）</h3>
+<ul>
+<li>旧版：销售手工输入企业名称 → 点击查询 → 创建 <code>enterprise_lookup_log</code></li>
+<li>新版：客户提交 <code>enterprise_profile</code>（status=20 待审核） → 系统自动创建 <code>due_diligence_log</code> → 调用天眼查 API → 填充 <code>enterprise_info</code> + <code>enterprise_risk_report</code></li>
+</ul>
+<h3>降级策略</h3>
+<ul>
+<li>天眼查 API 调用失败 → <code>due_diligence_log.lookup_status = 30</code> → Toast 提示但不阻断入驻 → 定时任务扫描 status=30 的记录 → 自动补采</li>
+</ul>
+<h3>数据快照</h3>
+<ul>
+<li><code>enterprise_info</code> 和 <code>enterprise_risk_report</code> 为查询时刻的快照数据，不可编辑</li>
+<li>客户再次提交入驻（被拒绝后重提）→ 创建新的 <code>due_diligence_log</code> → 重新调用 API → 生成新快照</li>
+</ul>
+<h3>与客商中心数据融合</h3>
+<ul>
+<li>尽调 PDF 通过 <code>enterprise_report_file.material_id</code> 关联 <code>customer_material</code> 表</li>
+<li><code>customer_material.material_type = 30</code>（天眼查风险信息PDF），来源 <code>FileSource = 40</code>（天眼查生成）</li>
+</ul>
+
+  </div>
+</div>
+</body>
+</html>

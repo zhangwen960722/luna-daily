@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>收货地址管理 - 审核</title>
+    <title>地址管理 - 员工端审核</title>
     <!-- 引入 Vue 3 -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <!-- 引入 Element Plus 样式 -->
@@ -24,7 +24,7 @@
             padding: 16px;
             background-color: var(--el-bg-color);
             font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
-            padding-bottom: 80px; /* 为底部悬浮栏留出空间 */
+            padding-bottom: 80px;
         }
         .page-header {
             display: flex;
@@ -69,105 +69,121 @@
             margin-right: 8px;
             border-radius: 2px;
         }
-        
-        /* 详情展示样式 */
-        .detail-row {
-            margin-bottom: 20px;
-        }
-        .detail-label {
-            color: #909399;
-            font-size: 14px;
-            margin-bottom: 8px;
-            display: block;
-        }
-        .detail-value {
-            color: #303133;
-            font-size: 14px;
-            padding: 8px 12px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #e4e7ed;
-            min-height: 20px;
-            line-height: 1.5;
-            word-break: break-all;
-        }
-        
-        /* 悬浮底部栏 */
-        .sticky-footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: #fff;
-            padding: 12px 24px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: flex-end;
-            z-index: 100;
-        }
-        .footer-inner {
-            display: flex;
-            gap: 12px;
-        }
+        .detail-row { margin-bottom: 20px; }
+        .detail-label { color: #909399; font-size: 14px; margin-bottom: 8px; display: block; }
+        .detail-value { color: #303133; font-size: 14px; padding: 8px 12px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; line-height: 1.5; word-break: break-all; }
+        .sticky-footer { position: fixed; bottom: 0; left: 0; right: 0; background-color: #fff; padding: 12px 24px; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex; justify-content: flex-end; z-index: 100; }
+        .footer-inner { display: flex; gap: 12px; }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- 页头 -->
-        <div class="page-header">
-            <el-icon @click="goBack"><Back /></el-icon>
-            <span>收货地址审核</span>
-        </div>
+        <!-- V2.3: 顶层Tab -->
+        <el-tabs v-model="mainTab" type="border-card">
+            <!-- ===== 收货地址审核 ===== -->
+            <el-tab-pane label="收货地址审核" name="shipping">
+                <div class="page-header">
+                    <el-icon @click="goBack"><Back /></el-icon>
+                    <span>收货地址审核</span>
+                </div>
+                <div class="content-card">
+                    <div class="section-title">收货人信息</div>
+                    <el-row :gutter="24" class="detail-row">
+                        <el-col :span="8">
+                            <span class="detail-label">联系人</span>
+                            <div class="detail-value">{{ addressInfo.contact }}</div>
+                        </el-col>
+                        <el-col :span="8">
+                            <span class="detail-label">联系电话</span>
+                            <div class="detail-value">{{ addressInfo.phone }}</div>
+                        </el-col>
+                    </el-row>
+                    <div class="section-title" style="margin-top: 30px;">地址详情</div>
+                    <el-row :gutter="24" class="detail-row">
+                        <el-col :span="8">
+                            <span class="detail-label">国家</span>
+                            <div class="detail-value">{{ addressInfo.country }}</div>
+                        </el-col>
+                        <el-col :span="8">
+                            <span class="detail-label">省/州</span>
+                            <div class="detail-value">{{ addressInfo.state }}</div>
+                        </el-col>
+                        <el-col :span="8">
+                            <span class="detail-label">城市</span>
+                            <div class="detail-value">{{ addressInfo.city }}</div>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24" class="detail-row">
+                        <el-col :span="8">
+                            <span class="detail-label">邮编</span>
+                            <div class="detail-value">{{ addressInfo.zip }}</div>
+                        </el-col>
+                        <el-col :span="16">
+                            <span class="detail-label">详细地址</span>
+                            <div class="detail-value">{{ addressInfo.address }}</div>
+                        </el-col>
+                    </el-row>
+                </div>
+                <div class="sticky-footer">
+                    <div class="footer-inner">
+                        <el-button size="large" style="width: 100px;" @click="goBack">返回</el-button>
+                        <el-button type="danger" size="large" style="width: 120px; font-weight: bold;" @click="handleReject">审核拒绝</el-button>
+                        <el-button type="success" size="large" style="width: 120px; font-weight: bold;" @click="handleApprove">审核通过</el-button>
+                    </div>
+                </div>
+            </el-tab-pane>
 
-        <!-- 地址信息详情 -->
-        <div class="content-card">
-            <div class="section-title">收货人信息</div>
-            <el-row :gutter="24" class="detail-row">
-                <el-col :span="8">
-                    <span class="detail-label">联系人</span>
-                    <div class="detail-value">{{ addressInfo.contact }}</div>
-                </el-col>
-                <el-col :span="8">
-                    <span class="detail-label">联系电话</span>
-                    <div class="detail-value">{{ addressInfo.phone }}</div>
-                </el-col>
-            </el-row>
-
-            <div class="section-title" style="margin-top: 30px;">地址详情</div>
-            <el-row :gutter="24" class="detail-row">
-                <el-col :span="8">
-                    <span class="detail-label">国家</span>
-                    <div class="detail-value">{{ addressInfo.country }}</div>
-                </el-col>
-                <el-col :span="8">
-                    <span class="detail-label">省/州</span>
-                    <div class="detail-value">{{ addressInfo.state }}</div>
-                </el-col>
-                <el-col :span="8">
-                    <span class="detail-label">城市</span>
-                    <div class="detail-value">{{ addressInfo.city }}</div>
-                </el-col>
-            </el-row>
-            <el-row :gutter="24" class="detail-row">
-                <el-col :span="8">
-                    <span class="detail-label">邮编</span>
-                    <div class="detail-value">{{ addressInfo.zip }}</div>
-                </el-col>
-                <el-col :span="16">
-                    <span class="detail-label">详细地址</span>
-                    <div class="detail-value">{{ addressInfo.address }}</div>
-                </el-col>
-            </el-row>
-        </div>
-
-        <!-- 悬浮底部栏 -->
-        <div class="sticky-footer">
-            <div class="footer-inner">
-                <el-button size="large" style="width: 100px;" @click="goBack">返回</el-button>
-                <el-button type="danger" size="large" style="width: 120px; font-weight: bold;" @click="handleReject">审核拒绝</el-button>
-                <el-button type="success" size="large" style="width: 120px; font-weight: bold;" @click="handleApprove">审核通过</el-button>
-            </div>
-        </div>
+            <!-- ===== 取件地址查看（只读） ===== -->
+            <el-tab-pane label="取件地址查看" name="pickup">
+                <div class="page-header">
+                    <el-icon @click="goBack"><Back /></el-icon>
+                    <span>取件地址查看</span>
+                </div>
+                <div class="content-card">
+                    <div class="section-title">取件人信息</div>
+                    <el-row :gutter="24" class="detail-row">
+                        <el-col :span="8">
+                            <span class="detail-label">联系人</span>
+                            <div class="detail-value">{{ pickupInfo.contact }}</div>
+                        </el-col>
+                        <el-col :span="8">
+                            <span class="detail-label">联系电话</span>
+                            <div class="detail-value">{{ pickupInfo.phone }}</div>
+                        </el-col>
+                    </el-row>
+                    <div class="section-title" style="margin-top: 30px;">地址详情</div>
+                    <el-row :gutter="24" class="detail-row">
+                        <el-col :span="8">
+                            <span class="detail-label">国家</span>
+                            <div class="detail-value">{{ pickupInfo.country }}</div>
+                        </el-col>
+                        <el-col :span="8">
+                            <span class="detail-label">省/州</span>
+                            <div class="detail-value">{{ pickupInfo.state }}</div>
+                        </el-col>
+                        <el-col :span="8">
+                            <span class="detail-label">城市</span>
+                            <div class="detail-value">{{ pickupInfo.city }}</div>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24" class="detail-row">
+                        <el-col :span="8">
+                            <span class="detail-label">邮编</span>
+                            <div class="detail-value">{{ pickupInfo.zip }}</div>
+                        </el-col>
+                        <el-col :span="16">
+                            <span class="detail-label">详细地址</span>
+                            <div class="detail-value">{{ pickupInfo.address }}</div>
+                        </el-col>
+                    </el-row>
+                </div>
+                <div class="sticky-footer">
+                    <div class="footer-inner">
+                        <el-button size="large" style="width: 100px;" @click="goBack">返回</el-button>
+                    </div>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
     </div>
 
     <script>
@@ -176,7 +192,10 @@
 
         const app = createApp({
             setup() {
-                // 模拟传入的数据
+                // V2.3: 顶层Tab
+                const mainTab = ref('shipping');
+
+                // 收货地址
                 const addressInfo = ref({
                     contact: 'Greg Bailys',
                     phone: '904-559-3808',
@@ -187,8 +206,18 @@
                     address: '7800 Bayberry Road'
                 });
 
+                // 取件地址（只读查看）
+                const pickupInfo = ref({
+                    contact: '张物流',
+                    phone: '13800138000',
+                    country: 'US - 美国',
+                    state: 'CA - 加利福尼亚州',
+                    city: 'Los Angeles',
+                    zip: '90001',
+                    address: '1234 Main St, LA'
+                });
+
                 onMounted(() => {
-                    // 实际开发中会从 URL 解析 ID 并获取详情
                     const urlParams = new URLSearchParams(window.location.search);
                     const contact = urlParams.get('contact');
                     if (contact) {
@@ -224,7 +253,9 @@
                 };
 
                 return {
+                    mainTab,
                     addressInfo,
+                    pickupInfo,
                     goBack,
                     handleReject,
                     handleApprove
