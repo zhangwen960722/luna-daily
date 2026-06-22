@@ -467,33 +467,48 @@
         <!-- 合同签约弹窗 -->
         <el-dialog v-model="signDialogVisible" title="合同签约" width="550px" destroy-on-close>
             <el-form :model="signForm" @submit.prevent>
-                <div class="a11y-form-group">
-                    <label for="sign-is-new-customer" class="a11y-form-label is-required">是否新客户</label>
-                    <el-select id="sign-is-new-customer" v-model="signForm.isNewCustomer" placeholder="请选择" style="width: 100%;">
-                        <el-option label="是" value="是"></el-option>
-                        <el-option label="否" value="否"></el-option>
-                    </el-select>
-                </div>
-                <div class="a11y-form-group" v-if="signForm.isNewCustomer === '否'">
-                    <label for="sign-old-customer-code" class="a11y-form-label is-required">老客户代码</label>
-                    <el-input id="sign-old-customer-code" v-model="signForm.oldCustomerCode" placeholder="请输入老客户代码" style="width: 100%;"></el-input>
-                </div>
-                <div class="a11y-form-group">
-                    <label for="sign-is-simple" class="a11y-form-label is-required">是否简易合同</label>
-                    <el-select id="sign-is-simple" v-model="signForm.isSimple" placeholder="请选择" style="width: 100%;">
-                        <el-option label="是" value="是"></el-option>
-                        <el-option label="否" value="否"></el-option>
-                    </el-select>
-                </div>
-                
-                <div class="a11y-form-group">
-                    <label for="sign-is-standard" class="a11y-form-label is-required">是否标准合同</label>
-                    <el-select id="sign-is-standard" v-model="signForm.isStandard" placeholder="请选择" style="width: 100%;">
-                        <el-option label="是" value="是"></el-option>
-                        <el-option label="否" value="否"></el-option>
-                    </el-select>
-                </div>
+                <!-- Row 1: 是否简易 | 是否标准 -->
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="sign-is-simple" class="a11y-form-label is-required">是否简易合同</label>
+                            <el-select id="sign-is-simple" v-model="signForm.isSimple" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="sign-is-standard" class="a11y-form-label is-required">是否标准合同</label>
+                            <el-select id="sign-is-standard" v-model="signForm.isStandard" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                </el-row>
 
+                <!-- Row 2: 是否新客户 | 老客户代码（联动） -->
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <div class="a11y-form-group">
+                            <label for="sign-is-new-customer" class="a11y-form-label is-required">是否新客户</label>
+                            <el-select id="sign-is-new-customer" v-model="signForm.isNewCustomer" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </div>
+                    </el-col>
+                    <el-col :span="12" v-if="signForm.isNewCustomer === '否'">
+                        <div class="a11y-form-group">
+                            <label for="sign-old-customer-code" class="a11y-form-label is-required">老客户代码</label>
+                            <el-input id="sign-old-customer-code" v-model="signForm.oldCustomerCode" placeholder="请输入老客户代码" style="width: 100%;"></el-input>
+                        </div>
+                    </el-col>
+                </el-row>
+
+                <!-- Row 3: 我司合同抬头（独占） -->
                 <div class="a11y-form-group">
                     <label for="sign-company-title" class="a11y-form-label is-required">我司合同抬头</label>
                     <el-select id="sign-company-title" v-model="signForm.companyTitle" placeholder="请选择" style="width: 100%;">
@@ -680,19 +695,28 @@
         <!-- 合同签约弹窗 (针对中国香港特殊客户) -->
         <el-dialog v-model="hkSignDialogVisible" title="合同签约" width="550px" destroy-on-close>
             <el-form :model="hkSignForm" :rules="hkSignRules" ref="hkSignFormRef" label-position="top">
-                <el-form-item label="是否新客户" required>
-                    <el-select v-model="hkSignForm.isNewCustomer" placeholder="请选择" style="width: 100%;">
-                        <el-option label="是" value="是"></el-option>
-                        <el-option label="否" value="否"></el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item v-if="hkSignForm.isNewCustomer === '否'" label="老客户代码" required>
-                    <el-input v-model="hkSignForm.oldCustomerCode" placeholder="请输入老客户代码" style="width: 100%;"></el-input>
-                </el-form-item>
+                <!-- Row 1: 是否新客户 | 老客户代码（联动） -->
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="是否新客户" required>
+                            <el-select v-model="hkSignForm.isNewCustomer" placeholder="请选择" style="width: 100%;">
+                                <el-option label="是" value="是"></el-option>
+                                <el-option label="否" value="否"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12" v-if="hkSignForm.isNewCustomer === '否'">
+                        <el-form-item label="老客户代码" required>
+                            <el-input v-model="hkSignForm.oldCustomerCode" placeholder="请输入老客户代码" style="width: 100%;"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <!-- Row 2: 我司合同抬头（独占） -->
                 <el-form-item label="我司合同抬头" prop="companyTitle" required>
                     <el-input v-model="hkSignForm.companyTitle" disabled placeholder="香港富力顿"></el-input>
                 </el-form-item>
-                <el-row :gutter="24">
+                <!-- Row 3: 合同开始日期 | 合同结束日期 -->
+                <el-row :gutter="16">
                     <el-col :span="12">
                         <el-form-item label="合同开始日期" prop="startDate">
                             <el-date-picker v-model="hkSignForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
