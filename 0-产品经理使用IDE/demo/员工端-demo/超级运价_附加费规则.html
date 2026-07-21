@@ -35,10 +35,6 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-option label="标识提醒" value="flag"></el-option>
         <el-option label="阻止下单" value="block"></el-option>
       </el-select>
-      <el-select v-model="q.node" clearable placeholder="全部触发节点" style="width:130px">
-        <el-option label="运单创建" value="waybill"></el-option>
-        <el-option label="红外过机" value="ir"></el-option>
-      </el-select>
       <el-select v-model="q.status" clearable placeholder="全部状态" style="width:110px">
         <el-option label="正常" value="active"></el-option>
         <el-option label="已冻结" value="disabled"></el-option>
@@ -46,7 +42,6 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       <el-button type="primary" @click="search">查询</el-button>
       <el-button @click="reset">重置</el-button>
       <div style="margin-left:auto">
-        <el-button type="warning" plain :disabled="!selectedRules.length" @click="openBatchDiscount">批量设置附加费优惠<span v-if="selectedRules.length">（{{selectedRules.length}}）</span></el-button>
         <el-button type="primary" @click="openAdd">新增规则</el-button>
       </div>
     </div>
@@ -56,12 +51,10 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <div class="card-header">
       <h3>附加费规则 <span style="font-weight:400;font-size:13px;color:var(--text-secondary);margin-left:8px">{{ filteredRules.length }} 条</span></h3>
     </div>
-    <el-table :data="filteredRules" border stripe @selection-change="onRuleSelectionChange" ref="ruleTable">
-      <el-table-column type="selection" width="45"></el-table-column>
+    <el-table :data="filteredRules" border stripe>
       <el-table-column prop="name" label="规则名称" min-width="160"></el-table-column>
       <el-table-column prop="type" label="类型" width="90"></el-table-column>
       <el-table-column prop="action" label="动作" width="90"></el-table-column>
-      <el-table-column prop="node" label="触发节点" width="90"></el-table-column>
       <el-table-column prop="cond" label="触发条件/公式" min-width="200"></el-table-column>
       <el-table-column prop="pricing" label="计价" min-width="130"></el-table-column>
       <el-table-column prop="feeLabel" label="费用类型" width="90"></el-table-column>
@@ -87,7 +80,6 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       <div class="form-section">
         <span class="form-section-title">规则信息</span>
         <el-form-item label="规则名称" required><el-input v-model="f.name" placeholder="如 粉末品名加收"></el-input></el-form-item>
-        <el-form-item label="触发节点" required><el-select v-model="f.node" style="width:200px"><el-option label="运单创建" value="waybill"></el-option><el-option label="红外过机" value="ir"></el-option></el-select></el-form-item>
       </div>
 
       <!-- Step 1: 触发条件 -->
@@ -242,32 +234,13 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <template #footer><el-button @click="showDialog=false">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="save">保存</el-button></template>
   </el-dialog>
 
-<!-- 批量设置附加费优惠弹窗 -->
-<el-dialog v-model="showBatchDiscount" title="批量设置附加费优惠" width="520px" :close-on-click-modal="false">
-  <div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)">已选择 {{ selectedRules.length }} 条附加费规则</div>
-  <el-form :model="batchForm" label-width="120px">
-    <el-form-item label="对象类型" required><el-select v-model="batchForm.targetType" style="width:100%"><el-option label="客户等级" value="level"></el-option><el-option label="客户特批" value="customer"></el-option></el-select></el-form-item>
-    <el-form-item label="目标" required>
-      <el-select v-if="batchForm.targetType==='level'" v-model="batchForm.targetLevels" multiple collapse-tags style="width:100%"><el-option v-for="lv in customerLevels" :key="lv.id" :label="lv.label" :value="lv.id"></el-option></el-select>
-      <el-select v-else v-model="batchForm.targetCustomers" multiple collapse-tags filterable style="width:100%"><el-option v-for="cust in customerList" :key="cust.id" :label="cust.name" :value="cust.id"></el-option></el-select>
-    </el-form-item>
-    <el-form-item label="优惠方式" required><el-select v-model="batchForm.mode" style="width:100%"><el-option label="折扣率" value="rate"></el-option><el-option label="固定减免" value="fixed"></el-option></el-select></el-form-item>
-    <el-form-item label="优惠值" required><el-input-number v-model="batchForm.val" :min="batchForm.mode==='rate'?0.01:-999" :max="batchForm.mode==='rate'?9.99:999" :precision="2" style="width:100%"></el-input-number></el-form-item>
-    <el-form-item label="有效期" required><el-select v-model="batchForm.validity" style="width:100%"><el-option label="永久有效" value="permanent"></el-option><el-option label="固定期限" value="period"></el-option><el-option label="单次有效" value="single"></el-option></el-select></el-form-item>
-    <el-form-item label="有效期起止" required v-if="batchForm.validity==='period'"><el-date-picker v-model="batchForm.validRange" type="daterange" range-separator="至" start-placeholder="起始日期" end-placeholder="结束日期" style="width:100%" value-format="YYYY-MM-DD"></el-date-picker></el-form-item>
-    <el-form-item label="审批编号" required v-if="batchForm.targetType==='customer'"><el-input v-model="batchForm.approvalNo" placeholder="飞书审批单号"></el-input></el-form-item>
-  </el-form>
-  <template #footer><el-button @click="showBatchDiscount=false">取消</el-button><el-button type="primary" @click="batchSetDiscount">确认设置</el-button></template>
-</el-dialog>
-
 </div>
 
 <script>
 (function(){
 var typeLabel={field:'字段匹配',formula:'公式阈值',manual:'人工添加'},
     actionLabel={charge:'加收',flag:'标识提醒',block:'阻止下单'},
-    nodeLabel={waybill:'运单创建',ir:'红外过机'},
-    dirLabel={r:'应收',p:'应付'},
+        dirLabel={r:'应收',p:'应付'},
     puLabel={ticket:'按票',box:'按箱',kg:'按KG',cbm:'按m³',unit:'按数量'},
     dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送方式',warehouse:'本地仓',user:'用户',userLevel:'用户等级',isFba:'是否FBA运单',customsMode:'报关方式',selfDelivery:'自送标识'};
 var enabledChannels=['美森360','美森432','EX456','洛杉矶600'];
@@ -279,18 +252,18 @@ var customerList=[{id:'C001',name:'深圳市XX科技'},{id:'C002',name:'广州YY
 var app=Vue.createApp({
 data:function(){
   return {
-    showDialog:false, editMode:false, editIndex:-1, discountLocked:false, showBatchDiscount:false, selectedRules:[], batchForm:{targetType:'level',targetLevels:[],targetCustomers:[],mode:'fixed',val:0,validity:'permanent'},
+    showDialog:false, editMode:false, editIndex:-1, discountLocked:false,
     customerLevels:customerLevels,customerList:customerList,surchargeTags:surchargeTags,
-    q:{type:'',action:'',node:'',status:''},enabledChannels:enabledChannels,feeTypesAll:feeTypesAll,
+    q:{type:'',action:'',status:''},enabledChannels:enabledChannels,feeTypesAll:feeTypesAll,
     rules:[
       {name:'粉末品名加收',type:'字段匹配',action:'加收',node:'运单创建',cond:'SKU属性=粉末 AND 尾程派送方式=卡派',pricing:'按KG 1.5元 / 按m³ 200元',feeLabel:'出口费用',direction:'应收',status:'正常',
-        _raw:{id:'R001',type:'field',action:'charge',node:'waybill',dl:'partial',conditions:[{dim:'sku',val:'powder'},{dim:'lastMile',val:'truck'}],f1:'',f2:'',ml:'',pricingRows:[{dir:'r',feeLabel:'出口费用',pu:'kg',price:1.5,currency:'rmb'},{dir:'r',feeLabel:'出口费用',pu:'cbm',price:200,currency:'rmb'}],status:'active'}},
+        _raw:{id:'R001',type:'field',action:'charge',dl:'partial',conditions:[{dim:'sku',val:'powder'},{dim:'lastMile',val:'truck'}],f1:'',f2:'',ml:'',pricingRows:[{dir:'r',feeLabel:'出口费用',pu:'kg',price:1.5,currency:'rmb'},{dir:'r',feeLabel:'出口费用',pu:'cbm',price:200,currency:'rmb'}],status:'active'}},
       {name:'超重超长加收',type:'公式阈值',action:'加收',node:'红外过机',cond:'(长+宽)x2+高>300 OR 长+宽x2+高x2>265',pricing:'按箱 200元',feeLabel:'出口费用',direction:'应收',status:'正常',
         _raw:{id:'R002',type:'formula',action:'charge',node:'ir',dl:'partial',f1:'(长+宽)x2+高>300',f2:'长+宽x2+高x2>265',ml:'',pricingRows:[{dir:'r',feeLabel:'出口费用',pu:'box',price:200,currency:'rmb'}],status:'active'}},
       {name:'商业地址加收',type:'字段匹配',action:'加收',node:'运单创建',cond:'尾程派送方式=快递派 AND 地址类型=商业地址',pricing:'按票 50元',feeLabel:'派送费用',direction:'应收',status:'正常',
-        _raw:{id:'R003',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'},{dim:'address',val:'commercial'}],f1:'',f2:'',ml:'',pricingRows:[{dir:'r',feeLabel:'派送费用',pu:'ticket',price:50,currency:'rmb'}],status:'active'}},
+        _raw:{id:'R003',type:'field',action:'charge',dl:'full',conditions:[{dim:'lastMile',val:'express'},{dim:'address',val:'commercial'}],f1:'',f2:'',ml:'',pricingRows:[{dir:'r',feeLabel:'派送费用',pu:'ticket',price:50,currency:'rmb'}],status:'active'}},
       {name:'贴标费',type:'人工添加',action:'加收',node:'运单创建',cond:'人工勾选贴标+填张数',pricing:'按数量 2元',feeLabel:'增值服务',direction:'应收',status:'已冻结',
-        _raw:{id:'R004',type:'manual',action:'charge',node:'waybill',dl:'full',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'增值服务',pu:'unit',price:2,currency:'rmb'}],status:'disabled'}}
+        _raw:{id:'R004',type:'manual',action:'charge',dl:'full',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'增值服务',pu:'unit',price:2,currency:'rmb'}],status:'disabled'}}
     ],
     surchargeDiscounts:[
       {name:'S-粉末品名加收减0.30',surchargeRule:'粉末品名加收',targetTypeLabel:'客户等级',targetName:'S',modeLabel:'固定减免',val:'-0.30',priorityLabel:'中（客户等级）',validityLabel:'永久有效',status:'生效中',
@@ -300,7 +273,7 @@ data:function(){
       {name:'A-偏远邮编加收打折0.90',surchargeRule:'偏远邮编加收',targetTypeLabel:'客户等级',targetName:'A',modeLabel:'折扣率',val:'0.90',priorityLabel:'中（客户等级）',validityLabel:'固定期限 2026-01-01~2026-06-30',status:'已失效',
         _raw:{ruleId:'R004',targetType:'level',targetLevel:'A',targetCustomer:'',mode:'rate',val:0.90,priority:40,validity:'period',validFrom:'2026-01-01',validTo:'2026-06-30',approvalNo:''}}
     ],
-    f:{name:'',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagIds:[],discountRules:[]}
+    f:{name:'',type:'field',action:'charge',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagIds:[],discountRules:[]}
   }
 },
 computed:{
@@ -310,7 +283,6 @@ computed:{
     return this.rules.filter(function(r){
       if(self.q.type&&r.type!==typeLabel[self.q.type]) return false;
       if(self.q.action&&r.action!==actionLabel[self.q.action]) return false;
-      if(self.q.node&&r.node!==nodeLabel[self.q.node]) return false;
       if(self.q.status){var s=self.q.status==='active'?'生效中':'已禁用';if(r.status!==s) return false;}
       return true;
     });
@@ -318,10 +290,10 @@ computed:{
 },
 methods:{
   search:function(){},
-  reset:function(){this.q={type:'',action:'',node:'',status:''}},
+  reset:function(){this.q={type:'',action:'',status:''}},
   openAdd:function(){
     this.editMode=false;this.editIndex=-1;this.discountLocked=false;
-    this.f={name:'',type:'field',action:'charge',node:'waybill',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagIds:[],discountRules:[]};
+    this.f={name:'',type:'field',action:'charge',dl:'full',conditions:[{dim:'lastMile',val:'express'}],f1:'',f2:'',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagIds:[],discountRules:[]};
     this.showDialog=true;
   },
   openEdit:function(row,idx){
@@ -383,19 +355,15 @@ methods:{
     self.surchargeDiscounts=self.surchargeDiscounts.filter(function(d){return d._raw.ruleId!==ruleId});
     for(var di=0;di<self.f.discountRules.length;di++){var rr=self.f.discountRules[di];var tgts=rr.targetType==='level'?rr.targetLevels:rr.targetCustomers;for(var ti=0;ti<tgts.length;ti++){var tgt=tgts[ti];var targetName=rr.targetType==='level'?tgt:(customerList.find(function(c){return c.id===tgt})||{}).name||tgt||'未指定';var vs=rr.mode==='rate'?Number(rr.val).toFixed(2):'-'+Number(rr.val).toFixed(2);var autoName=targetName+'-'+surchargeRuleName+(rr.mode==='rate'?'打折':'减'+Number(rr.val).toFixed(2));var p=rr.targetType==='customer'?20:40;self.surchargeDiscounts.push({name:autoName,surchargeRule:surchargeRuleName,targetTypeLabel:rr.targetType==='level'?'客户等级':'客户特批',targetName:targetName,modeLabel:rr.mode==='rate'?'折扣率':'固定减免',val:vs,validityLabel:rr.validity==='permanent'?'永久有效':(rr.validity==='period'?'固定期限':'单次有效'),status:'正常',_raw:{ruleId:ruleId,targetType:rr.targetType,targetLevel:rr.targetType==='level'?tgt:'',targetCustomer:rr.targetType==='customer'?tgt:'',mode:rr.mode,val:rr.val,priority:p,validity:rr.validity,validFrom:'',validTo:'',approvalNo:rr.approvalNo||''}})}}
     var row={
-      name:this.f.name,type:typeLabel[this.f.type],action:actionLabel[this.f.action],node:nodeLabel[this.f.node],
-      cond:this.buildCond(),pricing:pricingDisplay,
+      name:this.f.name,type:typeLabel[this.f.type],action:actionLabel[this.f.action],      cond:this.buildCond(),pricing:pricingDisplay,
       feeLabel:firstRow.feeLabel||'',direction:dirLabel[firstRow.dir]||'',
       status:this.editMode?this.rules[this.editIndex].status:'正常',
-      _raw:{id:ruleId,type:this.f.type,action:this.f.action,node:this.f.node,dl:this.f.dl,conditions:JSON.parse(JSON.stringify(this.f.conditions||[])),f1:this.f.f1,f2:this.f.f2,ml:this.f.ml,pricingRows:JSON.parse(JSON.stringify(this.f.pricingRows||[])),status:this.f.status}
+      _raw:{id:ruleId,type:this.f.type,action:this.f.action,dl:this.f.dl,conditions:JSON.parse(JSON.stringify(this.f.conditions||[])),f1:this.f.f1,f2:this.f.f2,ml:this.f.ml,pricingRows:JSON.parse(JSON.stringify(this.f.pricingRows||[])),status:this.f.status}
     };
     if(this.editMode){this.rules.splice(this.editIndex,1,row);ElementPlus.ElMessage.success('已保存规则及优惠')}
     else{this.rules.push(row);ElementPlus.ElMessage.success('已新增规则及优惠')}
     this.showDialog=false;
   },
-  onRuleSelectionChange:function(rows){this.selectedRules=rows},
-  openBatchDiscount:function(){var self=this;var bad=self.selectedRules.find(function(r){return r.status!=='正常'});if(bad){ElementPlus.ElMessage.warning('仅支持状态正常的附加费规则设置优惠规则。请检查！');return}this.batchForm={targetType:'level',targetLevels:[],targetCustomers:[],mode:'fixed',val:0,validity:'permanent',validRange:[],approvalNo:''};this.showBatchDiscount=true},
-  batchSetDiscount:function(){var self=this;var badRule=self.selectedRules.find(function(r){return r.status!=='正常'});if(badRule){ElementPlus.ElMessage.warning('附加费规则【'+badRule.name+'】状态为'+badRule.status+'，不允许批量设置优惠。请确保所选规则状态均为正常');return}if(!this.batchForm.targetType){ElementPlus.ElMessage.warning('请选择对象类型');return}var targets=self.batchForm.targetType==='level'?self.batchForm.targetLevels:self.batchForm.targetCustomers;if(!targets||!targets.length){ElementPlus.ElMessage.warning(self.batchForm.targetType==='level'?'请至少选择一个客户等级':'请至少选择一个目标客户');return}if(this.batchForm.targetType==='customer'&&!this.batchForm.approvalNo){ElementPlus.ElMessage.warning('请输入飞书审批编号');return}if(this.batchForm.validity==='period'&&(!this.batchForm.validRange||this.batchForm.validRange.length<2)){ElementPlus.ElMessage.warning('请选择有效期起止日期');return}if(!this.batchForm.val){ElementPlus.ElMessage.warning('请输入优惠值');return}var targets=self.batchForm.targetType==='level'?self.batchForm.targetLevels:self.batchForm.targetCustomers;var modeText=self.batchForm.mode==='rate'?'打折'+self.batchForm.val:'减'+self.batchForm.val;for(var ti=0;ti<targets.length;ti++){var tgt=targets[ti];var targetName=self.batchForm.targetType==='level'?tgt:(customerList.find(function(c){return c.id===tgt})||{}).name||tgt;for(var si=0;si<self.selectedRules.length;si++){var rule=self.selectedRules[si];var ruleId=rule._raw.id;var ruleName=rule.name;var p=self.batchForm.targetType==='customer'?20:40;var vs=self.batchForm.mode==='rate'?Number(self.batchForm.val).toFixed(2):'-'+Number(self.batchForm.val).toFixed(2);var autoName=targetName+'-'+ruleName+(self.batchForm.mode==='rate'?'打折':'减'+Number(self.batchForm.val).toFixed(2));self.surchargeDiscounts.push({name:autoName,surchargeRule:ruleName,targetTypeLabel:self.batchForm.targetType==='level'?'客户等级':'客户特批',targetName:targetName,modeLabel:self.batchForm.mode==='rate'?'折扣率':'固定减免',val:vs,priorityLabel:p===20?'高（客户特批）':'中（客户等级）',validityLabel:self.batchForm.validity==='permanent'?'永久有效':(self.batchForm.validity==='period'?'固定期限':'单次有效'),status:'正常',_raw:{ruleId:ruleId,targetType:self.batchForm.targetType,targetLevel:self.batchForm.targetType==='level'?tgt:'',targetCustomer:self.batchForm.targetType==='customer'?tgt:'',mode:self.batchForm.mode,val:self.batchForm.val,priority:p,validity:self.batchForm.validity,validFrom:self.batchForm.validRange?self.batchForm.validRange[0]:'',validTo:self.batchForm.validRange?self.batchForm.validRange[1]:'',approvalNo:self.batchForm.approvalNo||''}})}}ElementPlus.ElMessage.success('已为 '+self.selectedRules.length+' 条规则的 '+targets.length+' 个目标批量设置附加费优惠');self.showBatchDiscount=false;self.$refs.ruleTable.clearSelection()},
   toggleStatus:function(idx){
     var row=this.rules[idx];
     var newStatus=row.status==='正常'?'已冻结':'正常';

@@ -47,8 +47,8 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       </div>
       <el-table :data="segItems" border stripe style="flex:1">
         <el-table-column prop="name" label="成本项" min-width="180"></el-table-column>
-        <el-table-column label="公式类型" width="140">
-          <template #default="s"><el-tag v-if="s.row.formulaType===10" type="info" size="small">人民币直接计算</el-tag><el-tag v-else size="small" effect="plain">美元换汇计算</el-tag></template>
+        <el-table-column label="是否换汇" width="100" align="center">
+          <template #default="s"><el-tag :type="s.row.cur==='RMB'?'info':'warning'" size="small">{{s.row.cur==='RMB'?'否':'是'}}</el-tag></template>
         </el-table-column>
         <el-table-column prop="dp" label="建议默认价" width="120" align="right">
           <template #default="s">
@@ -56,8 +56,8 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
             <span v-else style="color:#C0C4CC">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="启用默认价" width="90" align="center">
-          <template #default="s"><el-switch v-model="s.row._useDefaultPrice" :disabled="s.row._preset" size="small" @change="onToggleDefaultPrice(s.row)"></el-switch></template>
+        <el-table-column label="启用默认价" width="100" align="center">
+          <template #default="s"><el-tag :type="s.row._useDefaultPrice?'success':'info'" size="small">{{s.row._useDefaultPrice?'已启用':'未启用'}}</el-tag></template>
         </el-table-column>
         <el-table-column label="状态" width="80" align="center">
           <template #default="s"><el-tag :type="s.row.enabled?'success':'danger'">{{s.row.enabled?'正常':'已冻结'}}</el-tag></template>
@@ -65,7 +65,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-table-column label="操作" width="220" align="center" fixed="right">
           <template #default="s">
             <el-button size="small" @click="openEdit(s.row)">编辑</el-button>
-            <el-button v-if="!s.row._preset" size="small" @click="openBatchUpdate(s.row)">批量更新</el-button>
+            <el-button v-if="!(s.row._preset && s.row.seg==='派送段')" size="small" @click="openBatchUpdate(s.row)">批量更新</el-button>
             <el-button size="small" :type="s.row.enabled?'danger':'success'" :disabled="s.row._preset" @click="toggleStatus(s.row)">{{s.row.enabled?'冻结':'启用'}}</el-button>
           </template>
         </el-table-column>
@@ -77,14 +77,11 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-form :model="editForm" label-width="100px">
       <el-form-item label="所属段"><span style="color:#303133;font-weight:600">{{ activeSeg }}</span></el-form-item>
       <el-form-item label="成本项名称" required><el-input v-model="editForm.name"></el-input></el-form-item>
-      <el-form-item label="公式类型" required>
-        <el-radio-group v-model="editForm.formulaType"><el-radio :value="10">人民币直接计算</el-radio><el-radio :value="20">美元换汇计算</el-radio></el-radio-group>
-      </el-form-item>
-      <el-form-item label="启用默认价"><el-switch v-model="editForm.useDefaultPrice" :disabled="editForm._preset"></el-switch><span style="margin-left:8px;font-size:12px;color:#909399">关闭后该成本项不设默认价，从子表取值</span></el-form-item>
-      <el-row :gutter="12" v-if="editForm.useDefaultPrice">
+      <el-row :gutter="12">
         <el-col :span="12"><el-form-item label="建议默认价" required><el-input-number v-model="editForm.dpVal" :min="0" :precision="2" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
         <el-col :span="12"><el-form-item label="币种" required><el-select v-model="editForm.cur" style="width:100%"><el-option label="RMB" value="RMB"></el-option><el-option label="USD" value="USD"></el-option></el-select></el-form-item></el-col>
       </el-row>
+      <el-form-item label="是否换汇" required><el-tag :type="editForm.cur==='RMB'?'info':'warning'" size="small">{{editForm.cur==='RMB'?'否':'是'}}</el-tag><span style="margin-left:8px;font-size:12px;color:#909399">根据币种自动确定，不可编辑</span></el-form-item>
     </el-form>
     </div>
     <template #footer><el-button @click="showEdit=false">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="saveEdit">保存</el-button></template>
@@ -119,8 +116,8 @@ data:function(){return{
   buForm:{newPrice:0,selectAll:true,selectedCombos:{}},
   editForm:{name:'',formulaType:10,dpVal:0,cur:'RMB',idx:-1},
   items:[
-    {seg:'揽收段',name:'装柜费',dp:'500',dpVal:500,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
-    {seg:'揽收段',name:'拖车费',dp:'1950',dpVal:1950,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
+    {seg:'揽收段',name:'装柜费',dp:'1200',dpVal:1200,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
+    {seg:'揽收段',name:'拖车费',_preset:true,dp:'900',dpVal:900,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
     {seg:'干线运输段',name:'海运费',dp:'5.0',dpVal:5,cur:'USD',formulaType:20,_useDefaultPrice:true,enabled:true},
     {seg:'干线运输段',name:'港杂费',dp:'250',dpVal:250,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
     {seg:'关务段',name:'国内报关费',dp:'2800',dpVal:2800,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
@@ -131,7 +128,7 @@ data:function(){return{
     {seg:'仓储段',name:'库内操作费',dp:'5.0',dpVal:5,cur:'RMB',formulaType:10,_useDefaultPrice:true,enabled:true},
     {seg:'派送段',name:'目的港提还柜费',dp:'350',dpVal:350,cur:'USD',formulaType:20,enabled:true,_useDefaultPrice:true},
     {seg:'派送段',name:'仓点成本（卡派）',_preset:true,dp:'—',dpVal:0,cur:'—',formulaType:20,enabled:true,_useDefaultPrice:false},
-    {seg:'派送段',name:'快递派单价（快递派）',_preset:true,dp:'—',dpVal:0,cur:'—',formulaType:10,enabled:true,_useDefaultPrice:false}
+    {seg:'派送段',name:'快递派单价（快递派）',_preset:true,dp:'—',dpVal:0,cur:'RMB',formulaType:10,enabled:true,_useDefaultPrice:false}
   ],comboAffectedMap:{海运费:[{code:"美森360-海运-卡派-KG-包税-散货",ch:"美森360",costPrice:"5.0"},{code:"美森360-海运-卡派-KG-不包税-散货",ch:"美森360",costPrice:"5.0"},{code:"美森360-海运-卡派-m³-包税-散货",ch:"美森360",costPrice:"5.0"},{code:"美森432-海运-卡派-KG-包税-散货",ch:"美森432",costPrice:"5.2"}],港杂费:[{code:"美森360-海运-卡派-KG-包税-散货",ch:"美森360",costPrice:"250"}],国内报关费:[{code:"美森360-海运-卡派-KG-包税-散货",ch:"美森360",costPrice:"2800"},{code:"美森432-海运-卡派-KG-包税-散货",ch:"美森432",costPrice:"2800"}]}
 }},computed:{
   isReadonly: function(){ return this.editMode && this.items[this.editForm.idx] && !this.items[this.editForm.idx].enabled; },
@@ -141,17 +138,14 @@ data:function(){return{
 },methods:{
   selectSeg:function(seg){this.activeSeg=seg},
   toggleStatus:function(row){var self=this;var action=row.enabled?'冻结':'启用';ElementPlus.ElMessageBox.confirm('确定要'+action+'成本项【'+row.name+'】吗？','状态变更提示',{type:'warning'}).then(function(){row.enabled=!row.enabled;ElementPlus.ElMessage.success('已成功'+action+'该成本项')}).catch(function(){})},
-  openAdd:function(){this.editMode=false;this.editForm={name:'',formulaType:10,dpVal:0,cur:'RMB',idx:-1,useDefaultPrice:true,_preset:false};this.showEdit=true},
-  openEdit:function(row){this.editMode=true;this.editForm={name:row.name,formulaType:row.formulaType,dpVal:row.dpVal,cur:row.cur,idx:this.items.indexOf(row),useDefaultPrice:row._useDefaultPrice!==false,_preset:row._preset||false};this.showEdit=true},
+  openAdd:function(){this.editMode=false;this.editForm={name:'',dpVal:0,cur:'RMB',idx:-1};this.showEdit=true},
+  openEdit:function(row){this.editMode=true;this.editForm={name:row.name,dpVal:row.dpVal,cur:row.cur,idx:this.items.indexOf(row)};this.showEdit=true},
   saveEdit:function(){
     if(!this.editForm.name){ElementPlus.ElMessage.warning('请输入成本项名称');return}
-    if(this.editForm.useDefaultPrice&&this.editForm.dpVal===null){ElementPlus.ElMessage.warning('请输入建议默认价');return}
-    if(this.editMode){var row=this.items[this.editForm.idx];row.name=this.editForm.name;row.formulaType=this.editForm.formulaType;row._useDefaultPrice=this.editForm.useDefaultPrice;row.dp=this.editForm.useDefaultPrice?String(this.editForm.dpVal):'—';row.dpVal=this.editForm.useDefaultPrice?this.editForm.dpVal:0;row.cur=this.editForm.useDefaultPrice?this.editForm.cur:'—';ElementPlus.ElMessage.success(row.name+' 已更新')}
-    else{this.items.push({seg:this.activeSeg,name:this.editForm.name,formulaType:this.editForm.formulaType,_useDefaultPrice:this.editForm.useDefaultPrice,dp:this.editForm.useDefaultPrice?String(this.editForm.dpVal):'—',dpVal:this.editForm.useDefaultPrice?this.editForm.dpVal:0,cur:this.editForm.useDefaultPrice?this.editForm.cur:'—',_useDefaultPrice:true,enabled:true});ElementPlus.ElMessage.success('已新增 '+this.editForm.name)}
+    if(this.editForm.dpVal===null){ElementPlus.ElMessage.warning('请输入建议默认价');return}
+    if(this.editMode){var row=this.items[this.editForm.idx];row.name=this.editForm.name;row.formulaType=this.editForm.cur==='RMB'?10:20;row.dp=String(this.editForm.dpVal);row.dpVal=this.editForm.dpVal;row.cur=this.editForm.cur;ElementPlus.ElMessage.success(row.name+' 已更新')}
+    else{this.items.push({seg:this.activeSeg,name:this.editForm.name,formulaType:this.editForm.cur==='RMB'?10:20,_useDefaultPrice:true,dp:String(this.editForm.dpVal),dpVal:this.editForm.dpVal,cur:this.editForm.cur,enabled:true});ElementPlus.ElMessage.success('已新增 '+this.editForm.name)}
     this.showEdit=false
-  },
-  onToggleDefaultPrice: function(row){
-    if(!row._useDefaultPrice){ row.dp='—'; row.dpVal=0; row.cur='—'; }
   },
   openBatchUpdate:function(row){this.buRow=row;var self=this,combos=this.comboAffectedMap[row.name]||[],sel={};combos.forEach(function(c){sel[c.code]=true});this.buForm={newPrice:parseFloat(row.dp)||0,selectAll:true,selectedCombos:sel};this.showBuDialog=true},
   toggleBuAll:function(val){var self=this;this.buCombos.forEach(function(c){self.buForm.selectedCombos[c.code]=val})},

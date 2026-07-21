@@ -58,7 +58,6 @@ body,html{margin:0;padding:0;background:#f0f2f5;font-family:"Helvetica Neue",Hel
       <el-form-item label="计价单位" required><el-select v-model="form.unit" style="width:100%"><el-option label="KG" value="KG"></el-option><el-option label="m³" value="m³"></el-option></el-select></el-form-item>
       <el-form-item label="段名称" required><el-input v-model="form.tierName" placeholder="如 101KG+"></el-input></el-form-item>
       <el-row :gutter="16"><el-col :span="12"><el-form-item label="起始值" required><el-input-number v-model="form.startVal" :min="0" :precision="0" style="width:100%"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="结束值"><el-input-number v-model="form.endVal" :min="0" :precision="0" style="width:100%"></el-input-number><span style="font-size:11px;color:#909399">留空=以上</span></el-form-item></el-col></el-row>
-      <el-form-item label="排序"><el-input-number v-model="form.sortOrder" :min="0" :precision="0" style="width:100%"></el-input-number></el-form-item>
     </el-form>
     </div>
     <template #footer><el-button @click="showEdit=false">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="saveEdit">保存</el-button></template>
@@ -68,7 +67,7 @@ body,html{margin:0;padding:0;background:#f0f2f5;font-family:"Helvetica Neue",Hel
 (function(){
 var app=Vue.createApp({
 data:function(){return{
-  filterTransport:'',filterUnit:'',showEdit:false,editMode:false,editIdx:-1,form:{transportMode:10,unit:'KG',tierName:'',startVal:0,endVal:null,sortOrder:1},
+  filterTransport:'',filterUnit:'',showEdit:false,editMode:false,editIdx:-1,form:{transportMode:10,unit:'KG',tierName:'',startVal:0,endVal:null},
   list:[
     {transportMode:10,transportLabel:'海运',unit:'KG',tierName:'8KG+',startVal:8,endVal:101,sortOrder:1,enabled:true},
     {transportMode:10,transportLabel:'海运',unit:'KG',tierName:'101KG+',startVal:101,endVal:null,sortOrder:2,enabled:true},
@@ -84,14 +83,14 @@ data:function(){return{
 },methods:{
   doSearch:function(){ElementPlus.ElMessage.success('查询完成')},
   resetSearch:function(){this.filterTransport='';this.filterUnit=''},
-  addRow:function(){this.editMode=false;this.form={transportMode:10,unit:'KG',tierName:'',startVal:0,endVal:null,sortOrder:1};this.showEdit=true},
+  addRow:function(){this.editMode=false;this.form={transportMode:10,unit:'KG',tierName:'',startVal:0,endVal:null};this.showEdit=true},
   toggleStatus:function(row){var self=this;var action=row.enabled?'冻结':'启用';ElementPlus.ElMessageBox.confirm('确定要'+action+'该重量段吗？','状态变更提示',{type:'warning'}).then(function(){row.enabled=!row.enabled;ElementPlus.ElMessage.success('已成功'+action)}).catch(function(){})},
-  editRow:function(row){this.editMode=true;this.editIdx=this.list.indexOf(row);this.form={transportMode:row.transportMode,unit:row.unit,tierName:row.tierName,startVal:row.startVal,endVal:row.endVal,sortOrder:row.sortOrder};this.showEdit=true},
+  editRow:function(row){this.editMode=true;this.editIdx=this.list.indexOf(row);this.form={transportMode:row.transportMode,unit:row.unit,tierName:row.tierName,startVal:row.startVal,endVal:row.endVal};this.showEdit=true},
   saveEdit:function(){
     if(!this.form.tierName){ElementPlus.ElMessage.warning('请输入段名称');return}
     var transportLabel=this.form.transportMode===10?'海运':'空运';
-    if(this.editMode){var row=this.list[this.editIdx];row.transportMode=this.form.transportMode;row.transportLabel=transportLabel;row.unit=this.form.unit;row.tierName=this.form.tierName;row.startVal=this.form.startVal;row.endVal=this.form.endVal;row.sortOrder=this.form.sortOrder;ElementPlus.ElMessage.success('重量段模板已更新')}
-    else{this.list.push({transportMode:this.form.transportMode,transportLabel:transportLabel,unit:this.form.unit,tierName:this.form.tierName,startVal:this.form.startVal,endVal:this.form.endVal,sortOrder:this.form.sortOrder,enabled:true});ElementPlus.ElMessage.success('重量段模板已新增')}
+    if(this.editMode){var row=this.list[this.editIdx];row.transportMode=this.form.transportMode;row.transportLabel=transportLabel;row.unit=this.form.unit;row.tierName=this.form.tierName;row.startVal=this.form.startVal;row.endVal=this.form.endVal;ElementPlus.ElMessage.success('重量段模板已更新')}
+    else{this.list.push({transportMode:this.form.transportMode,transportLabel:transportLabel,unit:this.form.unit,tierName:this.form.tierName,startVal:this.form.startVal,endVal:this.form.endVal,sortOrder:this.list.length+1,enabled:true});ElementPlus.ElMessage.success('重量段模板已新增')}
     this.showEdit=false
   }
 }});

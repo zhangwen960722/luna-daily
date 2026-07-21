@@ -39,17 +39,21 @@
 
         #app {
             flex: 1;
-            padding: 16px;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
+            min-width: 0;
+        }
+
+        .app-scroll {
+            flex: 1;
+            padding: 16px;
+            overflow: auto;
         }
 
         .content-card {
             background-color: #FFFFFF;
             border-radius: var(--el-border-radius-base);
             padding: 16px;
-            height: 100%;
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -214,6 +218,7 @@
 </head>
 <body>
     <div id="app">
+        <div class="app-scroll">
         <div class="content-card">
             
             <!-- 搜索筛选区与新增按钮 -->
@@ -262,8 +267,8 @@
             <div class="table-container">
                 <el-table 
                     :data="tableData" 
-                    style="width: 100%; min-width: 1200px;" 
-                    border 
+                    style="width: 100%;"
+                    border
                     height="100%"
                     @selection-change="handleSelectionChange">
                     
@@ -281,22 +286,57 @@
                         </template>
                     </el-table-column>
                     <el-table-column prop="level" label="供应商等级" min-width="100" align="center"></el-table-column>
+                    <el-table-column label="合同数量" min-width="130" align="center">
+                        <template #default="scope">
+                            <el-popover placement="bottom" :width="600" trigger="click">
+                                <template #reference>
+                                    <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                                        <el-button link type="primary" size="small">{{ (scope.row._contracts || []).length }} 份合同</el-button>
+                                        <el-tag v-if="getSupplierEffectiveContract(scope.row._contracts)" type="success" size="small" effect="plain" style="font-size:10px;">生效中</el-tag>
+                                    </div>
+                                </template>
+                                <el-table :data="scope.row._contracts || []" size="small">
+                                    <el-table-column label="当前生效" width="72" align="center">
+                                        <template #default="s">
+                                            <span v-if="getSupplierEffectiveContractId(s.row, scope.row._contracts)" style="color:#2DA44E;font-weight:bold;">●</span>
+                                            <span v-else style="color:#DCDFE6;">○</span>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="contractCompany" label="签约主体" width="90"></el-table-column>
+                                    <el-table-column prop="signStatus" label="合同状态" width="80">
+                                        <template #default="s">
+                                            <el-tag :type="s.row.signStatus==='已签署'?'success':(s.row.signStatus==='签约中'?'warning':(s.row.signStatus==='已过期'?'info':(s.row.signStatus==='已解约'?'danger':'info')))" size="small">{{ s.row.signStatus }}</el-tag>
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="contractStartDate" label="开始日期" width="105"></el-table-column>
+                                    <el-table-column prop="contractEndDate" label="结束日期" width="105"></el-table-column>
+                                    <el-table-column prop="terminationDate" label="解约时间" width="95">
+                                        <template #default="s"><span style="font-size:12px;">{{ s.row.terminationDate || '-' }}</span></template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-popover>
+                        </template>
+                    </el-table-column>
                     <el-table-column prop="serviceStatus" label="服务状态" min-width="100" align="center">
                         <template #default="scope">
                             <el-tag :type="scope.row.serviceStatus === '正常' ? 'success' : 'danger'">{{ scope.row.serviceStatus }}</el-tag>
                         </template>
                     </el-table-column>
                     
-                    <el-table-column label="操作" width="160" fixed="right" align="center">
+                    <el-table-column label="操作" width="250" fixed="right" align="center">
                         <template #default="scope">
                             <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">
-                                编辑
+                                <el-icon><Edit /></el-icon> 编辑
                             </el-button>
-                            <el-button 
-                                link 
-                                :type="scope.row.serviceStatus === '正常' ? 'danger' : 'success'" 
-                                size="small" 
+                            <el-button link type="primary" size="small" @click="openSignDialog(scope.row)" v-if="scope.row.serviceStatus === '正常'">
+                                <el-icon><DocumentChecked /></el-icon> 签约
+                            </el-button>
+                            <el-button
+                                link
+                                :type="scope.row.serviceStatus === '正常' ? 'danger' : 'success'"
+                                size="small"
                                 @click="toggleStatus(scope.row)">
+                                <el-icon v-if="scope.row.serviceStatus === '正常'"><CircleCloseFilled /></el-icon><el-icon v-else><CircleCheckFilled /></el-icon>
                                 {{ scope.row.serviceStatus === '正常' ? '冻结' : '启用' }}
                             </el-button>
                         </template>
@@ -469,6 +509,50 @@
                         </table>
                     </el-tab-pane>
 
+                    <!-- 合同信息 Tab -->
+                    <el-tab-pane label="合同信息">
+                        <div style="margin-bottom: 12px;display:flex;align-items:center;gap:12px;">
+                            <span style="color: var(--el-text-color-regular); font-size: 13px;">
+                                <el-icon><InfoFilled /></el-icon> 合同通过主列表「签约」按钮创建，签约完成后自动同步至此
+                            </span>
+                        </div>
+                        <el-table :data="formData.contracts" size="small" border>
+                            <el-table-column label="主合同" width="75" align="center">
+                                <template #default="scope">
+                                    <el-radio :model-value="scope.row.isPrimary" :value="true" @change="() => setSupplierPrimaryContract(scope.$index)" size="small">&nbsp;</el-radio>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="签约主体" width="100">
+                                <template #default="scope"><span style="font-size:12px">{{ scope.row.contractCompany }}</span></template>
+                            </el-table-column>
+                            <el-table-column label="合同状态" width="85">
+                                <template #default="scope">
+                                    <el-tag :type="scope.row.signStatus==='已签署'?'success':(scope.row.signStatus==='签约中'?'warning':(scope.row.signStatus==='已过期'?'info':(scope.row.signStatus==='已解约'?'danger':'info')))" size="small">{{ scope.row.signStatus }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="合同开始日期" width="140">
+                                <template #default="scope"><el-date-picker v-model="scope.row.contractStartDate" type="date" size="small" style="width:100%" disabled></el-date-picker></template>
+                            </el-table-column>
+                            <el-table-column label="合同结束日期" width="140">
+                                <template #default="scope"><el-date-picker v-model="scope.row.contractEndDate" type="date" size="small" style="width:100%" disabled></el-date-picker></template>
+                            </el-table-column>
+                            <el-table-column label="解约时间" width="140">
+                                <template #default="scope"><el-date-picker v-model="scope.row.terminationDate" type="date" size="small" style="width:100%" disabled></el-date-picker></template>
+                            </el-table-column>
+                            <el-table-column label="服务协议" min-width="160">
+                                <template #default="scope">
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <template v-if="scope.row.contractFiles && scope.row.contractFiles.length>0">
+                                            <a v-for="(f,fi) in scope.row.contractFiles" :key="fi" href="#" style="color:#2DA44E;font-size:12px;white-space:nowrap;">{{ f.name }}</a>
+                                        </template>
+                                        <span v-else style="color:#909399;font-size:12px;">暂无</span>
+                                    </div>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <el-empty v-if="!formData.contracts || formData.contracts.length===0" description="暂无合同，请通过主列表「签约」按钮发起签约" :image-size="60" style="padding:20px 0;"></el-empty>
+                    </el-tab-pane>
+
                     <!-- 资料 Tab -->
                     <el-tab-pane label="资料">
                         <div style="margin-bottom: 16px;">
@@ -510,6 +594,41 @@
                 <span class="dialog-footer">
                     <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
                     <el-button v-if="!isReadonly" type="primary" @click="confirmSave">确 定</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 合同签约弹窗 -->
+        <el-dialog v-model="signDialogVisible" title="合同签约" width="550px" destroy-on-close>
+            <el-form :model="signForm" :rules="signRules" ref="signFormRef" label-position="top">
+                <el-form-item label="我司合同抬头" prop="companyTitle" required>
+                    <el-select v-model="signForm.companyTitle" placeholder="请选择" style="width: 100%;">
+                        <el-option v-for="c in companyTitleOptions" :key="c" :label="c" :value="c"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="合同开始日期" prop="startDate">
+                            <el-date-picker v-model="signForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="合同结束日期" prop="endDate">
+                            <el-date-picker v-model="signForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="服务合同协议" prop="files">
+                    <el-upload class="upload-demo" action="#" :limit="1" :auto-upload="false" :on-change="handleSignFileChange" :on-remove="handleSignFileRemove">
+                        <el-button type="primary" size="small"><el-icon><Upload /></el-icon> 点击上传</el-button>
+                        <template #tip><div class="el-upload__tip" style="display: inline-block; margin-left: 10px; color: #909399;">只能上传 pdf/jpg/png 文件</div></template>
+                    </el-upload>
+                </el-form-item>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="signDialogVisible = false">返回</el-button>
+                    <el-button type="primary" @click="confirmSign">保 存</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -759,6 +878,7 @@
             </template>
         </el-dialog>
 
+        </div>
     </div>
 
     <script>
@@ -863,7 +983,8 @@
                     contractContactId: null,
                     accountContactId: null,
                     materials: [],
-                    printServices: []
+                    printServices: [],
+                    contracts: []
                 });
 
                 // SCAC 条件必填校验
@@ -904,7 +1025,7 @@
                             supplierName: '', supplierShortName: '', supplierCategory: [], supplierDetail: [], scac: '', level: 'G', isPeer: '是',
                             contacts: [{ id: Date.now(), name: '', phone: '', email: '' }],
                             contractContactId: null, accountContactId: null,
-                            materials: [], printServices: []
+                            materials: [], printServices: [], contracts: []
                         });
                         formDetailOptions.value = [];
                     } else {
@@ -928,7 +1049,8 @@
                         formData.printServices = [
                             { id: 1, receiveChannel: '测试收货渠道', status: '正常' }
                         ];
-                        
+                        formData.contracts = row._contracts ? JSON.parse(JSON.stringify(row._contracts)) : [];
+
                         formDetailOptions.value = formData.supplierCategory.flatMap(c => categoryMap[c] || []);
                     }
                     dialogVisible.value = true;
@@ -1119,6 +1241,77 @@
                     }
                 };
 
+                // ========== 签约相关 ==========
+                const signDialogVisible = ref(false);
+                const signFormRef = ref(null);
+                const currentSignRow = ref(null);
+                const companyTitleOptions = ['广州飞点', '深圳飞点', '广东飞点'];
+                const signForm = reactive({
+                    companyTitle: '',
+                    startDate: '',
+                    endDate: '',
+                    contractFile: null
+                });
+                const signRules = reactive({
+                    companyTitle: [{ required: true, message: '必选', trigger: 'change' }],
+                    startDate: [{ required: true, message: '必选', trigger: 'change' }],
+                    endDate: [{ required: true, message: '必选', trigger: 'change' }]
+                });
+
+                const openSignDialog = (row) => {
+                    currentSignRow.value = row;
+                    signForm.companyTitle = '';
+                    signForm.startDate = '';
+                    signForm.endDate = '';
+                    signForm.contractFile = null;
+                    if (signFormRef.value) signFormRef.value.resetFields();
+                    signDialogVisible.value = true;
+                };
+
+                const handleSignFileChange = (file) => {
+                    signForm.contractFile = file;
+                };
+                const handleSignFileRemove = () => {
+                    signForm.contractFile = null;
+                };
+
+                const confirmSign = () => {
+                    if (!signFormRef.value) return;
+                    signFormRef.value.validate((valid) => {
+                        if (valid) {
+                            const row = currentSignRow.value;
+                            if (!row._contracts) row._contracts = [];
+                            const contractFile = signForm.contractFile ? [{ name: signForm.contractFile.name }] : [];
+                            row._contracts.push({
+                                contractCompany: signForm.companyTitle,
+                                signStatus: '签约中',
+                                isPrimary: row._contracts.length === 0,
+                                contractStartDate: signForm.startDate,
+                                contractEndDate: signForm.endDate,
+                                terminationDate: '',
+                                contractFiles: contractFile
+                            });
+                            ElMessage.success('合同签约成功！');
+                            signDialogVisible.value = false;
+                        }
+                    });
+                };
+
+                const setSupplierPrimaryContract = (index) => {
+                    formData.contracts.forEach((c, i) => { c.isPrimary = i === index; });
+                };
+                const getSupplierEffectiveContract = (contracts) => {
+                    if (!contracts || !contracts.length) return null;
+                    const primary = contracts.find(c => c.isPrimary && c.signStatus === '已签署');
+                    if (primary) return primary;
+                    return contracts.find(c => c.signStatus === '已签署') || null;
+                };
+                const getSupplierEffectiveContractId = (contract, contracts) => {
+                    if (!contracts) return false;
+                    const eff = getSupplierEffectiveContract(contracts);
+                    return eff && eff.contractCompany === contract.contractCompany;
+                };
+
                 const confirmTransfer = () => {
                     if (!transferFormRef.value) return;
                     transferFormRef.value.validate((valid) => {
@@ -1157,7 +1350,8 @@
                     addPrintService, removePrintService,
                     openDialog, addContact, removeContact, addMaterial, removeMaterial, confirmSave, toggleStatus,
                     selectedRows, handleSelectionChange, transferDialogVisible, transferFormRef, transferFormData, transferFormRules, handleTransferToCustomer, confirmTransfer, handleTransferCustomerTypeChange,
-                    addTransferCustomMaterial, removeTransferMaterialFile, handleTransferIdCardChange
+                    addTransferCustomMaterial, removeTransferMaterialFile, handleTransferIdCardChange,
+                    signDialogVisible, signForm, signRules, signFormRef, companyTitleOptions, openSignDialog, confirmSign, handleSignFileChange, handleSignFileRemove, setSupplierPrimaryContract, getSupplierEffectiveContract, getSupplierEffectiveContractId
                 };
             }
         });
