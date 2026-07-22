@@ -18,34 +18,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 .doc-content p{margin:12px 0}
 .doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
 .doc-content li{margin:4px 0}
-.doc-content blockquote{border-left:4px solid #7c3aed;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
-.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
-.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
-.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
-.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
-.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
-.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
-.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
-.doc-content tr:last-child td{border-bottom:none}
-.doc-content img{max-width:100%;border-radius:8px;margin:12px 0}
-.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}</style>
+.doc-content table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+.doc-content th,.doc-content td{border:1px solid #e2e8f0;padding:8px 12px;text-align:left}
+.doc-content th{background:#f1f5f9;font-weight:600}
+.doc-content code{background:#f1f5f9;padding:1px 4px;border-radius:3px;font-size:13px;color:#7c3aed}
+.doc-content pre{background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;overflow-x:auto;margin:12px 0}
+.doc-content pre code{background:none;color:inherit;padding:0}
+.doc-content blockquote{border-left:3px solid #7c3aed;padding:4px 16px;margin:12px 0;color:#64748b;background:#f8fafc}
+.doc-content strong{color:#0f172a}
+tr{border:1px solid #e2e8f0}
+tr:nth-child(even){background:#f8fafc}
+</style>
 </head>
 <body>
 <div class="nav-bar">
-  <a href="../index.html">&#x1f3e0; 文档中心</a>
-  <span class="sep">/</span>
-  <span class="module-tag" style="background:#2563eb15;color:#2563eb">超级运价</span>
-  <span class="sep">/</span>
-  <span style="font-size:14px;color:#334155">数据设计</span>
+<a href="../index.html" style="font-size:18px;font-weight:700;color:#7c3aed">Luna</a>
+<span class="sep">/</span>
+<span class="module-tag" style="background:#EDE9FE;color:#7c3aed">超级运价</span>
+<span class="sep">/</span>
+<span>数据设计</span>
+<span style="margin-left:auto;font-size:12px;color:#94a3b8">2026-07-22</span>
 </div>
-<div class="container"><div class="doc-content">
-<h1 id="_1">核心方案设计草稿 — 超级运价模块</h1>
+<div class="container">
+<div class="doc-content">
+<p>﻿# 核心方案设计草稿 — 超级运价模块</p>
 <blockquote>
 <p>Phase 2：方案架构 | 基于 RDD v5.0 | 2026-07-21 | 装柜费改为统一价不受交货地影响、从预置项移除；拖车费保留为预置项；新增delivery_group实体管理拖车费交货地组合</p>
 </blockquote>
 <hr />
-<h2 id="1">1. 实体 × 表映射</h2>
-<div class="table-wrapper"><table>
+<h2>1. 实体 × 表映射</h2>
+<table>
 <thead>
 <tr>
 <th>#</th>
@@ -246,9 +248,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>关联拖车费成本项模板和运价行；定义各交货地的拖车费单价和加价</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>全局目录实体（独立于渠道/组合，运价管理员维护）</strong>：</p>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>#</th>
@@ -264,7 +266,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>成本折算基准</td>
 <td><code>loading_standard</code></td>
 <td>主表</td>
-<td>全局，Key = (运输方式, 尾程方式, 类型)；渠道/组合不存</td>
+<td>全局，Key = (基准类型, 运输方式, 尾程方式)；渠道/组合不存。head 行尾程方式为空；tail 行尾程方式必填</td>
 </tr>
 <tr>
 <td>G2</td>
@@ -274,66 +276,65 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>全局，Key = (运输方式, 计价单位)；渠道引用模板ID</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>核心原则</strong>：配置层（渠道/组合）只存引用ID，不存具体值。执行层（周批次）做快照。变更下周生效，历史不受影响。</p>
 </blockquote>
 <hr />
-<h2 id="2-er">2. ER 图（核心）</h2>
-<div class="codehilite"><pre><span></span><code><span class="n">erDiagram</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="o">|</span><span class="w"> </span><span class="n">estimated_transit_time</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:1&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">warehouse_delivery_estimate</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">claim_commitment</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">channel_cost_item</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="err">渠道派送仓点成本</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="err">渠道快递派送单价</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">route_channel</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">service_combination</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_channel</span><span class="w"> </span><span class="p">}</span><span class="n">o</span><span class="o">--||</span><span class="w"> </span><span class="n">weight_tier_template</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;引用&quot;</span>
+<h2>2. ER 图（核心）</h2>
+<pre><code class="language-mermaid">erDiagram
+    service_channel ||--o| estimated_transit_time : &quot;1:1&quot;
+    service_channel ||--o{ warehouse_delivery_estimate : &quot;1:N&quot;
+    service_channel ||--o{ claim_commitment : &quot;1:N&quot;
+    service_channel ||--o{ channel_cost_item : &quot;1:N&quot;
+    service_channel ||--o{ 渠道派送仓点成本 : &quot;1:N&quot;
+    service_channel ||--o{ 渠道快递派送单价 : &quot;1:N&quot;
+    service_channel ||--o{ route_channel : &quot;1:N&quot;
+    service_channel ||--o{ service_combination : &quot;1:N&quot;
+    service_channel }o--|| weight_tier_template : &quot;引用&quot;
 
-<span class="w">    </span><span class="n">route</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">route_channel</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">route</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">sailing_schedule</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
+    route ||--o{ route_channel : &quot;1:N&quot;
+    route ||--o{ sailing_schedule : &quot;1:N&quot;
 
-<span class="w">    </span><span class="n">weekly_schedule_batch</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">sailing_schedule</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">weekly_schedule_batch</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">price_table_row</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
+    weekly_schedule_batch ||--o{ sailing_schedule : &quot;1:N&quot;
+    weekly_schedule_batch ||--o{ price_table_row : &quot;1:N&quot;
 
-<span class="w">    </span><span class="n">cost_segment</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">cost_item_template</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">cost_item_template</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">channel_cost_item</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">channel_cost_item</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">combination_cost_item</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
+    cost_segment ||--o{ cost_item_template : &quot;1:N&quot;
+    cost_item_template ||--o{ channel_cost_item : &quot;1:N&quot;
+    channel_cost_item ||--o{ combination_cost_item : &quot;1:N&quot;
 
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">combination_cost_item</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">combination_warehouse_cost</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">combination_express_delivery_rate</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">billing_rule</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">freight_discount</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">density_discount</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">service_combination</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">price_table_row</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
+    service_combination ||--o{ combination_cost_item : &quot;1:N&quot;
+    service_combination ||--o{ combination_warehouse_cost : &quot;1:N&quot;
+    service_combination ||--o{ combination_express_delivery_rate : &quot;1:N&quot;
+    service_combination ||--o{ billing_rule : &quot;1:N&quot;
+    service_combination ||--o{ freight_discount : &quot;1:N&quot;
+    service_combination ||--o{ density_discount : &quot;1:N&quot;
+    service_combination ||--o{ price_table_row : &quot;1:N&quot;
 
-<span class="w">    </span><span class="n">surcharge_rule</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">surcharge_discount</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
+    surcharge_rule ||--o{ surcharge_discount : &quot;1:N&quot;
 
-<span class="w">    </span><span class="n">cost_segment</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">channel_cost_item</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
-<span class="w">    </span><span class="n">cost_segment</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">combination_cost_item</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1:N&quot;</span>
+    cost_segment ||--o{ channel_cost_item : &quot;1:N&quot;
+    cost_segment ||--o{ combination_cost_item : &quot;1:N&quot;
 
-<span class="w">    </span><span class="n">loading_standard</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">weekly_schedule_batch</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;周批次快照引用&quot;</span>
-<span class="w">    </span><span class="n">weight_tier_template</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">weekly_schedule_batch</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;周批次快照引用&quot;</span>
+    loading_standard ||--o{ weekly_schedule_batch : &quot;周批次快照引用&quot;
+    weight_tier_template ||--o{ weekly_schedule_batch : &quot;周批次快照引用&quot;
 
-<span class="w">    </span><span class="n">delivery_group</span><span class="w"> </span><span class="o">||--</span><span class="n">o</span><span class="p">{</span><span class="w"> </span><span class="n">price_table_row</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;运价行引用交货地组&quot;</span>
-<span class="w">    </span><span class="n">delivery_group</span><span class="w"> </span><span class="p">}</span><span class="n">o</span><span class="o">--||</span><span class="w"> </span><span class="n">cost_item_template</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;拖车费模板关联交货地组&quot;</span>
-</code></pre></div>
-
+    delivery_group ||--o{ price_table_row : &quot;运价行引用交货地组&quot;
+    delivery_group }o--|| cost_item_template : &quot;拖车费模板关联交货地组&quot;
+</code></pre>
 <p><strong>揽收段成本关系说明</strong>：
 - <strong>装柜费</strong>：统一价，不受交货地影响，不再按交货地拆行
 - <strong>拖车费</strong>：通过 <code>delivery_group</code>（交货地组合）管理不同交货地的拖车费单价和加价，<code>cost_item_template</code>（拖车费模板）关联 <code>delivery_group</code>，运价行引用 <code>delivery_group</code> 获取对应拖车费</p>
 <hr />
-<h2 id="3-schema">3. 核心实体 Schema</h2>
+<h2>3. 核心实体 Schema</h2>
 <blockquote>
 <p>以下 Schema 按 RDD Section 2 数据实体 + Epic 顺序列出。所有业务主表包含标准管理字段（id / tenant_id / created_at / created_by / updated_at / updated_by / is_deleted / version），下文仅标注业务字段。</p>
 </blockquote>
-<h3 id="31-service_channel">3.1 服务渠道 <code>service_channel</code></h3>
+<h3>3.1 服务渠道 <code>service_channel</code></h3>
 <blockquote>
 <p>超级运价模块的聚合根。所有组合、成本、定价、优惠均挂在渠道之下。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -458,18 +459,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10:正常 20:已冻结；冻结后级联冻结关联组合；启用时弹窗确认是否一并启用关联组合</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>全局引用</strong>：成本折算基准（<code>loading_standard</code>）、重量段模板（<code>weight_tier_template</code>）为全局独立实体。渠道只存引用ID，不存具体值。具体值在周批次创建时快照到批次表。利润加成额存于服务组合（见 §3.10 <code>default_markup</code>），不再有独立利润策略实体。</p>
 <p><strong>关联航线</strong>：服务渠道与航线为 N:N，不在 <code>service_channel</code> 表存字段，绑定关系存于关联表 <code>route_channel</code>（见 §3.2）。服务渠道编辑弹窗提供「关联航线」多选入口（仅展示航线代码），保存时强校验 <code>route_channel</code> 中该渠道 ≥1 条航线。</p>
 </blockquote>
 <p><strong>子表</strong>：见下方 3.1a ~ 3.1c。</p>
 <hr />
-<h3 id="31a-estimated_transit_time">3.1a 预估运输时效 <code>estimated_transit_time</code></h3>
+<h3>3.1a 预估运输时效 <code>estimated_transit_time</code></h3>
 <blockquote>
 <p>1:1 挂在 service_channel 下。控制是否向亚马逊推送 FBA 运单 DW 及对应的服务等级和运输天数。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -514,14 +515,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>服务渠道.fba_sync=是时必填，须 ≥ 最小天数</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>业务规则</strong>：<code>service_channel.fba_sync</code>=false 时，另三个字段不存储（非 disabled）。切换为 true 时必须重新填写，避免过期数据静默激活。</p>
 <hr />
-<h3 id="31b-warehouse_delivery_estimate">3.1b 送仓预估时效 <code>warehouse_delivery_estimate</code></h3>
+<h3>3.1b 送仓预估时效 <code>warehouse_delivery_estimate</code></h3>
 <blockquote>
 <p>1:N 挂在 service_channel 下。分两阶段滚动更新 DW（运单创建→首次推送 / 提柜后→二次修正）。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -574,18 +575,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>第二阶段：DW = 提柜日 + 此值</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>校验规则</strong>：<code>cabinet_to_warehouse_days ≤ sail_to_warehouse_days</code>，否则阻止保存。
 <strong>唯一约束</strong>：<code>UNIQUE(channel_id, delivery_method, warehouse_or_zip)</code>，同一渠道下同派送方式的同一仓库/邮编不可重复配置。
 <strong>仓库过滤</strong>：卡派时下拉仅展示 <code>仓库.country ∈ 服务渠道.目的国</code> 的仓库；快递派时文本框自由输入邮编开头。
 <strong>目的国修改校验</strong>：减少目的国时，如已有该国 FBA 仓库的时效配置，阻止操作。
 <strong>FBA运单同步联动</strong>：<code>service_channel.fba_sync</code>=false 时，送仓预估时效配置不可编辑，已有数据清空。切换为 true 时必须重新填写，避免过期数据静默激活。</p>
 <hr />
-<h3 id="31c-claim_commitment">3.1c 理赔承诺时效 <code>claim_commitment</code></h3>
+<h3>3.1c 理赔承诺时效 <code>claim_commitment</code></h3>
 <blockquote>
 <p>1:N 挂在 service_channel 下。按派送方式 + FBA 仓库分组配置。运单模块根据实际送达天数 vs 理赔承诺时效自动判定是否需要理赔。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -630,18 +631,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>实际送达天数 &gt; 此值 → 触发理赔判定</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>业务规则</strong>：
 - <code>service_channel.need_claim</code> = false → 理赔承诺时效配置不可编辑，已有数据清空
 - 卡派未选仓库 → 阻止保存并提示"卡派必须指定 FBA 仓库"
 - 同一仓点不可重复出现在多条卡派理赔规则中
 - 快递派仅可配置一条（渠道级，不区分仓点）</p>
 <hr />
-<h3 id="31d-loading_standardg1">3.1d 成本折算基准 <code>loading_standard</code>（全局表，G1）</h3>
+<h3>3.1d 成本折算基准 <code>loading_standard</code>（全局表，G1）</h3>
 <blockquote>
 <p>独立全局实体。按运输方式 × 尾程方式 × 基准类型定义。<strong>渠道和组合不存此值</strong>，运价维护时从全局表拉取并快照到周批次。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -681,17 +682,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td><code>kg_standard</code></td>
 <td>公斤折算基准</td>
 <td>整数</td>
-<td>✅</td>
+<td>条件必填</td>
 <td></td>
-<td>海运头程=12525 / 海运卡派=350</td>
+<td>尾程≠快递派时必填。海运头程=12525 / 海运卡派=350</td>
 </tr>
 <tr>
 <td><code>cbm_standard</code></td>
 <td>方折算基准</td>
 <td>小数(6,2)</td>
-<td>✅</td>
+<td>条件必填</td>
 <td></td>
-<td>海运头程=75 / 海运卡派=1.8</td>
+<td>尾程≠快递派时必填。海运头程=75 / 海运卡派=1.8</td>
 </tr>
 <tr>
 <td><code>is_enabled</code></td>
@@ -702,7 +703,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>唯一约束</strong>：<code>UNIQUE(transport_mode, COALESCE(last_mile_method, 0), standard_type)</code>。</p>
 <p><strong>预置数据</strong>：
 | 运输方式 | 尾程方式 | 类型 | KG基准 | 方基准 |
@@ -711,16 +712,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 | 海运 | 卡派 | 派送 | 350 | 1.8 |
 | 空运 | — | 头程 | 6000 | — |</p>
 <p><strong>折算公式</strong>（运价维护时实时计算）：</p>
-<div class="codehilite"><pre><span></span><code>头程 per KG  = 单价 × (USD项? 周批次汇率 : 1) ÷ 头程行.kg_standard
+<pre><code>头程 per KG  = 单价 × (USD项? 周批次汇率 : 1) ÷ 头程行.kg_standard
 头程 per CBM = 单价 × (USD项? 周批次汇率 : 1) ÷ 头程行.cbm_standard
 派送 per KG  = 仓点单价 × 周批次汇率 ÷ 派送行.kg_standard
 派送 per CBM = 仓点单价 × 周批次汇率 ÷ 派送行.cbm_standard
 成本底价 = 头程合计 + 派送段普通项 + MAX(派送段仓点成本 by 仓点)
-</code></pre></div>
-
+</code></pre>
 <hr />
-<h3 id="32-route">3.2 航线 <code>route</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.2 航线 <code>route</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -789,13 +789,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>航线级别，船期可覆盖</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>关联表</strong> <code>route_channel</code>：<code>route_id</code> + <code>channel_id</code>（N:N）。<strong>编辑入口双向</strong>——服务渠道侧「关联航线」多选与航线侧「关联渠道」多选写入同一张表（同一份数据、两个 UI 入口，无双向同步问题）。本次仅新增编辑入口与校验，<strong>表结构不变</strong>。</p>
 <p><strong>渠道关联过滤规则（双向对称）</strong>：航线↔渠道互选时均按以下双条件过滤：① <strong>港口类型</strong>——海港航线仅可关联海运渠道，非海港航线仅可关联非海运渠道（航线港口类型取自出发港 <code>port.type</code>）；② <strong>国家</strong>——<code>航线.出发港.country = 渠道.起运国</code> AND <code>航线.目的港.country ∈ 渠道.目的国</code>。<strong>强校验卡在渠道侧</strong>：服务渠道保存 / 保存并生成组合时校验其在 <code>route_channel</code> 中 ≥1 条航线，否则阻止。</p>
 <p><strong>校验规则</strong>：出发港和目的港不可相同（<code>origin_港口代码 ≠ dest_港口代码</code>），应用层阻止保存。</p>
 <hr />
-<h3 id="33-weekly_schedule_batch">3.3 周船期批次 <code>weekly_schedule_batch</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.3 周船期批次 <code>weekly_schedule_batch</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -861,7 +861,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>JSON</td>
 <td>✅</td>
 <td></td>
-<td>创建时从 <code>loading_standard</code> 拉取，格式: <code>[{transport_mode, last_mile_method, standard_type, kg_standard, cbm_standard}]</code></td>
+<td>创建时从 <code>loading_standard</code> 拉取全部行快照，格式: <code>[{transport_mode, last_mile_method, standard_type, kg_standard, cbm_standard}]</code>。头程和派送各自独立快照，均写入批次</td>
 </tr>
 <tr>
 <td><code>weight_tier_snapshot</code></td>
@@ -880,7 +880,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>校验规则</strong>：<code>week_end ≥ week_start</code>，否则阻止保存；汇率快照至少一条，每条 <code>rate &gt; 0</code>。</p>
 <p><strong>状态流转</strong>：系统按日期自动流转——每周日 24:00，CURRENT→EXPIRED，下一 PREVIEW→CURRENT。同时仅一条 CURRENT（应用层乐观锁 + DB 部分唯一索引 <code>UNIQUE(status) WHERE status=20</code> 兜底）。<strong>不再支持手动发布到当前</strong>。</p>
@@ -890,8 +890,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <p><strong>汇率作用域</strong>：该批次下所有换汇计算型成本项按 <code>原始币种→目标币种</code> 匹配对应汇率行，计算 每公斤成本 / 每立方米成本。</p>
 </blockquote>
 <hr />
-<h3 id="34-sailing_schedule">3.4 船期 <code>sailing_schedule</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.4 船期 <code>sailing_schedule</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -960,14 +960,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>≥ ETA，到港后方可提取</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>批量导入</strong>：支持 Excel 模板导入船期数据，按周批次维度批量写入 <code>sailing_schedule</code> 表。</p>
 <hr />
-<h3 id="35-weight_tier_templateg2">3.5 重量段模板 <code>weight_tier_template</code>（全局表，G2）</h3>
+<h3>3.5 重量段模板 <code>weight_tier_template</code>（全局表，G2）</h3>
 <blockquote>
 <p>独立全局实体。按运输方式 × 计价单位定义标准重量段。渠道通过 <code>weight_tier_template_id</code> 引用模板，渠道可在此基础上追加自定义段。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1028,7 +1028,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>唯一约束</strong>：<code>UNIQUE(transport_mode, unit, tier_name)</code>。</p>
 <p><strong>预置数据</strong>：
 | 运输方式 | 计价单位 | 段名称 | 范围 |
@@ -1042,11 +1042,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 | 空运 | KG | 101KG+ | 101 ~ ∞ |</p>
 <p><strong>渠道引用扩展</strong>：渠道创建时根据运输方式自动匹配模板默认段。渠道编辑页面提供模板多选下拉框，按渠道已选的 <code>运输方式 + 计费方式</code> 联动过滤可选模板——计费方式含 KG → 仅展示 KG 类模板，含 m³ → 仅展示 m³ 类模板（新增时计费方式未选则展示全部）。支持多选合并：可同时选择 KG 和 m³ 模板，应用后合并所有模板段。模板段不可删除，渠道可在此基础上追加自定义段（存储在 <code>channel_weight_tier_override</code> 子表，仅该渠道可见）。编辑模式应用模板时弹出确认框，防止误覆盖已有数据。</p>
 <hr />
-<h3 id="36-price_table_row">3.6 运价行 <code>price_table_row</code></h3>
+<h3>3.6 运价行 <code>price_table_row</code></h3>
 <blockquote>
 <p><strong>定价维度按尾程派送方式分叉</strong>：卡派 → 仓库组；快递派 → 邮编前缀（逗号拼接）。<code>仓库组</code> 与 <code>zip_prefixes</code> 互斥。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1139,16 +1139,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>新建批次从上周复制后标记为 1；运价更新工作台展示"X 条待重算"提醒；运价管理员可一键触发重算后置 0</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>设计说明</strong>：仓库组用逗号存储（设计决策见 RDD）。参考签收时效和理赔时效不存储在运价行上——查询时从船期和理赔承诺时效实时计算。公布价与加成额双向联动：调整加成额→公布价自动重算（公布价=cost+加成额），直接修改公布价→加成额自动反算（加成额=公布价-cost）。后操作覆盖前操作。
 <strong>唯一约束</strong>：<code>UNIQUE(batch_id, combination_id, COALESCE(仓库组, ''), COALESCE(zip_prefixes, ''), weight_tier_id, delivery_group_id)</code>，同一周批次下不允许重复运价行。
 <strong>互斥校验</strong>：应用层保证 <code>(仓库组 IS NOT NULL) XOR (zip_prefixes IS NOT NULL)</code>，保存时校验。</p>
 <hr />
-<h3 id="36b">3.6b 邮编前缀</h3>
+<h3>3.6b 邮编前缀</h3>
 <p>快递派运价行和快递派单价表中，<code>zip_prefixes</code> 字段直接存储逗号拼接的邮编前缀（如 <code>8,9</code>），匹配时用 <code>startswith</code> 逐一比对。不再维护独立的邮编区间组实体。</p>
 <hr />
-<h3 id="37-cost_segment">3.7 成本段 <code>cost_segment</code>（全局目录）</h3>
-<div class="table-wrapper"><table>
+<h3>3.7 成本段 <code>cost_segment</code>（全局目录）</h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1177,16 +1177,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>禁用后不可在新渠道中选择</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>与 Demo 对齐</strong>：Demo 中使用状态枚举 <code>正常/已冻结</code>。本文档 <code>cost_segment</code> 保留 Boolean <code>is_enabled</code>，实现时以 Demo 为准。</p>
 </blockquote>
 <hr />
-<h3 id="38-cost_item_template">3.8 成本项模板 <code>cost_item_template</code>（全局目录）</h3>
+<h3>3.8 成本项模板 <code>cost_item_template</code>（全局目录）</h3>
 <blockquote>
 <p>纯成本底座。利润加成额存于服务组合（<code>service_combination.default_markup</code>），成本项只关注成本本身。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1263,17 +1263,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>1=预置项。揽收段的拖车费 + 派送段的仓点成本、快递派单价为预置项：不可禁用、不可删除、批量更新按钮隐藏（拖车费的建议默认价可编辑，仓点成本/快递派单价默认价置灰）。装柜费不再属于预置项，作为普通成本项管理（仍保留不可禁用、不可删除属性）</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>唯一约束</strong>：<code>UNIQUE(segment_id, name)</code>，同一成本段下不可有同名模板。</p>
 <blockquote>
 <p><strong>不再包含</strong> <code>profit_full</code> / <code>profit_segment</code> 字段。利润加成额存于服务组合（<code>default_markup</code>），成本项只关注成本本身。</p>
 </blockquote>
 <hr />
-<h3 id="38b-delivery_group">3.8b 交货地组合 <code>delivery_group</code></h3>
+<h3>3.8b 交货地组合 <code>delivery_group</code></h3>
 <blockquote>
 <p>独立实体，定义拖车费在不同交货地的单价和加价。被成本项模板（拖车费）和运价行引用。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1334,14 +1334,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>控制列表展示顺序</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>关联关系</strong>：
 - <code>cost_item_template</code>：拖车费成本项模板通过 <code>delivery_group_id</code> FK 关联，一个拖车费模板可关联多个交货地组（不同交货地组不同单价）
 - <code>price_table_row</code>：运价行通过 <code>delivery_group_id</code> FK 关联，查询时从此获取拖车费单价和加价，参与成本底价计算</p>
 <p><strong>唯一约束</strong>：<code>UNIQUE(name)</code>，交货地组合名称不可重复。</p>
 <hr />
-<h3 id="39-channel_cost_item">3.9 渠道成本项 <code>channel_cost_item</code>（纯数据层）</h3>
-<div class="table-wrapper"><table>
+<h3>3.9 渠道成本项 <code>channel_cost_item</code>（纯数据层）</h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1418,7 +1418,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>关闭后该渠道不适用此成本项，新生成组合时跳过</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p>无独立管理页面，在服务渠道编辑页中配置。修改此处不自动影响已有组合。<code>is_enabled</code>=false 时，已有组合不受影响；新创建组合时不再复制被禁用的项。
 <strong>不再包含利润字段</strong>。利润加成额存于服务组合（<code>default_markup</code>），成本项只关注成本本身。
@@ -1426,8 +1426,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <strong>唯一约束</strong>：<code>UNIQUE(channel_id, template_id, 交货地)</code>，同一渠道下同一成本项模板在同一交货地不可重复。</p>
 </blockquote>
 <hr />
-<h3 id="310-service_combination">3.10 服务组合 <code>service_combination</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.10 服务组合 <code>service_combination</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1520,11 +1520,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10:正常 20:已冻结；冻结后不在运价查询中出现</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>设计说明</strong>：服务组合由渠道属性笛卡尔积自动生成。<code>combination_code</code> 系统自动拼接。成本折算基准不存组合，运价维护时从全局表实时拉取。</p>
 <hr />
-<h3 id="311-combination_cost_item">3.11 组合成本项 <code>combination_cost_item</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.11 组合成本项 <code>combination_cost_item</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1625,7 +1625,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>一期预留</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>汇率来源</strong>：不在此表存储独立汇率，统一读取所在周批次（weekly_schedule_batch）的 汇率。追溯时通过 batch_id → 汇率 还原计算过程。</p>
 <p><strong>派送段内部分类</strong>：
@@ -1638,14 +1638,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <p><strong>异步重算策略</strong>：汇率变更或 head/tail 基准变更时，不直接在请求线程中全量重算。改为：(1) 标记受影响行 <code>待重算=1</code>；(2) 后台任务逐批（每批 50 条）重算 每公斤成本/cbm + 建议公布价；(3) 前端轮询 <code>/api/recalculation-status</code>。失败时保留旧值并写入告警日志。</p>
 </blockquote>
 <hr />
-<h3 id="_2">成本模型设计决策</h3>
+<h3>成本模型设计决策</h3>
 <blockquote>
 <p>以下原则约束成本模型的数据流向和实体归属，是跨模块一致性的基础。</p>
 </blockquote>
 <p><strong>D1 — 数据流单向原则</strong></p>
-<div class="codehilite"><pre><span></span><code>模板(全局) → 渠道(默认值) → 组合(执行值)
-</code></pre></div>
-
+<pre><code>模板(全局) → 渠道(默认值) → 组合(执行值)
+</code></pre>
 <p>修改模板 → 可选推送到渠道和组合。修改渠道 → 可选推送到组合。<strong>修改组合绝不反向同步回渠道或模板</strong>。</p>
 <p><strong>D2 — 交货地在渠道层，不在模板层</strong></p>
 <p>揽收段同一成本项在不同交货地有不同单价时，拆为多行存储在 <code>channel_cost_item</code>（渠道层），而非 <code>cost_item_template</code>（模板层）。<strong>装柜费为统一价，不受交货地影响</strong>，无需拆行；拖车费通过 <code>delivery_group</code>（交货地组合）管理不同交货地的单价和加价。</p>
@@ -1660,15 +1659,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <p><strong>D4 — 快递派单价不折算</strong></p>
 <p>卡派仓点成本需要用 <code>tail_kg_standard / tail_cbm_standard</code> 折算为 per KG/m³。快递派单价已是最终 per KG/m³ 价格，直接累加。</p>
 <p><strong>D5 — 单价静态链 × 批次周期计算</strong></p>
-<div class="codehilite"><pre><span></span><code>静态链（跨批次不变）：
+<pre><code>静态链（跨批次不变）：
   模板.单价 → 渠道.单价 → 组合.单价
 
 周期计算（每批次独立）：
   从周批次读取: 汇率 + 折算基准快照
   成本底价 = 组合.单价 × batch.汇率 ÷ batch.折算基准
   公布价 = 成本底价 + 组合.default_markup**；加成额与公布价双向联动（改加成额→公布价重算，改公布价→加成额反算）
-</code></pre></div>
-
+</code></pre>
 <ul>
 <li><code>单价</code> 走 D1-D3 的同步规则</li>
 <li>汇率、折算基准在周批次创建时快照，该批次内独立；加成额取自服务组合，不随批次快照</li>
@@ -1677,8 +1675,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li><strong>不再提供"同步后自动更新运价表"选项</strong>——运价重算统一在工作台人工触发</li>
 </ul>
 <hr />
-<h3 id="311a">3.11a 渠道派送仓点成本 <code>渠道派送仓点成本</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.11a 渠道派送仓点成本 <code>渠道派送仓点成本</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1747,9 +1745,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
-<h3 id="311b-combination_warehouse_cost">3.11b 组合派送仓点成本 <code>combination_warehouse_cost</code></h3>
-<div class="table-wrapper"><table>
+</table>
+<h3>3.11b 组合派送仓点成本 <code>combination_warehouse_cost</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1826,13 +1824,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <hr />
-<h3 id="311c">3.11c 渠道快递派送单价 <code>渠道快递派送单价</code></h3>
+<h3>3.11c 渠道快递派送单价 <code>渠道快递派送单价</code></h3>
 <blockquote>
 <p>1:N 挂在 service_channel 下。快递派专用——快递承运商（UPS/FedEx 等）按重量段 × 邮编前缀给出的固定单价。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1885,13 +1883,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10:RMB 20:USD</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>唯一约束</strong>：<code>UNIQUE(channel_id, weight_tier_id, zip_prefixes)</code>。</p>
-<h3 id="311d-combination_express_delivery_rate">3.11d 组合快递派送单价 <code>combination_express_delivery_rate</code></h3>
+<h3>3.11d 组合快递派送单价 <code>combination_express_delivery_rate</code></h3>
 <blockquote>
 <p>1:N 挂在 service_combination 下。从渠道级复制，组合可覆盖单价。</p>
 </blockquote>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -1960,12 +1958,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>唯一约束</strong>：<code>UNIQUE(combination_id, weight_tier_id, zip_prefixes)</code>。</p>
 <hr />
-<h3 id="312-billing_rule">3.12 计费规则 <code>billing_rule</code></h3>
+<h3>3.12 计费规则 <code>billing_rule</code></h3>
 <p>统一表格挂在服务组合上。首行为通用规则（<code>rule_type=10</code>，不可删除），可追加特殊规则（<code>rule_type=20</code>，按客户匹配覆盖通用值）。<strong>1:N</strong>。</p>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -2066,16 +2064,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p>约束：同一客户不可在同一组合的多条特殊规则中出现。优先级：特殊规则 &gt; 通用规则。同一客户命中多条特殊规则时取第一条。</p>
 </blockquote>
 <hr />
-<h3 id="313-default_markup">3.13 利润加成额（存于服务组合 <code>default_markup</code>）</h3>
+<h3>3.13 利润加成额（存于服务组合 <code>default_markup</code>）</h3>
 <p>利润不再是独立实体或成本项内联字段，而是服务组合上的 <code>default_markup</code>（见 §3.10），单位跟随组合计价方式（元/KG 或 元/m³）。成本项模板（§3.8）、渠道成本项（§3.9）、组合成本项（§3.11）均不含利润字段；成本与利润彻底分离。</p>
 <hr />
-<h3 id="314-surcharge_rule">3.14 附加费规则 <code>surcharge_rule</code></h3>
-<div class="table-wrapper"><table>
+<h3>3.14 附加费规则 <code>surcharge_rule</code></h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -2200,12 +2198,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>二期预留</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <p><strong>设计说明</strong>：三种规则类型的专属配置分别存储在 JSON 字段中（<code>match_conditions</code> / <code>formula_list</code> / <code>manual_input_fields</code>），不拆分子表，因为每种类型配置结构固定且不需要独立查询。<code>tag_ids</code> 为 JSON 数组，存储引用的标识 ID 列表。</p>
 <hr />
-<h3 id="315-freight_discount">3.15 运费优惠规则 <code>freight_discount</code>（内嵌于服务组合编辑弹窗管理）</h3>
+<h3>3.15 运费优惠规则 <code>freight_discount</code>（内嵌于服务组合编辑弹窗管理）</h3>
 <p>规则直接挂在服务组合上，无适用范围字段（天然绑定所在组合）。<strong>1:N</strong>。</p>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -2306,15 +2304,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10:生效中 20:已失效。系统自动维护：固定期限到期 → 20；单次有效被非取消运单引用 → 20。不可手动修改</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>业务规则</strong>：客户特批优先级高于客户等级。同组合上两条规则命中同一客户时，特批覆盖等级。</p>
 <p><strong>唯一性约束</strong>：应用层校验 <code>UNIQUE(combination_id, target_type, target_levels/target_customers) WHERE status=10</code>。同一组合 + 同一对象类型 + 同一目标最多一条生效规则。</p>
 </blockquote>
 <hr />
-<h3 id="315b-density_discount">3.15b 泡比优惠规则 <code>density_discount</code>（一期新增，内嵌于服务组合编辑弹窗管理）</h3>
+<h3>3.15b 泡比优惠规则 <code>density_discount</code>（一期新增，内嵌于服务组合编辑弹窗管理）</h3>
 <p>规则直接挂在服务组合上，基于货物泡比（实重 kg ÷ 体积 m³）的阶梯式固定减免。<strong>1:N</strong>。</p>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -2423,19 +2421,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10:生效中 20:已失效。系统自动维护</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p><strong>匹配逻辑</strong>：运价查询时计算货物泡比 = 实重(kg) ÷ 体积(m³)，泡比 ≥ 密度阈值 → 命中该档。多条命中取阈值最大那条。客户身份匹配按优先级：客户特批 &gt; 客户等级。泡比优惠与运费优惠叠加（一期纯减法，顺序无关）。</p>
 <p><strong>唯一性约束</strong>：应用层校验 <code>UNIQUE(combination_id, density_threshold, target_type, target_levels/target_customers) WHERE status=10</code>。同一组合 + 同一密度阈值 + 同一对象类型 + 同一目标最多一条生效规则。</p>
 </blockquote>
 <hr />
-<h3 id="316-surcharge_discount">3.16 附加费优惠规则 <code>surcharge_discount</code>（内嵌于附加费规则编辑弹窗管理）</h3>
+<h3>3.16 附加费优惠规则 <code>surcharge_discount</code>（内嵌于附加费规则编辑弹窗管理）</h3>
 <p>规则直接挂在附加费规则上，无适用范围字段（天然绑定所在规则）。<strong>1:N</strong>。与运费优惠独立配置。一期仅固定减免。字段及约束同 §3.15，差异：<code>surcharge_rule_id</code> 替代 <code>combination_id</code>。</p>
 <blockquote>
 <p><strong>唯一性约束</strong>：应用层校验 <code>UNIQUE(surcharge_rule_id, target_type, target_levels/target_customers) WHERE status=10</code>。同一规则 + 同一对象类型 + 同一目标最多一条生效规则。</p>
 </blockquote>
-<h3 id="317-audit_log">3.17 审计日志 <code>audit_log</code>（二期）</h3>
-<div class="table-wrapper"><table>
+<h3>3.17 审计日志 <code>audit_log</code>（二期）</h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -2504,13 +2502,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td></td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p>审计日志不可物理删除。不设软删除标识，保留 ≥ 2 年。</p>
 </blockquote>
 <hr />
-<h3 id="318-query_log">3.18 询价日志 <code>query_log</code>（二期）</h3>
-<div class="table-wrapper"><table>
+<h3>3.18 询价日志 <code>query_log</code>（二期）</h3>
+<table>
 <thead>
 <tr>
 <th>字段名</th>
@@ -2555,14 +2553,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>命中渠道列表 + 各渠道报价</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <blockquote>
 <p>一期仅记录不做分析。软删除后可清理，保留 ≥ 1 年。</p>
 </blockquote>
 <hr />
-<h2 id="4">4. 外部接口依赖</h2>
+<h2>4. 外部接口依赖</h2>
 <p>超级运价模块依赖以下基础资料/外部模块的接口，本模块不维护这些数据，仅通过接口调用：</p>
-<div class="table-wrapper"><table>
+<table>
 <thead>
 <tr>
 <th>依赖模块</th>
@@ -2617,10 +2615,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>运费优惠、附加费优惠</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <hr />
-<h2 id="5">5. 关键设计决策</h2>
-<div class="table-wrapper"><table>
+<h2>5. 关键设计决策</h2>
+<table>
 <thead>
 <tr>
 <th>决策</th>
@@ -2655,105 +2653,100 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>不在超级运价内维护主数据</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <hr />
-<h2 id="6">6. 核心业务流程</h2>
-<h3 id="61">6.1 运价查询完整链路</h3>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">A</span><span class="p">[</span><span class="err">销售输入</span><span class="o">:</span><span class="w"> </span><span class="err">目的国</span><span class="o">+</span><span class="err">仓点</span><span class="o">+</span><span class="err">件数</span><span class="o">+</span><span class="err">重量</span><span class="o">+</span><span class="err">尺寸</span><span class="o">+</span><span class="err">计费方式</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">B</span><span class="p">{</span><span class="err">渠道初筛</span><span class="p">}</span>
-<span class="w">    </span><span class="n">B</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">目的国匹配</span><span class="o">|</span><span class="w"> </span><span class="n">C</span><span class="p">[</span><span class="err">候选渠道列表</span><span class="p">]</span>
-<span class="w">    </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">D</span><span class="p">{</span><span class="err">组合匹配</span><span class="p">}</span>
-<span class="w">    </span><span class="n">D</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">计费方式</span><span class="o">+</span><span class="err">包税方式可选</span><span class="o">|</span><span class="w"> </span><span class="n">E</span><span class="p">[</span><span class="err">候选组合列表</span><span class="p">]</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">F</span><span class="p">{</span><span class="err">运价行匹配</span><span class="p">}</span>
-<span class="w">    </span><span class="n">F</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">仓库组</span><span class="o">+</span><span class="err">重量段</span><span class="o">+</span><span class="err">交货地组</span><span class="o">|</span><span class="w"> </span><span class="n">G</span><span class="p">{</span><span class="err">匹配成功</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">G</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">H</span><span class="p">[</span><span class="err">取公布价</span><span class="p">]</span>
-<span class="w">    </span><span class="n">G</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">I</span><span class="p">[</span><span class="err">标记暂未报价</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">展示渠道</span><span class="p">]</span>
-<span class="w">    </span><span class="n">H</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">J</span><span class="p">{</span><span class="err">选择了客户</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">J</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">K</span><span class="p">[</span><span class="err">匹配运费优惠</span><span class="p">]</span>
-<span class="w">    </span><span class="n">J</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">L</span><span class="p">[</span><span class="err">跳过优惠</span><span class="p">]</span>
-<span class="w">    </span><span class="n">K</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">L</span>
-<span class="w">    </span><span class="n">L</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">M</span><span class="p">[</span><span class="err">匹配附加费</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">触发节点</span><span class="o">=</span><span class="err">运单创建</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">仅字段匹配型</span><span class="p">]</span>
-<span class="w">    </span><span class="n">M</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">N</span><span class="p">{</span><span class="err">选择了客户</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">N</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">O</span><span class="p">[</span><span class="err">匹配附加费优惠</span><span class="p">]</span>
-<span class="w">    </span><span class="n">N</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">P</span><span class="p">[</span><span class="err">跳过</span><span class="p">]</span>
-<span class="w">    </span><span class="n">O</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">P</span>
-<span class="w">    </span><span class="n">P</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Q</span><span class="p">[</span><span class="err">船期关联</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">取最快提取</span><span class="o">/</span><span class="err">送仓时间</span><span class="p">]</span>
-<span class="w">    </span><span class="n">Q</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">R</span><span class="p">[</span><span class="err">底线检查</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">绿灯</span><span class="o">/</span><span class="err">黄灯</span><span class="o">/</span><span class="err">红灯</span><span class="p">]</span>
-<span class="w">    </span><span class="n">R</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">S</span><span class="p">[</span><span class="err">展示多渠道比价结果</span><span class="p">]</span>
-<span class="w">    </span><span class="n">I</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">T</span><span class="p">{</span><span class="err">货主端</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">U</span><span class="p">[</span><span class="err">不展示成本底价和盈亏</span><span class="p">]</span>
-<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">S</span>
-</code></pre></div>
-
-<h3 id="62">6.2 成本批量更新流程</h3>
+<h2>6. 核心业务流程</h2>
+<h3>6.1 运价查询完整链路</h3>
+<pre><code class="language-mermaid">flowchart TD
+    A[销售输入: 目的国+仓点+件数+重量+尺寸+计费方式] --&gt; B{渠道初筛}
+    B --&gt;|目的国匹配| C[候选渠道列表]
+    C --&gt; D{组合匹配}
+    D --&gt;|计费方式+包税方式可选| E[候选组合列表]
+    E --&gt; F{运价行匹配}
+    F --&gt;|仓库组+重量段+交货地组| G{匹配成功?}
+    G --&gt;|是| H[取公布价]
+    G --&gt;|否| I[标记暂未报价&lt;br&gt;展示渠道]
+    H --&gt; J{选择了客户?}
+    J --&gt;|是| K[匹配运费优惠]
+    J --&gt;|否| L[跳过优惠]
+    K --&gt; L
+    L --&gt; M[匹配附加费&lt;br&gt;触发节点=运单创建&lt;br&gt;仅字段匹配型]
+    M --&gt; N{选择了客户?}
+    N --&gt;|是| O[匹配附加费优惠]
+    N --&gt;|否| P[跳过]
+    O --&gt; P
+    P --&gt; Q[船期关联&lt;br&gt;取最快提取/送仓时间]
+    Q --&gt; R[底线检查&lt;br&gt;绿灯/黄灯/红灯]
+    R --&gt; S[展示多渠道比价结果]
+    I --&gt; T{货主端?}
+    T --&gt;|是| U[不展示成本底价和盈亏]
+    T --&gt;|否| S
+</code></pre>
+<h3>6.2 成本批量更新流程</h3>
 <p>两个入口，同一数据链路：</p>
 <p><strong>路径 A：模板「批量更新」</strong>（成本管理 → 成本项模板 → 点击「批量更新」）</p>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">A</span><span class="p">[</span><span class="err">修改模板建议默认价</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">B</span><span class="p">[</span><span class="err">点击「批量更新」</span><span class="p">]</span>
-<span class="w">    </span><span class="n">B</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">C</span><span class="p">[</span><span class="err">展示受影响组合清单</span><span class="o">:&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">组合编码</span><span class="o">/</span><span class="err">渠道</span><span class="o">/</span><span class="err">当前值</span><span class="o">/</span><span class="err">更新后值</span><span class="p">]</span>
-<span class="w">    </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">D</span><span class="p">[</span><span class="err">管理员勾选目标组合</span><span class="p">]</span>
-<span class="w">    </span><span class="n">D</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">E</span><span class="p">{</span><span class="err">勾选「自动更新成本底价」</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">F</span><span class="p">[</span><span class="err">批量更新组合成本价</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">同步更新渠道成本项</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">重算当周</span><span class="w"> </span><span class="n">cost_per_kg</span><span class="o">/</span><span class="n">m³</span><span class="p">]</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">G</span><span class="p">[</span><span class="err">仅批量更新组合成本价</span><span class="p">]</span>
-</code></pre></div>
-
+<pre><code class="language-mermaid">flowchart TD
+    A[修改模板建议默认价] --&gt; B[点击「批量更新」]
+    B --&gt; C[展示受影响组合清单:&lt;br&gt;组合编码/渠道/当前值/更新后值]
+    C --&gt; D[管理员勾选目标组合]
+    D --&gt; E{勾选「自动更新成本底价」?}
+    E --&gt;|是| F[批量更新组合成本价&lt;br&gt;同步更新渠道成本项&lt;br&gt;重算当周 cost_per_kg/m³]
+    E --&gt;|否| G[仅批量更新组合成本价]
+</code></pre>
 <p><strong>路径 B：渠道「同步到组合」</strong>（服务渠道 → 成本项弹窗 → 勾选 → 「同步到组合」）</p>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">A</span><span class="p">[</span><span class="err">渠道成本项弹窗</span><span class="o">:</span><span class="w"> </span><span class="err">勾选成本项</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">B</span><span class="p">[</span><span class="err">点击「同步到组合」</span><span class="p">]</span>
-<span class="w">    </span><span class="n">B</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">C</span><span class="p">[</span><span class="err">展示</span><span class="o">:</span><span class="w"> </span><span class="err">勾选的成本项</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="err">该渠道全部组合</span><span class="p">]</span>
-<span class="w">    </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">D</span><span class="p">[</span><span class="err">管理员调整勾选范围</span><span class="p">]</span>
-<span class="w">    </span><span class="n">D</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">E</span><span class="p">{</span><span class="err">勾选「自动更新成本底价」</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">F</span><span class="p">[</span><span class="err">更新选中组合的成本价</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">重算当周</span><span class="w"> </span><span class="n">cost_per_kg</span><span class="o">/</span><span class="n">m³</span><span class="p">]</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">G</span><span class="p">[</span><span class="err">仅更新选中组合的成本价</span><span class="p">]</span>
-</code></pre></div>
-
+<pre><code class="language-mermaid">flowchart TD
+    A[渠道成本项弹窗: 勾选成本项] --&gt; B[点击「同步到组合」]
+    B --&gt; C[展示: 勾选的成本项 + 该渠道全部组合]
+    C --&gt; D[管理员调整勾选范围]
+    D --&gt; E{勾选「自动更新成本底价」?}
+    E --&gt;|是| F[更新选中组合的成本价&lt;br&gt;重算当周 cost_per_kg/m³]
+    E --&gt;|否| G[仅更新选中组合的成本价]
+</code></pre>
 <blockquote>
 <p><strong>关键约束</strong>：两个路径均为「仅更新已有项」——只修改组合中已存在的成本项，不新增或删除。禁用项不可同步。仓点成本/快递派单价有独立同步按钮，且按组合尾程派送方式过滤（卡派仅同步仓点成本，快递派仅同步快递派单价）。</p>
 </blockquote>
-<h3 id="63">6.3 新建周批次（每周运维入口）</h3>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">A</span><span class="p">[</span><span class="err">运价管理员</span><span class="o">:</span><span class="w"> </span><span class="err">创建新周批次</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">B</span><span class="p">[</span><span class="err">系统自动从上周</span><span class="n">CURRENT批次</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">复制全部船期记录</span><span class="p">]</span>
-<span class="w">    </span><span class="n">B</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">C</span><span class="p">[</span><span class="err">系统自动从上周</span><span class="n">CURRENT批次</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">复制全部运价行</span><span class="p">]</span>
-<span class="w">    </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">D</span><span class="p">[</span><span class="err">系统基于当前成本底价</span><span class="o">+</span><span class="err">组合加成额</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">重新计算公布价</span><span class="p">]</span>
-<span class="w">    </span><span class="n">D</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">E</span><span class="p">[</span><span class="err">运价管理员审查</span><span class="o">+</span><span class="err">调价</span><span class="p">]</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">F</span><span class="p">{</span><span class="err">所有调整完成</span><span class="o">?</span><span class="p">}</span>
-<span class="w">    </span><span class="n">F</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">G</span><span class="p">[</span><span class="err">发布</span><span class="o">:</span><span class="w"> </span><span class="err">批次状态</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">CURRENT</span><span class="p">]</span>
-<span class="w">    </span><span class="n">F</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">E</span>
-<span class="w">    </span><span class="n">G</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">H</span><span class="p">[</span><span class="err">上一批次</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">EXPIRED</span><span class="p">]</span>
-</code></pre></div>
+<h3>6.3 新建周批次（每周运维入口）</h3>
+<pre><code class="language-mermaid">flowchart TD
+    A[运价管理员: 创建新周批次] --&gt; B[系统自动从上周CURRENT批次&lt;br&gt;复制全部船期记录]
+    B --&gt; C[系统自动从上周CURRENT批次&lt;br&gt;复制全部运价行]
+    C --&gt; D[系统基于当前成本底价+组合加成额&lt;br&gt;重新计算公布价]
+    D --&gt; E[运价管理员审查+调价]
+    E --&gt; F{所有调整完成?}
+    F --&gt;|是| G[发布: 批次状态 → CURRENT]
+    F --&gt;|否| E
+    G --&gt; H[上一批次 → EXPIRED]
+</code></pre>
+<h3>6.4 附加费规则匹配（分节点）</h3>
+<pre><code class="language-mermaid">flowchart TD
+    subgraph 运单创建节点
+        A[运单创建] --&gt; B[字段匹配型规则]
+        B --&gt; C{动作类型?}
+        C --&gt;|加收费用| D[计算金额]
+        C --&gt;|标识提醒| E[运单打标]
+        C --&gt;|阻止下单| F[拦截, 不可创建]
+        A --&gt; G[人工添加型规则]
+        G --&gt; H[运单界面展示可选列表]
+    end
 
-<h3 id="64">6.4 附加费规则匹配（分节点）</h3>
-<div class="codehilite"><pre><span></span><code><span class="n">flowchart</span><span class="w"> </span><span class="n">TD</span>
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="err">运单创建节点</span>
-<span class="w">        </span><span class="n">A</span><span class="p">[</span><span class="err">运单创建</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">B</span><span class="p">[</span><span class="err">字段匹配型规则</span><span class="p">]</span>
-<span class="w">        </span><span class="n">B</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">C</span><span class="p">{</span><span class="err">动作类型</span><span class="o">?</span><span class="p">}</span>
-<span class="w">        </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">加收费用</span><span class="o">|</span><span class="w"> </span><span class="n">D</span><span class="p">[</span><span class="err">计算金额</span><span class="p">]</span>
-<span class="w">        </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">标识提醒</span><span class="o">|</span><span class="w"> </span><span class="n">E</span><span class="p">[</span><span class="err">运单打标</span><span class="p">]</span>
-<span class="w">        </span><span class="n">C</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">阻止下单</span><span class="o">|</span><span class="w"> </span><span class="n">F</span><span class="p">[</span><span class="err">拦截</span><span class="p">,</span><span class="w"> </span><span class="err">不可创建</span><span class="p">]</span>
-<span class="w">        </span><span class="n">A</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">G</span><span class="p">[</span><span class="err">人工添加型规则</span><span class="p">]</span>
-<span class="w">        </span><span class="n">G</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">H</span><span class="p">[</span><span class="err">运单界面展示可选列表</span><span class="p">]</span>
-<span class="w">    </span><span class="kd">end</span>
+    subgraph 红外过机节点
+        I[货物红外扫描] --&gt; J[获取精确尺寸&lt;br&gt;长/宽/高/重量]
+        J --&gt; K[公式阈值型规则]
+        K --&gt; L{任一公式满足?}
+        L --&gt;|是| M[计算金额]
+        L --&gt;|否| N[不触发]
+        J --&gt; O[字段匹配型&lt;br&gt;trigger_node=红外过机]
+        O --&gt; P[二次匹配&lt;br&gt;如超重标识提醒]
+    end
 
-<span class="w">    </span><span class="n">subgraph</span><span class="w"> </span><span class="err">红外过机节点</span>
-<span class="w">        </span><span class="n">I</span><span class="p">[</span><span class="err">货物红外扫描</span><span class="p">]</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">J</span><span class="p">[</span><span class="err">获取精确尺寸</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">长</span><span class="o">/</span><span class="err">宽</span><span class="o">/</span><span class="err">高</span><span class="o">/</span><span class="err">重量</span><span class="p">]</span>
-<span class="w">        </span><span class="n">J</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">K</span><span class="p">[</span><span class="err">公式阈值型规则</span><span class="p">]</span>
-<span class="w">        </span><span class="n">K</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">L</span><span class="p">{</span><span class="err">任一公式满足</span><span class="o">?</span><span class="p">}</span>
-<span class="w">        </span><span class="n">L</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">是</span><span class="o">|</span><span class="w"> </span><span class="n">M</span><span class="p">[</span><span class="err">计算金额</span><span class="p">]</span>
-<span class="w">        </span><span class="n">L</span><span class="w"> </span><span class="o">--&gt;|</span><span class="err">否</span><span class="o">|</span><span class="w"> </span><span class="n">N</span><span class="p">[</span><span class="err">不触发</span><span class="p">]</span>
-<span class="w">        </span><span class="n">J</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">O</span><span class="p">[</span><span class="err">字段匹配型</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="n">trigger_node</span><span class="o">=</span><span class="err">红外过机</span><span class="p">]</span>
-<span class="w">        </span><span class="n">O</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">P</span><span class="p">[</span><span class="err">二次匹配</span><span class="o">&lt;</span><span class="n">br</span><span class="o">&gt;</span><span class="err">如超重标识提醒</span><span class="p">]</span>
-<span class="w">    </span><span class="kd">end</span>
-
-<span class="w">    </span><span class="n">D</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Q</span><span class="p">[</span><span class="err">业务流水汇总</span><span class="p">]</span>
-<span class="w">    </span><span class="n">E</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Q</span>
-<span class="w">    </span><span class="n">H</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Q</span>
-<span class="w">    </span><span class="n">M</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Q</span>
-<span class="w">    </span><span class="n">P</span><span class="w"> </span><span class="o">--&gt;</span><span class="w"> </span><span class="n">Q</span>
-</code></pre></div>
-
+    D --&gt; Q[业务流水汇总]
+    E --&gt; Q
+    H --&gt; Q
+    M --&gt; Q
+    P --&gt; Q
+</code></pre>
 <hr />
-<h2 id="7">7. 风险探测报告</h2>
-<div class="table-wrapper"><table>
+<h2>7. 风险探测报告</h2>
+<table>
 <thead>
 <tr>
 <th>风险维度</th>
@@ -2830,11 +2823,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>一期手动切换，运价管理员确认当前无在途业务后操作</td>
 </tr>
 </tbody>
-</table></div>
+</table>
 <hr />
-<h2 id="8-ia">8. 信息架构（IA 设计）</h2>
-<h3 id="81">8.1 菜单结构</h3>
-<div class="codehilite"><pre><span></span><code>├── 🏠 运价更新工作台（每周运维入口）
+<h2>8. 信息架构（IA 设计）</h2>
+<h3>8.1 菜单结构</h3>
+<pre><code>├── 🏠 运价更新工作台（每周运维入口）
 │   ├── 顶部：批次选择器 + 指标卡
 │   ├── Tab 1: 本周船期（只读，链接到航线&amp;船期页编辑）
 │   └── Tab 2: 本周运价（可编辑：新增/编辑运价行 + 批量调价 + 发布）
@@ -2874,13 +2867,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
     ├── 客户管理
     ├── 等级管理
     └── 商品管理
-</code></pre></div>
-
+</code></pre>
 <blockquote>
 <p><strong>两页分工原则</strong>：航线&amp;船期页 = 主数据 + 全量批次历史 + 船期录入（"写"操作）；工作台 = 本周运维，对照船期调运价 + 发布（"用"操作）。船期和运价共享同一个周批次（<code>weekly_schedule_batch</code>），不是各管各的周期。工作台的船期 Tab 只读，点击"编辑船期 →"跳转到航线&amp;船期页编辑。</p>
 </blockquote>
-<h3 id="82">8.2 页面清单</h3>
-<div class="table-wrapper"><table>
+<h3>8.2 页面清单</h3>
+<table>
 <thead>
 <tr>
 <th>页面名称</th>
@@ -2969,7 +2961,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>列表页</td>
 </tr>
 </tbody>
-</table></div>
-</div></div>
+</table>
+</div>
+</div>
 </body>
 </html>
