@@ -82,13 +82,8 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-table-column type="expand">
           <template #default="g">
             <div class="expand-row">
-              <div style="margin-bottom:8px;padding:6px 10px;background:#F5F7FA;border-radius:4px;font-size:12px;color:#606266">
-                <span style="color:#909399">各交货地组公布价 = 基准价 + 拖车费差价：</span>
-                <el-tag v-for="t in g.row._regions" :key="t.name" size="small" :type="t.scRMB>0?'warning':'success'" effect="plain" style="margin:0 4px">{{t.name}}{{t.scRMB>0?' +'+(t.scRMB/(g.row._billing==='KG'?12525:75)).toFixed(2)+(g.row._billing==='KG'?'元/KG':'元/m³'):' 基准'}}</el-tag>
-                <span style="color:#909399">（义乌仓拖车更远，装柜费更高；广州仓、中山仓同基准价）</span>
-              </div>
-              <el-table :data="g.row._matrix" border size="small" style="width:100%">
-                <el-table-column :label="dimLabel(g.row.comboName)" min-width="150">
+              <el-table v-if="g.row._lastMile==='卡派'" :data="g.row._matrix" border size="small" style="width:100%">
+                <el-table-column label="仓库组" min-width="150">
                   <template #default="r"><span v-if="r.row._hasPending" style="color:#E6A23C;margin-right:4px" title="待重算">⚠</span>{{r.row._wh}}</template>
                 </el-table-column>
                 <el-table-column label="成本底价" width="110" align="right">
@@ -100,7 +95,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
                     <span v-else style="color:#909399;font-size:12px">—</span>
                   </template>
                 </el-table-column>
-                <el-table-column v-for="wt in g.row._displayTiers" :key="wt" :label="wt" min-width="120" align="center">
+                <el-table-column v-for="wt in g.row._displayTiers" :key="wt" :label="wt" min-width="140" align="center">
                   <template #default="r">
                     <div class="tier-cell" v-if="r.row._tiers[wt]">
                       <div>利润额 <span :class="r.row._tiers[wt]._color">{{r.row._tiers[wt].markup}}</span></div>
@@ -110,16 +105,39 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
                     <span v-else style="color:#C0C4CC">—</span>
                   </template>
                 </el-table-column>
-                <el-table-column v-if="selectedBatch.status!=='已过期'" label="操作" width="60" fixed="right">
-                  <template #default="r"><el-button size="small" @click="openEditPrice(g.row, r.row)">编辑</el-button></template>
+              </el-table>
+              <el-table v-else :data="g.row._matrix" border size="small" style="width:100%">
+                <el-table-column label="邮编前缀" min-width="150">
+                  <template #default="r"><span v-if="r.row._hasPending" style="color:#E6A23C;margin-right:4px" title="待重算">⚠</span>{{r.row._wh}}</template>
+                </el-table-column>
+                <el-table-column label="最大优惠" width="110" align="center">
+                  <template #default="r">
+                    <span v-if="r.row._maxDiscount>0" style="font-size:12px" title="运费优惠+泡比优惠 最大可减">减{{r.row._maxDiscount}}{{g.row._billing==='KG'?'元/KG':'元/m³'}}</span>
+                    <span v-else style="color:#909399;font-size:12px">—</span>
+                  </template>
+                </el-table-column>
+                <el-table-column v-for="wt in g.row._displayTiers" :key="wt" :label="wt" min-width="140" align="center">
+                  <template #default="r">
+                    <div class="tier-cell" v-if="r.row._tiers[wt]">
+                      <div style="font-size:11px;color:#909399">成本 {{r.row._tiers[wt]._costBase||'—'}}</div>
+                      <div>利润额 <span :class="r.row._tiers[wt]._color">{{r.row._tiers[wt].markup}}</span></div>
+                      <div>公布价 <strong>{{r.row._tiers[wt].price||'—'}}</strong></div>
+                    </div>
+                    <span v-else style="color:#C0C4CC">—</span>
+                  </template>
                 </el-table-column>
               </el-table>
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="服务组合" min-width="220"><template #default="g"><span v-if="g.row._hasPending" style="color:#E6A23C;margin-right:4px" title="有待重算">⚠</span>{{g.row.comboName}}</template></el-table-column>
-        <el-table-column label="覆盖交货地" min-width="220"><template #default="g"><el-tag v-for="t in g.row._regions" :key="t.name" size="small" :type="t.scRMB>0?'warning':'info'" effect="plain" style="margin:1px 3px">{{t.name}}<span v-if="t.scRMB>0" style="opacity:0.85"> +{{(t.scRMB/(g.row._billing==='KG'?12525:75)).toFixed(2)}}/{{g.row._billing==='KG'?'KG':'m³'}}</span></el-tag></template></el-table-column>
-              </el-table>
+        <el-table-column label="服务组合" min-width="200"><template #default="g"><span v-if="g.row._hasPending" style="color:#E6A23C;margin-right:4px" title="有待重算">⚠</span>{{g.row.comboName}}</template></el-table-column>
+        <el-table-column label="交货地" min-width="160">
+          <template #default="g"><span>{{g.row.deliveryGroup||'—'}}</span></template>
+        </el-table-column>
+<el-table-column v-if="selectedBatch.status!=='已过期'" label="操作" width="60" fixed="right">
+          <template #default="g"><el-button size="small" @click="openEditMatrix(g.row)">编辑</el-button></template>
+        </el-table-column>
+      </el-table>
     </el-tab-pane>
   </el-tabs>
   </div>
@@ -183,53 +201,53 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       <div v-if="showCostDetail&&costDetail" style="margin-top:10px;background:#FAFBFC;border:1px solid #E4E7ED;border-radius:6px;padding:14px 16px;font-size:12px">
         <div style="font-weight:600;color:#303133;margin-bottom:8px">头程成本明细</div>
         <table style="width:100%;table-layout:fixed;border-collapse:collapse;line-height:1.8">
-          <thead><tr style="color:#909399;border-bottom:1px solid #E4E7ED"><th style="text-align:left;padding:2px 6px;width:12%">成本段</th><th style="text-align:left;padding:2px 6px;width:24%">成本项</th><th style="text-align:right;padding:2px 6px;width:14%">原始单价</th><th style="text-align:left;padding:2px 6px;width:36%">计算公式</th><th style="text-align:right;padding:2px 6px;width:14%" v-if="costDetailBilling==='KG'">每KG</th><th style="text-align:right;padding:2px 6px;width:14%" v-if="costDetailBilling==='m³'">每m³</th></tr></thead>
+          <thead><tr style="background:#F7F8FA;color:#606266;font-weight:600;border-bottom:2px solid #DCDFE6"><th style="text-align:left;padding:4px 6px;width:10%">成本段</th><th style="text-align:left;padding:4px 6px;width:16%">成本项</th><th style="padding:4px 6px;width:16%" v-if="costDetailTruckingItems"></th><th style="text-align:right;padding:4px 6px;width:12%">原始单价</th><th style="text-align:left;padding:4px 6px;width:32%">计算公式</th><th style="text-align:right;padding:4px 6px;width:14%" v-if="costDetailBilling==='KG'">每KG</th><th style="text-align:right;padding:4px 6px;width:14%" v-if="costDetailBilling==='m³'">每m³</th></tr></thead>
           <tbody>
             <tr v-for="h in costDetail.headItems" :key="h.item" style="border-bottom:1px solid #F2F2F2">
-              <td style="padding:2px 6px">{{h.seg}}</td><td style="padding:2px 6px">{{h.item}}</td><td style="text-align:right;padding:2px 6px">{{h.price}}</td>
+              <td style="padding:2px 6px">{{h.seg}}</td><td :colspan="costDetailTruckingItems?2:1" style="padding:2px 6px">{{h.item}}</td><td style="text-align:right;padding:2px 6px">{{h.price}}</td>
               <td style="padding:2px 6px;color:#909399;font-size:11px">{{h.formula}}</td>
               <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='KG'">{{h.kg}}</td>
               <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='m³'">{{h.cbm}}</td>
             </tr>
           </tbody>
+          <tbody v-if="costDetailTruckingItems&&costDetailTruckingItems.length">
+            <tr style="background:#F7F8FA;font-size:12px;color:#606266;font-weight:600;border-top:1px solid #DCDFE6;border-bottom:2px solid #DCDFE6">
+              <td style="padding:4px 6px">成本段</td>
+              <td style="padding:4px 6px">成本项</td>
+              <td style="padding:4px 6px">交货地</td>
+              <td style="text-align:right;padding:4px 6px">原始单价</td>
+              <td style="padding:4px 6px">计算公式</td>
+              <td style="text-align:right;padding:4px 6px" v-if="costDetailBilling==='KG'">每KG</td>
+              <td style="text-align:right;padding:4px 6px" v-if="costDetailBilling==='m³'">每m³</td>
+            </tr>
+            <tr v-for="tc in costDetailTruckingItems" :key="'tc-'+tc.region" style="border-bottom:1px solid #F2F2F2">
+              <td style="padding:2px 6px">揽收段</td>
+              <td style="padding:2px 6px">拖车费</td>
+              <td style="padding:2px 6px">{{tc.region}}</td>
+              <td style="text-align:right;padding:2px 6px">{{tc.price}}</td>
+              <td style="padding:2px 6px;color:#909399;font-size:11px">{{tc.formula}}</td>
+              <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='KG'">{{tc.kg}}</td>
+              <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='m³'">{{tc.cbm}}</td>
+            </tr>
+          </tbody>
           <tfoot>
-            <tr style="font-weight:600;border-top:1px solid #DCDFE6"><td colspan="4" style="text-align:right;padding:4px 6px">头程合计</td><td style="text-align:right;padding:4px 6px;color:#2DA44E" v-if="costDetailBilling==='KG'">{{costDetail.headKg}}/KG</td><td style="text-align:right;padding:4px 6px;color:#2DA44E" v-if="costDetailBilling==='m³'">{{costDetail.headCbm}}/m³</td></tr>
+            <tr style="font-weight:600;border-top:1px solid #DCDFE6"><td :colspan="costDetailTruckingItems?5:4" style="text-align:right;padding:4px 6px">头程合计{{costDetailTruckingItems?'（含拖车费）':''}}</td><td style="text-align:right;padding:4px 6px;color:#2DA44E" v-if="costDetailBilling==='KG'">{{priceEditHeadKg||costDetail.headKg}}/KG</td><td style="text-align:right;padding:4px 6px;color:#2DA44E" v-if="costDetailBilling==='m³'">{{priceEditHeadCbm||costDetail.headCbm}}/m³</td></tr>
           </tfoot>
         </table>
-        <div v-if="costDetailTruckingItems" style="margin-top:12px;padding:8px 0;border-top:1px solid #E4E7ED">
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:8px">
-            <span style="font-weight:600;font-size:13px">拖车费 · 按交货地分别计价</span>
-            <span style="font-size:12px;color:#909399">每个交货地拖车距离不同，费用不同</span>
-          </div>
-          <table style="width:100%;table-layout:fixed;border-collapse:collapse;line-height:1.8;font-size:12px">
-            <thead><tr style="color:#909399;border-bottom:1px solid #E4E7ED"><th style="text-align:left;padding:2px 6px;width:22%">交货地</th><th style="text-align:right;padding:2px 6px;width:20%">原始单价</th><th style="text-align:left;padding:2px 6px;width:30%">计算公式</th><th style="text-align:right;padding:2px 6px;width:14%" v-if="costDetailBilling==='KG'">每KG</th><th style="text-align:right;padding:2px 6px;width:14%" v-if="costDetailBilling==='m³'">每m³</th></tr></thead>
-            <tbody>
-              <tr v-for="tc in costDetailTruckingItems" :key="tc.region" style="border-bottom:1px solid #F2F2F2" :style="tc.isBase?'':'background:#F5F7FA'">
-                <td style="padding:2px 6px">{{tc.region}}<span v-if="tc.isBase" style="color:#909399;font-size:11px;margin-left:4px">基准</span><span v-else style="color:#E6A23C;font-size:11px;margin-left:4px">{{tc.deltaLabel}}</span></td>
-                <td style="text-align:right;padding:2px 6px">{{tc.price}}</td>
-                <td style="padding:2px 6px;color:#909399;font-size:11px">{{tc.formula}}</td>
-                <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='KG'">{{tc.kg}}</td>
-                <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='m³'">{{tc.cbm}}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
         <div style="margin-top:14px;padding-top:10px;border-top:1px dashed #DCDFE6">
           <div style="font-weight:600;color:#303133;margin-bottom:8px" v-if="costDetail.tailType==='卡派'">派送段成本明细（卡派）</div>
           <div style="font-weight:600;color:#303133;margin-bottom:8px" v-else>派送段成本明细（快递派）</div>
           <template v-if="costDetail.tailType==='卡派'">
             <table style="width:100%;border-collapse:collapse;line-height:1.8;margin-bottom:4px">
-              <thead><tr style="color:#909399;border-bottom:1px solid #E4E7ED">
-                <th style="text-align:left;padding:2px 6px">仓点</th><th style="text-align:left;padding:2px 6px">报价方式</th><th style="text-align:right;padding:2px 6px">成本单价</th><th style="text-align:left;padding:2px 6px">计算公式</th><th style="text-align:right;padding:2px 6px">末端成本</th><th style="text-align:right;padding:2px 6px">合计</th><th style="text-align:center;padding:2px 6px;width:80px">选用</th>
+              <thead><tr style="background:#F7F8FA;color:#606266;font-weight:600;border-bottom:2px solid #DCDFE6">
+                <th style="text-align:left;padding:4px 6px">仓点</th><th style="text-align:left;padding:4px 6px">报价方式</th><th style="text-align:right;padding:4px 6px">成本单价</th><th style="text-align:left;padding:4px 6px">计算公式</th><th style="text-align:right;padding:4px 6px">末端成本</th><th style="text-align:center;padding:4px 6px;width:80px">选用</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(tc,ti) in costDetail.tailCompare" :key="ti" style="border-bottom:1px solid #F2F2F2" :style="tc.selSource?'background:#F0F9EB':''">
                   <td style="padding:2px 6px">{{tc.wh}}</td><td style="padding:2px 6px">{{tc.sourceName}}</td><td style="text-align:right;padding:2px 6px">{{tc.priceRaw||'—'}}</td>
                   <td style="padding:2px 6px;color:#909399;font-size:11px">{{tc.formula||'—'}}</td>
-                  <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='KG'">{{tc.tailKg||'—'}}/KG</td>
-                  <td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='m³'">{{tc.tailCbm||'—'}}/m³</td>
-                  <td style="text-align:right;padding:2px 6px;color:#303133;font-weight:600" v-if="costDetailBilling==='KG'">{{tc.totalKg||'—'}}/KG</td>
-                  <td style="text-align:right;padding:2px 6px;color:#303133;font-weight:600" v-if="costDetailBilling==='m³'">{{tc.totalCbm||'—'}}/m³</td>
+                  <td style="text-align:right;padding:2px 6px" :style="tc.selSource?'color:#2DA44E;font-weight:600':'color:#606266'" v-if="costDetailBilling==='KG'">{{tc.tailKg||'—'}}/KG</td>
+                  <td style="text-align:right;padding:2px 6px" :style="tc.selSource?'color:#2DA44E;font-weight:600':'color:#606266'" v-if="costDetailBilling==='m³'">{{tc.tailCbm||'—'}}/m³</td>
                   <td style="text-align:center;padding:2px 6px"><span v-if="tc.selSource" style="color:#2DA44E;font-weight:700">←MAX</span></td>
                 </tr>
               </tbody>
@@ -237,7 +255,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
           </template>
           <template v-if="costDetail.tailType==='快递派'">
             <table style="width:100%;border-collapse:collapse;line-height:1.8;margin-bottom:4px">
-              <thead><tr style="color:#909399;border-bottom:1px solid #E4E7ED"><th style="text-align:left;padding:2px 6px">重量段</th><th style="text-align:left;padding:2px 6px">邮编前缀</th><th style="text-align:right;padding:2px 6px">原始单价</th><th style="text-align:right;padding:2px 6px" v-if="costDetailBilling==='KG'">每KG</th></tr></thead>
+              <thead><tr style="background:#F7F8FA;color:#606266;font-weight:600;border-bottom:2px solid #DCDFE6"><th style="text-align:left;padding:4px 6px">重量段</th><th style="text-align:left;padding:4px 6px">邮编前缀</th><th style="text-align:right;padding:4px 6px">原始单价</th><th style="text-align:right;padding:4px 6px" v-if="costDetailBilling==='KG'">每KG</th></tr></thead>
               <tbody>
                 <tr v-for="e in costDetail.tailExpress" :key="e.tier" style="border-bottom:1px solid #F2F2F2">
                   <td style="padding:2px 6px">{{e.tier}}</td><td style="padding:2px 6px">{{e.zip}}</td><td style="text-align:right;padding:2px 6px">{{e.price}}</td><td style="text-align:right;padding:2px 6px;color:#606266" v-if="costDetailBilling==='KG'">{{e.kg}}</td>
@@ -258,7 +276,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
           <div v-if="r.row._tiers[wt]" class="tier-cell" style="padding:2px 0">
             <div style="margin-bottom:3px;white-space:nowrap"><span :style="{background:markupColor(r.row._tiers[wt]._markup,r.row._maxDiscount),boxShadow:'0 0 0 2px '+markupColor(r.row._tiers[wt]._markup,r.row._maxDiscount)+'33'}" :title="markupLabel(r.row._tiers[wt]._markup,r.row._maxDiscount)+'（兜底利润=利润额−最大优惠='+((r.row._tiers[wt]._markup||0)-r.row._maxDiscount).toFixed(2)+'）'" style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;cursor:help"></span><span style="font-size:12px;color:#909399">利润</span> <el-input-number v-model="r.row._tiers[wt]._markup" :precision="2" :step="0.1" size="small" style="width:92px" controls-position="right" @change="onMatrixMarkupChange(r.row,wt)"></el-input-number></div>
             <div style="white-space:nowrap;padding-left:16px"><span style="font-size:12px;color:#909399">公布</span> <el-input-number v-model="r.row._tiers[wt]._price" :min="0" :precision="2" size="small" style="width:92px" controls-position="right" @change="onMatrixPriceChange(r.row,wt)"></el-input-number></div>
-            <div style="white-space:nowrap;padding-left:16px;font-size:11px;color:#909399">成本 {{r.row._tiers[wt]._costBase||'—'}}</div>
+            <div style="white-space:nowrap;padding-left:16px;font-size:11px;color:#909399" v-if="costDetail&&costDetail.tailType==='快递派'">成本 {{r.row._tiers[wt]._costBase||'—'}}</div>
           </div>
           <span v-else style="color:#C0C4CC">—</span>
         </template>
@@ -315,7 +333,7 @@ var app = Vue.createApp({
         {name:'2026-W06（2/2-2/8）',week:'2026-W06',start:'2026-02-02',end:'2026-02-08',status:'预告',exchangeRates:[{from:'USD',to:'RMB',rate:'7.2500'}],_snapshot:{headKg:12525,headCbm:75.0,tailKg:350,tailCbm:1.8}}
       ],
       enabledCombos: [
-        {code:'美森360-海运-卡派-KG-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',tax:'包税',serviceType:'散货',warehouses:['ONT8','LAX9','LGB8'],defaultMarkup:2.5},
+        {code:'美森360-海运-卡派-KG-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',tax:'包税',serviceType:'散货',warehouses:['ONT8','LAX9','LGB8','SBD1','POC1','POC2','POC3'],defaultMarkup:2.5},
         {code:'美森360-海运-卡派-KG-不包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',tax:'不包税',serviceType:'散货',warehouses:['ONT8','LAX9','LGB8'],defaultMarkup:2.5},
         {code:'美森360-海运-卡派-m³-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'m³',tax:'包税',serviceType:'散货',warehouses:['ONT8','LAX9'],defaultMarkup:250},
         {code:'美森432-海运-卡派-KG-包税-散货',channel:'美森432',transport:'海运',lastMile:'卡派',billing:'KG',tax:'包税',serviceType:'散货',warehouses:['ONT8','LAX9','LGB8'],defaultMarkup:2.0},
@@ -347,16 +365,53 @@ var app = Vue.createApp({
       },
       allPriceData: {
         '2026-W05（1/26-2/1）': [
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.00',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'8KG+',deliveryGroup:'义乌仓+东莞仓',priceKg:'11.08',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'100KG+',deliveryGroup:'义乌仓+东莞仓',priceKg:'10.88',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'8KG+',deliveryGroup:'深圳仓',priceKg:'11.09',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'100KG+',deliveryGroup:'深圳仓',priceKg:'10.89',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'LGB8',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.50',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'LGB8',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.20',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-m³-包税-散货',warehouseGroup:'ONT8,LAX9',weightTier:'2m³+',deliveryGroup:'广州仓+中山仓',priceKg:'—',priceCbm:'1488.00',_dimType:'wh',_pendingRecalc:true},
-          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.70',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.00',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'义乌仓+东莞仓',priceKg:'11.08',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'义乌仓+东莞仓',priceKg:'10.88',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'深圳仓',priceKg:'11.09',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'深圳仓',priceKg:'10.89',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.15',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.95',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.50',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.10',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.90',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.40',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.20',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.70',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'CLT2,RDU2,TPA2,TPA3,TOL3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.85',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'CLT2,RDU2,TPA2,TPA3,TOL3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.45',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.05',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-散货',warehouseGroup:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.65',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-m³-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'2m³+',deliveryGroup:'广州仓+中山仓',priceKg:'—',priceCbm:'1488.00',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.90',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.50',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.10',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.70',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.40',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.00',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.90',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.60',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.20',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'CLT2,RDU2,TPA2,TPA3,TOL3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.70',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'CLT2,RDU2,TPA2,TPA3,TOL3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'11.00',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-散货',warehouseGroup:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'10.60',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.50',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.20',priceCbm:'—',_dimType:'wh',_pendingRecalc:true},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.70',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.10',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.40',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'CLT2,RDU2,TPA2,TPA3,TOL3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.40',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森432-海运-卡派-KG-包税-散货',warehouseGroup:'CLT2,RDU2,TPA2,TPA3,TOL3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.00',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
           {comboName:'美森360-海运-快递派-KG-包税-散货',warehouseGroup:'8,9',weightTier:'1KG+',deliveryGroup:'广州仓+中山仓',priceKg:'18.00',priceCbm:'—',_dimType:'zip',zipPrefixes:'8,9',_pendingRecalc:false},
           {comboName:'美森360-海运-快递派-KG-包税-散货',warehouseGroup:'8,9',weightTier:'3KG+',deliveryGroup:'广州仓+中山仓',priceKg:'18.00',priceCbm:'—',_dimType:'zip',zipPrefixes:'8,9',_pendingRecalc:false}
         ],
@@ -365,18 +420,27 @@ var app = Vue.createApp({
         ],
         '2026-W06（2/2-2/8）': [],
         '2026-W05-整柜': [
-          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.90',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
-          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'ONT8,LAX9,LGB8',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.50',priceCbm:'—',_dimType:'wh',_pendingRecalc:false}
+          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.90',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.50',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.10',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.70',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'9.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-包税-整柜',warehouseGroup:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.90',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-整柜',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.60',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-整柜',warehouseGroup:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.20',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-整柜',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'8KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.80',priceCbm:'—',_dimType:'wh',_pendingRecalc:false},
+          {comboName:'美森360-海运-卡派-KG-不包税-整柜',warehouseGroup:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',weightTier:'100KG+',deliveryGroup:'广州仓+中山仓',priceKg:'8.30',priceCbm:'—',_dimType:'wh',_pendingRecalc:false}
         ]
       },
       costRefMap: {
-        '美森360-海运-卡派-KG-包税-散货': { costKg:'8.64', costCbm:'1427.48', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'1008.14'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'4.67'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'77.33'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'6.65',headCbm:'1108.81',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'48.00'},tailCompare:[{wh:'ONT8,LAX9',sourceName:'拆送价',priceRaw:'$30',formula:'30×7.25÷350',tailKg:'0.62',tailCbm:'120.83',totalKg:'7.33',totalCbm:'1167.48',selSource:false},{wh:'ONT8,LAX9',sourceName:'组合一口价',priceRaw:'$1,980',formula:'1980×7.25÷350',tailKg:'1.63',tailCbm:'260.00',totalKg:'8.34',totalCbm:'1379.48',selSource:true}],tailMaxKg:'1.63',tailMaxCbm:'260.00',totalKg:'8.64',totalCbm:'1427.48'}},
-        '美森360-海运-卡派-KG-不包税-散货': { costKg:'8.61', costCbm:'1422.81', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'1008.14'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'77.33'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'6.62',headCbm:'1104.14',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'48.00'},tailCompare:[{wh:'ONT8,LAX9',sourceName:'拆送价',priceRaw:'$30',formula:'30×7.25÷350',tailKg:'0.62',tailCbm:'120.83',totalKg:'7.30',totalCbm:'1162.81',selSource:false},{wh:'ONT8,LAX9',sourceName:'组合一口价',priceRaw:'$1,980',formula:'1980×7.25÷350',tailKg:'1.63',tailCbm:'260.00',totalKg:'8.31',totalCbm:'1374.81',selSource:true}],tailMaxKg:'1.63',tailMaxCbm:'260.00',totalKg:'8.61',totalCbm:'1422.81'}},
-        '美森432-海运-卡派-KG-包税-散货': { costKg:'5.27', costCbm:'918.34', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$6,500',formula:'6500×7.25÷12525',kg:'3.76',cbm:'628.33'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'4.67'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'3.91',headCbm:'651.67',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.20',cbm:'32.00'},tailCompare:[{wh:'ONT8,LAX9',sourceName:'拆送价',priceRaw:'$22',formula:'22×7.25÷350',tailKg:'0.46',tailCbm:'88.61',totalKg:'4.33',totalCbm:'734.95',selSource:false},{wh:'ONT8,LAX9',sourceName:'组合一口价',priceRaw:'$1,450',formula:'1450×7.25÷350',tailKg:'1.20',tailCbm:'240.00',totalKg:'5.07',totalCbm:'886.34',selSource:true}],tailMaxKg:'1.20',tailMaxCbm:'240.00',totalKg:'5.27',totalCbm:'918.34'}},
-        '美森360-海运-卡派-m³-包税-散货': { costKg:'8.61', costCbm:'1422.48', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'1008.14'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'4.67'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'77.33'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'6.65',headCbm:'1108.81',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'48.00'},tailCompare:[{wh:'ONT8,LAX9',sourceName:'拆送价',priceRaw:'$28',formula:'28×7.25÷1.8',tailKg:'0.58',tailCbm:'112.78',totalKg:'7.29',totalCbm:'1232.26',selSource:false},{wh:'ONT8,LAX9',sourceName:'组合一口价',priceRaw:'$1,950',formula:'1950×7.25÷1.8',tailKg:'1.60',tailCbm:'255.00',totalKg:'8.31',totalCbm:'1142.48',selSource:true}],tailMaxKg:'1.60',tailMaxCbm:'255.00',totalKg:'8.61',totalCbm:'1422.48'}},
+        '美森360-海运-卡派-KG-包税-散货': { costKg:'8.69', costCbm:'1435.81', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'1008.14'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'4.67'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'77.33'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'6.65',headCbm:'1108.81',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'48.00'},tailCompare:[{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'拆送价',priceRaw:'$30',formula:'30×7.25÷350',tailKg:'0.62',totalKg:'7.57',selSource:false},{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'组合一口价',priceRaw:'$1,980',formula:'1980×7.25÷350',tailKg:'1.63',totalKg:'8.58',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'拆送价',priceRaw:'$32',formula:'32×7.25÷350',tailKg:'0.66',totalKg:'7.61',selSource:false},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'组合一口价',priceRaw:'$2,100',formula:'2100×7.25÷350',tailKg:'1.74',totalKg:'8.69',selSource:true},{wh:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',sourceName:'拆送价',priceRaw:'$26',formula:'26×7.25÷350',tailKg:'0.54',totalKg:'7.49',selSource:false},{wh:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',sourceName:'组合一口价',priceRaw:'$1,720',formula:'1720×7.25÷350',tailKg:'1.42',totalKg:'8.37',selSource:true},{wh:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',sourceName:'拆送价',priceRaw:'$42',formula:'42×7.25÷350',tailKg:'0.87',totalKg:'7.82',selSource:true},{wh:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',sourceName:'组合一口价',priceRaw:'$1,250',formula:'1250×7.25÷350',tailKg:'1.03',totalKg:'7.98',selSource:false},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'拆送价',priceRaw:'$35',formula:'35×7.25÷350',tailKg:'0.73',totalKg:'7.68',selSource:false},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'组合一口价',priceRaw:'$2,050',formula:'2050×7.25÷350',tailKg:'1.70',totalKg:'8.65',selSource:true},{wh:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',sourceName:'拆送价',priceRaw:'$38',formula:'38×7.25÷350',tailKg:'0.79',totalKg:'7.74',selSource:true},{wh:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',sourceName:'组合一口价',priceRaw:'$1,150',formula:'1150×7.25÷350',tailKg:'0.95',totalKg:'7.90',selSource:false},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'拆送价',priceRaw:'$28',formula:'28×7.25÷350',tailKg:'0.58',totalKg:'7.53',selSource:false},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'组合一口价',priceRaw:'$1,880',formula:'1880×7.25÷350',tailKg:'1.55',totalKg:'8.50',selSource:true},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'拆送价',priceRaw:'$29',formula:'29×7.25÷350',tailKg:'0.60',totalKg:'7.55',selSource:false},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'组合一口价',priceRaw:'$1,950',formula:'1950×7.25÷350',tailKg:'1.61',totalKg:'8.56',selSource:true}],tailMaxKg:'1.74',totalKg:'8.69'}},
+        '美森360-海运-卡派-KG-不包税-散货': { costKg:'8.66', costCbm:'1430.81', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'1008.14'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'77.33'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'6.62',headCbm:'1104.14',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'48.00'},tailCompare:[{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'拆送价',priceRaw:'$31',formula:'31×7.25÷350',tailKg:'0.64',totalKg:'7.56',selSource:false},{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'组合一口价',priceRaw:'$1,950',formula:'1950×7.25÷350',tailKg:'1.62',totalKg:'8.54',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'拆送价',priceRaw:'$44',formula:'44×7.25÷350',tailKg:'0.91',totalKg:'7.83',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'组合一口价',priceRaw:'$1,350',formula:'1350×7.25÷350',tailKg:'1.12',totalKg:'8.04',selSource:false},{wh:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',sourceName:'拆送价',priceRaw:'$27',formula:'27×7.25÷350',tailKg:'0.56',totalKg:'7.48',selSource:false},{wh:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',sourceName:'组合一口价',priceRaw:'$1,700',formula:'1700×7.25÷350',tailKg:'1.41',totalKg:'8.33',selSource:true},{wh:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',sourceName:'拆送价',priceRaw:'$40',formula:'40×7.25÷350',tailKg:'0.83',totalKg:'7.75',selSource:true},{wh:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',sourceName:'组合一口价',priceRaw:'$1,280',formula:'1280×7.25÷350',tailKg:'1.06',totalKg:'7.98',selSource:false},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'拆送价',priceRaw:'$36',formula:'36×7.25÷350',tailKg:'0.75',totalKg:'7.67',selSource:false},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'组合一口价',priceRaw:'$2,020',formula:'2020×7.25÷350',tailKg:'1.67',totalKg:'8.59',selSource:true},{wh:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',sourceName:'拆送价',priceRaw:'$39',formula:'39×7.25÷350',tailKg:'0.81',totalKg:'7.73',selSource:true},{wh:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',sourceName:'组合一口价',priceRaw:'$1,180',formula:'1180×7.25÷350',tailKg:'0.98',totalKg:'7.90',selSource:false},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'拆送价',priceRaw:'$29',formula:'29×7.25÷350',tailKg:'0.60',totalKg:'7.52',selSource:false},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'组合一口价',priceRaw:'$1,850',formula:'1850×7.25÷350',tailKg:'1.53',totalKg:'8.45',selSource:true},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'拆送价',priceRaw:'$30',formula:'30×7.25÷350',tailKg:'0.62',totalKg:'7.54',selSource:false},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'组合一口价',priceRaw:'$2,080',formula:'2080×7.25÷350',tailKg:'1.72',totalKg:'8.66',selSource:true}],tailMaxKg:'1.72',totalKg:'8.66'}},
+        '美森432-海运-卡派-KG-包税-散货': { costKg:'5.42', costCbm:'933.34', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$6,500',formula:'6500×7.25÷12525',kg:'3.76',cbm:'628.33'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'4.67'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'3.91',headCbm:'651.67',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.20',cbm:'32.00'},tailCompare:[{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'拆送价',priceRaw:'$21',formula:'21×7.25÷350',tailKg:'0.44',totalKg:'4.55',selSource:false},{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'组合一口价',priceRaw:'$1,420',formula:'1420×7.25÷350',tailKg:'1.18',totalKg:'5.29',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'拆送价',priceRaw:'$24',formula:'24×7.25÷350',tailKg:'0.50',totalKg:'4.61',selSource:false},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'组合一口价',priceRaw:'$1,580',formula:'1580×7.25÷350',tailKg:'1.31',totalKg:'5.42',selSource:true},{wh:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',sourceName:'拆送价',priceRaw:'$18',formula:'18×7.25÷350',tailKg:'0.37',totalKg:'4.48',selSource:false},{wh:'GYR3,GYR2,LAS1,VGT2,SMF3,SCK4,MIT2,GEU3,GEU2,HLI2,TCY1,TCY2,JOT1,SCK8',sourceName:'组合一口价',priceRaw:'$1,250',formula:'1250×7.25÷350',tailKg:'1.04',totalKg:'5.15',selSource:true},{wh:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',sourceName:'拆送价',priceRaw:'$28',formula:'28×7.25÷350',tailKg:'0.58',totalKg:'4.69',selSource:false},{wh:'IUTE,MCC1,QXY5,QXY8,PSP3,QZZ7',sourceName:'组合一口价',priceRaw:'$960',formula:'960×7.25÷350',tailKg:'0.80',totalKg:'4.91',selSource:true},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'拆送价',priceRaw:'$30',formula:'30×7.25÷350',tailKg:'0.62',totalKg:'4.73',selSource:true},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'组合一口价',priceRaw:'$900',formula:'900×7.25÷350',tailKg:'0.75',totalKg:'4.86',selSource:false},{wh:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',sourceName:'拆送价',priceRaw:'$26',formula:'26×7.25÷350',tailKg:'0.54',totalKg:'4.65',selSource:false},{wh:'MQJ1,MEM1,FWA4,MDW2,IND9,RFD2,BJC1',sourceName:'组合一口价',priceRaw:'$1,380',formula:'1380×7.25÷350',tailKg:'1.14',totalKg:'5.25',selSource:true},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'拆送价',priceRaw:'$32',formula:'32×7.25÷350',tailKg:'0.66',totalKg:'4.77',selSource:true},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'组合一口价',priceRaw:'$880',formula:'880×7.25÷350',tailKg:'0.73',totalKg:'4.84',selSource:false},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'拆送价',priceRaw:'$20',formula:'20×7.25÷350',tailKg:'0.41',totalKg:'4.52',selSource:false},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'组合一口价',priceRaw:'$1,520',formula:'1520×7.25÷350',tailKg:'1.26',totalKg:'5.37',selSource:true}],tailMaxKg:'1.31',totalKg:'5.42'}},
+        '美森360-海运-卡派-m³-包税-散货': { costKg:'8.62', costCbm:'1429.03', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'16.00'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'1008.14'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'4.67'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'77.33'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'2.67'}],headKg:'6.65',headCbm:'1108.81',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'48.00'},tailCompare:[{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'拆送价',priceRaw:'$28',formula:'28×7.25÷1.8',tailCbm:'112.78',totalCbm:'1269.59',selSource:false},{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'组合一口价',priceRaw:'$1,950',formula:'1950×7.25÷1.8',tailCbm:'255.00',totalCbm:'1411.81',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'拆送价',priceRaw:'$30',formula:'30×7.25÷1.8',tailCbm:'120.83',totalCbm:'1277.64',selSource:false},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'组合一口价',priceRaw:'$2,080',formula:'2080×7.25÷1.8',tailCbm:'272.22',totalCbm:'1429.03',selSource:true},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'拆送价',priceRaw:'$35',formula:'35×7.25÷1.8',tailCbm:'140.97',totalCbm:'1297.78',selSource:true},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'组合一口价',priceRaw:'$1,250',formula:'1250×7.25÷1.8',tailCbm:'163.89',totalCbm:'1320.70',selSource:false},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'拆送价',priceRaw:'$27',formula:'27×7.25÷1.8',tailCbm:'108.75',totalCbm:'1265.56',selSource:false},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'组合一口价',priceRaw:'$1,850',formula:'1850×7.25÷1.8',tailCbm:'241.94',totalCbm:'1398.75',selSource:true},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'拆送价',priceRaw:'$29',formula:'29×7.25÷1.8',tailCbm:'116.81',totalCbm:'1273.62',selSource:false},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'组合一口价',priceRaw:'$2,100',formula:'2100×7.25÷1.8',tailCbm:'274.44',totalCbm:'1431.25',selSource:true}],tailMaxCbm:'274.44',totalCbm:'1429.03'}},
+'美森360-海运-卡派-KG-包税-整柜': { costKg:'7.45', costCbm:'—', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'—'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'—'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'—'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'—'}],headKg:'6.19',headCbm:'—',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'—'},tailCompare:[{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'整柜直送价',priceRaw:'$1,430',formula:'1430×7.25÷350',tailKg:'0.59',totalKg:'7.08',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'整柜直送价',priceRaw:'$1,550',formula:'1550×7.25÷350',tailKg:'0.64',totalKg:'7.13',selSource:true},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'整柜直送价',priceRaw:'$1,620',formula:'1620×7.25÷350',tailKg:'0.67',totalKg:'7.16',selSource:true},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'整柜直送价',priceRaw:'$1,380',formula:'1380×7.25÷350',tailKg:'0.57',totalKg:'7.06',selSource:true},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'整柜直送价',priceRaw:'$1,480',formula:'1480×7.25÷350',tailKg:'0.61',totalKg:'7.10',selSource:true}],tailMaxKg:'0.67',totalKg:'7.45'}},
         '美森360-海运-快递派-KG-包税-散货': { costKg:'15.51', costByTier:{'1KG+':15.51,'3KG+':14.81}, costCbm:'—', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'—'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'—'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'—'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'—'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'—'}],headKg:'6.65',headCbm:'—',tailType:'快递派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'—'},tailExpress:[{tier:'1KG+',zip:'8,9',price:'¥8.50',kg:'8.50',cbm:'—'},{tier:'3KG+',zip:'8,9',price:'¥7.80',kg:'7.80',cbm:'—'}],tailSumKg:'8.50',tailSumCbm:'—',totalKg:'15.51',totalCbm:'—'}},
         '美森360-海运-卡派-KG-包税-整柜': { costKg:'7.50', costCbm:'—', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'—'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'—'},{seg:'关务段',item:'国内报关费',price:'¥350',formula:'350÷12525',kg:'0.03',cbm:'—'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'—'}],headKg:'6.19',headCbm:'—',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'—'},tailCompare:[{wh:'ONT8,LAX9',sourceName:'整柜直送价',priceRaw:'$1,430',formula:'1430×7.25÷350',tailKg:'0.59',tailCbm:'—',totalKg:'7.20',totalCbm:'—',selSource:true}],tailMaxKg:'0.59',tailMaxCbm:'—',totalKg:'7.50',totalCbm:'—'}},
-        '美森360-海运-卡派-KG-不包税-整柜': { costKg:'7.20', costCbm:'—', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'—'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'—'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'—'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'—'}],headKg:'6.62',headCbm:'—',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'—'},tailCompare:[{wh:'ONT8,LAX9',sourceName:'整柜直送价',priceRaw:'$1,380',formula:'1380×7.25÷350',tailKg:'0.52',tailCbm:'—',totalKg:'7.10',totalCbm:'—',selSource:true}],tailMaxKg:'0.52',tailMaxCbm:'—',totalKg:'7.20',totalCbm:'—'}}
+        '美森360-海运-卡派-KG-不包税-整柜': { costKg:'7.10', costCbm:'—', _detail:{headItems:[{seg:'揽收段',item:'装柜费',price:'¥1,200',formula:'1200÷12525',kg:'0.10',cbm:'—'},{seg:'干线运输段',item:'海运费',price:'$10,429',formula:'10429×7.25÷12525',kg:'6.04',cbm:'—'},{seg:'关务段',item:'国外清关费',price:'$800',formula:'800×7.25÷12525',kg:'0.46',cbm:'—'},{seg:'仓储段',item:'库内操作费',price:'¥200',formula:'200÷12525',kg:'0.02',cbm:'—'}],headKg:'6.62',headCbm:'—',tailType:'卡派',tailCommon:{item:'提拆派费',kg:'0.30',cbm:'—'},tailCompare:[{wh:'ONT8,LAX9,LGB8,SBD1,POC1,POC2,POC3',sourceName:'整柜直送价',priceRaw:'$1,360',formula:'1360×7.25÷350',tailKg:'0.56',totalKg:'7.48',selSource:true},{wh:'IUSP,IUSQ,IUTI,IUSJ,IUSW,IUTF',sourceName:'整柜直送价',priceRaw:'$1,500',formula:'1500×7.25÷350',tailKg:'0.62',totalKg:'7.54',selSource:true},{wh:'FTW1,ABQ2,IAH3,PSC2,SAT1,SAT4,MCI4',sourceName:'整柜直送价',priceRaw:'$1,580',formula:'1580×7.25÷350',tailKg:'0.65',totalKg:'7.57',selSource:true},{wh:'CLT2,RDU2,TPA2,TPA3,TOL3',sourceName:'整柜直送价',priceRaw:'$1,320',formula:'1320×7.25÷350',tailKg:'0.55',totalKg:'7.47',selSource:true},{wh:'ORF2,RMN3,TEB3,TEB9,ABE8,AVP1,AVP3,SWF2,BNA6',sourceName:'整柜直送价',priceRaw:'$1,420',formula:'1420×7.25÷350',tailKg:'0.59',totalKg:'7.51',selSource:true}],tailMaxKg:'0.65',totalKg:'7.10'}}
       },
       truckingCostMap: {
         '美森360-海运-卡派-KG-包税-散货': {'广州仓+中山仓':900,'义乌仓+东莞仓':1950,'深圳仓':2000},
@@ -393,7 +457,7 @@ var app = Vue.createApp({
       ],
       batchForm: { name:'', week:'', start:'', end:'', remark:'', copyLast:true, headKg:12525, headCbm:75.0, tailKg:350, tailCbm:1.8, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] },
       priceForm: { comboName:'' },
-      priceEditCostKg: null, priceEditCostCbm: null, priceEditRows: [], priceEditMatrix: [], showCostDetail: false, costDetail: null, costDetailBilling: 'KG', costDetailServiceType: '散货', costDetailTruckingItems: null,
+      priceEditCostKg: null, priceEditCostCbm: null, priceEditHeadKg: null, priceEditHeadCbm: null, priceEditRows: [], priceEditMatrix: [], showCostDetail: false, costDetail: null, costDetailBilling: 'KG', costDetailServiceType: '散货', costDetailTruckingItems: null,
       _editGroup: null, _editWh: '', _editMaxDiscount: 0, editMatrixMode: false
     };
   },
@@ -425,23 +489,23 @@ var app = Vue.createApp({
     priceGroups: function(){
       var self=this; var map={};
       this.priceList.forEach(function(r){
-        var ckey=r.comboName;
-        if(!map[ckey]){
-          var combo=self.enabledCombos.find(function(c){return c.code===r.comboName;});
-          map[ckey]={_key:ckey,comboName:r.comboName,_hasPending:false,_matrix:[],_billing:combo?combo.billing:'KG',_regions:self.deliveryGroups};
-        }
-        var g=map[ckey];
+        var combo=self.enabledCombos.find(function(c){return c.code===r.comboName;});
+        if(!combo) return;
         var dkey=r.deliveryGroup||'';
+        var gkey=r.comboName+'|||'+dkey;
+        if(!map[gkey]){
+          map[gkey]={_key:gkey,comboName:r.comboName,deliveryGroup:dkey,_hasPending:false,_matrix:[],_billing:combo.billing,_lastMile:combo.lastMile,_displayTiers:[]};
+        }
+        var g=map[gkey];
         var wkey=r.warehouseGroup||r.zipPrefixes||'';
-        var mkey=wkey?(dkey?dkey+' × '+wkey:wkey):(dkey||'—');
         var billing2=g._billing;
-        var mrow=g._matrix.find(function(m){return m._wh===mkey;});
+        var unit=billing2==='KG'?'/KG':'/m³';
+        var mrow=g._matrix.find(function(m){return m._wh===wkey;});
         if(!mrow){
           var ref=self.costRefMap[r.comboName]||{};
           var costVal=billing2==='KG'?ref.costKg:ref.costCbm;
-          var unit=billing2==='KG'?'/KG':'/m³';
           var costByTier=ref.costByTier;
-          mrow={_wh:mkey||'—',_costBase:costByTier?'按重量段':(costVal?parseFloat(costVal).toFixed(2)+unit:'—'),_maxDiscount:(self.comboMaxDiscount[r.comboName]||0)+(self.comboMaxDensityDiscount[r.comboName]||0),_tiers:{},_hasPending:false};
+          mrow={_wh:wkey||'—',_costBase:costByTier?'按重量段':(costVal?parseFloat(costVal).toFixed(2)+unit:'—'),_maxDiscount:(self.comboMaxDiscount[r.comboName]||0)+(self.comboMaxDensityDiscount[r.comboName]||0),_tiers:{},_hasPending:false};
           g._matrix.push(mrow);
         }
         var refc=self.costRefMap[r.comboName]||{};
@@ -466,18 +530,14 @@ var app = Vue.createApp({
     editDimLabel: function(){
       var group=this._editGroup; if(!group) return '仓库组';
       var combo=this.enabledCombos.find(function(c){return c.code===group.comboName;});
-      var base=combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';
-      var hasDelivery=this.truckingCostMap[group.comboName]!=null;
-      return hasDelivery?'交货地组 × '+base:base;
+      return combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';
     },
     editDimShortLabel: function(){
-      var group=this._editGroup; if(!group) return '仓点';
-      var combo=this.enabledCombos.find(function(c){return c.code===group.comboName;});
-      return combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';
+      return this.editDimLabel;
     }
   },
   methods: {
-    dimLabel: function(comboName){var combo=this.enabledCombos.find(function(c){return c.code===comboName;});var base=combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';var hasDelivery=this.truckingCostMap[comboName]!=null;return hasDelivery?'交货地组 × '+base:base;},
+    dimLabel: function(comboName){var combo=this.enabledCombos.find(function(c){return c.code===comboName;});return combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';},
     switchBatch: function(){ this.activeTab='sailing'; },
     openAddBatch: function(){
       var cur=this.batches.find(function(b){return b.status==='当前'});
@@ -522,25 +582,42 @@ var app = Vue.createApp({
       var self=this; var snap=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:{headKg:12525,headCbm:75};
       var truckMap=self.truckingCostMap[group.comboName];
       if(truckMap&&self.costDetail){
-        self.costDetailTruckingItems=self.deliveryGroups.map(function(dg){
-          var fee=truckMap[dg.name]||dg.truckFee||0;
+        var fee=truckMap[group.deliveryGroup]||0;
+        if(fee>0){
+          var headDiv=self.costDetailBilling==='KG'?snap.headKg:snap.headCbm;
           var kgVal=(fee/snap.headKg).toFixed(2);
           var cbmVal=(fee/snap.headCbm).toFixed(2);
-          var isBase=dg.scRMB===0;
-          var delta='';if(!isBase){delta=self.costDetailBilling==='KG'?'+'+((dg.scRMB)/snap.headKg).toFixed(2)+'/KG':'+'+(dg.scRMB)/snap.headCbm.toFixed(2)+'/m³';}
-          return {region:dg.name,price:'¥'+fee.toLocaleString(),formula:fee+'÷'+snap.headKg,kg:kgVal,cbm:cbmVal,isBase:isBase,deltaLabel:delta};
-        });
-      }else{self.costDetailTruckingItems=null;}
-      var self=this; var plist=this.allPriceData[this.selectedBatchName]||[];
-      var billing=this.costDetailBilling; var unit=billing==='KG'?'/KG':'/m³';
-      var costVal=billing==='KG'?this.priceEditCostKg:this.priceEditCostCbm;
-      this.priceEditMatrix=group._matrix.map(function(m){
-        var row={_wh:m._wh,_costBase:m._costBase,_maxDiscount:m._maxDiscount,_tiers:{}};
-        Object.keys(m._tiers).forEach(function(wt){
-          var t=m._tiers[wt];
-          row._tiers[wt]={_markup:(typeof t.markup==='number'?t.markup:null),_price:t.price!=='—'?parseFloat(t.price):null,_costBase:t._costBase||null};
-        });
-        return row;
+          var truckKg=parseFloat(kgVal);var truckCbm=parseFloat(cbmVal);
+          self.priceEditHeadKg=(parseFloat(self.costDetail.headKg)+truckKg).toFixed(2);
+          self.priceEditHeadCbm=self.costDetail.headCbm!=='—'?(parseFloat(self.costDetail.headCbm)+truckCbm).toFixed(2):'—';
+          self.costDetailTruckingItems=[{region:group.deliveryGroup,price:'¥'+fee.toLocaleString(),formula:fee+'÷'+snap.headKg,kg:kgVal,cbm:cbmVal}];
+        }else{self.costDetailTruckingItems=null;self.priceEditHeadKg=self.costDetail.headKg;self.priceEditHeadCbm=self.costDetail.headCbm;}
+      }else{self.costDetailTruckingItems=null;if(self.costDetail){self.priceEditHeadKg=self.costDetail.headKg;self.priceEditHeadCbm=self.costDetail.headCbm;}}
+      var defMarkup=combo&&combo.defaultMarkup!=null?combo.defaultMarkup:0;
+      var allWhs=(self.costDetail&&self.costDetail.tailCompare||[]).map(function(tc){return tc.wh;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+      if(allWhs.length===0) allWhs=group._matrix.map(function(m){return m._wh;});
+      var billing=self.costDetailBilling; var unit=billing==='KG'?'/KG':'/m³';
+      self.priceEditMatrix=allWhs.map(function(wh){
+        var exist=group._matrix.find(function(m){return m._wh===wh;});
+        var maxDisc=(self.comboMaxDiscount[group.comboName]||0)+(self.comboMaxDensityDiscount[group.comboName]||0);
+        if(exist){
+          var row={_wh:exist._wh,_costBase:exist._costBase,_maxDiscount:maxDisc,_tiers:{}};
+          Object.keys(exist._tiers).forEach(function(wt){
+            var t=exist._tiers[wt];
+            row._tiers[wt]={_markup:(typeof t.markup==='number'?t.markup:null),_price:t.price!=='—'?parseFloat(t.price):null,_costBase:t._costBase||null};
+          });
+          return row;
+        }
+        var ref2=self.costRefMap[group.comboName]||{};
+        var costV=billing==='KG'?(ref2.costKg?parseFloat(ref2.costKg):null):(ref2.costCbm?parseFloat(ref2.costCbm):null);
+        var row2={_wh:wh,_costBase:costV?costV.toFixed(2)+unit:'—',_maxDiscount:maxDisc,_tiers:{}};
+        var wtList=group._displayTiers||[];
+        if(!wtList.length){
+          var seen2={};
+          group._matrix.forEach(function(m){Object.keys(m._tiers).forEach(function(wt){if(!seen2[wt]){seen2[wt]=true;wtList.push(wt);}});});
+        }
+        wtList.forEach(function(wt){row2._tiers[wt]={_markup:defMarkup,_price:costV?parseFloat((costV+defMarkup).toFixed(2)):null,_costBase:costV?costV.toFixed(2)+unit:null};});
+        return row2;
       });
       this.showPriceDialog=true;
     },
@@ -615,25 +692,28 @@ var app = Vue.createApp({
       var plist=this.allPriceData[this.selectedBatchName]; if(!plist) return;
       if(this.editMatrixMode){
         this.priceEditMatrix.forEach(function(mrow){
-          var parts=mrow._wh.split(' × ');
-          var wg=parts.length>1?parts[1]:parts[0];
-          var dg=parts.length>1?parts[0]:'';
+          var wg=mrow._wh;
           Object.keys(mrow._tiers).forEach(function(wt){
             var t=mrow._tiers[wt];
             var p=plist.find(function(pp){
               var ppWg=pp.warehouseGroup||pp.zipPrefixes||'';
               var ppDg=pp.deliveryGroup||'';
-              return pp.comboName===group.comboName&&ppWg===wg&&pp.weightTier===wt&&(!dg||ppDg===dg);
+              return pp.comboName===group.comboName&&ppWg===wg&&pp.weightTier===wt&&ppDg===group.deliveryGroup;
             });
             if(p){
               var billing=self.costDetailBilling;
               if(billing==='KG') p.priceKg=t._price!=null?String(t._price):'—';
               else p.priceCbm=t._price!=null?String(t._price):'—';
+            } else {
+              var billing2=self.costDetailBilling;
+              var combo2=self.enabledCombos.find(function(c){return c.code===group.comboName;});
+              var dimType2=combo2&&combo2.lastMile==='快递派'?'zip':'wh';
+              plist.push({comboName:group.comboName,warehouseGroup:dimType2==='wh'?wg:'',weightTier:wt,deliveryGroup:group.deliveryGroup,priceKg:billing2==='KG'?(t._price!=null?String(t._price):'—'):'—',priceCbm:billing2==='m³'?(t._price!=null?String(t._price):'—'):'—',_dimType:dimType2,_pendingRecalc:false,zipPrefixes:dimType2==='zip'?wg:''});
             }
           });
         });
       } else {
-        var editWh=this._editWh;var eparts=editWh.split(' × ');var edg=eparts.length>1?eparts[0]:'';var ewg=eparts.length>1?eparts[1]:eparts[0];
+        var ewgs=this._editWh.split(' × ');var ewg=ewgs.length>1?ewgs[1]:ewgs[0];var edg=ewgs.length>1?ewgs[0]:'';
         this.priceEditRows.forEach(function(er){
           var p=plist.find(function(pp){
             return pp.comboName===group.comboName&&(pp.warehouseGroup||pp.zipPrefixes||'')===ewg&&pp.weightTier===er.weightTier&&(!edg||pp.deliveryGroup===edg);
