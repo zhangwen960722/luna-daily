@@ -51,9 +51,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <h2>0. 文档基础信息</h2>
 <ul>
 <li>文档标题：客商中心（客户入驻 + 客户管理 + 合同签约 + 供应商管理 + 等级管理）</li>
-<li>版本号：v2.0</li>
+<li>版本号：v2.1</li>
 <li>状态：草稿</li>
-<li>作者：AI PM（v2.0: 合同开始日期+结束日期改为条件必填；v1.9: 签订日期改为条件必填；v1.8: 供应商签约弹窗移除是否新客户+老客户代码；v1.7: 供应商新增签约+合同信息Tab）</li>
+<li>作者：AI PM（v2.1: 签约后账期自动插入规则+Popover去账期/天数号；v2.0: 合同开始日期+结束日期改为条件必填）</li>
 <li>评审人：产品/研发/测试/业务代表</li>
 <li>计划里程碑：评审 待定 / 提测 待定 / 上线 待定</li>
 </ul>
@@ -1529,7 +1529,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <tr>
 <td>8</td>
 <td>合同数量</td>
-<td>按钮：N份合同，点击弹出Popover（签约主体/合同状态/起止日期/账期/天数号）</td>
+<td>按钮：N份合同，点击弹出Popover（签约主体/合同状态/起止日期/解约时间）</td>
 </tr>
 <tr>
 <td>9</td>
@@ -1797,7 +1797,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </ul>
 <h5>5.5.2 账期 Tab（列表形式）</h5>
 <blockquote>
-<p>V1.4。以表格列表形式展示每份合同的完整账期明细，每行可独立编辑。</p>
+<p>V1.4。以表格列表形式展示每份合同的完整账期明细，每行可独立编辑。账期行由签约完成后系统自动插入（见 §5.7 签约后账期自动插入规则），Tab 内无需提供新增按钮。</p>
 </blockquote>
 <p><strong>列表字段</strong>（每行 = 一个所属分公司）：</p>
 <div class="table-wrapper"><table>
@@ -1940,6 +1940,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li>标准合同（is_contract_auto_sync=true）：customer_contract.sign_status=已签署 + contract_start_date/end_date 取签约值自动写入</li>
 <li>非标合同（is_contract_auto_sync=false）：销售手工在合同管理Tab中点击&quot;查看详情&quot;后维护</li>
 </ul>
+<p><strong>签约后账期自动插入规则</strong>（签约完成即触发，无需手工操作）：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>插入行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>大陆 + 标准合同</td>
+<td>自动填充：所属分公司=我司合同抬头，账期=签约所选，账单周期/结算类型/结算月 按级联推导，天数/号=0</td>
+</tr>
+<tr>
+<td>大陆 + 非标准合同</td>
+<td>自动插入：仅有所属分公司，其余字段（账单周期/账期/结算类型/结算月/天数号）均为空，销售后续在账期Tab补填</td>
+</tr>
+<tr>
+<td>中国香港</td>
+<td>自动插入：仅有所属分公司（香港富力顿），其余字段均为空</td>
+</tr>
+</tbody></table></div>
 <hr>
 <h3>5.8 香港线下签约弹窗</h3>
 <p><strong>页面信息</strong>：</p>

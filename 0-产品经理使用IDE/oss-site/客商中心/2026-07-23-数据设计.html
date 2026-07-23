@@ -48,7 +48,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   <div class="doc-content">
     <h1>数据设计 — 客商中心</h1>
 <blockquote>
-<p><strong>文档版本</strong>: v2.1 | <strong>日期</strong>: 2026-07-06 | <strong>作者</strong>: AI PM（v2.1: contract_start_date+end_date改为条件必填；v2.0: sign_date签订日期改为条件必填；v1.9: supplier_contract移除is_new_customer+old_customer_code字段）<br><strong>上游文档</strong>: <code>2026-07-06-用户需求.md</code></p>
+<p><strong>文档版本</strong>: v2.2 | <strong>日期</strong>: 2026-07-23 | <strong>作者</strong>: AI PM（v2.2: 签约后账期自动插入规则+billing_cycle/payment_term必填改条件；v2.1: contract_start_date+end_date改为条件必填）<br><strong>上游文档</strong>: <code>2026-07-23-用户需求.md</code></p>
 </blockquote>
 <hr>
 <h2>一、实体清单 x 表映射</h2>
@@ -797,6 +797,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <h3>表6: <code>customer_contract</code> | 对应实体: 客户合同 (Contract)</h3>
 <blockquote>
 <p><strong>设计说明</strong>: V1.4 合同1:1→1:N。<code>customer_id</code> 去掉 Unique 约束，允许一个客户多份合同。新增 <code>contract_company</code> 标识每份合同所属主体公司。账期字段（<code>billing_cycle</code>/<code>payment_term</code>/<code>settlement_type</code>/<code>days_or_date</code>）从 <code>customer</code> 表下沉至此表——每份合同独立账期。</p>
+<p><strong>签约后账期自动插入</strong>：签约完成（sign_status=已签署）时系统自动填充账期段——大陆+标准合同：payment_term=签约所选，billing_cycle/settlement_type/settlement_month 级联推导，days_or_date=0；大陆+非标准合同 / 中国香港：仅填 contract_company，其余账期字段留空待销售补填。</p>
 </blockquote>
 <div class="table-wrapper"><table>
 <thead>
@@ -861,17 +862,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td align="left"><code>billing_cycle</code></td>
 <td align="left">账单周期</td>
 <td align="left">TinyInt</td>
-<td align="left">✅</td>
+<td align="left">条件</td>
 <td align="left">—</td>
-<td align="left">10:固定, 20:不固定</td>
+<td align="left">10:固定, 20:不固定；大陆+标准合同签约后系统自动填入，其余场景留空</td>
 </tr>
 <tr>
 <td align="left"><code>payment_term</code></td>
 <td align="left">签约账期</td>
 <td align="left">TinyInt</td>
-<td align="left">✅</td>
+<td align="left">条件</td>
 <td align="left">—</td>
-<td align="left">101:月结, 102:双月结, 103:三月结, 201:周结, 202:到港前结, 203:签收月结, 204:到海外仓结, 205:签收结</td>
+<td align="left">101:月结, 102:双月结, 103:三月结, 201:周结, 202:到港前结, 203:签收月结, 204:到海外仓结, 205:签收结；大陆+标准合同签约后系统自动填入，其余场景留空</td>
 </tr>
 <tr>
 <td align="left"><code>settlement_type</code></td>
@@ -879,7 +880,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td align="left">TinyInt</td>
 <td align="left">—</td>
 <td align="left">—</td>
-<td align="left">10:按月, 20:按天（由账期自动推导）</td>
+<td align="left">10:按月, 20:按天（由 payment_term 自动推导）</td>
 </tr>
 <tr>
 <td align="left"><code>days_or_date</code></td>
@@ -887,7 +888,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td align="left">Int</td>
 <td align="left">—</td>
 <td align="left">—</td>
-<td align="left">&gt;=0 整数</td>
+<td align="left">&gt;=0 整数；大陆+标准合同默认 0，其余场景留空</td>
 </tr>
 <tr>
 <td align="left"><code>settlement_month</code></td>

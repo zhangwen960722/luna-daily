@@ -48,7 +48,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   <div class="doc-content">
     <h1>需求定义卡片 (RDD) — 客商中心</h1>
 <blockquote>
-<p><strong>原始需求</strong>：为飞点跨境供应链建立统一的客商中心，覆盖客户入驻、客户管理、供应商管理、合同签约、等级体系的完整生命周期。<br><strong>文档版本</strong>: v1.9 | <strong>日期</strong>: 2026-07-06 | <strong>作者</strong>: AI PM（v1.9: 合同开始日期+结束日期改为条件必填；v1.8: 签订日期改为条件必填；v1.7: 供应商签约弹窗移除是否新客户+老客户代码）</p>
+<p><strong>原始需求</strong>：为飞点跨境供应链建立统一的客商中心，覆盖客户入驻、客户管理、供应商管理、合同签约、等级体系的完整生命周期。<br><strong>文档版本</strong>: v1.10 | <strong>日期</strong>: 2026-07-23 | <strong>作者</strong>: AI PM（v1.10: 签约后账期自动插入规则R42/R43/R44；v1.9: 合同开始日期+结束日期改为条件必填）</p>
 </blockquote>
 <h2>1. 核心洞察 (Insight)</h2>
 <p><strong>真实痛点</strong>：</p>
@@ -941,6 +941,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <p>合同通过主列表「签约」按钮创建，Tab 内不提供新增/删除按钮。</p>
 </blockquote>
 <p><strong>【账期】Tab</strong>（列表形式，行内可编辑）：</p>
+<blockquote>
+<p>账期行在签约完成后由系统自动插入（见 R42/R43/R44），无需手工新增。销售可在本 Tab 中编辑补填。</p>
+</blockquote>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
@@ -1251,6 +1254,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li>R39：监听飞书审批通过后，触发E签宝生成合同 → 客户签署 → E签宝回传合同附件</li>
 <li>R40：合同信息回传：标准合同取签约值自动回写至 customer_contract 表；非标合同由销售手工在客户编辑页的合同管理Tab中维护</li>
 <li>R41：签约完成后合同签署状态更新为&quot;已签约&quot;</li>
+<li><strong>R42-账期自动插入（大陆·标准合同）</strong>：签约完成（sign_status=已签署）且为标准合同时，系统自动在合同记录上插入账期段——账期取值签约时选的 payment_term，账单周期/结算类型/结算月按级联规则自动推导，天数/号默认为 0</li>
+<li><strong>R43-账期自动插入（大陆·非标准合同）</strong>：签约完成且为非标准合同时，系统自动插入账期行——仅有所属分公司（contract_company），账单周期/账期/结算类型/结算月/天数号均为空，由销售后续在账期 Tab 中补填</li>
+<li><strong>R44-账期自动插入（中国香港）</strong>：香港线下签约完成（sign_status=已签署），自动插入账期行——仅有所属分公司（香港富力顿），账单周期/账期/结算类型/结算月/天数号均为空</li>
 </ul>
 <p><strong>相关 AC</strong>：<code>AC2a</code> <code>AC2b</code> <code>AC2c</code> <code>AC2d</code></p>
 <h3>7.2 中国香港客户签约 (HKSigning)</h3>
@@ -1932,7 +1938,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </ul>
 <p><strong>流程四：客户管理</strong></p>
 <ul>
-<li><input disabled="" type="checkbox"> <strong>AC1a-列表查询</strong>：支持客户名称/类型/属地/是否同行筛选+Tab过滤；列表含是否同行列+合同数量Popover（签约主体+状态+起止日期+账期+天数号）</li>
+<li><input disabled="" type="checkbox"> <strong>AC1a-列表查询</strong>：支持客户名称/类型/属地/是否同行筛选+Tab过滤；列表含是否同行列+合同数量Popover（签约主体+状态+起止日期+解约时间）</li>
 <li><input disabled="" type="checkbox"> <strong>AC1b-新增客户</strong>：弹窗900px，基本信息（含客户昵称必填）+更多信息（合同管理Tab+账期Tab+资料/地址库/联系人/通信信息/关联账户）</li>
 <li><input disabled="" type="checkbox"> <strong>AC1c-客户昵称必填</strong>：新增/编辑时客户昵称必填，底纹&quot;举例：qyjskj&quot;，位于是否同行前</li>
 <li><input disabled="" type="checkbox"> <strong>AC1d-保存并生成账户</strong>：校验身份证+营业执照→生成账户+邮件通知</li>
@@ -1951,7 +1957,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li><input disabled="" type="checkbox"> <strong>AC2g-香港线下签约</strong>：我司合同抬头置灰只读&quot;香港富力顿&quot;，确定时校验唯一→合同表新增</li>
 <li><input disabled="" type="checkbox"> <strong>AC2h-合同管理Tab</strong>：列表形式（签约主体下拉+状态Tag+日期Picker+服务协议上传/链接）；编辑态签约主体/日期置灰；不提供新增/删除按钮</li>
 <li><input disabled="" type="checkbox"> <strong>AC2i-账期Tab</strong>：列表形式（所属分公司只读+账单周期+账期联动+结算类型自动+结算月自动+天数号）</li>
-<li><input disabled="" type="checkbox"> <strong>AC2j-合同数量Popover</strong>：列表点击弹出（签约主体+合同状态+起止日期+账期+天数号）</li>
+<li><input disabled="" type="checkbox"> <strong>AC2j-合同数量Popover</strong>：列表点击弹出（签约主体+合同状态+起止日期+解约时间）</li>
 </ul>
 <p><strong>流程六：供应商管理</strong></p>
 <ul>
