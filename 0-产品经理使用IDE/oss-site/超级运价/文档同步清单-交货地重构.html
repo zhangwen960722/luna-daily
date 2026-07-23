@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文档同步清单-交货地重构 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}
+.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}
+.nav-bar a:hover{color:#2563eb}
+.nav-bar .sep{color:#cbd5e1;font-size:14px}
+.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#2563eb15;color:#2563eb;font-size:13px;font-weight:500}
+.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content p{margin:12px 0}
+.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
+.doc-content li{margin:4px 0}
+.doc-content blockquote{border-left:4px solid #2563eb;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}
+.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}
+.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}
+.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}
+.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}
+.doc-content table{width:100%;border-collapse:collapse;font-size:14px}
+.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
+.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.doc-content tr:last-child td{border-bottom:none}
+.doc-content tr:hover td{background:#f8fafc}
+.doc-content img{max-width:100%;border-radius:8px;margin:16px 0}
+.doc-content a{color:#2563eb;text-decoration:none}
+.doc-content a:hover{text-decoration:underline}
+.doc-content hr{border:none;border-top:1px solid #e2e8f0;margin:32px 0}
+@media(max-width:640px){.container{padding:20px 16px 60px}.nav-bar{padding:0 16px}}
+</style>
+</head>
+<body>
+<nav class="nav-bar">
+  <a href="../index.html">🏠 首页</a>
+  <span class="sep">/</span>
+  <span class="module-tag">超级运价</span>
+  <span class="sep">/</span>
+  <span style="font-size:13px;color:#64748b">文档同步清单-交货地重构</span>
+</nav>
+<div class="container">
+  <div class="doc-content">
+    <h1>文档同步清单 — 交货地重构（待原型定稿后执行）</h1>
+<blockquote>
+<p>用途：交货地&quot;基准价 + 加价自动派生&quot;方向一旦在原型上定稿，按本清单同步文档。<br>原则：<strong>不靠记忆，靠搜索</strong>。每条附「验证搜索词」，改完用它 grep，旧表述必须归零。<br>生成方式：本清单由 grep 当前三份文档实测得出（2026-07-13），非凭记忆。</p>
+</blockquote>
+<hr>
+<h2>一、方向摘要（定稿前请先确认，可能微调）</h2>
+<ul>
+<li>工作台：一个服务组合 = 一个分组；运价员只维护<strong>珠三角基准矩阵</strong>（仓点组 × 重量段）。</li>
+<li>其他交货地公布价 = 基准价 + <strong>头程加价</strong>（揽收装柜/提货费差），系统自动派生。</li>
+<li>新增：只选组合，各交货地自动覆盖，不再逐交货地新增。</li>
+<li><strong>底层数据不变</strong>：仍每交货地一条运价行（供查询命中），只是&quot;维护入口&quot;从手动 N 份 → 编基准 + 派生。</li>
+</ul>
+<hr>
+<h2>二、要改的位置（按文档）</h2>
+<h3>数据设计 <code>2026-07-13-数据设计.md</code></h3>
+<ul>
+<li><input disabled="" type="checkbox"> §3.6 <code>price_table_row</code>（L317 交货地字段、L324 唯一约束）：补&quot;维护方式=编基准+派生&quot;说明；数据仍每交货地一行，<strong>不删交货地维度</strong>。</li>
+<li><input disabled="" type="checkbox"> 成本计算流（§ 约 L470–476）：明确&quot;成本底价 = 基准 + 交货地加价&quot;，加价来自 §3.9 揽收段按交货地单价差。</li>
+<li><input disabled="" type="checkbox"> §3.9 <code>channel_cost_item</code>（L376/L382/L451–453 D2）：<strong>保持不变</strong>（揽收段按交货地拆行是加价来源）。仅确认表述与&quot;加价派生&quot;一致。</li>
+</ul>
+<h3>RDD <code>2026-07-13-用户需求.md</code></h3>
+<ul>
+<li><input disabled="" type="checkbox"> §7.1 运价行（L888/L912）：维护方式说明（基准 + 派生）。</li>
+<li><input disabled="" type="checkbox"> §7.4 工作台（L936 起、L948/L962 主表列）：<strong>主表列改</strong>——&quot;交货地&quot;列 → &quot;覆盖交货地&quot;；新增&quot;交货地加价条&quot;说明；矩阵为珠三角基准。← <strong>改动最集中处</strong></li>
+<li><input disabled="" type="checkbox"> §5.4 渠道成本项（L928 成本底价按交货地）：确认与&quot;加价派生&quot;表述一致（此处是加价来源，逻辑不变）。</li>
+<li><input disabled="" type="checkbox"> AC0m（L1462 四维维护）：措辞从&quot;逐交货地维护&quot; → &quot;编基准 + 交货地派生&quot;。</li>
+<li><input disabled="" type="checkbox"> 功能清单 C2（L1618）：同 AC0m。</li>
+<li><input disabled="" type="checkbox"> 新增运价行相关描述（搜 &quot;选择服务组合 + 交货地&quot; / &quot;交货地多选&quot;）：改为&quot;选组合，交货地自动派生&quot;。</li>
+</ul>
+<h3>PRD <code>2026-07-13-PRD.md</code></h3>
+<ul>
+<li><input disabled="" type="checkbox"> §5.9 新建运价行（L623）：从&quot;交货地多选&quot;改为&quot;选组合 → 基准 + 派生&quot;；补加价条。</li>
+<li><input disabled="" type="checkbox"> §5.9 运价维护：主列表列 + 编辑弹窗（成本明细按交货地展示装柜费差，即明天待办①）。</li>
+<li><input disabled="" type="checkbox"> R02 公布价生成：补&quot;派生交货地价 = 基准 + 加价&quot;。</li>
+<li><input disabled="" type="checkbox"> 变更记录：追加 V2.9；版本索引：版本号 + 日期。</li>
+</ul>
+<hr>
+<h2>三、保持不变（别误改）</h2>
+<ul>
+<li>数据模型仍以交货地为运价行维度（查询按交货地命中）。</li>
+<li>揽收段按交货地拆行、成本项按交货地存储（§3.9 / D2 / AC0q）——这是加价的<strong>来源</strong>，不动。</li>
+<li>运价查询按交货地匹配（AC0n / AC22 / §运价查询）——不动。</li>
+</ul>
+<hr>
+<h2>四、验证搜索词（改完你自己跑，旧表述须归零/已更新）</h2>
+<blockquote>
+<p>在三份文档目录跑这些搜索，逐条核对是否已改到位：</p>
+</blockquote>
+<ol>
+<li><code>选择服务组合 + 交货地</code> —— 应无（新增流程已改）</li>
+<li><code>交货地多选</code> —— 应无或已改为&quot;自动派生&quot;</li>
+<li><code>四维维护</code> —— 应改为含&quot;基准 + 派生&quot;表述</li>
+<li>工作台主表列里的 <code>交货地</code>（§7.4 / PRD §5.9）—— 应为&quot;覆盖交货地&quot;</li>
+<li><code>加价</code> / <code>基准价</code> / <code>派生</code> —— 应在 §7.4、PRD §5.9、数据设计成本流 出现（新表述已落）</li>
+</ol>
+<blockquote>
+<p>核对方法：每次同步后我会 grep 上述词并把结果贴给你；你也可独立跑，不用信我口头。</p>
+</blockquote>
+<hr>
+<h2>五、同步后自检（我执行 + 你复核）</h2>
+<ul>
+<li><input disabled="" type="checkbox"> 三份文档 grep 上述词，结果与预期一致（旧归零 / 新已落）</li>
+<li><input disabled="" type="checkbox"> 文件日期前缀更新为执行当天</li>
+<li><input disabled="" type="checkbox"> 变更记录 + 版本索引 + LOG 同步</li>
+<li><input disabled="" type="checkbox"> 把 grep 结果贴给你复核</li>
+</ul>
+
+  </div>
+</div>
+</body>
+</html>
