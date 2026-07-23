@@ -704,14 +704,19 @@
                                     </el-form-item>
                                 </el-col>
                                 <el-col :span="12">
+                                    <el-form-item label="供应商简称" prop="supplierShortName">
+                                        <el-input v-model="transferSupplierForm.supplierShortName" placeholder="请输入供应商简称"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                            </el-row>
+                            <el-row :gutter="24">
+                                <el-col :span="12">
                                     <el-form-item label="供应商大类" prop="supplierCategory">
                                         <el-select v-model="transferSupplierForm.supplierCategory" multiple collapse-tags placeholder="请选择供应商大类" style="width: 100%;" @change="handleSupplierCategoryChange">
                                             <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat"></el-option>
                                         </el-select>
                                     </el-form-item>
                                 </el-col>
-                            </el-row>
-                            <el-row :gutter="24">
                                 <el-col :span="12">
                                     <el-form-item label="供应商明细" prop="supplierDetails">
                                         <el-select v-model="transferSupplierForm.supplierDetails" multiple collapse-tags placeholder="请选择供应商明细" style="width: 100%;">
@@ -719,9 +724,19 @@
                                         </el-select>
                                     </el-form-item>
                                 </el-col>
+                            </el-row>
+                            <el-row :gutter="24">
                                 <el-col :span="12">
                                     <el-form-item label="SCAC" prop="scac" :rules="scacRules">
                                         <el-input v-model="transferSupplierForm.scac" placeholder="请输入 SCAC 代码 (快递必填)"></el-input>
+                                    </el-form-item>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-form-item label="是否同行" prop="isPeer">
+                                        <el-select v-model="transferSupplierForm.isPeer" placeholder="请选择" style="width: 100%;">
+                                            <el-option label="是" value="是"></el-option>
+                                            <el-option label="否" value="否"></el-option>
+                                        </el-select>
                                     </el-form-item>
                                 </el-col>
                             </el-row>
@@ -819,8 +834,8 @@
                                     </el-form-item>
                                 </el-col>
                                 <el-col :span="6">
-                                    <el-form-item label="统一社会信用代码" prop="creditCode" :required="editFormData.customerType === '企业'">
-                                        <el-input v-model="editFormData.creditCode" placeholder="请输入" :disabled="dialogTitle === '编辑客户' || editFormData.customerType === '自然人'"></el-input>
+                                    <el-form-item label="客户昵称" prop="nickname">
+                                        <el-input v-model="editFormData.nickname" placeholder="举例：qyjskj"></el-input>
                                     </el-form-item>
                                 </el-col>
                             </el-row>
@@ -834,8 +849,8 @@
                                     </el-form-item>
                                 </el-col>
                                 <el-col :span="6">
-                                    <el-form-item label="客户昵称" prop="nickname">
-                                        <el-input v-model="editFormData.nickname" placeholder="举例：qyjskj"></el-input>
+                                    <el-form-item label="统一社会信用代码" prop="creditCode" :required="editFormData.customerType === '企业'">
+                                        <el-input v-model="editFormData.creditCode" placeholder="请输入" :disabled="dialogTitle === '编辑客户' || editFormData.customerType === '自然人'"></el-input>
                                     </el-form-item>
                                 </el-col>
                                 <el-col :span="6">
@@ -1454,9 +1469,11 @@ firstOrderTime: '2024-02-20 14:30:00',
                 const currentTransferCustomer = ref(null);
                 const transferSupplierForm = reactive({
                     supplierName: '',
+                    supplierShortName: '',
                     supplierCategory: [],
                     supplierDetails: [],
                     scac: '',
+                    isPeer: '',
                     level: 'G',
                     contacts: [],
                     contractContactId: null,
@@ -1487,8 +1504,10 @@ firstOrderTime: '2024-02-20 14:30:00',
                 });
 
                 const transferSupplierRules = reactive({
+                    supplierShortName: [{ required: true, message: '请输入供应商简称', trigger: 'blur' }],
                     supplierCategory: [{ required: true, type: 'array', min: 1, message: '请选择供应商大类', trigger: 'change' }],
                     supplierDetails: [{ required: true, type: 'array', min: 1, message: '请选择供应商明细', trigger: 'change' }],
+                    isPeer: [{ required: true, message: '请选择是否同行', trigger: 'change' }],
                     level: [{ required: true, message: '请选择供应商等级', trigger: 'change' }]
                 });
 
@@ -1500,9 +1519,11 @@ firstOrderTime: '2024-02-20 14:30:00',
                     currentTransferCustomer.value = selectedRows.value[0];
                     // 重置表单
                     transferSupplierForm.supplierName = currentTransferCustomer.value.customerName;
+                    transferSupplierForm.supplierShortName = '';
                     transferSupplierForm.supplierCategory = [];
                     transferSupplierForm.supplierDetails = [];
                     transferSupplierForm.scac = '';
+                    transferSupplierForm.isPeer = '';
                     transferSupplierForm.level = 'G';
                     transferSupplierForm.contacts = [{ id: Date.now(), name: '', phone: '', email: '' }];
                     transferSupplierForm.contractContactId = null;
