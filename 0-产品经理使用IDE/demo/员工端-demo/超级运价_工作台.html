@@ -60,7 +60,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-tabs v-model="activeTab">
     <el-tab-pane label="本周船期" name="sailing">
       <el-table :data="sailingList" border stripe>
-        <el-table-column prop="routeName" label="航线" min-width="220"></el-table-column>
+        <el-table-column label="航线" min-width="240"><template #default="s">{{s.row.routeName}}<el-tag v-if="s.row._isNew" type="success" size="small" style="margin-left:6px">新增</el-tag></template></el-table-column>
         <el-table-column label="截单时间（按本地仓）" min-width="240"><template #default="s"><el-tag v-for="(d,wh) in s.row.cutoffTimes" :key="wh" size="small" style="margin:1px 2px">{{wh}}: {{d}}</el-tag></template></el-table-column>
         <el-table-column prop="etd" label="ETD" width="80"></el-table-column>
         <el-table-column prop="eta" label="ETA" width="80"></el-table-column>
@@ -82,9 +82,15 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-table-column type="expand">
           <template #default="g">
             <div class="expand-row">
+              <div v-if="g.row._costChanges&&(g.row._costChanges.headAdded.length||g.row._costChanges.headRemoved.length||g.row._costChanges.headChanged.length)" style="font-size:11px;line-height:1.8;margin-bottom:6px;padding:4px 8px;background:#FFF7E6;border-radius:4px">
+                <span style="color:#909399">成本项变更：</span>
+                <el-tag v-for="a in g.row._costChanges.headAdded" :key="'a-'+a" type="success" size="small" style="margin:1px 2px">+{{a}}</el-tag>
+                <el-tag v-for="r in g.row._costChanges.headRemoved" :key="'r-'+r" type="danger" size="small" style="margin:1px 2px">-{{r}}</el-tag>
+                <el-tag v-for="c in g.row._costChanges.headChanged" :key="'c-'+c.item" type="warning" size="small" style="margin:1px 2px">{{c.item}} {{c.old}}→{{c.nw}}</el-tag>
+              </div>
               <el-table v-if="g.row._lastMile==='卡派'" :data="g.row._matrix" border size="small" style="width:100%">
-                <el-table-column label="仓库组" min-width="150">
-                  <template #default="r"><span v-if="r.row._hasPending" style="color:#E6A23C;margin-right:4px" title="待重算">⚠</span>{{r.row._wh}}</template>
+                <el-table-column label="仓库组" min-width="160">
+                  <template #default="r"><span v-if="r.row._hasPending" style="color:#E6A23C;margin-right:4px" title="待重算">⚠</span>{{r.row._wh}}<el-tag v-if="r.row._isNew" type="success" size="small" style="margin-left:4px">新增</el-tag></template>
                 </el-table-column>
                 <el-table-column label="成本底价" width="110" align="right">
                   <template #default="r"><span style="color:var(--text-secondary);font-size:12px">{{r.row._costBase||'—'}}</span></template>
@@ -107,8 +113,8 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
                 </el-table-column>
               </el-table>
               <el-table v-else :data="g.row._matrix" border size="small" style="width:100%">
-                <el-table-column label="邮编前缀" min-width="150">
-                  <template #default="r"><span v-if="r.row._hasPending" style="color:#E6A23C;margin-right:4px" title="待重算">⚠</span>{{r.row._wh}}</template>
+                <el-table-column label="邮编前缀" min-width="160">
+                  <template #default="r"><span v-if="r.row._hasPending" style="color:#E6A23C;margin-right:4px" title="待重算">⚠</span>{{r.row._wh}}<el-tag v-if="r.row._isNew" type="success" size="small" style="margin-left:4px">新增</el-tag></template>
                 </el-table-column>
                 <el-table-column label="最大优惠" width="110" align="center">
                   <template #default="r">
@@ -130,7 +136,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="服务组合" min-width="200"><template #default="g"><span v-if="g.row._hasPending" style="color:#E6A23C;margin-right:4px" title="有待重算">⚠</span>{{g.row.comboName}}</template></el-table-column>
+        <el-table-column label="服务组合" min-width="220"><template #default="g"><span v-if="g.row._hasPending" style="color:#E6A23C;margin-right:4px" title="有待重算">⚠</span>{{g.row.comboName}}</template></el-table-column>
         <el-table-column label="交货地" min-width="160">
           <template #default="g"><span>{{g.row.deliveryGroup||'—'}}</span></template>
         </el-table-column>
@@ -152,12 +158,12 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-form-item label="备注"><el-input v-model="batchForm.remark" placeholder="选填"></el-input></el-form-item>
     <el-divider content-position="left" style="margin:8px 0">复制选项</el-divider>
     <el-form-item label="从上周复制">
-      <el-switch v-model="batchForm.copyLast"></el-switch>
-      <span style="margin-left:8px;font-size:12px;color:#909399">船期（复制航线结构，日期清空）+ 运价行（公布价保留）</span>
+      <el-switch v-model="batchForm.copyLast" :disabled="!hasCurrentBatch"></el-switch>
+      <span style="margin-left:8px;font-size:12px;color:#909399">{{hasCurrentBatch?'复制上周运价和船期——已停用的航线/组合/成本自动移除，本周新增的标绿标记，成本按最新重算':'当前无运行中批次，无法复制'}}</span>
     </el-form-item>
     <el-tabs v-model="batchForm.activeTab" style="margin-top:8px">
       <el-tab-pane label="折算基准快照" name="loading">
-        <div style="font-size:12px;color:#909399;margin-bottom:10px">{{batchForm.copyLast?'将从上周批次复制（可编辑）':'将从全局表拉取折算基准'}}。加成额取各服务组合的默认加成额</div>
+        <div style="font-size:12px;color:#909399;margin-bottom:10px">{{batchForm.copyLast?'沿用上周配置（可编辑）':'从全局表拉取'}}。加成额取组合默认值。</div>
         <el-row :gutter="16">
           <el-col :span="12"><el-form-item label="头程KG基准" label-width="110px"><el-input-number v-model="batchForm.headKg" :min="1" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="头程CBM基准" label-width="120px"><el-input-number v-model="batchForm.headCbm" :min="0.01" :precision="2" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
@@ -455,6 +461,27 @@ var app = Vue.createApp({
         {name:'义乌仓+东莞仓',regions:['义乌仓','东莞仓'],scRMB:1050,truckFee:1950},
         {name:'深圳仓',regions:['深圳仓'],scRMB:1100,truckFee:2000}
       ],
+      enabledRoutes: ['CLX 上海港→长滩港(MATSON)', 'MAX 上海港→长滩港(MATSON)'],
+      costRefHistory: {}, // batchName -> comboCode -> {headItems, tailCompare/tailExpress snapshot}
+      batchCostChanges: {}, // batchName -> {comboCode: {headAdded:[], headRemoved:[], headChanged:[{item,old,nw}]}}
+      _initCostSnapshots: function(){
+        var self=this;
+        ['2026-W05（1/26-2/1）','2026-W04（1/19-1/25）','2026-W06（2/2-2/8）'].forEach(function(bn){
+          if(!self.costRefHistory[bn]) self.costRefHistory[bn]=JSON.parse(JSON.stringify(self.costRefMap));
+        });
+        // Simulate last week's state for demo: extra cost item that was removed this week; price changed
+        var w05 = this.costRefHistory['2026-W05（1/26-2/1）'];
+        if(w05){
+          var ck='美森360-海运-卡派-KG-包税-散货';
+          if(w05[ck]&&w05[ck]._detail&&w05[ck]._detail.headItems){
+            // Last week had 燃油附加费 (removed this week)
+            w05[ck]._detail.headItems.push({seg:'干线运输段',item:'燃油附加费',price:'$350',formula:'350×7.25÷12525',kg:'0.20',cbm:'33.80'});
+            // Last week海运费 was cheaper
+            var hw=w05[ck]._detail.headItems.find(function(h){return h.item==='海运费';});
+            if(hw) hw.price='$9,800';
+          }
+        }
+      },
       batchForm: { name:'', week:'', start:'', end:'', remark:'', copyLast:true, headKg:12525, headCbm:75.0, tailKg:350, tailCbm:1.8, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] },
       priceForm: { comboName:'' },
       priceEditCostKg: null, priceEditCostCbm: null, priceEditHeadKg: null, priceEditHeadCbm: null, priceEditRows: [], priceEditMatrix: [], showCostDetail: false, costDetail: null, costDetailBilling: 'KG', costDetailServiceType: '散货', costDetailTruckingItems: null,
@@ -469,6 +496,7 @@ var app = Vue.createApp({
     priceList: function(){ return this.allPriceData[this.selectedBatchName]||[]; },
     priceGroupCount: function(){ return this.priceGroups.length; },
     priceRowCount: function(){ return this.priceList.length; },
+    hasCurrentBatch: function(){ return this.batches.some(function(b){return b.status==='当前';}); },
     pendingRecalcCount: function(){ return this.priceList.filter(function(p){return p._pendingRecalc;}).length; },
     editMatrixWeightTiers: function(){
       var self=this; var tiers=[]; var seen={};
@@ -494,7 +522,8 @@ var app = Vue.createApp({
         var dkey=r.deliveryGroup||'';
         var gkey=r.comboName+'|||'+dkey;
         if(!map[gkey]){
-          map[gkey]={_key:gkey,comboName:r.comboName,deliveryGroup:dkey,_hasPending:false,_matrix:[],_billing:combo.billing,_lastMile:combo.lastMile,_displayTiers:[]};
+          var cc=(self.batchCostChanges[self.selectedBatchName]||{})[r.comboName]||null;
+          map[gkey]={_key:gkey,comboName:r.comboName,deliveryGroup:dkey,_hasPending:false,_hasNew:false,_costChanges:cc,_matrix:[],_billing:combo.billing,_lastMile:combo.lastMile,_displayTiers:[]};
         }
         var g=map[gkey];
         var wkey=r.warehouseGroup||r.zipPrefixes||'';
@@ -505,9 +534,10 @@ var app = Vue.createApp({
           var ref=self.costRefMap[r.comboName]||{};
           var costVal=billing2==='KG'?ref.costKg:ref.costCbm;
           var costByTier=ref.costByTier;
-          mrow={_wh:wkey||'—',_costBase:costByTier?'按重量段':(costVal?parseFloat(costVal).toFixed(2)+unit:'—'),_maxDiscount:(self.comboMaxDiscount[r.comboName]||0)+(self.comboMaxDensityDiscount[r.comboName]||0),_tiers:{},_hasPending:false};
+          mrow={_wh:wkey||'—',_costBase:costByTier?'按重量段':(costVal?parseFloat(costVal).toFixed(2)+unit:'—'),_maxDiscount:(self.comboMaxDiscount[r.comboName]||0)+(self.comboMaxDensityDiscount[r.comboName]||0),_tiers:{},_hasPending:false,_isNew:false};
           g._matrix.push(mrow);
         }
+        if(r._isNew) mrow._isNew=true;
         var refc=self.costRefMap[r.comboName]||{};
         var costByTier2=refc.costByTier;
         var costV=billing2==='KG'?(refc.costKg?parseFloat(refc.costKg):null):(refc.costCbm?parseFloat(refc.costCbm):null);
@@ -519,6 +549,7 @@ var app = Vue.createApp({
         if(markup==null||markup<=0) color='profit-loss'; else if(maxDiscAmt>0&&markup<maxDiscAmt) color='profit-risk';
         mrow._tiers[r.weightTier]={markup:markup!=null?markup:'—',price:(billing2==='KG'?(r.priceKg!=='—'?r.priceKg:'—'):(r.priceCbm!=='—'?r.priceCbm:'—')),_color:color,_costBase:tierCostV!=null?tierCostV.toFixed(2)+unit:'—'};
         if(r._pendingRecalc){ mrow._hasPending=true; g._hasPending=true; }
+        if(r._isNew){ g._hasNew=true; }
       });
       var groups=Object.values(map);
       groups.forEach(function(g){var dtSeen={};g._displayTiers=[];g._matrix.forEach(function(m){Object.keys(m._tiers).forEach(function(wt){if(!dtSeen[wt]){dtSeen[wt]=true;g._displayTiers.push(wt);}});});});
@@ -536,6 +567,7 @@ var app = Vue.createApp({
       return this.editDimLabel;
     }
   },
+  mounted: function(){ this._initCostSnapshots(); },
   methods: {
     dimLabel: function(comboName){var combo=this.enabledCombos.find(function(c){return c.code===comboName;});return combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';},
     switchBatch: function(){ this.activeTab='sailing'; },
@@ -554,12 +586,159 @@ var app = Vue.createApp({
       var ers=this.batchForm.exchangeRates||[];
       if(!ers.length){ElementPlus.ElMessage.warning('请至少配置一条汇率');return}
       for(var ei=0;ei<ers.length;ei++){if(!ers[ei].from||!ers[ei].to||!ers[ei].rate||ers[ei].rate<=0){ElementPlus.ElMessage.warning('汇率第'+(ei+1)+'行：请完善币种和汇率（>0）');return}}
-      var name = this.batchForm.name;
-      var nb = {name:name,week:this.batchForm.week,start:this.batchForm.start,end:this.batchForm.end,exchangeRates:JSON.parse(JSON.stringify(ers)),status:'预告',_snapshot:{headKg:this.batchForm.headKg,headCbm:this.batchForm.headCbm,tailKg:this.batchForm.tailKg,tailCbm:this.batchForm.tailCbm}};
+      var self=this; var name=this.batchForm.name;
+      var snap={headKg:this.batchForm.headKg,headCbm:this.batchForm.headCbm,tailKg:this.batchForm.tailKg,tailCbm:this.batchForm.tailCbm};
+      var nb={name:name,week:this.batchForm.week,start:this.batchForm.start,end:this.batchForm.end,exchangeRates:JSON.parse(JSON.stringify(ers)),status:'预告',_snapshot:snap};
       this.batches.push(nb);
-      if(this.batchForm.copyLast){var cur=this.batches.find(function(b){return b.status==='当前'});if(cur){if(this.allSailingData[cur.name]) this.allSailingData[name]=JSON.parse(JSON.stringify(this.allSailingData[cur.name]));else this.allSailingData[name]=[];if(this.allPriceData[cur.name]) this.allPriceData[name]=JSON.parse(JSON.stringify(this.allPriceData[cur.name]));else this.allPriceData[name]=[];}else{this.allSailingData[name]=[];this.allPriceData[name]=[];}}
-      else{this.allSailingData[name]=[];this.allPriceData[name]=[];}
-      this.selectedBatchName = name; ElementPlus.ElMessage.success('批次创建成功，已快照配置'); this.showBatchDialog = false;
+      this.costRefHistory[name] = JSON.parse(JSON.stringify(this.costRefMap));
+
+      if(this.batchForm.copyLast){
+        var cur=this.batches.find(function(b){return b.status==='当前'});
+        if(cur){
+          // ===== 船期：骨架重生 =====
+          var newSailing=[]; var oldSailing=this.allSailingData[cur.name]||[];
+          var addedSailings=0, removedSailings=0;
+          this.enabledRoutes.forEach(function(rn){
+            var old=oldSailing.find(function(s){return s.routeName===rn;});
+            if(old){
+              var cutoffWh={}; Object.keys(old.cutoffTimes).forEach(function(wh){cutoffWh[wh]='';});
+              newSailing.push({routeName:rn,cutoffTimes:cutoffWh,etd:'',eta:'',voyageDays:old.voyageDays,fastestPickup:'',_isNew:false});
+            }else{
+              newSailing.push({routeName:rn,cutoffTimes:{},etd:'',eta:'',voyageDays:'',fastestPickup:'',_isNew:true});
+              addedSailings++;
+            }
+          });
+          oldSailing.forEach(function(s){if(!self.enabledRoutes.includes(s.routeName)) removedSailings++;});
+          this.allSailingData[name]=newSailing;
+
+          // ===== 运价行：骨架重生 =====
+          var newPrice=[]; var oldPrice=this.allPriceData[cur.name]||[];
+          var addedPrices=0, removedPrices=0;
+          var activeDimVals={}; // combo -> [dimVal strings]
+          var activeTiers={};   // combo -> [weightTier strings]
+          this.enabledCombos.forEach(function(combo){
+            var dt=combo.lastMile==='卡派'?'wh':'zip';
+            var dvSet={};
+            // primary from combo definition
+            var pd=dt==='zip'?(combo.zipPrefixes?combo.zipPrefixes.join(','):''):(combo.warehouses?combo.warehouses.join(','):'');
+            if(pd) dvSet[pd]=true;
+            // from costRefMap tailCompare (current architecture — source of truth for warehouse groups)
+            var ref2=self.costRefMap[combo.code]||{}; var det2=ref2._detail;
+            if(det2&&det2.tailCompare&&dt==='wh'){det2.tailCompare.forEach(function(tc){if(tc.wh) dvSet[tc.wh]=true;});}
+            activeDimVals[combo.code]=Object.keys(dvSet);
+            // weight tiers for this combo
+            var tierSet={}; var billing=combo.billing||'KG';
+            self.weightTiers.forEach(function(wt){
+              if(billing==='KG'&&wt.indexOf('KG')!==-1) tierSet[wt]=true;
+              if(billing==='m³'&&wt.indexOf('m³')!==-1) tierSet[wt]=true;
+            });
+            oldPrice.forEach(function(p){if(p.comboName===combo.code)tierSet[p.weightTier]=true;});
+            activeTiers[combo.code]=Object.keys(tierSet);
+          });
+          this.enabledCombos.forEach(function(combo){
+            var billing=combo.billing||'KG';
+            var dimType=combo.lastMile==='卡派'?'wh':'zip';
+            var dimVals=activeDimVals[combo.code]||[];
+            var tiers=activeTiers[combo.code]||[];
+            if(!dimVals.length||!tiers.length) return;
+            dimVals.forEach(function(dimVal){
+            self.deliveryGroups.forEach(function(dg){
+              tiers.forEach(function(wt){
+                var matchKey={comboName:combo.code,warehouseGroup:dimType==='wh'?dimVal:'',zipPrefixes:dimType==='zip'?dimVal:'',deliveryGroup:dg.name,weightTier:wt};
+                var old=oldPrice.find(function(p){
+                  return p.comboName===matchKey.comboName&&(p.warehouseGroup||p.zipPrefixes||'')===(matchKey.warehouseGroup||matchKey.zipPrefixes||'')&&p.deliveryGroup===matchKey.deliveryGroup&&p.weightTier===matchKey.weightTier;
+                });
+                var ref=self.costRefMap[combo.code]||{};
+                var costByTier=ref.costByTier; var costV=billing==='KG'?(ref.costKg?parseFloat(ref.costKg):null):(ref.costCbm?parseFloat(ref.costCbm):null);
+                var tierCost=costByTier&&costByTier[wt]!=null?costByTier[wt]:costV;
+                var seedMarkup=combo.defaultMarkup!=null?combo.defaultMarkup:0;
+                var headDiv=billing==='KG'?snap.headKg:snap.headCbm;
+                var surcharge=dg.scRMB/headDiv;
+                if(old){
+                  var pKg=old.priceKg,pCbm=old.priceCbm;
+                  if(tierCost!=null){
+                    if(billing==='KG'&&pKg!=='—'&&pKg!=null){/*keep*/}else if(billing==='m³'&&pCbm!=='—'&&pCbm!=null){/*keep*/}else{
+                      if(billing==='KG') pKg=(tierCost+seedMarkup+surcharge).toFixed(2);
+                      else pCbm=(tierCost+seedMarkup+surcharge).toFixed(2);
+                    }
+                  }
+                  newPrice.push({comboName:old.comboName,warehouseGroup:old.warehouseGroup||'',weightTier:old.weightTier,deliveryGroup:old.deliveryGroup||'',priceKg:pKg,priceCbm:pCbm,_dimType:old._dimType||dimType,_pendingRecalc:true,zipPrefixes:old.zipPrefixes||'',_isNew:false});
+                }else{
+                  var initKg=billing==='KG'?(tierCost!=null?(tierCost+seedMarkup+surcharge).toFixed(2):'—'):'—';
+                  var initCbm=billing==='m³'?(tierCost!=null?(tierCost+seedMarkup+surcharge).toFixed(2):'—'):'—';
+                  newPrice.push({comboName:combo.code,warehouseGroup:dimType==='wh'?dimVal:'',weightTier:wt,deliveryGroup:dg.name,priceKg:initKg,priceCbm:initCbm,_dimType:dimType,_pendingRecalc:true,zipPrefixes:dimType==='zip'?dimVal:'',_isNew:true});
+                  addedPrices++;
+                }
+              });
+            });
+            });
+          });
+          oldPrice.forEach(function(p){
+            var combo2=self.enabledCombos.find(function(c){return c.code===p.comboName;});
+            if(!combo2){removedPrices++; return;}
+            var dt2=combo2.lastMile==='卡派'?'wh':'zip';
+            var dimVals2=activeDimVals[p.comboName]||[];
+            var pDim=p.warehouseGroup||p.zipPrefixes||'';
+            if(!dimVals2.includes(pDim)){removedPrices++; return;}
+            if(!self.deliveryGroups.some(function(dg2){return dg2.name===p.deliveryGroup;})){removedPrices++;}
+            var tiers2=activeTiers[p.comboName]||[];
+            if(!tiers2.includes(p.weightTier)){removedPrices++;}
+          });
+          this.allPriceData[name]=newPrice;
+
+          // ===== 成本项变更检测 =====
+          var comboCostChanges={};
+          var oldCS=this.costRefHistory[cur.name]||{};
+          var newCS=this.costRefMap;
+          var costChangedCount=0;
+          Object.keys(newCS).forEach(function(ck){
+            var oldDet=(oldCS[ck]||{})._detail;
+            var newDet=(newCS[ck]||{})._detail;
+            if(!oldDet || !newDet) return;
+            var oldHItems=(oldDet.headItems||[]).map(function(h){return h.item;});
+            var newHItems=(newDet.headItems||[]).map(function(h){return h.item;});
+            var added=[], removed=[], changed=[];
+            newHItems.forEach(function(ni){if(oldHItems.indexOf(ni)<0) added.push(ni);});
+            oldHItems.forEach(function(oi){if(newHItems.indexOf(oi)<0) removed.push(oi);});
+            (oldDet.headItems||[]).forEach(function(oh){
+              var nh=(newDet.headItems||[]).find(function(h){return h.item===oh.item;});
+              if(nh && oh.price!==nh.price) changed.push({item:oh.item,old:oh.price,nw:nh.price});
+            });
+            if(oldDet.tailCompare&&newDet.tailCompare){
+              var oldTW=(oldDet.tailCompare||[]).map(function(t){return t.wh+'|'+t.sourceName;});
+              var newTW=(newDet.tailCompare||[]).map(function(t){return t.wh+'|'+t.sourceName;});
+              newTW.forEach(function(n){if(oldTW.indexOf(n)<0) added.push('派送:'+n);});
+              oldTW.forEach(function(o){if(newTW.indexOf(o)<0) removed.push('派送:'+o);});
+            }
+            if(added.length||removed.length||changed.length){
+              comboCostChanges[ck]={headAdded:added,headRemoved:removed,headChanged:changed};
+              costChangedCount++;
+            }
+          });
+          this.batchCostChanges[name]=comboCostChanges;
+
+          // ===== 变更摘要 =====
+          var msgs=[];
+          if(addedSailings>0) msgs.push('航线新增 '+addedSailings+' 条');
+          if(removedSailings>0) msgs.push('航线失效移除 '+removedSailings+' 条');
+          if(addedPrices>0) msgs.push('运价行新增 '+addedPrices+' 条');
+          if(removedPrices>0) msgs.push('运价行失效移除 '+removedPrices+' 条');
+          var summary='已从上周批次骨架重生。';
+          if(msgs.length>0) summary+=' 变更：'+msgs.join('；')+'。新增行已标记「新增」。';
+          if(costChangedCount>0) summary+=' '+costChangedCount+' 个组合成本项有增减，已标记在运价行内。';
+          summary+=' 全部运价行已标记待复核，请逐行确认。';
+          this.selectedBatchName=name; this.showBatchDialog=false;
+          ElementPlus.ElMessage.success('批次创建成功，已快照配置');
+          var self2=this;
+          setTimeout(function(){ElementPlus.ElMessage({message:summary,type:'info',duration:8000,showClose:true});},400);
+        }else{
+          this.allSailingData[name]=[]; this.allPriceData[name]=[];
+          this.selectedBatchName=name; ElementPlus.ElMessage.success('批次创建成功，已快照配置'); this.showBatchDialog=false;
+        }
+      }else{
+        this.allSailingData[name]=[]; this.allPriceData[name]=[];
+        this.selectedBatchName=name; ElementPlus.ElMessage.success('批次创建成功，已快照配置'); this.showBatchDialog=false;
+      }
     },
     voidBatch: function(){var self=this;var label=self.selectedBatchName;ElementPlus.ElMessageBox.confirm('确定作废批次【'+label+'】？作废后数据保留但不可再使用。','作废批次确认',{confirmButtonText:'确定作废',cancelButtonText:'取消',type:'warning'}).then(function(){self.selectedBatch.status='已作废';self.selectedBatchName=self.selectedBatch.name;ElementPlus.ElMessage.success('批次已作废')}).catch(function(){});},
     addExchangeRate: function(){this.batchForm.exchangeRates.push({from:'USD',to:'RMB',rate:7.2500});},
