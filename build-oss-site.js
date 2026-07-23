@@ -22,6 +22,7 @@ const DOC_TYPES = [
 
 const DRAFTS_DIR = path.resolve(__dirname, '0-产品经理使用IDE/drafts');
 const OUT_DIR = path.resolve(__dirname, '0-产品经理使用IDE', 'oss-site');
+const TODAY = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
 marked.setOptions({ gfm: true, breaks: true });
 
@@ -169,7 +170,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   <div class="stats">
     <span>模块 <strong>${fileGroups.filter(g => g.files.length>0).length}</strong></span>
     <span>文档 <strong>${fileGroups.reduce((s,g) => s+g.files.length, 0)}</strong></span>
-    <span>更新 <strong>2026-06-09</strong></span>
+    <span>更新 <strong>${TODAY}</strong></span>
   </div>
 </div>
 <div class="grid">
