@@ -23,6 +23,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 .profit-loss{color:#909399;font-weight:600}
 .tier-cell{line-height:1.6}
 .expand-row{padding:0 20px 12px 20px}
+.changed-cell input{background:#FFF7E6!important;border-color:#E6A23C!important}
 </style>
 </head>
 <body>
@@ -31,7 +32,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 <div class="batch-bar" style="flex-direction:column;align-items:stretch;gap:8px;flex:none">
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
     <div>
-      <div class="week-label">{{selectedBatchName||'请选择批次'}}</div>
+      <a class="week-label" href="javascript:void(0)" @click="showBatchInfo" style="color:#fff;text-decoration:none;cursor:pointer" onmouseenter="this.style.textDecoration='underline'" onmouseleave="this.style.textDecoration='none'">{{selectedBatchName||'请选择批次'}} <span style="font-size:13px;opacity:0.8">查看详情 →</span></a>
       <div v-if="selectedBatch" style="font-size:12px;opacity:0.9">{{selectedBatch.week}} | {{selectedBatch.start}} ~ {{selectedBatch.end}} | {{selectedBatch.status}}</div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -39,15 +40,13 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-option v-for="b in batches" :key="b.name" :label="b.name+' ('+b.status+')'" :value="b.name"></el-option>
       </el-select>
       <el-button @click="openAddBatch" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">新建周批次</el-button>
+      <el-dropdown v-if="selectedBatch&&selectedBatch.status!=='已过期'" style="margin-left:6px" @command="openImport">
+        <el-button style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">导入成本<el-icon style="margin-left:2px"><svg viewBox="0 0 1024 1024" width="12" height="12"><path d="M831.872 340.864L512 660.736 192.128 340.864a30.592 30.592 0 0 0-42.752 0 29.376 29.376 0 0 0 0 42.24L512 745.344l362.624-362.24a29.376 29.376 0 0 0 0-42.24 30.592 30.592 0 0 0-42.752 0z" fill="currentColor"/></svg></el-icon></el-button>
+        <template #dropdown><el-dropdown-menu><el-dropdown-item command="normal">普通成本项（海运费等）</el-dropdown-item><el-dropdown-item command="truck">拖车费（按交货地）</el-dropdown-item><el-dropdown-item command="warehouse">卡派仓点成本</el-dropdown-item><el-dropdown-item command="express">快递派单价</el-dropdown-item></el-dropdown-menu></template>
+      </el-dropdown>
+      <el-button v-if="selectedBatch&&selectedBatch.status!=='已过期'" @click="openImport('markup')" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">导入加成额</el-button>
       <el-button v-if="selectedBatch&&(selectedBatch.status==='预告'||selectedBatch.status==='当前')" type="danger" @click="voidBatch" style="background:rgba(255,100,100,.3);color:#fff;border:1px solid rgba(255,255,255,.35)">作废</el-button>
     </div>
-  </div>
-  <div v-if="selectedBatch" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font-size:12px;border-top:1px solid rgba(255,255,255,.22);padding-top:7px">
-    <span v-for="(er,i) in (selectedBatch.exchangeRates||[])">{{er.from}}→{{er.to}} <strong style="font-size:14px">{{er.rate}}</strong><span v-if="i<(selectedBatch.exchangeRates||[]).length-1">, </span></span>
-    <span style="opacity:.85">周批次 <strong style="font-size:14px">{{batches.length}}</strong></span>
-    <span :style="{opacity:pendingRecalcCount>0?1:0.85}">待重算 <strong style="font-size:14px">{{pendingRecalcCount}}</strong></span>
-    <span style="opacity:.85">运价分组 <strong style="font-size:14px">{{priceGroupCount}}</strong></span>
-    <span v-if="selectedBatch._snapshot" style="opacity:.85;border-left:1px solid rgba(255,255,255,.25);padding-left:18px">折算基准 头程 <strong>{{selectedBatch._snapshot.headKg}}KG/{{selectedBatch._snapshot.headCbm}}CBM</strong> · 派送 <strong>{{selectedBatch._snapshot.tailKg}}KG/{{selectedBatch._snapshot.tailCbm}}CBM</strong></span>
   </div>
 </div>
 
@@ -163,15 +162,14 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     </el-form-item>
     <el-tabs v-model="batchForm.activeTab" style="margin-top:8px">
       <el-tab-pane label="折算基准快照" name="loading">
-        <div style="font-size:12px;color:#909399;margin-bottom:10px">{{batchForm.copyLast?'沿用上周配置（可编辑）':'从全局表拉取'}}。加成额取组合默认值。</div>
-        <el-row :gutter="16">
-          <el-col :span="12"><el-form-item label="头程KG基准" label-width="110px"><el-input-number v-model="batchForm.headKg" :min="1" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="头程CBM基准" label-width="120px"><el-input-number v-model="batchForm.headCbm" :min="0.01" :precision="2" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
-        </el-row>
-        <el-row :gutter="16">
-          <el-col :span="12"><el-form-item label="派送KG基准" label-width="110px"><el-input-number v-model="batchForm.tailKg" :min="1" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
-          <el-col :span="12"><el-form-item label="派送CBM基准" label-width="120px"><el-input-number v-model="batchForm.tailCbm" :min="0.01" :precision="2" style="width:100%" controls-position="right"></el-input-number></el-form-item></el-col>
-        </el-row>
+        <div style="font-size:12px;color:#909399;margin-bottom:10px">{{batchForm.copyLast?'沿用上周快照':'从全局表拉取当前全部启用行'}}。可针对本周编辑 KG/CBM 基准（快递派锁定为 1）。加成额取组合默认值。</div>
+        <el-table :data="batchForm.loadingStandards" border size="small" style="width:100%">
+          <el-table-column label="运输方式" width="100"><template #default="s2">{{s2.row.transportLabel}}</template></el-table-column>
+          <el-table-column label="基准类型" width="80"><template #default="s2"><el-tag v-if="s2.row.typeLabel==='头程'" type="success" size="small" effect="plain">{{s2.row.typeLabel}}</el-tag><el-tag v-else type="warning" size="small" effect="plain">{{s2.row.typeLabel}}</el-tag></template></el-table-column>
+          <el-table-column label="尾程方式" width="100"><template #default="s2">{{s2.row.lastMileLabel||'—'}}</template></el-table-column>
+          <el-table-column label="KG基准" align="right" width="150"><template #default="s2"><el-input-number v-if="s2.row.kgStandard!=null" v-model="s2.row.kgStandard" :min="0.01" :precision="0" size="small" style="width:120px" controls-position="right" :disabled="s2.row.lastMileLabel==='快递派'"></el-input-number><span v-else style="color:#C0C4CC">—</span></template></el-table-column>
+          <el-table-column label="CBM基准" align="right" width="150"><template #default="s2"><el-input-number v-if="s2.row.cbmStandard!=null" v-model="s2.row.cbmStandard" :min="0.0001" :precision="1" size="small" style="width:120px" controls-position="right" :disabled="s2.row.lastMileLabel==='快递派'"></el-input-number><span v-else style="color:#C0C4CC">—</span></template></el-table-column>
+        </el-table>
       </el-tab-pane>
       <el-tab-pane label="汇率快照" name="exchange">
         <div style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
@@ -199,6 +197,61 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 </el-dialog>
 
 
+
+<el-dialog v-model="showBatchInfoDialog" title="本周运价基本信息" width="580px" :close-on-click-modal="false">
+  <div v-if="selectedBatch">
+    <el-descriptions :column="2" border size="small">
+      <el-descriptions-item label="批次名称" :span="2">{{selectedBatch.name}}</el-descriptions-item>
+      <el-descriptions-item label="周次">{{selectedBatch.week}}</el-descriptions-item>
+      <el-descriptions-item label="状态"><el-tag :type="selectedBatch.status==='当前'?'success':(selectedBatch.status==='预告'?'warning':'info')" size="small">{{selectedBatch.status}}</el-tag></el-descriptions-item>
+      <el-descriptions-item label="日期范围" :span="2">{{selectedBatch.start}} ~ {{selectedBatch.end}}</el-descriptions-item>
+    </el-descriptions>
+    <div style="margin-top:14px;font-weight:600;font-size:13px;color:#303133">汇率快照</div>
+    <el-table :data="selectedBatch.exchangeRates||[]" border size="small" style="width:100%;margin-top:6px">
+      <el-table-column label="原始币种" width="120"><template #default="s2">{{s2.row.from}}</template></el-table-column>
+      <el-table-column label="目标币种" width="120"><template #default="s2">{{s2.row.to}}</template></el-table-column>
+      <el-table-column label="汇率" align="right"><template #default="s2">{{s2.row.rate}}</template></el-table-column>
+    </el-table>
+    <div style="margin-top:14px;font-weight:600;font-size:13px;color:#303133">折算基准</div>
+    <el-table :data="selectedBatch._snapshot||[]" border size="small" style="width:100%;margin-top:6px">
+      <el-table-column label="运输方式" width="80"><template #default="s2">{{s2.row.transportLabel}}</template></el-table-column>
+      <el-table-column label="类型" width="70"><template #default="s2"><el-tag v-if="s2.row.typeLabel==='头程'" type="success" size="small" effect="plain">{{s2.row.typeLabel}}</el-tag><el-tag v-else type="warning" size="small" effect="plain">{{s2.row.typeLabel}}</el-tag></template></el-table-column>
+      <el-table-column label="尾程" width="80"><template #default="s2">{{s2.row.lastMileLabel||'—'}}</template></el-table-column>
+      <el-table-column label="KG基准" align="right"><template #default="s2">{{s2.row.kgStandard!=null?s2.row.kgStandard:'—'}}</template></el-table-column>
+      <el-table-column label="CBM基准" align="right"><template #default="s2">{{s2.row.cbmStandard!=null?s2.row.cbmStandard:'—'}}</template></el-table-column>
+    </el-table>
+    <div style="margin-top:14px;font-weight:600;font-size:13px;color:#303133">数据统计</div>
+    <div style="font-size:13px;color:#606266;margin-top:4px;line-height:1.8">船期条数: <strong>{{sailingList.length}}</strong> &nbsp;|&nbsp; 运价分组: <strong>{{priceGroupCount}}</strong> &nbsp;|&nbsp; 运价行: <strong>{{priceRowCount}}</strong></div>
+  </div>
+  <template #footer><el-button @click="showBatchInfoDialog=false">关闭</el-button></template>
+</el-dialog>
+
+<el-dialog v-model="showImportDialog" :title="importTitle" width="750px" :close-on-click-modal="false" top="6vh">
+  <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+    <el-button size="small" @click="downloadTemplate" type="primary" plain>下载模板</el-button>
+    <el-upload action="#" :auto-upload="false" :show-file-list="false" :on-change="handleImportFile" accept=".xlsx,.xls,.csv">
+      <el-button size="small">上传文件</el-button>
+    </el-upload>
+    <span v-if="importFileName" style="font-size:12px;color:#909399">{{importFileName}}</span>
+  </div>
+  <div v-if="importPreview.length>0" style="margin-bottom:8px;font-size:13px;color:#606266">
+    识别到 <strong>{{importPreview.filter(function(r){return r.changed}).length}}</strong> 条变更，
+    影响 <strong>{{importAffectedCombos}}</strong> 个组合
+  </div>
+  <el-table :data="importPreview" border size="small" max-height="340">
+    <el-table-column v-for="col in importColumns" :key="col.prop" :label="col.label" :width="col.width" align="center">
+      <template #default="s">
+        <span v-if="!col.editable" :style="{color:col.prop==='current'?'#909399':'#303133'}">{{s.row[col.prop]}}</span>
+        <el-input v-else v-model="s.row[col.prop]" size="small" style="width:100%" :class="{'changed-cell':s.row.changed}"></el-input>
+      </template>
+    </el-table-column>
+  </el-table>
+  <div v-if="importPreview.length===0" style="text-align:center;padding:40px;color:#C0C4CC">请下载模板填写后上传</div>
+  <template #footer>
+    <el-button @click="showImportDialog=false">取消</el-button>
+    <el-button type="primary" @click="confirmImport" :disabled="importPreview.length===0">确认导入</el-button>
+  </template>
+</el-dialog>
 
 <el-dialog v-model="showPriceDialog" :title="editPriceMode?'编辑运价行':'新增运价行'" :width="editPriceMode?'min(1100px, 94vw)':'520px'" top="6vh" :close-on-click-modal="false">
   <div v-if="editPriceMode" style="max-height:70vh;overflow:auto;padding-right:4px">
@@ -330,13 +383,21 @@ var app = Vue.createApp({
     return {
       activeTab: 'sailing',
       selectedBatchName: '2026-W05（1/26-2/1）',
-      showBatchDialog: false,
+      showBatchDialog: false, showBatchInfoDialog: false,
       showPriceDialog: false, editPriceMode: false, editPriceIdx: -1,
+      showImportDialog: false, importType: '', importFileName: '', importTitle: '',
+      importColumns: [], importPreview: [], importAffectedCombos: 0,
 
+      globalLoadingStandards: [
+        {transportMode:10,transportLabel:'海运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:12525,cbmStandard:75.0},
+        {transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'卡派',lastMileLabel:'卡派',kgStandard:350,cbmStandard:1.8},
+        {transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'快递派',lastMileLabel:'快递派',kgStandard:1,cbmStandard:1},
+        {transportMode:20,transportLabel:'空运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:6000,cbmStandard:null}
+      ],
       batches: [
-        {name:'2026-W05（1/26-2/1）',week:'2026-W05',start:'2026-01-26',end:'2026-02-01',status:'当前',exchangeRates:[{from:'USD',to:'RMB',rate:'7.2500'}],_snapshot:{headKg:12525,headCbm:75.0,tailKg:350,tailCbm:1.8}},
-        {name:'2026-W04（1/19-1/25）',week:'2026-W04',start:'2026-01-19',end:'2026-01-25',status:'已过期',exchangeRates:[{from:'USD',to:'RMB',rate:'7.1800'}],_snapshot:{headKg:12525,headCbm:75.0,tailKg:350,tailCbm:1.8}},
-        {name:'2026-W06（2/2-2/8）',week:'2026-W06',start:'2026-02-02',end:'2026-02-08',status:'预告',exchangeRates:[{from:'USD',to:'RMB',rate:'7.2500'}],_snapshot:{headKg:12525,headCbm:75.0,tailKg:350,tailCbm:1.8}}
+        {name:'2026-W05（1/26-2/1）',week:'2026-W05',start:'2026-01-26',end:'2026-02-01',status:'当前',exchangeRates:[{from:'USD',to:'RMB',rate:'7.2500'}],_snapshot:[{transportMode:10,transportLabel:'海运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:12525,cbmStandard:75.0},{transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'卡派',lastMileLabel:'卡派',kgStandard:350,cbmStandard:1.8},{transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'快递派',lastMileLabel:'快递派',kgStandard:1,cbmStandard:1},{transportMode:20,transportLabel:'空运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:6000,cbmStandard:null}]},
+        {name:'2026-W04（1/19-1/25）',week:'2026-W04',start:'2026-01-19',end:'2026-01-25',status:'已过期',exchangeRates:[{from:'USD',to:'RMB',rate:'7.1800'}],_snapshot:[{transportMode:10,transportLabel:'海运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:12525,cbmStandard:75.0},{transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'卡派',lastMileLabel:'卡派',kgStandard:350,cbmStandard:1.8},{transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'快递派',lastMileLabel:'快递派',kgStandard:1,cbmStandard:1},{transportMode:20,transportLabel:'空运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:6000,cbmStandard:null}]},
+        {name:'2026-W06（2/2-2/8）',week:'2026-W06',start:'2026-02-02',end:'2026-02-08',status:'预告',exchangeRates:[{from:'USD',to:'RMB',rate:'7.2500'}],_snapshot:[{transportMode:10,transportLabel:'海运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:12525,cbmStandard:75.0},{transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'卡派',lastMileLabel:'卡派',kgStandard:350,cbmStandard:1.8},{transportMode:10,transportLabel:'海运',standardType:20,typeLabel:'派送',lastMile:'快递派',lastMileLabel:'快递派',kgStandard:1,cbmStandard:1},{transportMode:20,transportLabel:'空运',standardType:10,typeLabel:'头程',lastMile:'',lastMileLabel:'',kgStandard:6000,cbmStandard:null}]}
       ],
       enabledCombos: [
         {code:'美森360-海运-卡派-KG-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',tax:'包税',serviceType:'散货',warehouses:['ONT8','LAX9','LGB8','SBD1','POC1','POC2','POC3'],defaultMarkup:2.5},
@@ -482,7 +543,7 @@ var app = Vue.createApp({
           }
         }
       },
-      batchForm: { name:'', week:'', start:'', end:'', remark:'', copyLast:true, headKg:12525, headCbm:75.0, tailKg:350, tailCbm:1.8, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] },
+      batchForm: { name:'', week:'', start:'', end:'', remark:'', copyLast:true, loadingStandards:[], activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] },
       priceForm: { comboName:'' },
       priceEditCostKg: null, priceEditCostCbm: null, priceEditHeadKg: null, priceEditHeadCbm: null, priceEditRows: [], priceEditMatrix: [], showCostDetail: false, costDetail: null, costDetailBilling: 'KG', costDetailServiceType: '散货', costDetailTruckingItems: null,
       _editGroup: null, _editWh: '', _editMaxDiscount: 0, editMatrixMode: false
@@ -570,11 +631,22 @@ var app = Vue.createApp({
   mounted: function(){ this._initCostSnapshots(); },
   methods: {
     dimLabel: function(comboName){var combo=this.enabledCombos.find(function(c){return c.code===comboName;});return combo&&combo.lastMile==='快递派'?'邮编前缀':'仓库组';},
+    headDivFromSnapshot: function(snapshot, transportLabel, billing){
+      var row=(snapshot||[]).find(function(s){return s.transportLabel===transportLabel&&s.standardType===10;});
+      if(!row) return 1;
+      return billing==='KG'?row.kgStandard:row.cbmStandard;
+    },
+    headBench: function(snapshot, transportLabel, field){
+      var row=(snapshot||[]).find(function(s){return s.transportLabel===transportLabel&&s.standardType===10;});
+      if(!row) return 0;
+      return field==='kg'?row.kgStandard:row.cbmStandard;
+    },
     switchBatch: function(){ this.activeTab='sailing'; },
+    showBatchInfo: function(){ if(!this.selectedBatch) return; this.showBatchInfoDialog=true; },
     openAddBatch: function(){
       var cur=this.batches.find(function(b){return b.status==='当前'});
-      if(cur&&cur._snapshot){ this.batchForm = { name:'', week:'', start:'', end:'', remark:'', copyLast:true, headKg:cur._snapshot.headKg, headCbm:cur._snapshot.headCbm, tailKg:cur._snapshot.tailKg, tailCbm:cur._snapshot.tailCbm, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] }; }
-      else { this.batchForm = { name:'', week:'', start:'', end:'', remark:'', copyLast:false, headKg:12525, headCbm:75.0, tailKg:350, tailCbm:1.8, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] }; }
+      var loadingStds = (cur&&cur._snapshot) ? JSON.parse(JSON.stringify(cur._snapshot)) : JSON.parse(JSON.stringify(this.globalLoadingStandards));
+      this.batchForm = { name:'', week:'', start:'', end:'', remark:'', copyLast:!!cur, loadingStandards:loadingStds, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] };
       this.showBatchDialog = true;
     },
     saveBatch: function(){
@@ -587,7 +659,7 @@ var app = Vue.createApp({
       if(!ers.length){ElementPlus.ElMessage.warning('请至少配置一条汇率');return}
       for(var ei=0;ei<ers.length;ei++){if(!ers[ei].from||!ers[ei].to||!ers[ei].rate||ers[ei].rate<=0){ElementPlus.ElMessage.warning('汇率第'+(ei+1)+'行：请完善币种和汇率（>0）');return}}
       var self=this; var name=this.batchForm.name;
-      var snap={headKg:this.batchForm.headKg,headCbm:this.batchForm.headCbm,tailKg:this.batchForm.tailKg,tailCbm:this.batchForm.tailCbm};
+      var snap=JSON.parse(JSON.stringify(this.batchForm.loadingStandards));
       var nb={name:name,week:this.batchForm.week,start:this.batchForm.start,end:this.batchForm.end,exchangeRates:JSON.parse(JSON.stringify(ers)),status:'预告',_snapshot:snap};
       this.batches.push(nb);
       this.costRefHistory[name] = JSON.parse(JSON.stringify(this.costRefMap));
@@ -652,7 +724,7 @@ var app = Vue.createApp({
                 var costByTier=ref.costByTier; var costV=billing==='KG'?(ref.costKg?parseFloat(ref.costKg):null):(ref.costCbm?parseFloat(ref.costCbm):null);
                 var tierCost=costByTier&&costByTier[wt]!=null?costByTier[wt]:costV;
                 var seedMarkup=combo.defaultMarkup!=null?combo.defaultMarkup:0;
-                var headDiv=billing==='KG'?snap.headKg:snap.headCbm;
+                var headDiv=self.headDivFromSnapshot(snap,combo.transport,billing);
                 var surcharge=dg.scRMB/headDiv;
                 if(old){
                   var pKg=old.priceKg,pCbm=old.priceCbm;
@@ -758,18 +830,22 @@ var app = Vue.createApp({
       this.costDetailServiceType=combo?combo.serviceType:'散货';
       this._editMaxDiscount=(this.comboMaxDiscount[group.comboName]||0)+(this.comboMaxDensityDiscount[group.comboName]||0);
       this.showCostDetail=true;
-      var self=this; var snap=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:{headKg:12525,headCbm:75};
+      var self=this; var snap=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:[];
+      var comboX=self.enabledCombos.find(function(c){return c.code===group.comboName;});
+      var tLabel=comboX?comboX.transport:'海运';
       var truckMap=self.truckingCostMap[group.comboName];
       if(truckMap&&self.costDetail){
         var fee=truckMap[group.deliveryGroup]||0;
         if(fee>0){
-          var headDiv=self.costDetailBilling==='KG'?snap.headKg:snap.headCbm;
-          var kgVal=(fee/snap.headKg).toFixed(2);
-          var cbmVal=(fee/snap.headCbm).toFixed(2);
+          var headDiv2=self.headDivFromSnapshot(snap,tLabel,self.costDetailBilling);
+          var headKg2=self.headBench(snap,tLabel,'kg');
+          var headCbm2=self.headBench(snap,tLabel,'cbm');
+          var kgVal=headKg2?(fee/headKg2).toFixed(2):'0';
+          var cbmVal=headCbm2?(fee/headCbm2).toFixed(2):'0';
           var truckKg=parseFloat(kgVal);var truckCbm=parseFloat(cbmVal);
           self.priceEditHeadKg=(parseFloat(self.costDetail.headKg)+truckKg).toFixed(2);
           self.priceEditHeadCbm=self.costDetail.headCbm!=='—'?(parseFloat(self.costDetail.headCbm)+truckCbm).toFixed(2):'—';
-          self.costDetailTruckingItems=[{region:group.deliveryGroup,price:'¥'+fee.toLocaleString(),formula:fee+'÷'+snap.headKg,kg:kgVal,cbm:cbmVal}];
+          self.costDetailTruckingItems=[{region:group.deliveryGroup,price:'¥'+fee.toLocaleString(),formula:fee+'÷'+headKg2,kg:kgVal,cbm:cbmVal}];
         }else{self.costDetailTruckingItems=null;self.priceEditHeadKg=self.costDetail.headKg;self.priceEditHeadCbm=self.costDetail.headCbm;}
       }else{self.costDetailTruckingItems=null;if(self.costDetail){self.priceEditHeadKg=self.costDetail.headKg;self.priceEditHeadCbm=self.costDetail.headCbm;}}
       var defMarkup=combo&&combo.defaultMarkup!=null?combo.defaultMarkup:0;
@@ -831,16 +907,19 @@ var app = Vue.createApp({
       this.costDetailBilling=combo?combo.billing:'KG';
       this.costDetailServiceType=combo?combo.serviceType:'散货';
       this.showCostDetail=true;
-      var self=this; var snap2=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:{headKg:12525,headCbm:75};
+      var self=this; var snap2=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:[];
+      var tLabel2=combo?combo.transport:'海运';
       var truckMap2=self.truckingCostMap[group.comboName];
       if(truckMap2&&self.costDetail){
         self.costDetailTruckingItems=self.deliveryGroups.map(function(dg){
           var fee=truckMap2[dg.name]||dg.truckFee||0;
-          var kgVal=(fee/snap2.headKg).toFixed(2);
-          var cbmVal=(fee/snap2.headCbm).toFixed(2);
+          var hKg2=self.headBench(snap2,tLabel2,'kg');
+          var hCbm2=self.headBench(snap2,tLabel2,'cbm');
+          var kgVal=hKg2?(fee/hKg2).toFixed(2):'0';
+          var cbmVal=hCbm2?(fee/hCbm2).toFixed(2):'0';
           var isBase=dg.scRMB===0;
-          var delta='';if(!isBase){delta=self.costDetailBilling==='KG'?'+'+((dg.scRMB)/snap2.headKg).toFixed(2)+'/KG':'+'+(dg.scRMB)/snap2.headCbm.toFixed(2)+'/m³';}
-          return {region:dg.name,price:'¥'+fee.toLocaleString(),formula:fee+'÷'+snap2.headKg,kg:kgVal,cbm:cbmVal,isBase:isBase,deltaLabel:delta};
+          var delta='';if(!isBase){delta=self.costDetailBilling==='KG'?(hKg2?'+'+((dg.scRMB)/hKg2).toFixed(2)+'/KG':''):(hCbm2?'+'+(dg.scRMB)/hCbm2.toFixed(2)+'/m³':'');}
+          return {region:dg.name,price:'¥'+fee.toLocaleString(),formula:fee+'÷'+hKg2,kg:kgVal,cbm:cbmVal,isBase:isBase,deltaLabel:delta};
         });
       }else{self.costDetailTruckingItems=null;}
       var combo2=this.enabledCombos.find(function(c){return c.code===group.comboName;});
@@ -912,8 +991,8 @@ var app = Vue.createApp({
       var plist=self.allPriceData[self.selectedBatchName];
       var ref=self.costRefMap[comboKey]||{};var det=ref._detail;var cKg=det?parseFloat(det.totalKg):null,cCbm=det?parseFloat(det.totalCbm):null;
       var seedMarkup=combo.defaultMarkup!=null?combo.defaultMarkup:0;
-      var snap=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:{headKg:12525,headCbm:75};
-      var billing=combo.billing||'KG';var headDiv=billing==='KG'?snap.headKg:snap.headCbm;
+      var snap=self.selectedBatch&&self.selectedBatch._snapshot?self.selectedBatch._snapshot:[];
+      var billing=combo.billing||'KG';var headDiv=self.headDivFromSnapshot(snap,combo.transport,billing);
       self.deliveryGroups.forEach(function(dg){
         var surcharge=dg.scRMB/headDiv;
         var initKg=cKg!==null?(cKg+seedMarkup+surcharge).toFixed(2):null;
@@ -922,6 +1001,76 @@ var app = Vue.createApp({
         self.weightTiers.forEach(function(t){self.allPriceData[self.selectedBatchName].push({comboName:comboKey,warehouseGroup:dimType==='zip'?(combo.zipPrefixes?combo.zipPrefixes.join(','):''):wgKey,weightTier:t,deliveryGroup:dg.name,priceKg:cKg!==null?initKg:'—',priceCbm:cCbm!==null?initCbm:'—',_dimType:dimType,_pendingRecalc:false,zipPrefixes:dimType==='zip'?(combo.zipPrefixes?combo.zipPrefixes.join(','):''):''})});
       });
       ElementPlus.ElMessage.success('基准运价已创建，按'+self.deliveryGroups.length+'个交货地组 × '+self.weightTiers.length+'个重量段 = '+(self.deliveryGroups.length*self.weightTiers.length)+'行'); this.showPriceDialog=false;
+    },
+    // === 导入功能 ===
+    openImport: function(type){
+      this.importType=type; this.importFileName=''; this.importPreview=[];
+      var titles={normal:'导入普通成本项（海运费、文件费等）',truck:'导入拖车费（按交货地组合）',warehouse:'导入卡派仓点成本',express:'导入快递派单价',markup:'导入加成额'};
+      this.importTitle=titles[type]||'导入';
+      this.showImportDialog=true;
+      // 根据类型生成预览数据
+      var self=this;
+      if(type==='normal'){
+        this.importColumns=[{label:'成本段',prop:'seg',width:'100'},{label:'成本项名称',prop:'item',width:'140'},{label:'币种',prop:'currency',width:'60'},{label:'当前建议默认价',prop:'current',width:'120'},{label:'新建议默认价',prop:'newVal',editable:true,width:'120'},{label:'受影响组合',prop:'combos',width:'100'}];
+        this.importPreview=[
+          {seg:'干线运输段',item:'海运费',currency:'USD',current:'3.50',newVal:'',combos:'52',changed:false},
+          {seg:'干线运输段',item:'文件费',currency:'RMB',current:'200.00',newVal:'',combos:'48',changed:false},
+          {seg:'揽收段',item:'装柜费',currency:'RMB',current:'1.50',newVal:'',combos:'38',changed:false},
+          {seg:'派送段',item:'提拆派费',currency:'RMB',current:'0.80',newVal:'',combos:'26',changed:false}
+        ];
+      }else if(type==='truck'){
+        this.importColumns=[{label:'交货地组',prop:'name',width:'140'},{label:'包含交货地',prop:'regions',width:'140'},{label:'当前拖车费单价',prop:'currentFee',width:'120'},{label:'当前加价',prop:'currentSc',width:'90'},{label:'新拖车费单价',prop:'newFee',editable:true,width:'120'},{label:'新加价',prop:'newSc',editable:true,width:'90'},{label:'受影响组合',prop:'combos',width:'90'}];
+        this.importPreview=this.deliveryGroups.map(function(dg){return {name:dg.name,regions:dg.regions,currentFee:dg.truckFee.toFixed(2),currentSc:dg.scRMB.toFixed(2),newFee:'',newSc:'',combos:Math.floor(Math.random()*20+10),changed:false};});
+      }else if(type==='warehouse'){
+        this.importColumns=[{label:'渠道名称',prop:'channel',width:'110'},{label:'服务类型',prop:'serviceType',width:'70'},{label:'FBA仓点',prop:'wh',width:'90'},{label:'币种',prop:'currency',width:'55'},{label:'当前-拆送价',prop:'currentSplit',width:'110'},{label:'当前-一口价',prop:'currentFlat',width:'110'},{label:'当前-直送价',prop:'currentFcl',width:'110'},{label:'新-拆送价',prop:'newSplit',editable:true,width:'110'},{label:'新-一口价',prop:'newFlat',editable:true,width:'110'},{label:'新-直送价',prop:'newFcl',editable:true,width:'110'},{label:'受影响组合',prop:'combos',width:'85'}];
+        this.importPreview=[
+          {channel:'美森360',serviceType:'散货',wh:'ONT8',currency:'USD',currentSplit:'1.20',currentFlat:'—',currentFcl:'—',newSplit:'',newFlat:'',newFcl:'',combos:'6',changed:false},
+          {channel:'美森360',serviceType:'散货',wh:'LAX9',currency:'USD',currentSplit:'1.35',currentFlat:'850.00',currentFcl:'—',newSplit:'',newFlat:'',newFcl:'',combos:'6',changed:false},
+          {channel:'美森360',serviceType:'整柜',wh:'ONT8',currency:'USD',currentSplit:'—',currentFlat:'—',currentFcl:'1800.00',newSplit:'',newFlat:'',newFcl:'',combos:'3',changed:false},
+          {channel:'美森360',serviceType:'整柜',wh:'LAX9',currency:'USD',currentSplit:'—',currentFlat:'—',currentFcl:'1750.00',newSplit:'',newFlat:'',newFcl:'',combos:'3',changed:false}
+        ];
+      }else if(type==='express'){
+        this.importColumns=[{label:'渠道名称',prop:'channel',width:'110'},{label:'重量段',prop:'tier',width:'75'},{label:'邮编前缀',prop:'zip',width:'90'},{label:'币种',prop:'currency',width:'55'},{label:'当前单价',prop:'current',width:'100'},{label:'新单价',prop:'newVal',editable:true,width:'100'},{label:'受影响组合',prop:'combos',width:'85'}];
+        this.importPreview=[
+          {channel:'美森360',tier:'1KG+',zip:'8,9',currency:'RMB',current:'2.50',newVal:'',combos:'3',changed:false},
+          {channel:'美森360',tier:'3KG+',zip:'8,9',currency:'RMB',current:'2.10',newVal:'',combos:'3',changed:false},
+          {channel:'美森360',tier:'1KG+',zip:'90,91',currency:'RMB',current:'3.00',newVal:'',combos:'3',changed:false}
+        ];
+      }else if(type==='markup'){
+        this.importColumns=[{label:'组合名称',prop:'combo',width:'180'},{label:'仓库组/邮编',prop:'dim',width:'110'},{label:'重量段',prop:'tier',width:'75'},{label:'交货地组',prop:'dg',width:'120'},{label:'当前加成额KG',prop:'currentKg',width:'115'},{label:'当前加成额m³',prop:'currentCbm',width:'115'},{label:'新加成额KG',prop:'newKg',editable:true,width:'115'},{label:'新加成额m³',prop:'newCbm',editable:true,width:'115'}];
+        var preview=[];
+        this.priceGroups.slice(0,4).forEach(function(g){
+          var dim=g._matrix&&g._matrix[0]?g._matrix[0]._wh:'';
+          Object.keys(g._matrix&&g._matrix[0]&&g._matrix[0]._tiers||{}).forEach(function(wt){
+            var t=g._matrix[0]._tiers[wt];
+            var hasKg=wt.indexOf('KG')!==-1, hasCbm=wt.indexOf('m³')!==-1;
+            preview.push({combo:g.comboName,dim:dim,tier:wt,dg:g.deliveryGroup||'—',currentKg:hasKg?(t._markup!=null?t._markup.toFixed(2):'—'):'—',currentCbm:hasCbm?(t._markup!=null?t._markup.toFixed(2):'—'):'—',newKg:hasKg?'':'',newCbm:hasCbm?'':'',changed:false});
+          });
+        });
+        this.importPreview=preview;
+      }
+    },
+    downloadTemplate: function(){
+      ElementPlus.ElMessage.success('模板已下载（模拟）：含当前值，仅「新」列可编辑');
+    },
+    handleImportFile: function(file){
+      this.importFileName=file.name;
+      var self=this;
+      // 模拟：将预览中部分行标记为变更
+      this.importPreview.forEach(function(r,i){
+        var editableKeys=Object.keys(r).filter(function(k){return k.indexOf('new')===0||k==='newVal';});
+        if(i%2===0&&editableKeys.length>0){
+          var k=editableKeys[0]; var oldVal=r.current||r.currentFee||r.currentSplit||r.currentKg||''; r[k]=oldVal?(parseFloat(oldVal)+Math.random()*2).toFixed(2):(Math.random()*5+1).toFixed(2); r.changed=true;
+        }
+      });
+      var changedCount=this.importPreview.filter(function(r){return r.changed;}).length;
+      this.importAffectedCombos=changedCount*Math.floor(Math.random()*20+5);
+      ElementPlus.ElMessage.success('文件解析完成，识别到 '+changedCount+' 条变更');
+    },
+    confirmImport: function(){
+      var changed=this.importPreview.filter(function(r){return r.changed;}).length;
+      ElementPlus.ElMessage.success('导入成功！'+changed+' 条成本项已更新，受影响运价行已标记待重算');
+      this.showImportDialog=false;
     }
   }
 });
