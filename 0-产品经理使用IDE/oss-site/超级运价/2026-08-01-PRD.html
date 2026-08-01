@@ -12,10 +12,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 .nav-bar a:hover{color:#7c3aed}
 .nav-bar .sep{color:#cbd5e1;font-size:14px}
 .nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#7c3aed15;color:#7c3aed;font-size:13px;font-weight:500}
-.container{max-width:960px;margin:0 auto;padding:32px 24px 80px}
+.layout{display:flex;max-width:1300px;margin:0 auto;padding:32px 24px 80px;gap:40px}
+.toc{width:220px;flex-shrink:0;position:sticky;top:72px;align-self:flex-start;max-height:calc(100vh - 100px);overflow-y:auto}
+.toc-title{font-size:13px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
+.toc ul{list-style:none}
+.toc li{margin:0}
+.toc a{display:block;padding:4px 0;color:#64748b;text-decoration:none;font-size:13px;line-height:1.5;transition:color 0.15s;border-left:2px solid transparent;padding-left:12px}
+.toc a:hover{color:#7c3aed}
+.toc .toc-lv2 a{font-weight:500;color:#475569}
+.toc .toc-lv3 a{padding-left:28px;font-size:12px}
+.content{flex:1;min-width:0}
 .doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}
-.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b}
-.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155}
+.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b;scroll-margin-top:72px}
+.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155;scroll-margin-top:72px}
 .doc-content p{margin:12px 0}
 .doc-content ul,.doc-content ol{margin:8px 0 8px 24px}
 .doc-content li{margin:4px 0}
@@ -28,6 +37,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 .doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}
 .doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
 .doc-content tr:last-child td{border-bottom:none}
+@media(max-width:900px){.layout{flex-direction:column}.toc{width:100%;position:static;max-height:none;margin-bottom:24px}}
 </style>
 </head>
 <body>
@@ -38,16 +48,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <span class="sep">/</span>
 <span>PRD</span>
 </div>
-<div class="container"><div class="doc-content"><p>﻿# 超级运价模块 — 产品需求文档 (PRD)
+<div class="layout">
+
+<div class="content"><div class="doc-content"><p>﻿# 超级运价模块 — 产品需求文档 (PRD)
 
 <blockquote><strong>文档类型</strong>：PRD | <strong>版本</strong>：V2.19 | <strong>状态</strong>：草稿 | <strong>日期</strong>：2026-07-27</blockquote>
 <blockquote><strong>作者</strong>：AI PM + 飞点业务团队</blockquote>
 <blockquote><strong>评审人</strong>：产品/研发/测试/业务代表</blockquote>
 
-<h3>0.1 变更记录</h3>
+<h3 id="0-1-变更记录">0.1 变更记录</h3>
 
 <div class="table-wrapper"><table><tr><td>版本</td><td>变更日期</td><td>变更内容</td><td>变更人</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>---------</td><td>--------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>V2.19</td><td>2026-07-27</td><td>新增成本Excel导入（普通成本项/拖车费/卡派仓点/快递派单价）+ 加成额导入，入口统一在工作台；新增三层询价体系（运营端/货主端/公开计算器）+ 公开运费计算器+分享链接；新增报价API GET /api/v1/quote/query</td><td>AI PM</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>V2.18</td><td>2026-07-27</td><td>折算基准快照改为数组（全量加载loading_standard启用行）；批次栏汇总信息行移除；批次名称改为可点击链接弹出基本信息卡片</td><td>AI PM</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>V1.0</td><td>2026-05-28</td><td>初稿，基于 RDD v3.4 + Architecture</td><td>AI PM</td></tr></table></div>
@@ -69,24 +81,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <div class="table-wrapper"><table><tr><td>V2.9</td><td>2026-07-13</td><td>成本项模板「公式类型」改为「是否换汇」（是/否），根据币种自动派生不可编辑；建议默认价+币种与是否换汇交换位置；新增界面去启用默认价开关，主列表改为只读标签</td><td>AI PM</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>V2.8</td><td>2026-07-10</td><td>利润模型改固定加成额（元/计价单位）；砍掉 <code>profit_strategy</code> 全局利润策略池实体，改为服务组合字段 <code>default_markup</code>；公布价=成本+加成额；盈亏灯统一"只判运费侧"——工作台=加成额 vs（最大运费优惠+最大泡比优惠）、销售查询=运费净利、附加费不并入、客户/货主端无灯（R07/BPR-1 同步）；删利润策略页</td><td>AI PM</td></tr></table></div>
 
-<h3>0.2 关联链接</h3>
+<h3 id="0-2-关联链接">0.2 关联链接</h3>
 
 <ul><li>RDD：<code>drafts/超级运价/2026-07-27-用户需求.md</code></li></ul>
 <ul><li>Architecture：<code>drafts/超级运价/2026-07-27-数据设计.md</code></li></ul>
 <ul><li>需求背景：<code>analysis/超级运价需求调研/超级运价需求背景.md</code></li></ul>
 <ul><li>原型：<code>demo/员工端-demo/, demo/货主端-demo/</code></li></ul>
 
-<h3>0.3 评审记录</h3>
+<h3 id="0-3-评审记录">0.3 评审记录</h3>
 
 <div class="table-wrapper"><table><tr><td>日期</td><td>参会人</td><td>主要问题/结论</td><td>待办</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>--------</td><td>-------------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>—</td><td>—</td><td>待评审</td><td>—</td></tr></table></div>
 
 <hr>
 
-<h2>1. 需求定义</h2>
+<h2 id="1-需求定义">1. 需求定义</h2>
 
-<h3>1.1 背景与现状</h3>
+<h3 id="1-1-背景与现状">1.1 背景与现状</h3>
 
 飞点跨境物流作为亚马逊 FIST 承运商，当前外采新智慧 TMS 系统仅能承载业务数据记录，无法做成本计算、利润分析、运价管理。核心瓶颈是"成本→报价"链路全部依赖人工 Excel。
 
@@ -96,20 +108,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <ul><li>附加费靠人工判定——商品属性、地址类型、邮编、超重超长等数据源分散在不同系统</li></ul>
 <ul><li>优惠折扣靠人算，成本底价不可追溯（Excel 覆盖即丢失），不同销售给同一客户报价可能不一致</li></ul>
 
-<h3>1.2 目标与成功口径</h3>
+<h3 id="1-2-目标与成功口径">1.2 目标与成功口径</h3>
 
 <strong>目标</strong>：当船公司周一发来新海运费时，运价管理员 30 分钟内完成 140+ 组合成本更新和对客公布价刷新；销售 5 秒内给客户含所有优惠的最终报价。
 
 <strong>成功口径</strong>：
 
 <div class="table-wrapper"><table><tr><td>指标</td><td>当前</td><td>目标</td><td>数据来源</td><td>评估窗口</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>------</td><td>------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>单组合成本核算</td><td>10 分钟</td><td>1 分钟</td><td>系统日志</td><td>上线后第 2 周</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>全量运价更新</td><td>1 天</td><td>0.5 天</td><td>系统日志</td><td>上线后第 2 周</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>成本可追溯性</td><td>无</td><td>100%</td><td>审计日志</td><td>持续</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>运价查询响应</td><td>—</td><td>< 3 秒</td><td>接口耗时</td><td>持续</td></tr></table></div>
 
-<h3>1.3 范围与边界</h3>
+<h3 id="1-3-范围与边界">1.3 范围与边界</h3>
 
 <strong>In Scope（Phase 1 MVP，56 项功能）</strong>：
 <ul><li>服务渠道管理 + 时效配置（预估/送仓/理赔）</li></ul>
@@ -129,7 +141,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <ul><li>销售提成计算（CRM 模块）</li></ul>
 <ul><li>供应商账单对接（SRM 模块）</li></ul>
 
-<h3>1.4 影响范围</h3>
+<h3 id="1-4-影响范围">1.4 影响范围</h3>
 
 <ul><li>影响角色：运价管理员、销售、运营主管、客户（货主）</li></ul>
 <ul><li>影响模块：TMS 超级运价（新建模块）</li></ul>
@@ -137,62 +149,62 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
 <hr>
 
-<h2>2. 枚举字典 ★ 研发必读</h2>
+<h2 id="2-枚举字典-研发必读">2. 枚举字典 ★ 研发必读</h2>
 
 <blockquote>与 Architecture Schema 中 TinyInt 值严格一致。研发实现时以此表为准。</blockquote>
 >
 <blockquote>Demo 原型中使用中文标签展示，生产环境 API 使用本表定义的小整数。两者语义一致，仅展示形式不同。</blockquote>
 
-<h3>2.1 运输方式</h3>
+<h3 id="2-1-运输方式">2.1 运输方式</h3>
 
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td><td>适用表</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>----</td><td>--------</td><td>------</td><td>--------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>10</td><td>海运</td><td>海运</td><td>服务渠道表, 服务组合</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>20</td><td>空运</td><td>空运</td><td>服务渠道表, 服务组合</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>30</td><td>洲际火车</td><td>洲际火车</td><td>服务渠道表, 服务组合</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>40</td><td>洲际卡车</td><td>洲际卡车</td><td>服务渠道表, 服务组合</td></tr></table></div>
 
-<h3>2.2 尾程派送方式</h3>
+<h3 id="2-2-尾程派送方式">2.2 尾程派送方式</h3>
 
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>----</td><td>--------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>10</td><td>卡派</td><td>卡派</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>20</td><td>快递派</td><td>快递派</td></tr></table></div>
 
-<h3>2.3 包税方式</h3>
+<h3 id="2-3-包税方式">2.3 包税方式</h3>
 
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>----</td><td>--------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>10</td><td>包税</td><td>包税</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>20</td><td>不包税</td><td>不包税</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>30</td><td>自主税号</td><td>自主税号</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>40</td><td>自税递延</td><td>自税递延</td></tr></table></div>
 
-<h3>2.4 计费方式</h3>
+<h3 id="2-4-计费方式">2.4 计费方式</h3>
 
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>----</td><td>--------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>10</td><td>公斤</td><td>重量 KG</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>20</td><td>立方米</td><td>体积 m³</td></tr></table></div>
 
-<h3>2.5 服务类型</h3>
+<h3 id="2-5-服务类型">2.5 服务类型</h3>
 
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>----</td><td>--------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>10</td><td>散货</td><td>散货</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>20</td><td>整柜</td><td>整柜</td></tr></table></div>
 
-<h3>2.6 渠道类型</h3>
+<h3 id="2-6-渠道类型">2.6 渠道类型</h3>
 
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td><td>备注</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>----</td><td>--------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>10</td><td>全段服务</td><td>全段服务</td><td>一期默认</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>20</td><td>分段服务</td><td>分段服务</td><td>三期预留</td></tr></table></div>
 
-<h3>2.7 实体状态</h3>
+<h3 id="2-7-实体状态">2.7 实体状态</h3>
 
 <div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>渠道状态</td><td>10</td><td>正常</td><td>正常</td><td>服务渠道表</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>渠道状态</td><td>20</td><td>已冻结</td><td>已冻结</td><td>服务渠道表</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>组合状态</td><td>10</td><td>正常</td><td>正常</td><td>服务组合</td></tr></table></div>
@@ -206,10 +218,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <div class="table-wrapper"><table><tr><td>成本段状态</td><td>10</td><td>正常</td><td>正常</td><td>成本段</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>成本段状态</td><td>20</td><td>已冻结</td><td>已冻结</td><td>成本段</td></tr></table></div>
 
-<h3>2.8 附加费规则枚举</h3>
+<h3 id="2-8-附加费规则枚举">2.8 附加费规则枚举</h3>
 
 <div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>----</td><td>--------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>规则类型</td><td>10</td><td>字段匹配</td><td>字段匹配</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>规则类型</td><td>20</td><td>公式阈值</td><td>公式阈值</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>规则类型</td><td>30</td><td>人工添加</td><td>人工添加</td></tr></table></div>
@@ -230,10 +242,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <div class="table-wrapper"><table><tr><td>计价单位</td><td>40</td><td>每立方米</td><td>按 m³</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>计价单位</td><td>50</td><td>按数量</td><td>按数量</td></tr></table></div>
 
-<h3>2.9 优惠规则枚举</h3>
+<h3 id="2-9-优惠规则枚举">2.9 优惠规则枚举</h3>
 
 <div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>备注</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>对象类型</td><td>10</td><td>客户特批</td><td>客户特批</td><td>泡比优惠/运费优惠/附加费优惠通用</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>对象类型</td><td>20</td><td>客户等级</td><td>客户等级</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>优惠方式</td><td>10</td><td>折扣率</td><td>折扣率</td><td><strong>二期开放</strong>：运费优惠、泡比优惠、附加费优惠</td></tr></table></div>
@@ -243,10 +255,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <div class="table-wrapper"><table><tr><td>有效期类型</td><td>30</td><td>单次有效</td><td>单次有效</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>—</td><td>—</td><td>—</td><td><strong>业务规则</strong>：客户特批优先级高于客户等级，不单独存字段。泡比优惠与运费优惠叠加</td></tr></table></div>
 
-<h3>2.10 其他枚举</h3>
+<h3 id="2-10-其他枚举">2.10 其他枚举</h3>
 
 <div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>说明</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>亚马逊服务等级</td><td>10</td><td>标准</td><td>标准</td><td>亚马逊服务等级</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>亚马逊服务等级</td><td>20</td><td>加急</td><td>加急</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>亚马逊服务等级</td><td>30</td><td>快速</td><td>快速</td></tr></table></div>
@@ -269,9 +281,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
 <hr>
 
-<h2>3. 状态机 ★ 研发必读</h2>
+<h2 id="3-状态机-研发必读">3. 状态机 ★ 研发必读</h2>
 
-<h3>3.1 服务渠道 <code>服务渠道表.status</code></h3>
+<h3 id="3-1-服务渠道-服务渠道表-status">3.1 服务渠道 <code>服务渠道表.status</code></h3>
 
 ``<code>
 正常(正常=10) ──{冻结}──→ 已冻结(已冻结=20)
@@ -279,13 +291,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </code>`<code>
 
 <div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>---------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>正常</td><td>冻结</td><td>已冻结</td><td>运价管理员</td><td>—</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>已冻结</td><td>解冻</td><td>正常</td><td>运价管理员</td><td>—</td></tr></table></div>
 
 <blockquote>冻结后级联影响：该渠道下所有服务组合同步变更为已冻结。启用时弹窗确认是否一并启用关联组合，可选"启用渠道及关联组合"或"仅启用渠道"。</blockquote>
 
-<h3>3.2 周船期批次 </code>周批次表.status<code></h3>
+<h3 id="3-2-周船期批次-周批次表-status">3.2 周船期批次 </code>周批次表.status<code></h3>
 
 </code>`<code>
 预告(预告=10) ──{系统定时}──→ 当前(当前=20) ──{周日24:00}──→ 已过期(已过期=30)
@@ -294,7 +306,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </code>`<code>
 
 <div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>---------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>预告</td><td>系统定时</td><td>当前</td><td>系统</td><td>每周日 24:00 自动流转；同一时刻仅一条 当前</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>当前</td><td>定时到期</td><td>已过期</td><td>系统</td><td>每周日 24:00 自动流转</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>预告</td><td>作废</td><td>已作废</td><td>运价管理员</td><td>数据保留，不可恢复</td></tr></table></div>
@@ -302,20 +314,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
 <blockquote>约束：同时仅一条 当前（应用层乐观锁 + DB 部分唯一索引 </code>UNIQUE(status) WHERE status=20<code>）。不再支持手动发布到当前，系统按日期自动流转。</blockquote>
 
-<h3>3.3 运费优惠规则 </code>运费优惠规则.status<code></h3>
+<h3 id="3-3-运费优惠规则-运费优惠规则-status">3.3 运费优惠规则 </code>运费优惠规则.status<code></h3>
 
 </code>`<code>
 正常(正常=10) ──{到期/单次引用}──→ 已失效(已失效=20) (终态)
 </code>`<code>
 
 <div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>---------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>正常</td><td>固定期限到期</td><td>已失效</td><td>系统定时任务</td><td>valid_to ≤ 当前日期</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>正常</td><td>单次有效被运单引用</td><td>已失效</td><td>系统</td><td>有非取消的运单关联此优惠规则后自动失效</td></tr></table></div>
 
 <blockquote>到期前 7 天系统推送提醒给运价管理员。已失效后运价查询不再展示，但历史运单仍可追溯原优惠。</blockquote>
 
-<h3>3.4 附加费规则 </code>附加费规则.status<code></h3>
+<h3 id="3-4-附加费规则-附加费规则-status">3.4 附加费规则 </code>附加费规则.status<code></h3>
 
 </code>`<code>
 正常(正常=10) ──{冻结}──→ 已冻结(已冻结=20)
@@ -324,7 +336,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
 <blockquote>已被运单引用的规则不可删除，只能冻结。</blockquote>
 
-<h3>3.5 服务组合 </code>服务组合.status<code></h3>
+<h3 id="3-5-服务组合-服务组合-status">3.5 服务组合 </code>服务组合.status<code></h3>
 
 </code>`<code>
 正常(正常=10) ──{冻结}──→ 已冻结(已冻结=20)
@@ -335,10 +347,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
 <hr>
 
-<h2>4. 功能清单与页面映射</h2>
+<h2 id="4-功能清单与页面映射">4. 功能清单与页面映射</h2>
 
 <div class="table-wrapper"><table><tr><td>模块</td><td>功能点</td><td>优先级</td><td>对应页面</td><td>页面类型</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>--------</td><td>--------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>服务渠道</td><td>渠道创建/编辑/冻结解冻+时效配置+重量段+渠道成本项</td><td>P0</td><td>服务渠道列表 / 服务渠道编辑</td><td>列表页+编辑页</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>航线管理</td><td>航线创建/编辑/N:N关联渠道</td><td>P0</td><td>航线列表</td><td>列表页+编辑弹窗</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>周船期批次</td><td>按周创建/复制/状态流转</td><td>P0</td><td>周船期批次列表</td><td>列表页</td></tr></table></div>
@@ -366,7 +378,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
 <hr>
 
-<h3>4.1 页面导航关系图</h3>
+<h3 id="4-1-页面导航关系图">4.1 页面导航关系图</h3>
 
 <blockquote>14 个原型页面之间的跳转关系、数据流向、角色入口。</blockquote>
 
@@ -420,9 +432,9 @@ flowchart TD
 
 <hr>
 
-<h2>5. 页面规格 ★ 研发必读</h2>
+<h2 id="5-页面规格-研发必读">5. 页面规格 ★ 研发必读</h2>
 
-<h3>5.1 运价更新工作台（首页）</h3>
+<h3 id="5-1-运价更新工作台-首页">5.1 运价更新工作台（首页）</h3>
 
 <strong>页面信息</strong>：
 <ul><li>路径：首页 → 运价更新工作台</li></ul>
@@ -436,7 +448,7 @@ flowchart TD
 <strong>本周船期 Tab</strong>：
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>航线</td><td>route.route_code + origin_port_name → dest_port_name (supplier)</td><td>如"CLX 上海→长滩(MATSON)"</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>截单时间（按本地仓）</td><td>sailing_schedule.cutoff_times</td><td>JSON 渲染为多行</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>ETD</td><td>sailing_schedule.etd</td><td>日期</td></tr></table></div>
@@ -456,12 +468,12 @@ flowchart TD
 
 <hr>
 
-<h3>5.2 服务渠道列表 / 编辑</h3>
+<h3 id="5-2-服务渠道列表-编辑">5.2 服务渠道列表 / 编辑</h3>
 
 <strong>列表页字段</strong>：
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>渠道名称</td><td>服务渠道表.name</td><td>原样</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>运输方式</td><td>服务渠道表.transport_mode</td><td>枚举渲染</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>目的国</td><td>服务渠道表.dest_countries</td><td>JSON 数组渲染</td></tr></table></div>
@@ -479,7 +491,7 @@ flowchart TD
 <strong>基本信息字段表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>默认值</td><td>校验规则</td><td>数据来源</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>--------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>name</td><td>渠道名称</td><td>字符串(50)</td><td>✅</td><td>—</td><td>长度 1-50</td><td>手动输入</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>origin_country</td><td>起运国</td><td>字符串(10)</td><td>✅</td><td>—</td><td>—</td><td>基础资料-国家（单选）</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>dest_countries</td><td>目的国</td><td>数组</td><td>✅</td><td>—</td><td>至少选 1 个</td><td>基础资料-国家（多选）</td></tr></table></div>
@@ -512,12 +524,12 @@ flowchart TD
 
 <hr>
 
-<h3>5.3 航线列表</h3>
+<h3 id="5-3-航线列表">5.3 航线列表</h3>
 
 <strong>列表页字段</strong>：
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>航线代码</td><td>route.route_code</td><td>如"AAC/AAC2"</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>出发港</td><td>route.origin_port_name(origin_港口代码)</td><td>"上海港(shg)"</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>目的港</td><td>route.dest_port_name(dest_港口代码)</td><td>"长滩港(uslax)"</td></tr></table></div>
@@ -528,7 +540,7 @@ flowchart TD
 <strong>新增/编辑弹窗字段表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td><td>数据来源</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>route_code</td><td>航线代码</td><td>字符串(20)</td><td>✅</td><td>—</td><td>手动输入，默认空可编辑</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>origin_港口代码</td><td>出发港代码</td><td>字符串(10)</td><td>✅</td><td>与目的港不可相同</td><td>港口主数据（选择名称后自动带出）</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>origin_port_name</td><td>出发港名称</td><td>字符串(50)</td><td>✅</td><td>—</td><td>港口主数据下拉</td></tr></table></div>
@@ -547,14 +559,14 @@ flowchart TD
 
 <hr>
 
-<h3>5.4 船期维护</h3>
+<h3 id="5-4-船期维护">5.4 船期维护</h3>
 
 <strong>页面信息</strong>：在周批次详情页内，按航线分别录入本周船期。
 
 <strong>字段表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td><td>说明</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>route_id</td><td>航线</td><td>长整数</td><td>✅</td><td>—</td><td>下拉选航线</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>cutoff_times</td><td>截单时间</td><td>数组</td><td>✅</td><td>至少 1 个仓库；截单日期 < ETD</td><td>{"仓库名称":"日期"}</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>etd</td><td>预计开船时间(ETD)</td><td>日期</td><td>✅</td><td>—</td><td>日期选择器；变更时自动重算 ETA</td></tr></table></div>
@@ -571,19 +583,19 @@ flowchart TD
 
 <hr>
 
-<h3>5.5 成本段 / 成本项模板管理</h3>
+<h3 id="5-5-成本段-成本项模板管理">5.5 成本段 / 成本项模板管理</h3>
 
 <strong>成本段列表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>name</td><td>段名称</td><td>字符串(20)</td><td>✅</td></tr></table></div>
 | status | 状态 | 小整数 | ✅ | 10:正常 20:已冻结
 
 <strong>成本项模板列表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>段级_id</td><td>所属成本段</td><td>长整数</td><td>✅</td><td>—</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>name</td><td>项名称</td><td>字符串(30)</td><td>✅</td><td>同段下不可重名 UNIQUE(段级_id, name)</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>formula_type</td><td>是否换汇</td><td>小整数</td><td>✅</td><td>10:否(RMB) 20:是(USD)，界面根据币种自动派生、不可编辑</td></tr></table></div>
@@ -596,7 +608,7 @@ flowchart TD
 <strong>渠道成本项字段表</strong>（服务渠道 Tab「成本项」内，继承全局模板可覆盖）：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>默认值</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>--------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>template_id</td><td>引用模板</td><td>长整数</td><td>✅</td><td>—</td><td>FK → cost_item_template</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>单价</td><td>单价</td><td>小数(10,2)</td><td>✅</td><td>继承模板默认价</td><td>≥ 0，可覆盖</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>币种</td><td>币种</td><td>小整数</td><td>✅</td><td>继承模板</td><td>10:RMB 20:USD</td></tr></table></div>
@@ -611,12 +623,12 @@ flowchart TD
 
 <hr>
 
-<h3>5.6 服务组合列表 / 编辑</h3>
+<h3 id="5-6-服务组合列表-编辑">5.6 服务组合列表 / 编辑</h3>
 
 <strong>列表页字段</strong>：
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>组合名称</td><td>服务组合.组合级_code</td><td>自动拼接</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>服务渠道</td><td>服务组合.channel_id → name</td><td>渲染渠道名称</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>运输方式</td><td>transport_mode</td><td>枚举渲染</td></tr></table></div>
@@ -639,12 +651,12 @@ flowchart TD
 
 <hr>
 
-<h3>5.7 计费规则（组合编辑弹窗内嵌，统一表格）</h3>
+<h3 id="5-7-计费规则-组合编辑弹窗内嵌-统一表格">5.7 计费规则（组合编辑弹窗内嵌，统一表格）</h3>
 
 挂在服务组合上，首行为通用规则（不可删除），可追加特殊规则行按客户匹配覆盖。<strong>1:N</strong>。
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>默认值</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>--------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>rule_type</td><td>对象类型</td><td>小整数</td><td>✅</td><td>10(通用) / 20(特殊规则)</td><td>首行固定=10</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>target_customers</td><td>目标</td><td>数组</td><td>条件</td><td>—</td><td>rule_type=20 时必填；多选客户；同一客户不可在多条规则中出现</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>volume_factor</td><td>计泡系数</td><td>整数</td><td>✅</td><td>KG=6000 / m³=363</td><td>> 0</td></tr></table></div>
@@ -660,12 +672,12 @@ flowchart TD
 
 <hr>
 
-<h3>5.8 默认加成额（服务组合字段）</h3>
+<h3 id="5-8-默认加成额-服务组合字段">5.8 默认加成额（服务组合字段）</h3>
 
 利润为服务组合上的字段 </code>default_markup<code>（固定金额，元/计价单位），不再有独立的全局利润策略实体，也不是成本项内联字段。成本和利润分离——成本管理只管成本，利润在组合上以固定加成额表达。
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>default_markup</td><td>默认加成额</td><td>小数(10,2)</td><td>元/计价单位。组合 billing_unit=KG→元/KG，m³→元/m³；默认 0</td></tr></table></div>
 
 <strong>数据流</strong>：服务组合维护 </code>default_markup<code>（单位随计价方式）→ 新建运价行时取组合加成额作起步值 → 运价编辑：公布价 = 成本底价 + 加成额 + 拖车费交货地组加价/KG，运价管理员逐行覆盖（所有重量段初始值相同）。
@@ -674,7 +686,7 @@ flowchart TD
 
 <hr>
 
-<h3>5.9 运价维护（工作台运价 Tab）</h3>
+<h3 id="5-9-运价维护-工作台运价-Tab">5.9 运价维护（工作台运价 Tab）</h3>
 
 <strong>页面信息</strong>：运价更新工作台内嵌，本周运价 Tab。两级折叠视图：主表行 = 服务组合 × 交货地组，列 = 服务组合 | 交货地 | 公布价范围 | 操作（编辑按钮）。展开子表按派送方式分化——卡派：仓库组 | 成本底价 | 最大优惠 | 各重量段（利润额+公布价+成本）；快递派：邮编前缀 | 最大优惠 | 各重量段（成本+利润额+公布价，成本嵌入每格无独立列）。盈亏色标（同单位相减，精确，只判运费侧）：加成额≥最大优惠额→绿、0<加成额<最大优惠额→红（给满优惠会亏）、加成额≤0→灰。<strong>最大优惠 = 该组合最大运费优惠额 + 最大泡比优惠额</strong>（两者都挂组合、都减运费、叠加，取最坏情况；元/计价单位）。附加费不进工作台灯。
 
@@ -696,7 +708,7 @@ flowchart TD
 <hr>
 
 
-<h3>5.10 附加费规则列表 / 编辑</h3>
+<h3 id="5-10-附加费规则列表-编辑">5.10 附加费规则列表 / 编辑</h3>
 
 <strong>列表页字段</strong>：规则名称、规则类型(字段匹配/公式阈值/人工添加)、动作类型(加收/标识/阻止)、生效范围、计价单位、状态
 
@@ -708,7 +720,7 @@ flowchart TD
 <strong>通用字段表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>name</td><td>规则名称</td><td>字符串(50)</td><td>✅</td><td>唯一 Unique</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>rule_type</td><td>规则类型</td><td>小整数</td><td>✅</td><td>10/20/30</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>action_type</td><td>动作类型</td><td>小整数</td><td>✅</td><td>10/20/30</td></tr></table></div>
@@ -733,14 +745,14 @@ flowchart TD
 
 <hr>
 
-<h3>5.11 运费优惠 / 附加费优惠规则（内嵌于父实体编辑弹窗）</h3>
+<h3 id="5-11-运费优惠-附加费优惠规则-内嵌于父实体编辑弹窗">5.11 运费优惠 / 附加费优惠规则（内嵌于父实体编辑弹窗）</h3>
 
 运费优惠规则在<strong>服务组合编辑弹窗</strong>内直接维护，附加费优惠规则在<strong>附加费规则编辑弹窗</strong>内直接维护。均无独立页面。两种优惠均支持从列表页批量设置。
 
 <strong>运费优惠编辑字段表</strong>（内嵌于服务组合编辑弹窗）：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>combination_id</td><td>服务组合</td><td>长整数</td><td>✅</td><td>FK，规则天然绑定所在组合</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>target_type</td><td>优惠对象类型</td><td>小整数</td><td>✅</td><td>10:客户特批 20:客户等级</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>target_levels</td><td>目标客户等级</td><td>数组</td><td>条件</td><td>target_type=20 时必填；多选，下拉取值来源于客商中心-等级管理</td></tr></table></div>
@@ -756,7 +768,7 @@ flowchart TD
 <strong>附加费优惠编辑字段表</strong>（内嵌于附加费规则编辑弹窗，共享 target/validity 逻辑，差异字段如下）：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>surcharge_rule_id</td><td>目标附加费规则</td><td>长整数</td><td>✅</td><td>FK → 附加费规则；天然绑定所在规则</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>target_type</td><td>优惠对象类型</td><td>小整数</td><td>✅</td><td>10:客户特批 20:客户等级</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>target_levels</td><td>目标客户等级</td><td>数组</td><td>条件</td><td>target_type=20 时必填；多选</td></tr></table></div>
@@ -780,7 +792,7 @@ flowchart TD
 
 <hr>
 
-<h3>5.12 运价查询（运营端）</h3>
+<h3 id="5-12-运价查询-运营端">5.12 运价查询（运营端）</h3>
 
 <strong>页面信息</strong>：
 <ul><li>路径：查价订舱 → 运营端运价查询</li></ul>
@@ -807,7 +819,7 @@ flowchart TD
 
 <strong>上 — 查询栏</strong>：
 <div class="table-wrapper"><table><tr><td>字段</td><td>必填</td><td>控件</td><td>说明</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>国家</td><td>✅</td><td>下拉单选，placeholder="请选择国家"，默认空</td><td>过滤渠道</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>仓库代码</td><td>✅</td><td>下拉搜索，placeholder="请选择仓库代码"，默认空</td><td>FBA 仓库代码</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>包裹信息</td><td>✅</td><td>点击弹窗</td><td>空时显示"点击填写包裹信息"，有数据时摘要显示件数·总重·体积</td></tr></table></div>
@@ -821,14 +833,14 @@ flowchart TD
 
 <strong>下左 — 筛选面板</strong>（高度自适应，无底部留白）：
 <div class="table-wrapper"><table><tr><td>筛选项</td><td>控件</td><td>枚举来源</td><td>说明</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>渠道专线</td><td>多选复选框</td><td>海卡 / 海派 / 空卡 / 空派</td><td>专线 = 运输方式 + 尾程派送组合；控制右侧分组显隐</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>货物属性</td><td>下拉多选</td><td>商品管理-商品属性枚举（粉末/液体/带电/超大/超重/易碎/普货）</td><td>命中附加费规则</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>包税方式</td><td>下拉多选</td><td>包税 / 不包税</td><td>过滤组合</td></tr></table></div>
 
 <strong>渠道专线映射</strong>：
 <div class="table-wrapper"><table><tr><td>专线</td><td>运输方式</td><td>尾程派送</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>海卡</td><td>海运</td><td>卡派</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>海派</td><td>海运</td><td>快递派</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>空卡</td><td>空运</td><td>卡派</td></tr></table></div>
@@ -839,7 +851,7 @@ flowchart TD
 <ul><li><strong>下方结果</strong>：</code>overflow-y:auto<code> 独立滚动，按渠道专线分组折叠</li></ul>
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td><td>可见角色</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>渠道</td><td>服务渠道表.name</td><td>原样</td><td>全部</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>计价方式</td><td>运价行匹配</td><td>KG / CBM</td><td>全部</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>公布价</td><td>price_table_row.price_每公斤/cbm</td><td>两位小数 + 盈亏标识</td><td>全部</td></tr></table></div>
@@ -865,7 +877,7 @@ flowchart TD
 <ul><li><strong>底部说明</strong>：截单日为该交货地最晚收货/截单时间，提醒客户在对应日期前将货交至该地</li></ul>
 
 <div class="table-wrapper"><table><tr><td>矩阵列</td><td>数据来源</td><td>说明</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>船期</td><td>sailing_schedule.route_name</td><td>当周该渠道关联航线每条船期</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>ETD / ETA</td><td>sailing_schedule.etd / eta</td><td>出发/到达</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>最快提取</td><td>sailing_schedule.fastest_pickup</td><td>目的地最快可提货日</td></tr></table></div>
@@ -874,7 +886,7 @@ flowchart TD
 
 <hr>
 
-<h3>5.13 货主端在线询价</h3>
+<h3 id="5-13-货主端在线询价">5.13 货主端在线询价</h3>
 
 与运营端布局一致（上查询栏 + 下左右布局 + 包裹弹窗）。前端差异：
 <ul><li><strong>不展示</strong>：成本底价列、盈亏标识、盈亏标签列</li></ul>
@@ -884,7 +896,7 @@ flowchart TD
 
 <hr>
 
-<h3>5.14 操作审计日志 / 询价日志</h3>
+<h3 id="5-14-操作审计日志-询价日志">5.14 操作审计日志 / 询价日志</h3>
 
 均为只读列表页，不支持编辑/删除。
 
@@ -898,14 +910,14 @@ flowchart TD
 
 <hr>
 
-<h3>5.15 折算基准列表</h3>
+<h3 id="5-15-折算基准列表">5.15 折算基准列表</h3>
 
 <strong>页面信息</strong>：独立列表页，管理头程/派送 KG/CBM 折算基准。基准类型（head/tail）为顶层维度——选"头程"时仅展示头程 KG/CBM，尾程方式置灰不可编辑；选"派送"时仅展示派送 KG/CBM，尾程方式必填（卡派/快递派）。
 
 <strong>列表页字段</strong>：
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>基准类型</td><td>loading_standard.standard_type</td><td>10:头程 20:派送</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>运输方式</td><td>loading_standard.transport_mode</td><td>枚举渲染</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>尾程方式</td><td>loading_standard.last_mile_method</td><td>枚举；head行置灰为空；tail行必填（卡派/快递派）</td></tr></table></div>
@@ -916,7 +928,7 @@ flowchart TD
 <strong>新增/编辑弹窗字段表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td><td>数据来源</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>transport_mode</td><td>运输方式</td><td>小整数</td><td>✅</td><td>—</td><td>枚举：10/20/30/40</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>last_mile_method</td><td>尾程方式</td><td>小整数</td><td>—</td><td>—</td><td>枚举：10/20</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>standard_type</td><td>类型</td><td>小整数</td><td>✅</td><td>—</td><td>10:头程 20:派送</td></tr></table></div>
@@ -933,14 +945,14 @@ flowchart TD
 
 <hr>
 
-<h3>5.16 重量段模板列表</h3>
+<h3 id="5-16-重量段模板列表">5.16 重量段模板列表</h3>
 
 <strong>页面信息</strong>：独立列表页，定义各运输方式下的重量段区间。
 
 <strong>列表页字段</strong>：
 
 <div class="table-wrapper"><table><tr><td>列名</td><td>数据来源</td><td>格式</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>模板名称</td><td>weight_tier_template.name</td><td>原样</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>运输方式</td><td>weight_tier_template.transport_mode</td><td>枚举渲染</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>计价单位</td><td>weight_tier_template.billing_unit</td><td>枚举渲染</td></tr></table></div>
@@ -950,7 +962,7 @@ flowchart TD
 <strong>新增/编辑弹窗字段表</strong>：
 
 <div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td><td>数据来源</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>name</td><td>模板名称</td><td>字符串(30)</td><td>✅</td><td>—</td><td>手动输入</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>transport_mode</td><td>运输方式</td><td>小整数</td><td>✅</td><td>—</td><td>枚举：10/20/30/40</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>billing_unit</td><td>计价单位</td><td>小整数</td><td>✅</td><td>—</td><td>枚举：10:KG 20:CBM</td></tr></table></div>
@@ -967,10 +979,10 @@ flowchart TD
 
 <hr>
 
-<h2>6. 业务规则 ★ 研发必读</h2>
+<h2 id="6-业务规则-研发必读">6. 业务规则 ★ 研发必读</h2>
 
 <div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>--------</td><td>----------</td><td>------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>R01</td><td>成本计算</td><td></code>每公斤成本 = 单价 × 汇率 ÷ 折算基准(KG)<code>（USD换汇）；或 </code>每公斤成本 = 单价 ÷ 折算基准(KG)<code>（RMB直接）</td><td>combination_cost_item.每公斤成本/每立方米成本</td><td>汇率未填时阻断计算</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>R02</td><td>公布价生成</td><td></code>公布价 = 成本底价 + 加成额 + 拖车费交货地组加价/KG<code>（加成额，元/计价单位，取自组合 default_markup 作起步值，可逐行覆盖；拖车费交货地组加价按所选交货地组查表）；KG/CBM 分别计算</td><td>price_table_row.price_每公斤/cbm</td><td>—</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>R03</td><td>运价查询-重量段匹配</td><td>KG路径→计费重量匹配 weight_tier(KG)的 start≤x<end；CBM路径→计费体积匹配 weight_tier(CBM)</td><td>公布价</td><td>无匹配→标记"暂未报价"</td></tr></table></div>
@@ -1004,9 +1016,9 @@ flowchart TD
 
 <hr>
 
-<h2>7. 计算公式 ★ 研发必读</h2>
+<h2 id="7-计算公式-研发必读">7. 计算公式 ★ 研发必读</h2>
 
-<h3>7.1 货物参数换算（运价查询 Step 0）</h3>
+<h3 id="7-1-货物参数换算-运价查询-Step-0">7.1 货物参数换算（运价查询 Step 0）</h3>
 
 </code>`<code>
 变量:
@@ -1027,7 +1039,7 @@ flowchart TD
 精度: 重量 0.1KG；体积 0.001m³；尺寸 1cm
 </code>`<code>
 
-<h3>7.2 成本底价计算（流程三）</h3>
+<h3 id="7-2-成本底价计算-流程三">7.2 成本底价计算（流程三）</h3>
 
 </code>`<code>
 变量:
@@ -1067,7 +1079,7 @@ flowchart TD
 精度: 0.0001 (每公斤成本/cbm 内部) → 0.01 (公布价展示)
 </code>`<code>
 
-<h3>7.3 公布价生成（流程四）</h3>
+<h3 id="7-3-公布价生成-流程四">7.3 公布价生成（流程四）</h3>
 
 </code>`<code>
 固定加成额:
@@ -1078,7 +1090,7 @@ flowchart TD
 拖车费交货地组加价按所选交货地组查表取值，KG/CBM 分别计算，互不干扰。结果写入 price_table_row。
 </code>`<code>
 
-<h3>7.4 最终报价计算（流程八，Step 5+6+7+8）</h3>
+<h3 id="7-4-最终报价计算-流程八-Step-5-6-7-8">7.4 最终报价计算（流程八，Step 5+6+7+8）</h3>
 
 </code>`<code>
 运费部分:
@@ -1105,10 +1117,10 @@ flowchart TD
 
 <hr>
 
-<h2>8. 权限矩阵</h2>
+<h2 id="8-权限矩阵">8. 权限矩阵</h2>
 
 <div class="table-wrapper"><table><tr><td>操作</td><td>运价管理员</td><td>销售</td><td>运营主管</td><td>客户(货主)</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>----------</td><td>------</td><td>---------</td><td>----------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>服务渠道 CRUD</td><td>✅</td><td>❌</td><td>仅查看</td><td>❌</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>航线 CRUD</td><td>✅</td><td>❌</td><td>仅查看</td><td>❌</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>周批次/船期 CRUD</td><td>✅</td><td>❌</td><td>仅查看</td><td>❌</td></tr></table></div>
@@ -1126,10 +1138,10 @@ flowchart TD
 
 <hr>
 
-<h2>9. 接口清单</h2>
+<h2 id="9-接口清单">9. 接口清单</h2>
 
 <div class="table-wrapper"><table><tr><td>接口</td><td>方法</td><td>路径</td><td>触发页面</td><td>关键参数</td><td>失败处理</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>查询服务渠道列表</td><td>GET</td><td></code>/api/service-channels<code></td><td>渠道列表</td><td>?status=</td><td>—</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>创建服务渠道</td><td>POST</td><td></code>/api/service-channel<code></td><td>渠道编辑</td><td>body 含子表(时效/重量段/成本项)</td><td>校验失败返回错误字段</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>编辑服务渠道</td><td>PUT</td><td></code>/api/service-channel/{id}<code></td><td>渠道编辑</td><td>body 含子表</td><td>version 乐观锁</td></tr></table></div>
@@ -1161,10 +1173,10 @@ flowchart TD
 
 <hr>
 
-<h2>10. 错误提示文案汇总</h2>
+<h2 id="10-错误提示文案汇总">10. 错误提示文案汇总</h2>
 
 <div class="table-wrapper"><table><tr><td>编号</td><td>触发条件</td><td>文案</td><td>类型</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>---------</td><td>------</td><td>------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>E01</td><td>送仓时效 提柜>开船</td><td>"提柜至送仓天数不可超过开船至送仓"</td><td>阻断</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>E02</td><td>出发港=目的港</td><td>"出发港和目的港不能相同"</td><td>阻断</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>E03</td><td>周结束日<周起始日</td><td>"周结束日不得早于周起始日"</td><td>阻断</td></tr></table></div>
@@ -1183,10 +1195,10 @@ flowchart TD
 
 <hr>
 
-<h2>11. 验收标准</h2>
+<h2 id="11-验收标准">11. 验收标准</h2>
 
 <div class="table-wrapper"><table><tr><td>编号</td><td>验收项</td><td>验收方式</td><td>通过标准</td><td>关联 AC</td></tr></table></div>
-
+<div class="table-wrapper"><table><tr><td>------</td><td>--------</td><td>---------</td><td>---------</td><td>---------</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>A01</td><td>渠道创建+时效配置</td><td>手动操作</td><td>创建渠道→填写全部Tab→保存→重新打开数据一致</td><td>AC0a~AC0g</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>A02</td><td>航线管理+港口引用</td><td>手动操作</td><td>创建航线→选出发港自动带出代码→选目的港→选供应商（按港口类型过滤明细）→关联渠道→保存</td><td>AC0h, AC0p</td></tr></table></div>
 <div class="table-wrapper"><table><tr><td>A03</td><td>周批次+船期维护</td><td>手动操作</td><td>新建批次→录入船期→发布→自动当前→原批次已过期</td><td>AC0i~AC0k</td></tr></table></div>
@@ -1212,7 +1224,7 @@ flowchart TD
 
 <hr>
 
-<h2>12. 附录</h2>
+<h2 id="12-附录">12. 附录</h2>
 
 <ul><li><strong>术语表</strong>：</li></ul>
   - FBA (Fulfillment by Amazon) — 亚马逊物流服务
@@ -1229,5 +1241,6 @@ flowchart TD
 <ul><li><strong>原型</strong>：见 </code>demo/员工端-demo/, demo/货主端-demo/<code></li></ul>
 <ul><li><strong>AC 清单</strong>：见 </code>prds/超级运价/AC-Checklist.md`</li></ul>
 </p></div></div>
+</div>
 </body>
 </html>
