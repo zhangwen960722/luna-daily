@@ -188,7 +188,7 @@ trigger: always_on
 | 1 | **LOG.md** | 索引表加日期行 + 插入 `<a id>` 锚点摘要条目（先读后插） |
 | 2 | **TODO.md** | 更新今日完成 / 保留待办 |
 | 3 | **git** | `git add` 变更文件 → `git commit` → `git push` |
-| 4 | **oss-site** | `drafts/` 下最新 md → HTML 放入 `oss-site/`，删旧日期 HTML |
+| 4 | **oss-site** | 运行 `node oss-site/build.js` 全量重建文档站点（自动：MD→HTML + 本页目录 + 交叉引用链接 + 删旧日期文件） |
 
 **触发词**（满足任一即执行）："先这样""定稿""今天到这""明天继续""下了""88""拜拜""更新文档""同步""归档"。
 
