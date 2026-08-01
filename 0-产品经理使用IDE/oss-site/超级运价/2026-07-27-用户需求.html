@@ -49,7 +49,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
     <p>﻿# 需求定义卡片 (RDD) — 超级运价模块</p>
 <blockquote>
 <p><strong>原始需求</strong>：从0-1搭建TMS跨境物流系统，超级运价是第一块核心模块。当前外采新智慧TMS等同于&quot;线上记事本&quot;，无法做成本计算、利润分析、运价管理。</p>
-<p><strong>文档版本</strong>: v5.1 | <strong>日期</strong>: 2026-07-23 | <strong>作者</strong>: AI PM + 飞点业务团队（v5.1: 骨架重生式复制——本周架构铺底+决策继承，失效自动移除+新增标记；v5.0: 装柜费取消交货地影响因素改为统一价；新增交货地组合实体；运价矩阵加入交货地组维度）</p>
+<p><strong>文档版本</strong>: v5.2 | <strong>日期</strong>: 2026-07-27 | <strong>作者</strong>: AI PM + 飞点业务团队（v5.2: 成本/加成额Excel导入+三层询价体系+公开运费计算器分享链接；v5.1: 骨架重生式复制——本周架构铺底+决策继承，失效自动移除+新增标记）</p>
 </blockquote>
 <hr>
 <h2>1. 核心洞察 (Insight)</h2>
@@ -128,7 +128,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   笛卡尔积生成组合 → 渠道成本项继承 → 计费规则 → 组合默认加成额
       ↓
 【每周运维】
-  周船期批次 → 船期录入 → 运价行维护 → 成本更新(模板→渠道+组合) → 公布价刷新 → 发布
+  周船期批次 → 船期录入 → 成本导入(Excel四类) → 加成额导入 → 运价行维护 → 成本重算 → 公布价刷新 → 发布
       ↓
 【销售查询】
   输入货物参数 → 渠道初筛 → 组合匹配 → 运价行匹配 → 附加费匹配 → 优惠叠加 → 最终报价
@@ -174,8 +174,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 
     subgraph 泳道二_运价管理员[&quot;👤 运价管理员（周一上午）&quot;]
         M1[新建周批次&lt;br&gt;（骨架重生+决策继承）&lt;br&gt;全部标记 待重算] --&gt; M2[调整 美元→人民币 汇率&lt;br&gt;标记美元项待重算]
-        M2 --&gt; M3[更新海运费等&lt;br&gt;美元成本项原始单价&lt;br&gt;含头程+卡派仓点+快递派单价]
-        M3 --&gt; M7[系统异步重算&lt;br&gt;每公斤成本 / 每立方米成本]
+        M2 --&gt; M3[导入成本&lt;br&gt;普通成本项/拖车费&lt;br&gt;卡派仓点/快递派单价&lt;br&gt;Excel上传→预览→确认]
+        M3 --&gt; M3b[导入加成额&lt;br&gt;Excel上传→预览→确认&lt;br&gt;公布价联动]
+        M3b --&gt; M7[系统异步重算&lt;br&gt;每公斤成本 / 每立方米成本]
         M7 --&gt; M8[工作台提醒条:&lt;br&gt;X条待重算]
         M8 --&gt; M9[运价维护&lt;br&gt;逐重量段覆盖公布价]
         M9 --&gt; M10[确认公布价]
@@ -775,6 +776,19 @@ Level 1: 定义段名       Level 2: 定义项名+公式+建议价    Level 3: �
 头程共享成本（非派送段，所有仓点共用）：
   揽收段 + 干线运输段 + 关务段 + 仓储段 + ...
   → 按头程行 公斤折算基准 / 立方米折算基准 均摊为 每公斤 和 每立方米 单价
+  ⚠ 例外：揽收段内的拖车费按 交货地组 定价，各交货地组独立计费，不共享（见下方「拖车费」）
+
+拖车费（揽收段，按交货地组独立）：
+  拖车费是揽收段的预置成本项，但不是统一价——它绑定 交货地组合（delivery_group）。
+  每个交货地组定义了两个字段：
+    ├── 拖车费单价 (truck_fee)：该交货地组的拖车基准单价（元）
+    └── 拖车费加价 (sc_rmb)：相对基准的加价（元），可为负数
+  → 拖车费总额 = truck_fee + sc_rmb
+  → 按 头程公斤折算基准 / 头程立方米折算基准 均摊为 per KG 和 per m³
+  → 最终以&quot;每 KG/m³ 加价&quot;形式显示在运价行交货地列
+
+  因此成本底价按交货地不同——交货地不同 → 拖车费不同 → 头程成本不同 → 成本底价与公布价随之不同。
+  示例：义乌仓长途拖车（truck_fee=1500 + sc_rmb=200 = 1700元）&gt; 珠三角（truck_fee=1200 + sc_rmb=0 = 1200元），义乌头程成本更高。
 
 派送段普通项（所有仓点共用，与头程成本项逻辑一致）：
   提拆派费等不区分仓点、不区分报价来源的派送段成本项
@@ -1340,7 +1354,7 @@ Level 1: 定义段名       Level 2: 定义项名+公式+建议价    Level 3: �
 <ul>
 <li>左侧成本段列表（5 段），右侧成本项表格（启用、成本项、是否换汇、建议默认价、编辑/批量更新）</li>
 <li>新增/编辑成本项：段、名称、建议默认价+币种、是否换汇（自动派生，不可编辑）</li>
-<li>预置项（仓点成本/快递派单价）：不可禁用、不可删除、批量更新隐藏、默认价置灰为&quot;—&quot;</li>
+<li>预置项（拖车费/仓点成本/快递派单价）：不可禁用、不可删除、批量更新隐藏、编辑时仅名称可修改，其余字段不可编辑</li>
 <li>批量更新：修改建议默认价 → 展示受影响组合清单（勾选同步）→ 可选&quot;同步后自动更新当周运价表&quot;</li>
 <li>模板修改后通过「批量更新」推送到选中组合（仅更新已有项，不新增不删除）</li>
 <li>派送段仓点成本/快递派单价在服务渠道级别维护，渠道变更后可按项同步到组合</li>
@@ -1362,6 +1376,180 @@ Level 1: 定义段名       Level 2: 定义项名+公式+建议价    Level 3: �
 <p>成本项 <code>effective_from</code> 字段为一期预留（原型不展示），二期实现定时自动切换。</p>
 </blockquote>
 <p><strong>相关 AC</strong>：<code>AC1</code> <code>AC2</code> <code>AC3</code> <code>AC4</code> <code>AC5</code> <code>AC6</code> <code>AC28</code></p>
+<hr>
+<h3>5.9 成本 Excel 导入</h3>
+<blockquote>
+<p><strong>触发</strong>：船公司/代理周一早上发来新报价 Excel，运价管理员需批量更新成本项价格。<br><strong>入口</strong>：工作台 <code>[导入成本 ▼]</code> 下拉菜单，统一收拢四类成本导入。<br><strong>通用流程</strong>：下载模板（预填当前值）→ 运价管理员填新价格 → 上传 → 系统识别变更行 → 预览变更清单（受影响组合数）→ 确认 → 执行更新 + 触发传播 + 标记受影响运价行待重算。</p>
+</blockquote>
+<p><strong>导入规则</strong>：</p>
+<ul>
+<li>空单元格 = 不更新该字段</li>
+<li>按匹配键定位，匹配不到的行跳过并在报告中标注</li>
+<li>不新增不删除记录，仅更新已有项的价格</li>
+<li>错误处理：≤50 条单事务；&gt;50 条分批提交（50 条/批）</li>
+<li>预置项/不适用列在模板中灰显不可填</li>
+</ul>
+<h4>5.9.1 普通成本项导入</h4>
+<p><strong>更新目标</strong>：<code>cost_item_template.default_price</code><br><strong>传播</strong>：R08 → 渠道 → 组合</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">列</th>
+<th align="left">说明</th>
+<th align="center">可编辑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">成本段</td>
+<td align="left">匹配 <code>cost_segment.name</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">成本项名称</td>
+<td align="left">匹配 <code>cost_item_template.name</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">币种</td>
+<td align="left">当前币种</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">当前建议默认价</td>
+<td align="left">当前值，供对照</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">新建议默认价</td>
+<td align="left">填入新价格</td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>模板不含预置项（拖车费、仓点成本、快递派单价），预置项走各自专用导入。</p>
+</blockquote>
+<h4>5.9.2 拖车费导入</h4>
+<p><strong>更新目标</strong>：<code>delivery_group.truck_fee</code>、<code>delivery_group.sc_rmb</code><br><strong>传播</strong>：组合成本项通过拖车费模板关联交货地组 → 自动引用更新后的值</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">列</th>
+<th align="left">说明</th>
+<th align="center">可编辑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">交货地组</td>
+<td align="left">匹配 <code>delivery_group.name</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">包含交货地</td>
+<td align="left"><code>delivery_group.regions</code>，供参考</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">当前拖车费单价</td>
+<td align="left"><code>truck_fee</code> 当前值</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">当前拖车费加价</td>
+<td align="left"><code>sc_rmb</code> 当前值</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">新拖车费单价</td>
+<td align="left">更新 <code>truck_fee</code></td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td align="left">新拖车费加价</td>
+<td align="left">更新 <code>sc_rmb</code></td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<h4>5.9.3 卡派仓点成本导入</h4>
+<p><strong>更新目标</strong>：<code>渠道派送仓点成本</code> 的三种报价（拆送价、组合一口价、整柜直送价）<br><strong>传播</strong>：D0a → 组合派送仓点成本</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">列</th>
+<th align="left">说明</th>
+<th align="center">可编辑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">渠道名称</td>
+<td align="left">匹配 <code>service_channel.name</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">FBA仓点</td>
+<td align="left">单个仓点代码，匹配 <code>fba_warehouse_codes</code> 数组</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">币种</td>
+<td align="left">当前币种</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">当前-拆送价 / 当前-一口价 / 当前-直送价</td>
+<td align="left">当前值，<code>—</code> = 未填</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">新-拆送价 / 新-一口价 / 新-直送价</td>
+<td align="left">至少填一种</td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p>数据设计中 <code>fba_warehouse_codes</code> 是数组（同行多仓点价格相同时合并）。导入时 Excel 每行一个仓点，系统自动处理同行合并/拆行。</p>
+</blockquote>
+<h4>5.9.4 快递派单价导入</h4>
+<p><strong>更新目标</strong>：<code>渠道快递派送单价.单价</code><br><strong>传播</strong>：D0a → 组合快递派送单价</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">列</th>
+<th align="left">说明</th>
+<th align="center">可编辑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">渠道名称</td>
+<td align="left">匹配 <code>service_channel.name</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">重量段</td>
+<td align="left">匹配 <code>weight_tier.tier_name</code>（如 <code>1KG+</code>）</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">邮编前缀</td>
+<td align="left">匹配 <code>zip_prefixes</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">币种</td>
+<td align="left">当前币种</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">当前单价</td>
+<td align="left">当前值</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">新单价</td>
+<td align="left">更新值</td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<p><strong>相关 AC</strong>：<code>AC30</code> <code>AC31</code> <code>AC32</code> <code>AC33</code></p>
 <hr>
 <h2>6. 流程四：服务组合、计费规则与默认加成额（Epic 2 + 3）</h2>
 <blockquote>
@@ -1719,6 +1907,53 @@ Level 1: 定义段名       Level 2: 定义项名+公式+建议价    Level 3: �
 <p><strong>一期范围</strong>：成本底价只读引用 + 公布价范围展示 + 重量段展开明细 + 加成额计算。默认加成额在服务组合上配置，工作台可逐重量段覆盖。客户报价预览、利润预警、批量调价二期实现。</p>
 <p><strong>工作台定位</strong>：工作台是周运维唯一入口——船期 Tab 只读（编辑跳转到航线&amp;船期页），运价 Tab 支持全量运价行 CRUD + 逐重量段调价 + 骨架重生式复制 + 发布。船期和运价共享同一周批次。</p>
 <p><strong>相关 AC</strong>：<code>AC5a</code> <code>AC5i</code></p>
+<hr>
+<h3>7.5 加成额 Excel 导入</h3>
+<blockquote>
+<p><strong>触发</strong>：成本导入完成后，运价管理员需要批量调整各组合×重量段×交货地组的加成额（利润空间）。<br><strong>入口</strong>：工作台 <code>[导入加成额]</code> 按钮。</p>
+</blockquote>
+<p><strong>更新目标</strong>：<code>price_table_row.加成额</code><br><strong>联动</strong>：保存后 <code>公布价 = 成本底价 + 新加成额</code>（KG 和 m³ 独立计算）</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">列</th>
+<th align="left">说明</th>
+<th align="center">可编辑</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">组合名称</td>
+<td align="left">匹配 <code>combination_code</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">仓库组/邮编</td>
+<td align="left">卡派 = <code>仓库组</code>，快递派 = <code>zip_prefixes</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">重量段</td>
+<td align="left">匹配 <code>weight_tier.tier_name</code></td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">交货地组</td>
+<td align="left">匹配 <code>delivery_group.name</code>，<code>—</code> = 不适用</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">当前加成额KG / 当前加成额m³</td>
+<td align="left">当前值，<code>—</code> = 该计价单位不适用</td>
+<td align="center">❌</td>
+</tr>
+<tr>
+<td align="left">新加成额KG / 新加成额m³</td>
+<td align="left">填入新值；KG 列仅计费方式含 KG 的组合可填，m³ 同理</td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<p><strong>匹配键</strong>：<code>组合名称 + 仓库组/邮编 + 重量段 + 交货地组</code><br><strong>校验</strong>：导入后校验——计费方式含 KG 的组合加成额-KG 必填，含 m³ 的组合加成额-m³ 必填。导入时允许空=不改。</p>
+<p><strong>相关 AC</strong>：<code>AC34</code></p>
 <hr>
 <h2>8. 流程六：附加费规则引擎（Epic 4）</h2>
 <blockquote>
@@ -2556,6 +2791,111 @@ Step 7 — 底线检查
 </blockquote>
 <p><strong>相关 AC</strong>：<code>AC22</code> <code>AC23</code> <code>AC24</code></p>
 <hr>
+<h3>10.4 三层询价体系</h3>
+<p>同一套报价引擎（<code>GET /api/v1/quote/query</code>），通过 <code>caller</code> 参数控制返回字段，服务三个端：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="center">运营端</th>
+<th align="center">货主端</th>
+<th align="center">公开计算器</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">谁用</td>
+<td align="center">内部销售</td>
+<td align="center">已注册货主</td>
+<td align="center">任何人</td>
+</tr>
+<tr>
+<td align="left">是否登录</td>
+<td align="center">是</td>
+<td align="center">是</td>
+<td align="center">否（登录后升权）</td>
+</tr>
+<tr>
+<td align="left">公布价</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td align="left">成本底价</td>
+<td align="center">✅</td>
+<td align="center">—</td>
+<td align="center">—</td>
+</tr>
+<tr>
+<td align="left">盈亏灯</td>
+<td align="center">✅</td>
+<td align="center">—</td>
+<td align="center">—</td>
+</tr>
+<tr>
+<td align="left">运费优惠</td>
+<td align="center">匹配客户等级</td>
+<td align="center">匹配当前货主</td>
+<td align="center">登录后匹配，未登录不展示</td>
+</tr>
+<tr>
+<td align="left">泡比优惠</td>
+<td align="center">匹配客户等级</td>
+<td align="center">匹配当前货主</td>
+<td align="center">登录后匹配，未登录不展示</td>
+</tr>
+<tr>
+<td align="left">附加费</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+</tr>
+<tr>
+<td align="left">船期</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+<td align="center">✅</td>
+</tr>
+</tbody></table></div>
+<blockquote>
+<p><strong>数据安全</strong>：成本底价和盈亏灯仅运营端可见。货主端和公开计算器不暴露成本信息。</p>
+</blockquote>
+<h3>10.5 分享链接与公开运费计算器</h3>
+<p><strong>链接</strong>：<code>https://flytrans.com/calculator</code> —— 新媒体发公众号/社群/朋友圈、销售发客户群，统一用这一个链接。</p>
+<p><strong>页面行为</strong>：</p>
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th align="left">访问者</th>
+<th align="left">看到什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">免登录</td>
+<td align="left">输入货物参数 → 基础公布价 + 附加费。底部提示&quot;登录查看您的专属优惠价&quot;</td>
+</tr>
+<tr>
+<td align="left">登录（已注册客户）</td>
+<td align="left">输入货物参数 → 基础公布价 + 附加费 + 该客户的运费优惠 + 泡比优惠</td>
+</tr>
+<tr>
+<td align="left">登录（非客户身份）</td>
+<td align="left">同免登录</td>
+</tr>
+</tbody></table></div>
+<p><strong>页面设计</strong>：独立页面，不挂在 TMS 货主端框架内。输入：目的国 → 仓库 → 包裹重量/尺寸。输出：各渠道公布价 + 附加费 + 船期。底部引导&quot;如需精准报价（含专属优惠），请联系销售&quot;。</p>
+<p><strong>分享场景</strong>：</p>
+<ul>
+<li>公众号文章：&quot;美国FBA运费更新！&quot; → 文末贴链接</li>
+<li>社群：&quot;谁要美国海运报价？点这个直接查&quot;</li>
+<li>朋友圈海报：二维码 → 扫码打开计算器</li>
+<li>销售 1v1：&quot;张总，这周运价更新了，点链接看你的专属价&quot;</li>
+</ul>
+<blockquote>
+<p><strong>与货主端查价订舱的关系</strong>：货主端 <code>查价订舱.html</code> 是已登录货主的完整询价入口（含多件装箱等高级功能）。公开计算器是轻量版，面向未登录散客和分享场景。二者走同一报价引擎，仅 caller 和登录状态不同。</p>
+</blockquote>
+<p><strong>相关 AC</strong>：<code>AC35</code> <code>AC36</code></p>
+<hr>
 <h2>11. 流程九：审计与数据飞轮（Epic 8）— 二期</h2>
 <blockquote>
 <p><strong>一期不做</strong>。操作审计日志和询价日志均为二期范围，一期仅需在数据库预留对应表结构。<br><strong>触发</strong>：所有变更和查询自动记录。<br><strong>频率</strong>：持续。<br><strong>前置依赖</strong>：无。</p>
@@ -2741,6 +3081,22 @@ Step 7 — 底线检查
 <li><input disabled="" type="checkbox"> <strong>AC27-审计日志不可删除</strong>（二期）：所有审计记录物理不可删，仅支持查看和导出</li>
 <li><input disabled="" type="checkbox"> <strong>AC29-询价日志</strong>（二期）：每次运价查询记录 operator_id、timestamp、查询条件、返回结果。一期仅记录，不做分析</li>
 </ul>
+<h3>成本导入</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC30-普通成本项导入</strong>：工作台下载模板（含成本段/成本项名称/币种/当前建议默认价）→ 填新价格 → 上传预览变更清单 → 确认后更新模板 default_price → 触发 R08 传播 → 标记受影响运价行待重算。空单元格=不更新，预置项不出现在模板中</li>
+<li><input disabled="" type="checkbox"> <strong>AC31-拖车费导入</strong>：工作台下载模板（含交货地组/当前拖车费单价/当前加价）→ 填新值 → 上传预览 → 确认后更新 delivery_group.truck_fee/sc_rmb。按交货地组名称匹配</li>
+<li><input disabled="" type="checkbox"> <strong>AC32-卡派仓点成本导入</strong>：工作台下载模板（含渠道/FBA仓点/三种报价当前值）→ 填新值 → 上传预览 → 确认后更新 渠道派送仓点成本 → 触发 D0a 同步到组合。按 渠道名称+FBA仓点 匹配。每行至少填一种报价方式</li>
+<li><input disabled="" type="checkbox"> <strong>AC33-快递派单价导入</strong>：工作台下载模板（含渠道/重量段/邮编前缀/当前单价）→ 填新值 → 上传预览 → 确认后更新 渠道快递派送单价 → 触发 D0a 同步到组合。按 渠道名称+重量段+邮编前缀 匹配</li>
+</ul>
+<h3>加成额导入</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC34-加成额导入</strong>：工作台下载模板（含组合名称/仓库组或邮编/重量段/交货地组/当前加成额）→ 填新值 → 上传预览 → 确认后更新 price_table_row.加成额 → 公布价=成本底价+新加成额自动联动。按 组合+仓库组或邮编+重量段+交货地组 匹配</li>
+</ul>
+<h3>询价出口与分享链接</h3>
+<ul>
+<li><input disabled="" type="checkbox"> <strong>AC35-三层询价体系</strong>：同一报价 API（GET /api/v1/quote/query），caller=operator 返回完整数据（含成本/利润/盈亏灯），caller=shipper 返回公布价+优惠（无成本/利润），caller=public 返回基础公布价（无优惠）。货主端和公开计算器不暴露成本底价和盈亏灯</li>
+<li><input disabled="" type="checkbox"> <strong>AC36-公开运费计算器与分享链接</strong>：独立页面 <a href="https://flytrans.com/calculator%EF%BC%8C%E5%85%8D%E7%99%BB%E5%BD%95%E5%8F%AF%E6%9F%A5%E5%9F%BA%E7%A1%80%E5%85%AC%E5%B8%83%E4%BB%B7+%E9%99%84%E5%8A%A0%E8%B4%B9+%E8%88%B9%E6%9C%9F%EF%BC%9B%E7%99%BB%E5%BD%95%E5%90%8E%E8%87%AA%E5%8A%A8%E8%AF%86%E5%88%AB%E5%AE%A2%E6%88%B7%E8%BA%AB%E4%BB%BD%E5%8C%B9%E9%85%8D%E8%BF%90%E8%B4%B9%E4%BC%98%E6%83%A0+%E6%B3%A1%E6%AF%94%E4%BC%98%E6%83%A0%EF%BC%9B%E5%BA%95%E9%83%A8%E5%BC%95%E5%AF%BC%E6%9C%AA%E7%99%BB%E5%BD%95%E7%94%A8%E6%88%B7%E8%81%94%E7%B3%BB%E9%94%80%E5%94%AE%E3%80%82%E6%96%B0%E5%AA%92%E4%BD%93%E5%92%8C%E9%94%80%E5%94%AE%E7%BB%9F%E4%B8%80%E5%88%86%E4%BA%AB%E6%AD%A4%E9%93%BE%E6%8E%A5">https://flytrans.com/calculator，免登录可查基础公布价+附加费+船期；登录后自动识别客户身份匹配运费优惠+泡比优惠；底部引导未登录用户联系销售。新媒体和销售统一分享此链接</a></li>
+</ul>
 <hr>
 <h2>13. NFR（非功能性需求）</h2>
 <ul>
@@ -2801,7 +3157,7 @@ Step 8 最终报价 = 运费优惠后 + 附加费净额
 <hr>
 <h2>15. 功能清单</h2>
 <blockquote>
-<p>基于 9 条业务流程，共 <strong>11 个模块、52 项功能</strong>（不含二期审计模块）。P0 = MVP 必做，P1 = 二期，P2 = 三期。</p>
+<p>基于 9 条业务流程，共 <strong>11 个模块、59 项功能</strong>（不含二期审计模块）。P0 = MVP 必做，P1 = 二期，P2 = 三期。</p>
 </blockquote>
 <h3>模块 A：服务渠道与时效配置</h3>
 <div class="table-wrapper"><table>
@@ -3026,6 +3382,30 @@ Step 8 最终报价 = 运费优惠后 + 附加费净额
 <td>P0</td>
 <td>AC28</td>
 </tr>
+<tr>
+<td>D9</td>
+<td>普通成本项导入 — 工作台下载模板 → 填新价格 → 上传预览 → 更新模板 default_price → R08 传播</td>
+<td>P0</td>
+<td>AC30</td>
+</tr>
+<tr>
+<td>D10</td>
+<td>拖车费导入 — 工作台下载模板 → 填新值 → 上传预览 → 更新 delivery_group.truck_fee/sc_rmb</td>
+<td>P0</td>
+<td>AC31</td>
+</tr>
+<tr>
+<td>D11</td>
+<td>卡派仓点成本导入 — 工作台下载模板 → 填新值 → 上传预览 → 更新渠道派送仓点成本 → D0a 同步</td>
+<td>P0</td>
+<td>AC32</td>
+</tr>
+<tr>
+<td>D12</td>
+<td>快递派单价导入 — 工作台下载模板 → 填新值 → 上传预览 → 更新渠道快递派送单价 → D0a 同步</td>
+<td>P0</td>
+<td>AC33</td>
+</tr>
 </tbody></table></div>
 <h3>模块 E：服务组合与计费</h3>
 <div class="table-wrapper"><table>
@@ -3077,6 +3457,12 @@ Step 8 最终报价 = 运费优惠后 + 附加费净额
 <td>利润预核算 — 公布价 vs 成本底价，实时加成额展示 + 绿/黄/红盈亏色标（加成额 vs 最大优惠额）</td>
 <td>P0</td>
 <td>AC5c</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>加成额导入 — 工作台下载模板 → 填新值 → 上传预览 → 更新 price_table_row.加成额 → 公布价联动</td>
+<td>P0</td>
+<td>AC34</td>
 </tr>
 </tbody></table></div>
 <h3>模块 G：附加费规则引擎</h3>
@@ -3271,6 +3657,18 @@ Step 8 最终报价 = 运费优惠后 + 附加费净额
 <td>P0</td>
 <td>AC24</td>
 </tr>
+<tr>
+<td>J5</td>
+<td>三层询价体系 — 同一报价 API，caller 参数控制返回字段；运营端完整数据，货主端无成本/盈亏，公开端无优惠</td>
+<td>P0</td>
+<td>AC35</td>
+</tr>
+<tr>
+<td>J6</td>
+<td>公开运费计算器与分享链接 — 独立页面，免登录查基础公布价，登录自动匹配客户优惠；统一分享链接供新媒体和销售使用</td>
+<td>P0</td>
+<td>AC36</td>
+</tr>
 </tbody></table></div>
 <h3>模块 K：审计与日志（二期）</h3>
 <div class="table-wrapper"><table>
@@ -3336,7 +3734,7 @@ Step 8 最终报价 = 运费优惠后 + 附加费净额
 <tbody><tr>
 <td><strong>Phase 1 (MVP)</strong></td>
 <td>A~M 全部 P0 项（含泡比优惠 M1-M4）</td>
-<td><strong>56</strong></td>
+<td><strong>59</strong></td>
 </tr>
 <tr>
 <td><strong>Phase 2</strong></td>

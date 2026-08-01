@@ -48,7 +48,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   <div class="doc-content">
     <p>﻿# 核心方案设计草稿 — 超级运价模块</p>
 <blockquote>
-<p>Phase 2：方案架构 | 基于 RDD v5.1 | 2026-07-23 | 骨架重生式复制——本周架构铺底+决策继承，失效自动移除+新增标记；装柜费改为统一价不受交货地影响；新增delivery_group实体管理拖车费交货地组合</p>
+<p>Phase 2：方案架构 | 基于 RDD v5.2 | 2026-07-27 | v5.2: 成本/加成额Excel导入+三层询价体系+公开计算器；骨架重生式复制</p>
 </blockquote>
 <hr>
 <h2>1. 实体 × 表映射</h2>
@@ -678,7 +678,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>整数</td>
 <td>条件必填</td>
 <td></td>
-<td>尾程≠快递派时必填。海运头程=12525 / 海运卡派=350</td>
+<td>尾程=快递派时默认=1且置灰（快递派单价已是per KG/m³，除以1即原值不变）；否则必填。海运头程=12525 / 海运卡派=350</td>
 </tr>
 <tr>
 <td><code>cbm_standard</code></td>
@@ -686,7 +686,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>小数(6,2)</td>
 <td>条件必填</td>
 <td></td>
-<td>尾程≠快递派时必填。海运头程=75 / 海运卡派=1.8</td>
+<td>尾程=快递派时默认=1且置灰；否则必填。海运头程=75 / 海运卡派=1.8</td>
 </tr>
 <tr>
 <td><code>is_enabled</code></td>
@@ -878,7 +878,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>JSON</td>
 <td>✅</td>
 <td></td>
-<td>创建时从 <code>loading_standard</code> 拉取全部行快照，格式: <code>[{transport_mode, last_mile_method, standard_type, kg_standard, cbm_standard}]</code>。头程和派送各自独立快照，均写入批次</td>
+<td>创建时从 <code>loading_standard</code> 拉取全部行快照，支持运价管理员在弹窗中针对本周覆盖 KG/CBM 基准值（快递派行锁定为 1 不可编辑）。格式: <code>[{transport_mode, last_mile_method, standard_type, kg_standard, cbm_standard}]</code>。头程和派送各自独立快照，均写入批次</td>
 </tr>
 <tr>
 <td><code>weight_tier_snapshot</code></td>
@@ -1308,7 +1308,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>布尔</td>
 <td>—</td>
 <td>Default:0</td>
-<td>1=预置项。揽收段的拖车费 + 派送段的仓点成本、快递派单价为预置项：不可禁用、不可删除、批量更新按钮隐藏（拖车费的建议默认价可编辑，仓点成本/快递派单价默认价置灰）。装柜费不再属于预置项，作为普通成本项管理（仍保留不可禁用、不可删除属性）</td>
+<td>1=预置项。揽收段的拖车费 + 派送段的仓点成本、快递派单价为预置项：不可禁用、不可删除、批量更新按钮隐藏、编辑时仅成本项名称可修改（默认价/币种/是否换汇均不可编辑）。装柜费为普通成本项管理（仍保留不可禁用、不可删除属性）</td>
 </tr>
 </tbody></table></div>
 <p><strong>唯一约束</strong>：<code>UNIQUE(segment_id, name)</code>，同一成本段下不可有同名模板。</p>
@@ -2846,12 +2846,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <h3>8.1 菜单结构</h3>
 <pre><code>├── 🏠 运价更新工作台（每周运维入口）
 │   ├── 顶部：批次选择器 + 指标卡
+│   ├── 工具栏：[导入成本 ▼]（普通成本项/拖车费/卡派仓点/快递派单价）[导入加成额] [发布]
 │   ├── Tab 1: 本周船期（只读，链接到航线&amp;船期页编辑）
 │   └── Tab 2: 本周运价（可编辑：新增/编辑运价行 + 批量调价 + 发布）
 │
-├── 🔍 查价订舱
-│   ├── 运营端运价查询
-│   └── 货主端在线询价
+├── 🔍 运价查询
+│   ├── 运营端运价查询（内部销售，完整数据）
+│   ├── 货主端在线询价（已注册货主，无成本/利润）
+│   └── 公开运费计算器（免登录，基础公布价；登录后匹配客户优惠）
 │
 ├── 📋 基础配置
 │   ├── 服务渠道

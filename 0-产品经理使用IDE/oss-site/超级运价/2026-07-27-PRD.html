@@ -48,7 +48,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   <div class="doc-content">
     <p>﻿# 超级运价模块 — 产品需求文档 (PRD)</p>
 <blockquote>
-<p><strong>文档类型</strong>：PRD | <strong>版本</strong>：V2.17 | <strong>状态</strong>：草稿 | <strong>日期</strong>：2026-07-23<br><strong>作者</strong>：AI PM + 飞点业务团队<br><strong>评审人</strong>：产品/研发/测试/业务代表</p>
+<p><strong>文档类型</strong>：PRD | <strong>版本</strong>：V2.19 | <strong>状态</strong>：草稿 | <strong>日期</strong>：2026-07-27<br><strong>作者</strong>：AI PM + 飞点业务团队<br><strong>评审人</strong>：产品/研发/测试/业务代表</p>
 </blockquote>
 <h3>0.1 变更记录</h3>
 <div class="table-wrapper"><table>
@@ -61,6 +61,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </tr>
 </thead>
 <tbody><tr>
+<td>V2.19</td>
+<td>2026-07-27</td>
+<td>新增成本Excel导入（普通成本项/拖车费/卡派仓点/快递派单价）+ 加成额导入，入口统一在工作台；新增三层询价体系（运营端/货主端/公开计算器）+ 公开运费计算器+分享链接；新增报价API GET /api/v1/quote/query</td>
+<td>AI PM</td>
+</tr>
+<tr>
+<td>V2.18</td>
+<td>2026-07-27</td>
+<td>折算基准快照改为数组（全量加载loading_standard启用行）；批次栏汇总信息行移除；批次名称改为可点击链接弹出基本信息卡片</td>
+<td>AI PM</td>
+</tr>
+<tr>
 <td>V1.0</td>
 <td>2026-05-28</td>
 <td>初稿，基于 RDD v3.4 + Architecture</td>
@@ -171,8 +183,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </tbody></table></div>
 <h3>0.2 关联链接</h3>
 <ul>
-<li>RDD：<code>drafts/超级运价/2026-07-23-用户需求.md</code></li>
-<li>Architecture：<code>drafts/超级运价/2026-07-23-数据设计.md</code></li>
+<li>RDD：<code>drafts/超级运价/2026-07-27-用户需求.md</code></li>
+<li>Architecture：<code>drafts/超级运价/2026-07-27-数据设计.md</code></li>
 <li>需求背景：<code>analysis/超级运价需求调研/超级运价需求背景.md</code></li>
 <li>原型：<code>demo/员工端-demo/, demo/货主端-demo/</code></li>
 </ul>
@@ -1036,7 +1048,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 </tr>
 <tr>
 <td>成本项模板</td>
-<td>全局目录CRUD+冻结/解冻。派送段仓点成本/快递派单价为预置项：不可冻结、不可删除、批量更新隐藏、默认价置灰</td>
+<td>全局目录CRUD+冻结/解冻。拖车费/仓点成本/快递派单价为预置项：不可冻结、不可删除、批量更新隐藏；编辑时仅名称可修改，其余字段不可编辑</td>
 <td>P0</td>
 <td>成本项模板管理</td>
 <td>列表页+编辑弹窗</td>
@@ -1195,6 +1207,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li>访问角色：运价管理员</li>
 </ul>
 <p><strong>页面结构</strong>：双 Tab 页——「本周船期」+「本周运价行」。默认展示当前 当前 批次数据。</p>
+<p><strong>批次栏</strong>：绿色渐变条显示批次名称（可点击链接，弹出基本信息卡片：批次名称/周次/状态/日期范围 + 汇率快照表格 + 折算基准数组表格 + 船期条数/运价分组数/运价行总数统计）、批次下拉选择器、新建周批次按钮、作废按钮。汇总信息行（此前展示汇率/批次数量/待重算/运价分组/折算基准摘要）已移除。</p>
 <p><strong>本周船期 Tab</strong>：</p>
 <div class="table-wrapper"><table>
 <thead>
@@ -2016,7 +2029,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li>快递派：派送段按重量段 × 邮编前缀查表，直接累加不比较</li>
 <li>底部绿色公式条：成本底价 = 头程 + 派送普通项 + 派送MAX/快递合计</li>
 </ul>
-<p><strong>新建周批次</strong>：从全局表快照折算基准（头程+派送全部行）+ 重量段 + 汇率。可选「从上周复制」——骨架重生+决策继承：用本周启用航线/组合笛卡尔积铺底→匹配旧批次→命中则继承加成额/公布价（成本底价用本周 costRefMap 重算），未命中用组合默认加成额初始化并标记「新增」，已停用的航线/组合/成本项自动移除。复制后全部标记待重算。加成额取组合默认加成额起步值，不随批次快照。发布后锁定不可编辑。</p>
+<p><strong>新建周批次</strong>：从全局 <code>loading_standard</code> 表拉取全部启用行快照为数组（每行含运输方式/基准类型/尾程方式/KG基准/CBM基准），弹窗「折算基准快照」Tab 以可编辑表格展示（KG/CBM基准可直接修改，快递派行锁定为1不可编辑），支持运价管理员针对本周覆盖全局默认值。+ 汇率。可选「从上周复制」——骨架重生+决策继承：用本周启用航线/组合笛卡尔积铺底→匹配旧批次→命中则继承加成额/公布价（成本底价用本周 costRefMap 重算），未命中用组合默认加成额初始化并标记「新增」，已停用的航线/组合/成本项自动移除。复制后全部标记待重算。加成额取组合默认加成额起步值，不随批次快照。发布后锁定不可编辑。</p>
 <p><strong>待重算</strong>：成本单价变更 → 自动标记当前批次运价行为待重算 → 工作台提醒条 → [重算成本底价] 或 [已知晓不调整]。</p>
 <hr>
 <h3>5.10 附加费规则列表 / 编辑</h3>
@@ -2606,12 +2619,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <tr>
 <td>KG折算标准</td>
 <td>loading_standard.kg_standard</td>
-<td>数值；尾程=快递派时非必填</td>
+<td>数值；尾程=快递派时默认值=1且字段置灰不可修改</td>
 </tr>
 <tr>
 <td>CBM折算标准</td>
 <td>loading_standard.cbm_standard</td>
-<td>数值；尾程=快递派时非必填</td>
+<td>数值；尾程=快递派时默认值=1且字段置灰不可修改</td>
 </tr>
 <tr>
 <td>状态</td>
@@ -2660,7 +2673,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>KG折算标准</td>
 <td>小数(10,2)</td>
 <td>✅</td>
-<td>&gt; 0</td>
+<td>&gt; 0；尾程=快递派时强制=1且字段置灰</td>
 <td>手动输入</td>
 </tr>
 <tr>
@@ -2668,7 +2681,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>CBM折算标准</td>
 <td>小数(10,2)</td>
 <td>✅</td>
-<td>&gt; 0</td>
+<td>&gt; 0；尾程=快递派时强制=1且字段置灰</td>
 <td>手动输入</td>
 </tr>
 <tr>
@@ -2680,7 +2693,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>10:正常 20:已冻结</td>
 </tr>
 </tbody></table></div>
-<p><strong>交互</strong>：CRUD via dialog。变更时触发 R20 基准变更传播（见业务规则）。</p>
+<p><strong>交互</strong>：CRUD via dialog。尾程方式选择「快递派」时，KG折算标准和CBM折算标准自动设为1且字段置灰（快递派成本单价已是 per KG/m³，除以1即原值不变）。变更时触发 R20 基准变更传播（见业务规则）。</p>
 <p><strong>关联接口</strong>：</p>
 <ul>
 <li>查询：<code>GET /api/loading-standards</code></li>
@@ -2973,9 +2986,37 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>组合快递派单价</td>
 <td>—</td>
 </tr>
+<tr>
+<td>R25</td>
+<td>成本Excel导入</td>
+<td>四种导入统一在工作台入口：(1)普通成本项→更新模板default_price→R08传播；(2)拖车费→更新delivery_group；(3)卡派仓点→更新渠道仓点成本→D0a同步；(4)快递派单价→更新渠道快递单价→D0a同步。空单元格=不更新，仅更新已有项不新增不删除，≤50单事务/&gt;50分批</td>
+<td>更新成本+标记待重算</td>
+<td>匹配失败行跳过并报告</td>
+</tr>
+<tr>
+<td>R26</td>
+<td>加成额导入</td>
+<td>工作台入口，按 组合+仓库组或邮编+重量段+交货地组 匹配 price_table_row，更新加成额。导入后公布价=成本底价+新加成额双向联动</td>
+<td>更新加成额→公布价联动</td>
+<td>匹配失败行跳过并报告</td>
+</tr>
+<tr>
+<td>R27</td>
+<td>三层询价数据安全</td>
+<td>同一报价API(GET /api/v1/quote/query)，caller=operator返回完整数据+成本+利润+盈亏灯；caller=shipper返回公布价+优惠无成本/利润；caller=public返回基础公布价无优惠。货主端和公开端不暴露成本底价</td>
+<td>按角色过滤字段</td>
+<td>未登录+caller=shipper→401</td>
+</tr>
+<tr>
+<td>R28</td>
+<td>公开计算器分享</td>
+<td>独立页面 <a href="https://flytrans.com/calculator%EF%BC%8C%E5%85%8D%E7%99%BB%E5%BD%95%E6%9F%A5%E5%9F%BA%E7%A1%80%E5%85%AC%E5%B8%83%E4%BB%B7+%E9%99%84%E5%8A%A0%E8%B4%B9%EF%BC%9B%E7%99%BB%E5%BD%95%E5%90%8E%E8%87%AA%E5%8A%A8%E8%AF%86%E5%88%AB%E5%AE%A2%E6%88%B7%E8%BA%AB%E4%BB%BD%E5%8C%B9%E9%85%8D%E8%BF%90%E8%B4%B9%E4%BC%98%E6%83%A0+%E6%B3%A1%E6%AF%94%E4%BC%98%E6%83%A0%E3%80%82%E5%90%8CURL%E8%A6%86%E7%9B%96%E5%85%AC%E5%BC%80%E5%92%8C%E7%9B%B4%E5%AE%A2%E4%B8%A4%E5%9C%BA%E6%99%AF">https://flytrans.com/calculator，免登录查基础公布价+附加费；登录后自动识别客户身份匹配运费优惠+泡比优惠。同URL覆盖公开和直客两场景</a></td>
+<td>统一分享链接</td>
+<td>同IP每分钟&gt;10次→限流</td>
+</tr>
 </tbody></table></div>
 <blockquote>
-<p><strong>RDD 对照</strong>：PRD R01<del>R24 与 RDD BPR-1</del>BPR-5 的对应关系：R06→BPR-4（可优惠性校验）、R07→BPR-1（价格底线管控）、R13→BPR-2（应收应付关联）、R16→BPR-5（漏收检查）。BPR-3 未定义。完整对照见 RDD。</p>
+<p><strong>RDD 对照</strong>：PRD R01<del>R28 与 RDD BPR-1</del>BPR-5 的对应关系：R06→BPR-4（可优惠性校验）、R07→BPR-1（价格底线管控）、R13→BPR-2（应收应付关联）、R16→BPR-5（漏收检查）。BPR-3 未定义。完整对照见 RDD。</p>
 </blockquote>
 <hr>
 <h2>7. 计算公式 ★ 研发必读</h2>
@@ -3003,24 +3044,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   combination_cost_item.币种           = 币种 (10:RMB / 20:USD)
   batch.汇率                      = 汇率（取自当前周批次）
   combination_cost_item.status         = 状态(10:正常 20:已冻结)
-  batch.loading_snapshot = 头程折算基准 + 派送折算基准（从全局表 loading_standard 快照到周批次，如 12525 / 75 / 350 / 1.8）
+  batch.loading_snapshot = 折算基准数组（从全局表 loading_standard 拉取全部启用行快照到周批次，每行含 transport_mode / standard_type / last_mile_method / kg_standard / cbm_standard）。计算时按服务组合的运输方式匹配对应 head(standard_type=10) 和 tail(standard_type=20) 行取值
 
 头程共享 每公斤:
-  Σ( 非派送段正常项的 单价 × (if USD: 批次汇率 else 1) ) ÷ 批次快照.head_kg_standard
+  Σ( 非派送段正常项的 单价 × (if USD: 批次汇率 else 1) ) ÷ 批次快照[transport_mode=组合运输方式, standard_type=10].kg_standard
 
 头程共享 每立方米:
-  Σ( 非派送段正常项的 单价 × (if USD: 批次汇率 else 1) ) ÷ 批次快照.head_cbm_standard
+  Σ( 非派送段正常项的 单价 × (if USD: 批次汇率 else 1) ) ÷ 批次快照[transport_mode=组合运输方式, standard_type=10].cbm_standard
 
 派送段普通项 每公斤（提拆派费等，不区分仓点）:
-  Σ( 派送段非仓点正常项的 单价 × (if USD: 批次汇率 else 1) ) ÷ 批次快照.head_kg_standard
+  Σ( 派送段非仓点正常项的 单价 × (if USD: 批次汇率 else 1) ) ÷ 批次快照[transport_mode=组合运输方式, standard_type=10].kg_standard
 
 派送段仓点 每公斤（卡派专属；快递派此项为 0）:
-  拆送价 per KG = 拆送单价 × 批次汇率 ÷ 批次快照.tail_kg_standard
-  组合一口价 per KG = 组合一口价 × 批次汇率 ÷ 批次快照.tail_kg_standard
-  整柜直送 per KG = 直送单价 × 批次汇率 ÷ 批次快照.tail_kg_standard
-  拆送价 per CBM = 拆送单价 × 批次汇率 ÷ 批次快照.tail_cbm_standard
-  组合一口价 per CBM = 组合一口价 × 批次汇率 ÷ 批次快照.tail_cbm_standard
-  整柜直送 per CBM = 直送单价 × 批次汇率 ÷ 批次快照.tail_cbm_standard
+  拆送价 per KG = 拆送单价 × 批次汇率 ÷ 批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派].kg_standard
+  组合一口价 per KG = 组合一口价 × 批次汇率 ÷ 批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派].kg_standard
+  整柜直送 per KG = 直送单价 × 批次汇率 ÷ 批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派].kg_standard
+  拆送价 per CBM = 拆送单价 × 批次汇率 ÷ 批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派].cbm_standard
+  组合一口价 per CBM = 组合一口价 × 批次汇率 ÷ 批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派].cbm_standard
+  整柜直送 per CBM = 直送单价 × 批次汇率 ÷ 批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派].cbm_standard
   → 散货卡派 = MAX(拆送价, 组合一口价)
   → 整柜 = 整柜直送价
 
@@ -3028,8 +3069,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
   每公斤成本  = 头程共享 每公斤 + 派送段普通项 每公斤 + 派送段仓点 每公斤(该仓点)
   每立方米成本 = 头程共享 每立方米 + 派送段普通项 每立方米 + 派送段仓点 每立方米(该仓点)
 
-快递派: 派送段仓点项 = 0；派送段快递派单价 = Σ(匹配 weight_tier × zip_zone 的 单价)。快递派单价已是 per KG/m³，不折算
-卡派:   派送段仓点项 = MAX(拆送价, 组合一口价, 整柜直送价) per 仓点，用批次快照.tail_kg_standard / tail_cbm_standard 折算
+快递派: 派送段仓点项 = 0；派送段快递派单价 = Σ(匹配 weight_tier × zip_zone 的 单价)。快递派单价已是 per KG/m³，折算基准=1（除以1即原值不变）
+卡派:   派送段仓点项 = MAX(拆送价, 组合一口价, 整柜直送价) per 仓点，用批次快照[transport_mode=组合运输方式, standard_type=20, last_mile=卡派] 折算
 快递派: 运价行按邮编前缀匹配公布价（不使用仓库组）
 
 精度: 0.0001 (每公斤成本/cbm 内部) → 0.01 (公布价展示)
@@ -3349,6 +3390,54 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <td>部分失败返回清单</td>
 </tr>
 <tr>
+<td>导入普通成本项</td>
+<td>POST</td>
+<td><code>/api/cost-item-templates/import</code></td>
+<td>工作台</td>
+<td>Excel file</td>
+<td>回传错误行号</td>
+</tr>
+<tr>
+<td>导入拖车费</td>
+<td>POST</td>
+<td><code>/api/delivery-groups/import</code></td>
+<td>工作台</td>
+<td>Excel file</td>
+<td>回传错误行号</td>
+</tr>
+<tr>
+<td>导入卡派仓点成本</td>
+<td>POST</td>
+<td><code>/api/channel-warehouse-costs/import</code></td>
+<td>工作台</td>
+<td>Excel file</td>
+<td>回传错误行号</td>
+</tr>
+<tr>
+<td>导入快递派单价</td>
+<td>POST</td>
+<td><code>/api/channel-express-rates/import</code></td>
+<td>工作台</td>
+<td>Excel file</td>
+<td>回传错误行号</td>
+</tr>
+<tr>
+<td>导入加成额</td>
+<td>POST</td>
+<td><code>/api/price-table-rows/import-markup</code></td>
+<td>工作台</td>
+<td>Excel file</td>
+<td>回传错误行号</td>
+</tr>
+<tr>
+<td>报价查询</td>
+<td>GET</td>
+<td><code>/api/v1/quote/query</code></td>
+<td>运价查询/货主端/公开计算器</td>
+<td>?caller=operator/shipper/public&amp;country=&amp;warehouse=&amp;weight=&amp;volume=&amp;...</td>
+<td>3s 超时；caller 控制返回字段</td>
+</tr>
+<tr>
 <td>审计日志查询</td>
 <td>GET</td>
 <td><code>/api/audit-logs</code></td>
@@ -3638,9 +3727,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans S
 <li>JTBD (Jobs To Be Done) — 待办任务</li>
 </ul>
 </li>
-<li><p><strong>完整数据模型</strong>：见 <code>drafts/超级运价/2026-06-05-数据设计.md</code></p>
+<li><p><strong>完整数据模型</strong>：见 <code>drafts/超级运价/2026-07-27-数据设计.md</code></p>
 </li>
-<li><p><strong>完整业务流程 + 字段表</strong>：见 <code>drafts/超级运价/2026-06-05-用户需求.md</code></p>
+<li><p><strong>完整业务流程 + 字段表</strong>：见 <code>drafts/超级运价/2026-07-27-用户需求.md</code></p>
 </li>
 <li><p><strong>原型</strong>：见 <code>demo/员工端-demo/, demo/货主端-demo/</code></p>
 </li>

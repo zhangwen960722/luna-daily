@@ -62,9 +62,9 @@ body,html{margin:0;padding:0;background:#f0f2f5;font-family:"Helvetica Neue",Hel
     <el-form :model="form" label-width="110px">
       <el-form-item label="运输方式" required><el-select v-model="form.transportMode" :disabled="editMode" style="width:100%"><el-option label="海运" :value="10"></el-option><el-option label="空运" :value="20"></el-option><el-option label="洲际火车" :value="30"></el-option><el-option label="洲际卡车" :value="40"></el-option></el-select></el-form-item>
       <el-form-item label="基准类型" required><el-select v-model="form.standardType" :disabled="editMode" style="width:100%" @change="onStandardTypeChange"><el-option label="头程" :value="10"></el-option><el-option label="派送" :value="20"></el-option></el-select></el-form-item>
-      <el-form-item label="尾程方式" :required="form.standardType===20"><el-select v-model="form.lastMile" :disabled="editMode||form.standardType===10" style="width:100%"><el-option v-if="form.standardType===20" label="卡派" value="卡派"></el-option><el-option v-if="form.standardType===20" label="快递派" value="快递派"></el-option></el-select></el-form-item>
-      <el-form-item label="KG基准" :required="form.lastMile!=='快递派'"><el-input-number v-model="form.kgStandard" :min="1" style="width:100%"></el-input-number></el-form-item>
-      <el-form-item label="m³基准" :required="form.lastMile!=='快递派'"><el-input-number v-model="form.cbmStandard" :min="0.01" :precision="2" style="width:100%"></el-input-number></el-form-item>
+      <el-form-item label="尾程方式" :required="form.standardType===20"><el-select v-model="form.lastMile" :disabled="editMode||form.standardType===10" style="width:100%" @change="onLastMileChange"><el-option v-if="form.standardType===20" label="卡派" value="卡派"></el-option><el-option v-if="form.standardType===20" label="快递派" value="快递派"></el-option></el-select></el-form-item>
+      <el-form-item label="KG基准" :required="form.lastMile!=='快递派'"><el-input-number v-model="form.kgStandard" :min="1" :disabled="form.lastMile==='快递派'" style="width:100%"></el-input-number></el-form-item>
+      <el-form-item label="m³基准" :required="form.lastMile!=='快递派'"><el-input-number v-model="form.cbmStandard" :min="0.01" :precision="2" :disabled="form.lastMile==='快递派'" style="width:100%"></el-input-number></el-form-item>
     </el-form>
     </div>
     <template #footer><el-button @click="showEdit=false">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="saveEdit">保存</el-button></template>
@@ -78,7 +78,7 @@ data:function(){return{
   list:[
     {transportMode:10,transportLabel:'海运',lastMile:'',lastMileLabel:'',standardType:10,typeLabel:'头程',kgStandard:12525,cbmStandard:75.0,enabled:true},
     {transportMode:10,transportLabel:'海运',lastMile:'卡派',lastMileLabel:'卡派',standardType:20,typeLabel:'派送',kgStandard:350,cbmStandard:1.8,enabled:true},
-    {transportMode:10,transportLabel:'海运',lastMile:'快递派',lastMileLabel:'快递派',standardType:20,typeLabel:'派送',kgStandard:null,cbmStandard:null,enabled:true},
+    {transportMode:10,transportLabel:'海运',lastMile:'快递派',lastMileLabel:'快递派',standardType:20,typeLabel:'派送',kgStandard:1,cbmStandard:1,enabled:true},
     {transportMode:20,transportLabel:'空运',lastMile:'',lastMileLabel:'',standardType:10,typeLabel:'头程',kgStandard:6000,cbmStandard:null,enabled:true}
   ]
 }},computed:{
@@ -88,12 +88,14 @@ data:function(){return{
   doSearch:function(){ElementPlus.ElMessage.success('查询完成')},
   resetSearch:function(){this.filterTransport='';this.filterType=''},
   addRow:function(){this.editMode=false;this.form={transportMode:10,standardType:10,lastMile:'',kgStandard:null,cbmStandard:null};this.showEdit=true},
-  onStandardTypeChange:function(v){if(v===10){this.form.lastMile='';}else{this.form.lastMile='';}},
+  onStandardTypeChange:function(v){if(v===10){this.form.lastMile='';this.form.kgStandard=null;this.form.cbmStandard=null;}else{this.form.lastMile='';this.form.kgStandard=null;this.form.cbmStandard=null;}},
+  onLastMileChange:function(v){if(v==='快递派'){this.form.kgStandard=1;this.form.cbmStandard=1;}},
   toggleStatus:function(row){var self=this;var action=row.enabled?'冻结':'启用';ElementPlus.ElMessageBox.confirm('确定要'+action+'该折算基准吗？','状态变更提示',{type:'warning'}).then(function(){row.enabled=!row.enabled;ElementPlus.ElMessage.success('已成功'+action)}).catch(function(){})},
   editRow:function(row){this.editMode=true;this.editIdx=this.list.indexOf(row);this.form={transportMode:row.transportMode,standardType:row.standardType,lastMile:row.lastMile,kgStandard:row.kgStandard,cbmStandard:row.cbmStandard};this.showEdit=true},
   saveEdit:function(){
     if(this.form.standardType===20&&!this.form.lastMile){ElementPlus.ElMessage.warning('派送基准请选择尾程方式');return}
-    if(this.form.lastMile!=='快递派'){if(this.form.kgStandard===null||this.form.kgStandard===undefined){ElementPlus.ElMessage.warning('请输入KG基准');return}if(this.form.cbmStandard===null||this.form.cbmStandard===undefined){ElementPlus.ElMessage.warning('请输入m³基准');return}}
+    if(this.form.lastMile==='快递派'){this.form.kgStandard=1;this.form.cbmStandard=1;}
+    else{if(this.form.kgStandard===null||this.form.kgStandard===undefined){ElementPlus.ElMessage.warning('请输入KG基准');return}if(this.form.cbmStandard===null||this.form.cbmStandard===undefined){ElementPlus.ElMessage.warning('请输入m³基准');return}}
     var transportLabel=this.form.transportMode===10?'海运':(this.form.transportMode===20?'空运':(this.form.transportMode===30?'洲际火车':'洲际卡车'));
     var typeLabel=this.form.standardType===10?'头程':'派送';var lastMileLabel=this.form.lastMile||'';
     if(this.editMode){var row=this.list[this.editIdx];row.kgStandard=this.form.kgStandard;row.cbmStandard=this.form.cbmStandard;ElementPlus.ElMessage.success('折算基准已更新，下周新建批次时生效')}

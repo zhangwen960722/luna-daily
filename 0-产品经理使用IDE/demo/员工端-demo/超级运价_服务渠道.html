@@ -158,11 +158,10 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
       <!-- 重量段 -->
       <el-tab-pane label="重量段" name="weight">
         <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
-          <el-select v-model="weightTemplateIds" placeholder="选择重量段模板" size="small" style="width:280px" multiple collapse-tags @change="applyWeightTemplate">
-            <el-option v-for="t in availableWeightTemplates" :key="t.id" :label="t.label" :value="t.id"></el-option>
+          <el-select v-model="selectedWeightSegment" placeholder="选择重量段绑定" size="small" style="width:280px" @change="bindWeightSegment" :disabled="availableWeightSegments.length===0" clearable>
+            <el-option v-for="s in availableWeightSegments" :key="s._key" :label="s._label" :value="s._key"></el-option>
           </el-select>
-          <el-button type="primary" size="small" @click="addWeightRow">追加自定义段</el-button>
-          <span style="font-size:11px;color:#909399">模板段不可删除，自定义段可拖拽调整</span>
+          <span style="font-size:11px;color:#909399">根据运输方式+计费方式筛选可选段，选中后自动绑定，不可编辑/删除</span>
         </div>
         <el-table :data="weightList" border style="width:100%" max-height="360" row-key="__idx">
           <el-table-column label="" width="36" align="center" fixed="left">
@@ -176,10 +175,10 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
                 :style="dragWeightIdx===s2.$index?'color:#2DA44E':''">☰</span>
             </template>
           </el-table-column>
-          <el-table-column label="计价单位" width="100"><template #default="s2"><el-select v-model="s2.row.unit"><el-option label="KG" value="KG"></el-option><el-option label="m³" value="m³"></el-option></el-select></template></el-table-column>
-          <el-table-column label="起始值" min-width="120"><template #default="s2"><el-input-number v-model="s2.row.min" :min="0" :precision="0" :step="1" style="width:100%" controls-position="right" @change="validateWeightRow(s2.row)"></el-input-number></template></el-table-column>
-          <el-table-column label="结束值" min-width="120"><template #default="s2"><div style="display:flex;align-items:center;gap:4px"><el-input-number v-model="s2.row.max" :min="0" :precision="0" :step="1" style="flex:1" controls-position="right" @change="validateWeightRow(s2.row)"></el-input-number><span v-if="s2.row.max===null" style="font-size:12px;color:#909399;white-space:nowrap">无上限</span></div><div v-if="s2.row._err" style="font-size:11px;color:#F56C6C;margin-top:2px">{{s2.row._err}}</div></template></el-table-column>
-          <el-table-column label="段名称" min-width="130"><template #default="s2"><el-input v-model="s2.row.label" placeholder="如 101KG+"></el-input></template></el-table-column>
+          <el-table-column label="计价单位" width="100"><template #default="s2"><el-select v-model="s2.row.unit" :disabled="s2.row._template"><el-option label="KG" value="KG"></el-option><el-option label="m³" value="m³"></el-option></el-select></template></el-table-column>
+          <el-table-column label="起始值" min-width="120"><template #default="s2"><el-input-number v-model="s2.row.min" :min="0" :precision="0" :step="1" style="width:100%" controls-position="right" @change="validateWeightRow(s2.row)" :disabled="s2.row._template"></el-input-number></template></el-table-column>
+          <el-table-column label="结束值" min-width="120"><template #default="s2"><div style="display:flex;align-items:center;gap:4px"><el-input-number v-model="s2.row.max" :min="0" :precision="0" :step="1" style="flex:1" controls-position="right" @change="validateWeightRow(s2.row)" :disabled="s2.row._template"></el-input-number><span v-if="s2.row.max===null" style="font-size:12px;color:#909399;white-space:nowrap">无上限</span></div><div v-if="s2.row._err" style="font-size:11px;color:#F56C6C;margin-top:2px">{{s2.row._err}}</div></template></el-table-column>
+          <el-table-column label="段名称" min-width="130"><template #default="s2"><el-input v-model="s2.row.label" placeholder="如 101KG+" :disabled="s2.row._template"></el-input></template></el-table-column>
           <el-table-column label="操作" width="80" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWeightRow(s2.$index)">删除</el-button></template></el-table-column>
         </el-table>
       </el-tab-pane>
@@ -219,7 +218,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     </el-table-column>
     <el-table-column prop="name" label="成本项" min-width="110"></el-table-column>
     <el-table-column label="模板默认价" min-width="110" align="right">
-      <template #default="s2"><span style="font-size:12px;color:#909399">{{s2.row.dp}} {{s2.row.cur}}</span></template>
+      <template #default="s2"><span v-if="s2.row._preset" style="font-size:12px;color:#C0C4CC">—</span><span v-else style="font-size:12px;color:#909399">{{s2.row.dp}} {{s2.row.cur}}</span></template>
     </el-table-column>
     <el-table-column label="渠道覆盖价" min-width="150"><template #header><span style="color:#E6A23C">* </span>渠道覆盖价</template>
       <template #default="s2">
@@ -236,19 +235,14 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
         <el-switch v-model="chCostTruckingEnabled" size="small"></el-switch>
         <span style="font-weight:600;font-size:13px;margin-left:4px">揽收段 · 拖车费</span>
       </div>
-      <el-button v-if="chCostTruckingEnabled" size="small" @click="syncChTruckingToCombos">同步到组合</el-button>
+      <div style="display:flex;gap:4px"><el-button v-if="chCostTruckingEnabled" type="primary" size="small" @click="addPickupRow">新增交货地</el-button><el-button v-if="chCostTruckingEnabled" size="small" @click="syncChTruckingToCombos">同步到组合</el-button></div>
     </div>
-    <el-table v-if="chCostTruckingEnabled" :data="chCostPickupList" border size="small" max-height="200">
+    <div :class="{'is-readonly': !chCostTruckingEnabled}">
+    <el-table :data="chCostPickupList" border size="small" max-height="200">
       <el-table-column label="交货地" min-width="200"><template #header><span style="color:#E6A23C">* </span>交货地</template>
         <template #default="s2">
-          <div style="display:flex;align-items:center;gap:4px">
-            <el-select v-model="s2.row.pickup_region" multiple collapse-tags size="small" placeholder="选择交货地" :disabled="!s2.row.enabled" style="flex:1"><el-option v-for="r in pickupRegions" :key="r" :label="r" :value="r"></el-option></el-select>
-            <el-button v-if="s2.row.enabled" size="small" @click="dupPickupRow(s2.row)" style="font-size:11px;white-space:nowrap;flex-shrink:0">＋交货地</el-button>
-          </div>
+          <el-select v-model="s2.row.pickup_region" multiple collapse-tags size="small" placeholder="选择交货地" :disabled="!s2.row.enabled" style="width:100%"><el-option v-for="r in pickupRegions" :key="r" :label="r" :value="r"></el-option></el-select>
         </template>
-      </el-table-column>
-      <el-table-column label="模板默认价" min-width="110" align="right">
-        <template #default="s2"><span style="font-size:12px;color:#909399">{{s2.row.dp}} {{s2.row.cur}}</span></template>
       </el-table-column>
       <el-table-column label="渠道覆盖价" min-width="120" align="right"><template #header><span style="color:#E6A23C">* </span>渠道覆盖价</template>
         <template #default="s2">
@@ -260,19 +254,21 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
         <template #default="s2"><el-button link type="danger" size="small" @click="removePickupRow(s2.$index)">删除</el-button></template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
 
   <!-- 派送段：仓点子表 -->
   <div style="margin-top:12px;padding:8px 0;border-top:1px solid #E4E7ED">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:4px">
-        <el-switch v-model="chCostWhEnabled" size="small" @change="toggleChCostWh" :disabled="!editForm.lastMileMethods.includes('卡派')"></el-switch>
+        <el-switch v-model="chCostWhEnabled" size="small" @change="toggleChCostWh"></el-switch>
         <span style="font-weight:600;font-size:13px;margin-left:4px">派送段 · 卡派仓点成本</span>
         <span style="font-size:12px;color:#909399">两个报价来源取 MAX 计入成本底价</span>
       </div>
       <div style="display:flex;gap:4px"><el-button v-if="chCostWhEnabled" type="primary" size="small" @click="addWhRow">新增仓点</el-button><el-button v-if="chCostWhEnabled" size="small" @click="syncChWhToCombos">同步到组合</el-button></div>
     </div>
-    <el-table v-if="chCostWhEnabled" :data="chCostWhList" border size="small" max-height="280">
+    <div :class="{'is-readonly': !chCostWhEnabled}">
+    <el-table :data="chCostWhList" border size="small" max-height="280">
       <el-table-column label="仓库代码" min-width="150"><template #header><span style="color:#E6A23C">* </span>仓库代码</template><template #default="s2"><el-select v-model="s2.row.fba" multiple collapse-tags placeholder="请选择仓库代码" filterable size="small" style="width:100%"><el-option v-for="w in fbaWarehouseList" :key="w.code" :label="w.code" :value="w.code"></el-option></el-select></template></el-table-column>
       <el-table-column v-if="chCostServiceTypes.includes('散货')" label="拆送价" min-width="120"><template #header><span style="color:#E6A23C">* 拆送价</span></template><template #default="s2"><el-input-number v-model="s2.row.拆送价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
       <el-table-column v-if="chCostServiceTypes.includes('散货')" label="组合一口价" min-width="140"><template #default="s2"><el-input-number v-model="s2.row.组合一口价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
@@ -280,19 +276,21 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
       <el-table-column label="币种" width="85"><template #header><span style="color:#E6A23C">* </span>币种</template><template #default="s2"><el-select v-model="s2.row.cur" size="small"><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template></el-table-column>
       <el-table-column label="操作" width="70" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWhRow(s2.$index)">删除</el-button></template></el-table-column>
     </el-table>
+    </div>
   </div>
 
   <!-- 快递派：费率子表 -->
   <div style="margin-top:8px;padding:8px 0;border-top:1px solid #E4E7ED">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:4px">
-        <el-switch v-model="chCostExpEnabled" size="small" @change="toggleChCostExp" :disabled="!editForm.lastMileMethods.includes('快递派')"></el-switch>
+        <el-switch v-model="chCostExpEnabled" size="small" @change="toggleChCostExp"></el-switch>
         <span style="font-weight:600;font-size:13px;margin-left:4px">派送段 · 快递派单价</span>
         <span style="font-size:12px;color:#909399">重量段 × 邮编前缀 → 固定单价，逗号拼接前缀，直接累加到成本底价</span>
       </div>
       <div style="display:flex;gap:4px"><el-button v-if="chCostExpEnabled" type="primary" size="small" @click="addExpRow">新增费率行</el-button><el-button v-if="chCostExpEnabled" size="small" @click="syncChExpToCombos">同步到组合</el-button></div>
     </div>
-    <el-table v-if="chCostExpEnabled" :data="chCostExpList" border size="small" max-height="220">
+    <div :class="{'is-readonly': !chCostExpEnabled}">
+    <el-table :data="chCostExpList" border size="small" max-height="220">
       <el-table-column label="重量段" min-width="120"><template #header><span style="color:#E6A23C">* </span>重量段</template>
         <template #default="s2"><el-select v-model="s2.row.weightTier" placeholder="选择" size="small" style="width:100%"><el-option v-for="t in expWeightTiers" :key="t" :label="t" :value="t"></el-option></el-select></template>
       </el-table-column>
@@ -309,6 +307,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
         <template #default="s2"><el-button link type="danger" size="small" @click="removeExpRow(s2.$index)">删除</el-button></template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
   </div>
   <template #footer><span style="display:flex;justify-content:space-between;width:100%"><span></span><span><el-button @click="closeChCostDialog">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="saveChannelCost">保存</el-button></span></span></template>
@@ -346,7 +345,7 @@ var app = Vue.createApp({
       showDialog: false, editMode: false, editIdx: -1, isReadonly: false,
       activeTimeTab: 'transit', fbaSync: '是',
       editForm: { name:'', originCountry:'CN', destCountries:[], transportMode:'海运', routeCodes:[], lastMileMethods:[], taxMethods:[], billingUnits:[], serviceTypes:[], needClaim:false, _combosGenerated:false },transitForm: { amazonLevel:'标准', minDays:null, maxDays:null },
-      warehouseList: [], claimList: [], weightList: [], weightTemplateIds: [],
+      warehouseList: [], claimList: [], weightList: [], selectedWeightSegment: '',
       weightTemplates: [
         {id:'sea-kg', label:'海运 / KG — 8KG+, 101KG+', transportMode:10, unit:'KG', tiers:[{unit:'KG',min:8,max:101,label:'8KG+'},{unit:'KG',min:101,max:null,label:'101KG+'}]},
         {id:'sea-cbm', label:'海运 / m³ — 2m³+', transportMode:10, unit:'m³', tiers:[{unit:'m³',min:2,max:null,label:'2m³+'}]},
@@ -376,7 +375,7 @@ var app = Vue.createApp({
       fbaWarehouseList: [{code:'ONT8'},{code:'LGB8'},{code:'LAX9'},{code:'SBD1'},{code:'POC1'},{code:'POC3'},{code:'ABQ2'},{code:'AVP1'}],
       globalCostTmpls: [
         {seg:'揽收段',name:'装柜费',dp:'1200',cur:'RMB',pickup_region:[]},
-        {seg:'揽收段',name:'拖车费',dp:'1950',cur:'RMB',pickup_region:[]},
+        {seg:'揽收段',name:'拖车费',_preset:true,dp:'0',cur:'RMB',pickup_region:[]},
         {seg:'干线运输段',name:'海运费',dp:'5.0',cur:'USD'},
         {seg:'干线运输段',name:'港杂费',dp:'250',cur:'RMB'},
         {seg:'关务段',name:'国内报关费',dp:'2800',cur:'RMB'},{seg:'关务段',name:'国外清关费',dp:'1500',cur:'USD'},{seg:'关务段',name:'税金',dp:'1800',cur:'USD'},
@@ -477,6 +476,25 @@ var app = Vue.createApp({
       if(units.length===0) return list;
       return list.filter(function(t){return units.indexOf(t.unit)!==-1;});
     },
+    availableWeightSegments: function(){
+      var self = this; var segments = [];
+      this.availableWeightTemplates.forEach(function(t){
+        t.tiers.forEach(function(w, i){
+          var key = t.id + '__' + i;
+          var exists = self.weightList.some(function(existing){
+            return existing.unit === w.unit && existing.min === w.min && existing.max === w.max;
+          });
+          if(!exists){
+            segments.push({
+              _key: key,
+              _label: w.label + ' (' + w.unit + ', ' + w.min + '-' + (w.max || '∞') + ')',
+              unit: w.unit, min: w.min, max: w.max, label: w.label
+            });
+          }
+        });
+      });
+      return segments;
+    },
     filteredRoutes: function(){
       var f = this.editForm;
       var isSea = f.transportMode === '海运';
@@ -532,7 +550,7 @@ var app = Vue.createApp({
         {type:'派送', transportMode:10, lastMile:'卡派', kgStandard:350, cbmStandard:1.8}
       ];
       this.transitForm = { amazonLevel:'标准', minDays:null, maxDays:null };
-      this.warehouseList = []; this.claimList = []; this.weightList = []; this.weightTemplateIds = []; this.availableLastMileMethods = [];
+      this.warehouseList = []; this.claimList = []; this.weightList = []; this.availableLastMileMethods = [];
       this.showDialog = true;
     },
 
@@ -554,7 +572,7 @@ var app = Vue.createApp({
       this.claimList = JSON.parse(JSON.stringify(row._claim||[]));
       var ls = r._loadingStandards || [{type:'头程',transportMode:10,lastMile:'',kgStandard:12525,cbmStandard:75},{type:'派送',transportMode:10,lastMile:'卡派',kgStandard:350,cbmStandard:1.8}];
       this.loadingStandards = ls.map(function(s){ return {type:s.type, transportMode:s.transportMode||10, lastMile:s.lastMile||'', kgStandard:s.kgStandard, cbmStandard:s.cbmStandard}; });
-      this.weightList = JSON.parse(JSON.stringify(row._weight||[])); this.weightTemplateIds = [];
+      this.weightList = JSON.parse(JSON.stringify(row._weight||[]));
       this.showDialog = true;
     },
 
@@ -582,34 +600,15 @@ var app = Vue.createApp({
     removeWarehouseRow: function(i){ this.warehouseList.splice(i,1); },
     addClaimRow: function(){ var hasExpress=this.claimList.some(function(item){return item.deliveryMethod==='快递派'}); var def=this.availableLastMileMethods.length===1?this.availableLastMileMethods[0]:(hasExpress?'卡派':'快递派'); if(this.availableLastMileMethods.every(function(m){return m==='快递派'?hasExpress:false})&&hasExpress){ElementPlus.ElMessage.warning('每种派送方式最多一条理赔承诺规则。快递派已存在，卡派未开通');return} this.claimList.push({deliveryMethod:def,fbaCodes:[],claimDays:null}); },
     removeClaimRow: function(i){ this.claimList.splice(i,1); },
-    applyWeightTemplate: function(ids){
-      var self=this;
-      if(!ids||ids.length===0){ this.weightTemplateIds=[]; return; }
-      var hasCustom=this.weightList.some(function(w){return w._custom;});
-      if(this.weightList.length>0&&!hasCustom){
-        var self2=this;
-        ElementPlus.ElMessageBox.confirm('当前已有重量段数据，应用模板将覆盖现有内容。确定继续？','覆盖确认',{confirmButtonText:'确定覆盖',cancelButtonText:'取消',type:'warning'}).then(function(){
-          self2._doApplyTemplates(ids);
-        }).catch(function(){ self2.weightTemplateIds=[]; });
-      } else {
-        this._doApplyTemplates(ids);
-      }
+    bindWeightSegment: function(key){
+      if(!key){ this.selectedWeightSegment=''; return; }
+      var seg = this.availableWeightSegments.find(function(s){return s._key===key;});
+      if(!seg){ this.selectedWeightSegment=''; return; }
+      this.weightList.push({unit:seg.unit,min:seg.min,max:seg.max,label:seg.label,_template:true});
+      this.selectedWeightSegment='';
+      ElementPlus.ElMessage.success('已绑定重量段：'+seg.label);
     },
-    _doApplyTemplates: function(ids){
-      var self=this; var customs=this.weightList.filter(function(w){return w._custom;});
-      var merged=[];
-      ids.forEach(function(id){
-        var t=self.weightTemplates.find(function(x){return x.id===id});
-        if(t){ t.tiers.forEach(function(w){ merged.push({unit:w.unit,min:w.min,max:w.max,label:w.label,_template:true}); }); }
-      });
-      this.weightList=merged.concat(customs);
-      this.weightTemplateIds=[];
-      ElementPlus.ElMessage.success('已应用 '+ids.length+' 个模板');
-    },
-    addWeightRow: function(){ this.weightList.push({unit:'KG',min:0,max:null,label:'',_custom:true}); },
-    removeWeightRow: function(i){
-      if(this.weightList[i]&&this.weightList[i]._template){ ElementPlus.ElMessage.warning('模板自带段不可删除'); return; }
-      this.weightList.splice(i,1);
+    removeWeightRow: function(i){ this.weightList.splice(i,1);
     },
     onWeightDragStart: function(e, idx){ this.dragWeightIdx = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); },
     onWeightDragOver: function(e, idx){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; },
@@ -792,6 +791,16 @@ var app = Vue.createApp({
       var idx = list.indexOf(row);
       list.splice(idx+1, 0, {seg:row.seg,name:row.name,dp:row.dp,cur:row.cur,price:parseFloat(row.dp),enabled:true,pickup_region:[avail[0]]});
       ElementPlus.ElMessage.success(row.name+' 已添加交货地 '+avail[0]);
+    },
+    addPickupRow: function(){
+      this._costDirty = true;
+      var list = this.chCostData[this.chCostChannel];
+      if(!list) this.chCostData[this.chCostChannel] = [];
+      var tmpl = this.globalCostTmpls.find(function(t){return t.seg==='揽收段'&&t.name==='拖车费'});
+      var dp = tmpl ? parseFloat(tmpl.dp) : 0;
+      var cur = tmpl ? tmpl.cur : 'RMB';
+      this.chCostData[this.chCostChannel].push({seg:'揽收段',name:'拖车费',dp:dp,cur:cur,price:dp,enabled:true,pickup_region:[]});
+      ElementPlus.ElMessage.success('已新增拖车费交货地行');
     },
     removePickupRow: function(i){
       this._costDirty = true;
