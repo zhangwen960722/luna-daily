@@ -40,11 +40,11 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-option v-for="b in batches" :key="b.name" :label="b.name+' ('+b.status+')'" :value="b.name"></el-option>
       </el-select>
       <el-button @click="openAddBatch" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">新建周批次</el-button>
-      <el-dropdown v-if="selectedBatch&&selectedBatch.status!=='已过期'" style="margin-left:6px" @command="openImport">
+      <!-- TODO: 导入功能暂时隐藏 --><el-dropdown v-if="false" style="margin-left:6px" @command="openImport">
         <el-button style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">导入成本<el-icon style="margin-left:2px"><svg viewBox="0 0 1024 1024" width="12" height="12"><path d="M831.872 340.864L512 660.736 192.128 340.864a30.592 30.592 0 0 0-42.752 0 29.376 29.376 0 0 0 0 42.24L512 745.344l362.624-362.24a29.376 29.376 0 0 0 0-42.24 30.592 30.592 0 0 0-42.752 0z" fill="currentColor"/></svg></el-icon></el-button>
         <template #dropdown><el-dropdown-menu><el-dropdown-item command="normal">普通成本项（海运费等）</el-dropdown-item><el-dropdown-item command="truck">拖车费（按交货地）</el-dropdown-item><el-dropdown-item command="warehouse">卡派仓点成本</el-dropdown-item><el-dropdown-item command="express">快递派单价</el-dropdown-item></el-dropdown-menu></template>
       </el-dropdown>
-      <el-button v-if="selectedBatch&&selectedBatch.status!=='已过期'" @click="openImport('markup')" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">导入加成额</el-button>
+      <el-button v-if="false" @click="openImport('markup')" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)">导入加成额</el-button>
       <el-button v-if="selectedBatch&&(selectedBatch.status==='预告'||selectedBatch.status==='当前')" type="danger" @click="voidBatch" style="background:rgba(255,100,100,.3);color:#fff;border:1px solid rgba(255,255,255,.35)">作废</el-button>
     </div>
   </div>
@@ -156,13 +156,18 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-row :gutter="16"><el-col :span="12"><el-form-item label="周起始" required><el-date-picker v-model="batchForm.start" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col><el-col :span="12"><el-form-item label="周结束" required><el-date-picker v-model="batchForm.end" type="date" value-format="YYYY-MM-DD" style="width:100%"></el-date-picker></el-form-item></el-col></el-row>
     <el-form-item label="备注"><el-input v-model="batchForm.remark" placeholder="选填"></el-input></el-form-item>
     <el-divider content-position="left" style="margin:8px 0">复制选项</el-divider>
-    <el-form-item label="从上周复制">
-      <el-switch v-model="batchForm.copyLast" :disabled="!hasCurrentBatch"></el-switch>
-      <span style="margin-left:8px;font-size:12px;color:#909399">{{hasCurrentBatch?'复制上周运价和船期——已停用的航线/组合/成本自动移除，本周新增的标绿标记，成本按最新重算':'当前无运行中批次，无法复制'}}</span>
+    <el-form-item label="从历史批次复制">
+      <el-switch v-model="batchForm.copyLast" :disabled="batches.length===0"></el-switch>
+      <span v-if="!batchForm.copyLast" style="margin-left:8px;font-size:12px;color:#909399">{{batches.length>0?'开启后可选择历史批次复制运价和船期':'当前无可用批次，无法复制'}}</span>
+    </el-form-item>
+    <el-form-item v-if="batchForm.copyLast" label="选择周批次" required>
+      <el-select v-model="batchForm.copyFromBatch" placeholder="请选择要复制的周批次" style="width:100%">
+        <el-option v-for="b in batches" :key="b.name" :label="b.name+' ('+b.status+')'" :value="b.name"></el-option>
+      </el-select>
     </el-form-item>
     <el-tabs v-model="batchForm.activeTab" style="margin-top:8px">
       <el-tab-pane label="折算基准快照" name="loading">
-        <div style="font-size:12px;color:#909399;margin-bottom:10px">{{batchForm.copyLast?'沿用上周快照':'从全局表拉取当前全部启用行'}}。可针对本周编辑 KG/CBM 基准（快递派锁定为 1）。加成额取组合默认值。</div>
+        <div style="font-size:12px;color:#909399;margin-bottom:10px">{{batchForm.copyLast?'沿用选中批次快照':'从全局表拉取当前全部启用行'}}。可针对本周编辑 KG/CBM 基准（快递派锁定为 1）。加成额取组合默认值。</div>
         <el-table :data="batchForm.loadingStandards" border size="small" style="width:100%">
           <el-table-column label="运输方式" width="100"><template #default="s2">{{s2.row.transportLabel}}</template></el-table-column>
           <el-table-column label="基准类型" width="80"><template #default="s2"><el-tag v-if="s2.row.typeLabel==='头程'" type="success" size="small" effect="plain">{{s2.row.typeLabel}}</el-tag><el-tag v-else type="warning" size="small" effect="plain">{{s2.row.typeLabel}}</el-tag></template></el-table-column>
@@ -543,7 +548,7 @@ var app = Vue.createApp({
           }
         }
       },
-      batchForm: { name:'', week:'', start:'', end:'', remark:'', copyLast:true, loadingStandards:[], activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] },
+      batchForm: { name:'', week:'', start:'', end:'', remark:'', copyLast:false, copyFromBatch:'', loadingStandards:[], activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] },
       priceForm: { comboName:'' },
       priceEditCostKg: null, priceEditCostCbm: null, priceEditHeadKg: null, priceEditHeadCbm: null, priceEditRows: [], priceEditMatrix: [], showCostDetail: false, costDetail: null, costDetailBilling: 'KG', costDetailServiceType: '散货', costDetailTruckingItems: null,
       _editGroup: null, _editWh: '', _editMaxDiscount: 0, editMatrixMode: false
@@ -646,7 +651,7 @@ var app = Vue.createApp({
     openAddBatch: function(){
       var cur=this.batches.find(function(b){return b.status==='当前'});
       var loadingStds = (cur&&cur._snapshot) ? JSON.parse(JSON.stringify(cur._snapshot)) : JSON.parse(JSON.stringify(this.globalLoadingStandards));
-      this.batchForm = { name:'', week:'', start:'', end:'', remark:'', copyLast:!!cur, loadingStandards:loadingStds, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] };
+      this.batchForm = { name:'', week:'', start:'', end:'', remark:'', copyLast:false, copyFromBatch:'', loadingStandards:loadingStds, activeTab:'loading', exchangeRates:[{from:'USD',to:'RMB',rate:7.2500}] };
       this.showBatchDialog = true;
     },
     saveBatch: function(){
@@ -658,6 +663,7 @@ var app = Vue.createApp({
       var ers=this.batchForm.exchangeRates||[];
       if(!ers.length){ElementPlus.ElMessage.warning('请至少配置一条汇率');return}
       for(var ei=0;ei<ers.length;ei++){if(!ers[ei].from||!ers[ei].to||!ers[ei].rate||ers[ei].rate<=0){ElementPlus.ElMessage.warning('汇率第'+(ei+1)+'行：请完善币种和汇率（>0）');return}}
+      if(this.batchForm.copyLast&&!this.batchForm.copyFromBatch){ElementPlus.ElMessage.warning('请选择要复制的周批次');return}
       var self=this; var name=this.batchForm.name;
       var snap=JSON.parse(JSON.stringify(this.batchForm.loadingStandards));
       var nb={name:name,week:this.batchForm.week,start:this.batchForm.start,end:this.batchForm.end,exchangeRates:JSON.parse(JSON.stringify(ers)),status:'预告',_snapshot:snap};
@@ -665,7 +671,7 @@ var app = Vue.createApp({
       this.costRefHistory[name] = JSON.parse(JSON.stringify(this.costRefMap));
 
       if(this.batchForm.copyLast){
-        var cur=this.batches.find(function(b){return b.status==='当前'});
+        var cur=this.batches.find(function(b){return b.name===self.batchForm.copyFromBatch;});
         if(cur){
           // ===== 船期：骨架重生 =====
           var newSailing=[]; var oldSailing=this.allSailingData[cur.name]||[];

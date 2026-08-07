@@ -179,7 +179,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
           <el-table-column label="起始值" min-width="120"><template #default="s2"><el-input-number v-model="s2.row.min" :min="0" :precision="0" :step="1" style="width:100%" controls-position="right" @change="validateWeightRow(s2.row)" :disabled="s2.row._template"></el-input-number></template></el-table-column>
           <el-table-column label="结束值" min-width="120"><template #default="s2"><div style="display:flex;align-items:center;gap:4px"><el-input-number v-model="s2.row.max" :min="0" :precision="0" :step="1" style="flex:1" controls-position="right" @change="validateWeightRow(s2.row)" :disabled="s2.row._template"></el-input-number><span v-if="s2.row.max===null" style="font-size:12px;color:#909399;white-space:nowrap">无上限</span></div><div v-if="s2.row._err" style="font-size:11px;color:#F56C6C;margin-top:2px">{{s2.row._err}}</div></template></el-table-column>
           <el-table-column label="段名称" min-width="130"><template #default="s2"><el-input v-model="s2.row.label" placeholder="如 101KG+" :disabled="s2.row._template"></el-input></template></el-table-column>
-          <el-table-column label="操作" width="80" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWeightRow(s2.$index)">删除</el-button></template></el-table-column>
+          <el-table-column label="启用" width="70" align="center"><template #default="s2"><el-switch v-model="s2.row.enabled" size="small" @change="validateWeightRow(s2.row)"></el-switch></template></el-table-column>
         </el-table>
       </el-tab-pane>
     </el-tabs>
@@ -190,9 +190,9 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
       <div v-if="!editMode" style="font-size:13px;color:#2DA44E;background:#F0F9EB;border:1px solid #C8E6C9;border-radius:4px;padding:6px 12px">当前将生成 <strong>{{comboCount}}</strong> 个服务组合</div>
       <div v-else></div>
       <span>
-        <el-button @click="showDialog=false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
-        <el-button v-if="!isReadonly" type="primary" @click="saveService(false)">保存</el-button>
-        <el-button v-if="!editMode && !isReadonly" type="success" @click="saveService(true)">保存并生成服务组合</el-button>
+        <el-button @click="cancelService">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+        <el-button v-if="!isReadonly" type="primary" @click="confirmSaveService(false)">保存</el-button>
+        <el-button v-if="!editMode && !isReadonly" type="success" @click="confirmSaveService(true)">保存并生成服务组合</el-button>
       </span>
     </div>
   </template>
@@ -241,7 +241,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     <el-table :data="chCostPickupList" border size="small" max-height="200">
       <el-table-column label="交货地" min-width="200"><template #header><span style="color:#E6A23C">* </span>交货地</template>
         <template #default="s2">
-          <el-select v-model="s2.row.pickup_region" multiple collapse-tags size="small" placeholder="选择交货地" :disabled="!s2.row.enabled" style="width:100%"><el-option v-for="r in pickupRegions" :key="r" :label="r" :value="r"></el-option></el-select>
+          <el-select v-model="s2.row.pickup_region" multiple collapse-tags size="small" placeholder="选择交货地" :disabled="s2.row.pickup_region && s2.row.pickup_region.length > 0" style="width:100%"><el-option v-for="r in pickupRegions" :key="r" :label="r" :value="r"></el-option></el-select>
         </template>
       </el-table-column>
       <el-table-column label="渠道覆盖价" min-width="120" align="right"><template #header><span style="color:#E6A23C">* </span>渠道覆盖价</template>
@@ -249,6 +249,9 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
           <el-input-number v-if="s2.row.enabled" v-model="s2.row.price" :min="0" :precision="2" size="small" controls-position="right" style="width:120px" @change="_costDirty=true"></el-input-number>
           <span v-else style="font-size:12px;color:#C0C4CC">已禁用</span>
         </template>
+      </el-table-column>
+      <el-table-column label="币种" width="70" align="center">
+        <template #default="s2"><span>{{s2.row.cur||'RMB'}}</span></template>
       </el-table-column>
       <el-table-column label="操作" width="70" align="center">
         <template #default="s2"><el-button link type="danger" size="small" @click="removePickupRow(s2.$index)">删除</el-button></template>
@@ -269,11 +272,11 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     </div>
     <div :class="{'is-readonly': !chCostWhEnabled}">
     <el-table :data="chCostWhList" border size="small" max-height="280">
-      <el-table-column label="仓库代码" min-width="150"><template #header><span style="color:#E6A23C">* </span>仓库代码</template><template #default="s2"><el-select v-model="s2.row.fba" multiple collapse-tags placeholder="请选择仓库代码" filterable size="small" style="width:100%"><el-option v-for="w in fbaWarehouseList" :key="w.code" :label="w.code" :value="w.code"></el-option></el-select></template></el-table-column>
+      <el-table-column label="仓库代码" min-width="150"><template #header><span style="color:#E6A23C">* </span>仓库代码</template><template #default="s2"><el-select v-model="s2.row.fba" multiple collapse-tags placeholder="请选择仓库代码" filterable size="small" :disabled="s2.row.fba && s2.row.fba.length > 0" style="width:100%"><el-option v-for="w in fbaWarehouseList" :key="w.code" :label="w.code" :value="w.code"></el-option></el-select></template></el-table-column>
       <el-table-column v-if="chCostServiceTypes.includes('散货')" label="拆送价" min-width="120"><template #header><span style="color:#E6A23C">* 拆送价</span></template><template #default="s2"><el-input-number v-model="s2.row.拆送价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
       <el-table-column v-if="chCostServiceTypes.includes('散货')" label="组合一口价" min-width="140"><template #default="s2"><el-input-number v-model="s2.row.组合一口价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
       <el-table-column v-if="chCostServiceTypes.includes('整柜')" label="整柜直送价" min-width="140"><template #default="s2"><el-input-number v-model="s2.row.整柜直送价" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template></el-table-column>
-      <el-table-column label="币种" width="85"><template #header><span style="color:#E6A23C">* </span>币种</template><template #default="s2"><el-select v-model="s2.row.cur" size="small"><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template></el-table-column>
+      <el-table-column label="币种" width="85"><template #header><span style="color:#E6A23C">* </span>币种</template><template #default="s2"><el-select v-model="s2.row.cur" size="small" disabled><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template></el-table-column>
       <el-table-column label="操作" width="70" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWhRow(s2.$index)">删除</el-button></template></el-table-column>
     </el-table>
     </div>
@@ -292,16 +295,16 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     <div :class="{'is-readonly': !chCostExpEnabled}">
     <el-table :data="chCostExpList" border size="small" max-height="220">
       <el-table-column label="重量段" min-width="120"><template #header><span style="color:#E6A23C">* </span>重量段</template>
-        <template #default="s2"><el-select v-model="s2.row.weightTier" placeholder="选择" size="small" style="width:100%"><el-option v-for="t in expWeightTiers" :key="t" :label="t" :value="t"></el-option></el-select></template>
+        <template #default="s2"><el-select v-model="s2.row.weightTier" placeholder="选择" size="small" :disabled="!!s2.row.weightTier" style="width:100%"><el-option v-for="t in expWeightTiers" :key="t" :label="t" :value="t"></el-option></el-select></template>
       </el-table-column>
       <el-table-column label="邮编前缀" min-width="130"><template #header><span style="color:#E6A23C">* </span>邮编前缀</template>
-        <template #default="s2"><el-input v-model="s2.row.zipPrefixes" placeholder="如 8,9 表示 8xxxx+9xxxx" size="small" style="width:100%"></el-input></template>
+        <template #default="s2"><el-input v-model="s2.row.zipPrefixes" placeholder="如 8,9 表示 8xxxx+9xxxx" size="small" :disabled="!!s2.row.zipPrefixes" style="width:100%"></el-input></template>
       </el-table-column>
       <el-table-column label="单价" min-width="120"><template #header><span style="color:#E6A23C">* </span>单价</template>
         <template #default="s2"><el-input-number v-model="s2.row.price" :min="0" :precision="2" size="small" controls-position="right" style="width:100%" @change="_costDirty=true"></el-input-number></template>
       </el-table-column>
       <el-table-column label="币种" width="85"><template #header><span style="color:#E6A23C">* </span>币种</template>
-        <template #default="s2"><el-select v-model="s2.row.cur" size="small"><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template>
+        <template #default="s2"><el-select v-model="s2.row.cur" size="small" disabled><el-option label="USD" value="USD"></el-option><el-option label="RMB" value="RMB"></el-option></el-select></template>
       </el-table-column>
       <el-table-column label="操作" width="70" align="center">
         <template #default="s2"><el-button link type="danger" size="small" @click="removeExpRow(s2.$index)">删除</el-button></template>
@@ -310,7 +313,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     </div>
   </div>
   </div>
-  <template #footer><span style="display:flex;justify-content:space-between;width:100%"><span></span><span><el-button @click="closeChCostDialog">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="saveChannelCost">保存</el-button></span></span></template>
+  <template #footer><span style="display:flex;justify-content:space-between;width:100%"><span></span><span><el-button @click="cancelChCost">{{ isReadonly ? '关闭' : '取消' }}</el-button><el-button v-if="!isReadonly" type="primary" @click="confirmSaveChCost">保存</el-button></span></span></template>
 </el-dialog>
 
 <!-- 同步到组合弹窗 -->
@@ -319,10 +322,15 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
   <div style="margin-bottom:8px"><el-checkbox v-model="syncItemSelectAll" @change="toggleSyncItemsAll">全选成本项（已选 {{syncSelectedItemCount}} / {{syncItems.length}}）</el-checkbox></div>
   <el-table :data="syncItems" border size="small" max-height="200" @selection-change="onSyncItemSelectionChange" ref="syncItemTable">
     <el-table-column type="selection" width="45" :selectable="function(r){return r.enabled}"></el-table-column>
-    <el-table-column prop="name" label="成本项" min-width="140"></el-table-column>
-    <el-table-column prop="dp" label="单价" width="80"></el-table-column>
-    <el-table-column prop="cur" label="币种" width="60"></el-table-column>
-    <el-table-column label="状态" width="70"><template #default="s"><el-tag :type="s.row.enabled?'success':'info'" size="small">{{s.row.enabled?'启用':'禁用'}}</el-tag></template></el-table-column>
+    <el-table-column prop="name" label="成本项" min-width="90"></el-table-column>
+    <el-table-column v-if="syncType==='trucking'" prop="deliveryRegion" label="交货地" min-width="100"></el-table-column>
+    <el-table-column v-if="syncType==='wh'" prop="拆送价" label="拆送价" width="75"></el-table-column>
+    <el-table-column v-if="syncType==='wh'" prop="组合一口价" label="组合一口价" width="95"></el-table-column>
+    <el-table-column v-if="syncType==='wh'" prop="整柜直送价" label="整柜直送价" width="95"></el-table-column>
+    <el-table-column v-if="syncType==='exp'" prop="zipPrefixes" label="邮编前缀" min-width="100"></el-table-column>
+    <el-table-column v-if="syncType!=='wh'" prop="dp" label="单价" width="75"></el-table-column>
+    <el-table-column prop="cur" label="币种" width="55"></el-table-column>
+    <el-table-column label="状态" width="65"><template #default="s"><el-tag :type="s.row.enabled?'success':'info'" size="small">{{s.row.enabled?'启用':'禁用'}}</el-tag></template></el-table-column>
   </el-table>
   <div style="margin:14px 0 12px;font-size:13px;font-weight:600">同步到以下组合</div>
   <div style="margin-bottom:8px"><el-checkbox v-model="syncCombosSelectAll" @change="toggleSyncCombosAll">全选组合（已选 {{syncSelectedComboCount}} / {{syncCombos.length}}）</el-checkbox></div>
@@ -454,7 +462,7 @@ var app = Vue.createApp({
       get: function(){ var d=this.chCostWhData[this.chCostChannel]; return d?d.enabled:false; },
       set: function(v){ var d=this.chCostWhData[this.chCostChannel]; if(d) d.enabled=v; }
     },
-    syncTypeLabel: function(){var m={cost:'成本项',wh:'仓点成本',exp:'快递派单价'};return m[this.syncType]||''},
+    syncTypeLabel: function(){var m={cost:'成本项',trucking:'拖车费',wh:'仓点成本',exp:'快递派单价'};return m[this.syncType]||''},
     syncSelectedItemCount: function(){return this.syncItems.filter(function(c){return c._sel}).length},
     syncSelectedComboCount: function(){return this.syncCombos.filter(function(c){return c._sel}).length},
         hasPickupItems: function(){
@@ -628,6 +636,8 @@ var app = Vue.createApp({
       }
     },
 
+    cancelService: function(){var self=this;if(this.isReadonly){this.showDialog=false;return}ElementPlus.ElMessageBox.confirm('确定要取消吗？未保存的修改将丢失。','确认取消',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){self.showDialog=false}).catch(function(){})},
+    confirmSaveService: function(isGenerate){var self=this;var msg=isGenerate?'确定要保存并生成服务组合吗？':'确定要保存服务渠道吗？';ElementPlus.ElMessageBox.confirm(msg,'确认保存',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){self.saveService(isGenerate)}).catch(function(){})},
     saveService: function(isGenerate){
       var self = this;
       if(isGenerate){var dims=[];if(this.editForm.transportMode)dims.push('运输方式:'+this.editForm.transportMode);if(this.editForm.lastMileMethods.length)dims.push('尾程派送:'+this.editForm.lastMileMethods.join('/'));if(this.editForm.taxMethods.length)dims.push('包税方式:'+this.editForm.taxMethods.join('/'));if(this.editForm.billingUnits.length)dims.push('计费方式:'+this.editForm.billingUnits.join('/'));if(this.editForm.serviceTypes.length)dims.push('服务类型:'+this.editForm.serviceTypes.join('/'));var _dims=[1,this.editForm.lastMileMethods.length||1,this.editForm.taxMethods.length||1,this.editForm.billingUnits.length||1,this.editForm.serviceTypes.length||1];var comboCount=_dims[0]*_dims[1]*_dims[2]*_dims[3]*_dims[4];ElementPlus.ElMessageBox.confirm('即将基于当前维度生成 '+comboCount+' 个服务组合。\n\n'+dims.join('\n')+'\n\n生成后以上维度将永久锁定，不可变更。确定生成？','确认生成服务组合',{confirmButtonText:'确定生成',cancelButtonText:'取消',type:'warning'}).then(function(){self._doSave(isGenerate)}).catch(function(){});return}
@@ -644,8 +654,8 @@ var app = Vue.createApp({
       if(this.editForm.billingUnits.length===0){ ElementPlus.ElMessage.warning('请选择计费方式'); return; }
       if(this.editForm.serviceTypes.length===0){ ElementPlus.ElMessage.warning('请选择服务类型'); return; }
       var lms=this.editForm.lastMileMethods;var hasBoth=lms.includes('卡派')&&lms.includes('快递派');
-      if(lms.includes('卡派')){var whD=this.chCostWhData[this.editForm.name||this._editingChannelName];if(hasBoth&&(!whD||!whD.enabled)){ElementPlus.ElMessage.warning('同时关联卡派和快递派时，仓点成本不可禁用');return}if(this.editMode&&whD&&whD.enabled&&(!whD.warehouses||!whD.warehouses.length)){ElementPlus.ElMessage.warning('仓点成本已开启但未添加任何仓点，请至少添加一个仓点');return}}
-      if(lms.includes('快递派')){var expD=this.chCostExpData[this.editForm.name||this._editingChannelName];if(hasBoth&&(!expD||!expD.enabled)){ElementPlus.ElMessage.warning('同时关联卡派和快递派时，快递派单价不可禁用');return}if(this.editMode&&expD&&expD.enabled&&(!expD.rates||!expD.rates.length)){ElementPlus.ElMessage.warning('快递派单价已开启但未添加任何费率行，请至少添加一条费率行');return}}
+      if(lms.includes('卡派')){var whD=this.chCostWhData[this.editForm.name||this._editingChannelName];if(this.editMode&&whD&&whD.enabled&&(!whD.warehouses||!whD.warehouses.length)){ElementPlus.ElMessage.warning('仓点成本已开启但未添加任何仓点，请至少添加一个仓点');return}}
+      if(lms.includes('快递派')){var expD=this.chCostExpData[this.editForm.name||this._editingChannelName];if(this.editMode&&expD&&expD.enabled&&(!expD.rates||!expD.rates.length)){ElementPlus.ElMessage.warning('快递派单价已开启但未添加任何费率行，请至少添加一条费率行');return}}
 
       var wtErr = this.weightList.find(function(w){ return w.max!==null && w.min!==null && w.max < w.min; });
       if(wtErr){ ElementPlus.ElMessage.warning('重量段「'+wtErr.label+'」结束值不能小于起始值'); this.activeTimeTab='weight'; return; }
@@ -764,7 +774,8 @@ var app = Vue.createApp({
       }
       this.showChCostDialog = true;this._costDirty=false;
     },
-    closeChCostDialog: function(){var self=this;if(this._costDirty){ElementPlus.ElMessageBox.confirm('有未保存的变更，确定关闭？','确认关闭',{confirmButtonText:'确定关闭',cancelButtonText:'取消',type:'warning'}).then(function(){self.showChCostDialog=false}).catch(function(){})}else{this.showChCostDialog=false}},
+    cancelChCost: function(){var self=this;if(this.isReadonly){this.showChCostDialog=false;return}ElementPlus.ElMessageBox.confirm('确定要取消吗？未保存的修改将丢失。','确认取消',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){self.showChCostDialog=false}).catch(function(){})},
+    confirmSaveChCost: function(){var self=this;ElementPlus.ElMessageBox.confirm('确定要保存成本项修改吗？','确认保存',{confirmButtonText:'确定',cancelButtonText:'取消',type:'warning'}).then(function(){self.saveChannelCost()}).catch(function(){})},
     saveChannelCost: function(){var whD=this.chCostWhData[this.chCostChannel];var expD=this.chCostExpData[this.chCostChannel];var lms=this.editForm.lastMileMethods;if(lms.includes('卡派')&&whD&&whD.enabled){if(!whD.warehouses||!whD.warehouses.length){ElementPlus.ElMessage.warning('仓点成本已开启，请至少添加一个仓点');return}for(var i=0;i<whD.warehouses.length;i++){var w=whD.warehouses[i];if(w.拆送价===null&&w.组合一口价===null&&w.整柜直送价===null){ElementPlus.ElMessage.warning('仓点成本第'+(i+1)+'行：拆送价/组合一口价/整柜直送价至少填一个');return}}var allWh=[];var dupWh=false;whD.warehouses.forEach(function(w){(w.fba||[]).forEach(function(c){if(allWh.indexOf(c)!==-1)dupWh=true;allWh.push(c)})});if(dupWh){ElementPlus.ElMessage.warning('仓点成本存在重复的仓库代码（同一仓库不可出现在多行）');return}}if(lms.includes('快递派')&&expD&&expD.enabled){if(!expD.rates||!expD.rates.length){ElementPlus.ElMessage.warning('快递派单价已开启，请至少添加一条费率行');return}for(var j=0;j<expD.rates.length;j++){var r=expD.rates[j];if(!r.weightTier||!r.zipPrefixes||r.price===null){ElementPlus.ElMessage.warning('快递派单价第'+(j+1)+'行：重量段/邮编前缀/单价必填');return}}var expKeys=expD.rates.map(function(x){return x.weightTier+'|'+x.zipPrefixes});if(new Set(expKeys).size!==expKeys.length){ElementPlus.ElMessage.warning('快递派单价存在重复的(重量段+邮编前缀)组合');return}}this._costDirty=false;ElementPlus.ElMessageBox.alert('成本项已保存','保存成功',{confirmButtonText:'已知晓'})},
 
     toggleAllChCost: function(on){
@@ -854,9 +865,9 @@ var app = Vue.createApp({
       var r = ch._raw, combos = [];
       var lms = r.lastMileMethods||[], bus = r.billingUnits||[], txs = r.taxMethods||[], sts = r.serviceTypes||[], tm = r.transportMode||'海运';
       lms.forEach(function(lm){bus.forEach(function(bu){txs.forEach(function(tx){sts.forEach(function(st){combos.push(ch.name+'-'+tm+'-'+lm+'-'+bu+'-'+tx+'-'+st)})})})});
-      var items = self.chCostPickupList.map(function(x){return{name:x.name+'('+(x.pickup_region||[]).join(',')+')',dp:x.price,cur:x.cur,enabled:x.enabled!==false,_sel:true}});
+      var items = self.chCostPickupList.map(function(x){return{name:x.name,deliveryRegion:(x.pickup_region||[]).join(','),dp:x.price,cur:x.cur,enabled:x.enabled!==false,_sel:true}});
       if(items.length===0){ElementPlus.ElMessage.warning('没有可同步的拖车费项');return}
-      self.syncType = 'cost';
+      self.syncType = 'trucking';
       self.syncItems = items;
       self.syncItemSelectAll = true;
       self.syncCombos = combos.map(function(c){return{code:c,_sel:true}});
@@ -884,10 +895,10 @@ var app = Vue.createApp({
         items = this.chCostSelected.map(function(x){return{name:x.name,dp:x.price,cur:x.cur,enabled:x.enabled!==false,_sel:true}});
       } else if(type==='wh'){
         var whData = this.chCostWhData[this.chCostChannel];
-        items = (whData&&whData.warehouses||[]).map(function(w,i){return{name:w.fba||('仓点'+i),dp:w.拆送价,cur:w.cur||'USD',enabled:true,_sel:true}});
+        items = (whData&&whData.warehouses||[]).map(function(w,i){return{name:(w.fba||[]).join(','),拆送价:w.拆送价,组合一口价:w.组合一口价,整柜直送价:w.整柜直送价,dp:w.拆送价,cur:w.cur||'USD',enabled:true,_sel:true}});
       } else if(type==='exp'){
         var expData = this.chCostExpData[this.chCostChannel];
-        items = (expData&&expData.rates||[]).map(function(r,i){return{name:r.weightTier+' × '+r.zipZone,dp:r.price,cur:r.cur||'RMB',enabled:true,_sel:true}});
+        items = (expData&&expData.rates||[]).map(function(r,i){return{name:r.weightTier,zipPrefixes:r.zipPrefixes,dp:r.price,cur:r.cur||'RMB',enabled:true,_sel:true}});
       }
       this.syncItems = items;
       this.syncItemSelectAll = true;
@@ -907,7 +918,7 @@ var app = Vue.createApp({
       var itemCnt=this.syncItems.filter(function(c){return c._sel}).length;
       var comboCnt=this.syncCombos.filter(function(c){return c._sel}).length;
       var total=itemCnt*comboCnt;
-      var msg=(this.syncType==='wh'?'仓点成本':this.syncType==='exp'?'快递派单价':'成本项')+' 已同步：'+itemCnt+' 项 × '+comboCnt+' 组合 = '+total+' 条更新（仅更新已有项价格，未新增或删除）';
+      var msg=(this.syncType==='wh'?'仓点成本':this.syncType==='exp'?'快递派单价':this.syncType==='trucking'?'拖车费':'成本项')+' 已同步：'+itemCnt+' 项 × '+comboCnt+' 组合 = '+total+' 条更新（仅更新已有项价格，未新增或删除）';
       msg+='。成本底价变更已标记待重算，请前往运价工作台处理';
       ElementPlus.ElMessage.success(msg);
       this.showSyncDialog = false;
