@@ -18,7 +18,8 @@ var MODULES=[
   {dir:'客商中心', name:'客商中心', icon:'🤝', color:'#7c3aed'},
   {dir:'头程管理', name:'头程管理', icon:'🚢', color:'#d97706'},
   {dir:'系统设置', name:'系统设置', icon:'⚙️', color:'#dc2626'},
-  {dir:'邀请入驻', name:'邀请入驻', icon:'📨', color:'#db2777'}
+  {dir:'邀请入驻', name:'邀请入驻', icon:'📨', color:'#db2777'},
+  {dir:'财务', name:'财务', icon:'💰', color:'#0d9488'}
 ];
 
 // ====== Step 1: Build file map ======

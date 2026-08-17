@@ -244,6 +244,23 @@
             background: #fff;
         }
 
+        /* Dialog 左右结构 Tab */
+        .dialog-left-tabs {
+            height: 60vh;
+        }
+        .dialog-left-tabs > .el-tabs__header {
+            margin-right: 16px;
+        }
+        .dialog-left-tabs > .el-tabs__header .el-tabs__item {
+            text-align: left;
+        }
+        .dialog-left-tabs > .el-tabs__content {
+            height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0 8px;
+        }
+
         /* 联系人表格对齐 */
         .el-table td { vertical-align: middle !important; }
         .el-table .el-form-item { margin-bottom: 0; }
@@ -390,11 +407,13 @@
         </div>
 
         <!-- 新增/编辑弹窗 -->
-        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="900px" destroy-on-close>
+        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="1000px" destroy-on-close>
             <div :class="{'is-readonly': isReadonly}">
-            <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top" style="height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 16px;">
-                
-                <div class="section-title">基本信息</div>
+            <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top">
+                <el-tabs tab-position="left" class="dialog-left-tabs">
+                    <!-- 基本信息 Tab：身份信息 + 联系人 -->
+                    <el-tab-pane label="基本信息">
+                        <div class="section-title">身份信息</div>
                 <el-row :gutter="24">
                     <el-col :span="8">
                         <el-form-item label="供应商编号" prop="supplierCode">
@@ -453,10 +472,7 @@
                     </el-col>
                 </el-row>
 
-                <div class="section-title" style="margin-top: 24px;">更多信息</div>
-                <el-tabs type="border-card">
-                    <!-- 联系人 Tab -->
-                    <el-tab-pane label="联系人">
+                        <div class="section-title" style="margin-top: 24px;">联系人</div>
                         <div style="margin-bottom: 12px;">
                             <el-button type="primary" size="small" @click="addContact">
                                 <el-icon><Plus /></el-icon> 新增联系人
@@ -498,44 +514,6 @@
                                     </td>
                                     <td style="text-align: center;">
                                         <el-button link type="danger" @click="removeContact(index)">删除</el-button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </el-tab-pane>
-
-                    <!-- 打单服务 Tab -->
-                    <el-tab-pane label="打单服务">
-                        <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                            <el-button type="primary" size="small" @click="addPrintService">
-                                <el-icon><Plus /></el-icon> 新增服务
-                            </el-button>
-                        </div>
-                        <table class="dynamic-table">
-                            <thead>
-                                <tr>
-                                    <th width="30%">收货渠道</th>
-                                    <th width="15%" style="text-align: center;">状态</th>
-                                    <th width="25%" style="text-align: center;">操作</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-if="formData.printServices.length === 0">
-                                    <td colspan="3" style="text-align: center; color: #909399; padding: 20px;">暂无数据</td>
-                                </tr>
-                                <tr v-for="(service, index) in formData.printServices" :key="service.id">
-                                    <td>
-                                        <el-form-item :prop="'printServices.' + index + '.receiveChannel'" label-width="0">
-                                            <el-input v-model="service.receiveChannel" placeholder="收货渠道" size="small"></el-input>
-                                        </el-form-item>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <el-tag :type="service.status === '正常' ? 'success' : 'danger'" size="small">{{ service.status }}</el-tag>
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <el-button link type="success" size="small" v-if="service.status === '已冻结'" @click="service.status = '正常'">启用</el-button>
-                                        <el-button link type="danger" size="small" v-if="service.status === '正常'" @click="service.status = '已冻结'">冻结</el-button>
-                                        <el-button link type="danger" size="small" @click="removePrintService(index)">删除</el-button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -1014,7 +992,6 @@
                     contractContactId: null,
                     accountContactId: null,
                     materials: [],
-                    printServices: [],
                     contracts: []
                 });
 
@@ -1056,7 +1033,7 @@
                             supplierName: '', supplierShortName: '', supplierCategory: [], supplierDetail: [], scac: '', level: 'G', isPeer: '是',
                             contacts: [{ id: Date.now(), name: '', phone: '', email: '' }],
                             contractContactId: null, accountContactId: null,
-                            materials: [], printServices: [], contracts: []
+                            materials: [], contracts: []
                         });
                         formDetailOptions.value = [];
                     } else {
@@ -1077,9 +1054,6 @@
                         formData.contractContactId = 1;
                         formData.accountContactId = 1;
                         formData.materials = [];
-                        formData.printServices = [
-                            { id: 1, receiveChannel: '测试收货渠道', status: '正常' }
-                        ];
                         formData.contracts = row._contracts ? JSON.parse(JSON.stringify(row._contracts)) : [];
 
                         formDetailOptions.value = formData.supplierCategory.flatMap(c => categoryMap[c] || []);
@@ -1101,15 +1075,6 @@
                 };
                 const removeMaterial = (index) => {
                     formData.materials.splice(index, 1);
-                };
-
-                // 打单服务操作
-                const addPrintService = () => {
-                    formData.printServices.push({ id: Date.now(), receiveChannel: '', status: '正常' });
-                };
-                
-                const removePrintService = (index) => {
-                    formData.printServices.splice(index, 1);
                 };
 
                 const confirmSave = () => {
@@ -1383,7 +1348,6 @@
                     categoryOptions, searchDetailOptions, handleSearchCategoryChange,
                     handleTabClick, handleSearch, resetSearch,
                     dialogVisible, dialogTitle, isReadonly, formRef, formData, formRules, formDetailOptions, handleFormCategoryChange,
-                    addPrintService, removePrintService,
                     openDialog, addContact, removeContact, addMaterial, removeMaterial, confirmSave, toggleStatus,
                     selectedRows, handleSelectionChange, transferDialogVisible, transferDrawerTab, transferFormRef, transferFormData, transferFormRules, handleTransferToCustomer, confirmTransfer, handleTransferCustomerTypeChange,
                     addTransferCustomMaterial, removeTransferMaterialFile, handleTransferIdCardChange,
