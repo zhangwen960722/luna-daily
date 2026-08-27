@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>运单审计 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+        .section-title {
+            font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 1px solid #E4E7ED; display: flex; align-items: center;
+        }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: #2DA44E; margin-right: 8px; border-radius: 2px; }
+        .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
+        .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="content-card">
+            <div class="search-area">
+                <el-input v-model="searchForm.waybillNo" placeholder="运单号" clearable style="width: 180px;"></el-input>
+                <el-input v-model="searchForm.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
+                <el-select v-model="searchForm.linked" placeholder="是否关联账单" clearable style="width: 150px;">
+                    <el-option label="已关联账单" value="linked"></el-option>
+                    <el-option label="未关联账单" value="unlinked"></el-option>
+                </el-select>
+                <el-button class="btn-search-primary" @click="handleSearch">
+                    <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                </el-button>
+                <el-button class="btn-search-reset" @click="resetSearch">
+                    <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                </el-button>
+            </div>
+
+            <el-table :data="filteredAudits" border style="width: 100%">
+                <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
+                <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                <el-table-column label="审计人/时间" min-width="160">
+                    <template #default="scope">{{ scope.row.auditBy }} · {{ scope.row.auditAt }}</template>
+                </el-table-column>
+                <el-table-column label="关联账单" min-width="110" align="center">
+                    <template #default="scope">
+                        <el-tag :type="scope.row.linked ? 'warning' : 'success'" size="small">{{ scope.row.linked ? '已关联账单' : '未关联账单' }}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="操作" width="170" fixed="right" align="center">
+                    <template #default="scope">
+                        <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
+                        <el-button link type="danger" size="small" @click="openReverse(scope.row)">反审计</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="filteredAudits.length"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 反审计弹窗 -->
+        <el-dialog v-model="reverseVisible" title="反审计" width="640px" destroy-on-close>
+            <div v-if="currentAudit">
+                <div class="section-title">运单信息</div>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">运单号</span><div class="detail-value">{{ currentAudit.waybillNo }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">客户</span><div class="detail-value">{{ currentAudit.customerName }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">主体</span><div class="detail-value">{{ currentAudit.entityName }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">审计人</span><div class="detail-value">{{ currentAudit.auditBy }} · {{ currentAudit.auditAt }}</div></el-col>
+                </el-row>
+
+                <div class="section-title" style="margin-top: 20px;">选择反审计范围</div>
+                <el-radio-group v-model="reverseScope">
+                    <el-radio value="whole">反审计整个运单</el-radio>
+                    <el-radio value="category">反审计指定大类</el-radio>
+                </el-radio-group>
+
+                <div style="margin-top: 16px;">
+                    <el-table :data="currentAudit.categories" border style="width: 100%">
+                        <el-table-column prop="name" label="业务流水大类" min-width="120"></el-table-column>
+                        <el-table-column label="金额" min-width="120" align="right">
+                            <template #default="scope">{{ formatMoney(scope.row.amount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="关联账单" min-width="110" align="center">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.linked ? 'warning' : 'success'" size="small">{{ scope.row.linked ? '已关联账单' : '未关联账单' }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column v-if="reverseScope === 'category'" label="选择" min-width="90" align="center">
+                            <template #default="scope">
+                                <el-radio v-if="!scope.row.linked" v-model="reverseCategory" :value="scope.row.name">
+                                    <span></span>
+                                </el-radio>
+                                <el-tooltip v-else content="已关联账单，不可单独反审计" placement="top">
+                                    <el-icon style="color: #C0C4CC;"><Lock /></el-icon>
+                                </el-tooltip>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+
+                <div v-if="currentAudit.linked" style="background: #fdf6ec; border-radius: 4px; padding: 12px 16px; color: #E6A23C; font-size: 13px; margin-top: 16px; line-height: 1.6;">
+                    该运单存在已关联账单的业务流水，已关联账单的流水不可反审计，只能反审计整个运单后新增流水（红冲）。
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="reverseVisible = false">取消</el-button>
+                    <el-button type="danger" @click="submitReverse">确认反审计</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 详情弹窗 -->
+        <el-dialog v-model="detailVisible" title="运单详情" width="720px" destroy-on-close>
+            <div v-if="currentAudit">
+                <div class="section-title">运单信息</div>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">运单号</span><div class="detail-value">{{ currentAudit.waybillNo }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">客户</span><div class="detail-value">{{ currentAudit.customerName }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">主体</span><div class="detail-value">{{ currentAudit.entityName }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">审计人</span><div class="detail-value">{{ currentAudit.auditBy }} · {{ currentAudit.auditAt }}</div></el-col>
+                </el-row>
+                <div class="section-title" style="margin-top: 20px;">业务流水大类</div>
+                <el-table :data="currentAudit.categories" border style="width: 100%">
+                    <el-table-column prop="name" label="大类" min-width="120"></el-table-column>
+                    <el-table-column label="金额" min-width="140" align="right">
+                        <template #default="scope">{{ formatMoney(scope.row.amount) }}</template>
+                    </el-table-column>
+                    <el-table-column label="关联账单" min-width="110" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.linked ? 'warning' : 'success'" size="small">{{ scope.row.linked ? '已关联账单' : '未关联账单' }}</el-tag>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="detailVisible = false">关 闭</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const searchForm = reactive({ waybillNo: '', customerName: '', linked: '' });
+
+                const audits = reactive([
+                    {
+                        waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点',
+                        auditBy: '陈晓', auditAt: '2026-08-05 10:00', linked: false,
+                        categories: [
+                            { name: '应收', amount: 1280.50, linked: false },
+                            { name: '应付', amount: 800.00, linked: false },
+                            { name: '销售提成', amount: 50.00, linked: false }
+                        ]
+                    },
+                    {
+                        waybillNo: 'WB20260720001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点',
+                        auditBy: '陈晓', auditAt: '2026-07-20 10:00', linked: true,
+                        categories: [
+                            { name: '应收', amount: 3500.00, linked: true },
+                            { name: '应付', amount: 2000.00, linked: false },
+                            { name: '销售提成', amount: 100.00, linked: false }
+                        ]
+                    },
+                    {
+                        waybillNo: 'WB20260801001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点',
+                        auditBy: '陈晓', auditAt: '2026-08-16 09:30', linked: false,
+                        categories: [
+                            { name: '应收', amount: 1200.00, linked: false },
+                            { name: '应付', amount: 500.00, linked: false }
+                        ]
+                    }
+                ]);
+
+                const filteredAudits = computed(() => {
+                    let data = audits;
+                    if (searchForm.waybillNo) data = data.filter(a => a.waybillNo.includes(searchForm.waybillNo));
+                    if (searchForm.customerName) data = data.filter(a => a.customerName.includes(searchForm.customerName));
+                    if (searchForm.linked === 'linked') data = data.filter(a => a.linked);
+                    if (searchForm.linked === 'unlinked') data = data.filter(a => !a.linked);
+                    return data;
+                });
+
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => { searchForm.waybillNo = ''; searchForm.customerName = ''; searchForm.linked = ''; };
+
+                const reverseVisible = ref(false);
+                const detailVisible = ref(false);
+                const currentAudit = ref(null);
+                const reverseScope = ref('whole');
+                const reverseCategory = ref('');
+
+                const openReverse = (row) => {
+                    currentAudit.value = row;
+                    reverseScope.value = 'whole';
+                    reverseCategory.value = '';
+                    reverseVisible.value = true;
+                };
+                const openDetail = (row) => {
+                    currentAudit.value = row;
+                    detailVisible.value = true;
+                };
+
+                const submitReverse = () => {
+                    if (reverseScope.value === 'category' && !reverseCategory.value) {
+                        ElMessage.warning('请选择要反审计的大类'); return;
+                    }
+                    const scopeText = reverseScope.value === 'whole' ? '整个运单' : `「${reverseCategory.value}」大类`;
+                    ElMessageBox.confirm(`确认反审计 ${currentAudit.value.waybillNo} 的${scopeText}？反审计后退回业务侧重新审计。`, '反审计', { confirmButtonText: '确认反审计', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        reverseVisible.value = false;
+                        ElMessage.success('反审计成功，已退回业务侧重新审计');
+                    }).catch(() => {});
+                };
+
+                return {
+                    searchForm, filteredAudits, handleSearch, resetSearch,
+                    formatMoney, reverseVisible, detailVisible, currentAudit,
+                    reverseScope, reverseCategory, openReverse, openDetail, submitReverse
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

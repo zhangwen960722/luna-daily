@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账单管理 - 货主端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+        .section-title {
+            font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 1px solid #E4E7ED; display: flex; align-items: center;
+        }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: #2DA44E; margin-right: 8px; border-radius: 2px; }
+
+        .detail-row { margin-bottom: 14px; }
+        .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
+        .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
+        .amount { color: #303133; font-weight: 500; }
+        .unreceived { color: #F56C6C; font-weight: 500; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="content-card">
+            <el-tabs v-model="activeTab">
+                <el-tab-pane :label="'待确认 (' + pendingBills.length + ')'" name="pending">
+                    <div class="search-area">
+                        <el-input v-model="pendingSearch.billNo" placeholder="账单号" clearable style="width: 200px;"></el-input>
+                        <el-select v-model="pendingSearch.currency" placeholder="币种" clearable style="width: 140px;">
+                            <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                        </el-select>
+                        <el-button class="btn-search-primary" @click="handleSearch">
+                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        </el-button>
+                        <el-button class="btn-search-reset" @click="resetPendingSearch">
+                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                    <el-table :data="filteredPendingBills" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
+                        <el-table-column prop="billingDate" label="账单日" min-width="110"></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.billAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="未收金额" min-width="120" align="right">
+                            <template #default="scope"><span class="unreceived">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.unreceivedAmount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="170" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">查看详情</el-button>
+                                <el-button link type="success" size="small" @click="openConfirm(scope.row)">确认账单</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredPendingBills.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+
+                <el-tab-pane :label="'已确认 (' + confirmedBills.length + ')'" name="confirmed">
+                    <div class="search-area">
+                        <el-input v-model="confirmedSearch.billNo" placeholder="账单号" clearable style="width: 200px;"></el-input>
+                        <el-button class="btn-search-primary" @click="handleSearch">
+                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        </el-button>
+                        <el-button class="btn-search-reset" @click="resetConfirmedSearch">
+                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                    <el-table :data="filteredConfirmedBills" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
+                        <el-table-column prop="billingDate" label="账单日" min-width="110"></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.billAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="已核销" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.receivedAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="未收金额" min-width="120" align="right">
+                            <template #default="scope"><span class="unreceived">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.unreceivedAmount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column prop="status" label="状态" min-width="100" align="center">
+                            <template #default="scope">
+                                <el-tag :type="statusTag(scope.row.status)" size="small">{{ scope.row.status }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">查看详情</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredConfirmedBills.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+
+                <el-tab-pane :label="'已核销 (' + settledBills.length + ')'" name="settled">
+                    <el-table :data="settledBills" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
+                        <el-table-column prop="billingDate" label="账单日" min-width="110"></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.billAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="已核销" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.receivedAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="status" label="状态" min-width="100" align="center">
+                            <template #default="scope">
+                                <el-tag :type="statusTag(scope.row.status)" size="small">{{ scope.row.status }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">查看详情</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="settledBills.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
+        </div>
+
+        <!-- 账单详情弹窗 -->
+        <el-dialog v-model="detailVisible" :title="isConfirmMode ? '确认账单' : '账单详情'" width="720px" destroy-on-close>
+            <div v-if="currentBill">
+                <div class="section-title">账单信息</div>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <span class="detail-label">账单号</span>
+                        <div class="detail-value">{{ currentBill.billNo }}</div>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">主体</span>
+                        <div class="detail-value">{{ currentBill.entityName }}</div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <span class="detail-label">账单日</span>
+                        <div class="detail-value">{{ currentBill.billingDate }}</div>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">币种</span>
+                        <div class="detail-value">{{ currencyName(currentBill.currency) }}</div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <span class="detail-label">账单金额</span>
+                        <div class="detail-value amount">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(currentBill.billAmount) }}</div>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">未收金额</span>
+                        <div class="detail-value unreceived">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(currentBill.unreceivedAmount) }}</div>
+                    </el-col>
+                </el-row>
+
+                <div class="section-title" style="margin-top: 20px;">费用明细</div>
+                <el-table :data="currentDetails" border style="width: 100%">
+                    <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
+                    <el-table-column prop="feeType" label="费用类型" min-width="120"></el-table-column>
+                    <el-table-column label="公布价" min-width="110" align="right">
+                        <template #default="scope">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(scope.row.publishPrice) }}</template>
+                    </el-table-column>
+                    <el-table-column label="优惠" min-width="110" align="right">
+                        <template #default="scope">-{{ currencySymbol(currentBill.currency) }}{{ formatMoney(scope.row.discount) }}</template>
+                    </el-table-column>
+                    <el-table-column label="应收净额" min-width="120" align="right">
+                        <template #default="scope">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(scope.row.amount) }}</template>
+                    </el-table-column>
+                </el-table>
+
+                <div v-if="isConfirmMode" style="background: #fdf6ec; border-radius: 4px; padding: 12px 16px; color: #E6A23C; font-size: 13px; margin-top: 16px; line-height: 1.6;">
+                    确认后视为认可本账单金额，账单将进入财务核销流程。如对账单有异议，请线下联系业务或提交工单，由财务重新生成账单。
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="detailVisible = false">关 闭</el-button>
+                    <el-button v-if="isConfirmMode" type="primary" @click="confirmBill">确认账单</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const allBills = reactive([
+                    { billNo: 'AR-GZ-202608-001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1280.50, receivedAmount: 0, unreceivedAmount: 1280.50, status: '待确认', sentAt: '2026-08-01 10:00' },
+                    { billNo: 'AR-SZ-202608-001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 860.00, receivedAmount: 0, unreceivedAmount: 860.00, status: '待确认', sentAt: '2026-08-01 10:05' },
+                    { billNo: 'AR-GZ-202607-001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 3500.00, receivedAmount: 2219.50, unreceivedAmount: 1280.50, status: '部分核销', sentAt: '2026-07-01 10:00', confirmedAt: '2026-07-02 09:30' },
+                    { billNo: 'AR-SZ-202607-001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 1800.00, receivedAmount: 0, unreceivedAmount: 1800.00, status: '已确认', sentAt: '2026-07-01 10:00', confirmedAt: '2026-07-03 15:00' },
+                    { billNo: 'AR-GZ-202606-001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 2800.00, receivedAmount: 2800.00, unreceivedAmount: 0, status: '已核销', sentAt: '2026-06-01 10:00', confirmedAt: '2026-06-02 11:00' },
+                    { billNo: 'AR-SZ-202606-001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 1500.00, receivedAmount: 1500.00, unreceivedAmount: 0, status: '已核销', sentAt: '2026-06-01 10:00', confirmedAt: '2026-06-03 14:00' }
+                ]);
+
+                const billDetails = {
+                    'AR-GZ-202608-001': [
+                        { waybillNo: 'WB20260728001', feeType: '运费', publishPrice: 1500.00, discount: 219.50, amount: 1280.50 }
+                    ],
+                    'AR-SZ-202608-001': [
+                        { waybillNo: 'WB20260729001', feeType: '运费', publishPrice: 860.00, discount: 0, amount: 860.00 }
+                    ],
+                    'AR-GZ-202607-001': [
+                        { waybillNo: 'WB20260628001', feeType: '运费', publishPrice: 3000.00, discount: 0, amount: 3000.00 },
+                        { waybillNo: 'WB20260628002', feeType: '附加费-燃油', publishPrice: 500.00, discount: 0, amount: 500.00 }
+                    ],
+                    'AR-SZ-202607-001': [
+                        { waybillNo: 'WB20260629001', feeType: '运费', publishPrice: 1800.00, discount: 0, amount: 1800.00 }
+                    ],
+                    'AR-GZ-202606-001': [
+                        { waybillNo: 'WB20260528001', feeType: '运费', publishPrice: 2800.00, discount: 0, amount: 2800.00 }
+                    ],
+                    'AR-SZ-202606-001': [
+                        { waybillNo: 'WB20260529001', feeType: '运费', publishPrice: 1500.00, discount: 0, amount: 1500.00 }
+                    ]
+                };
+
+                const activeTab = ref('pending');
+                const pendingSearch = reactive({ billNo: '', currency: '' });
+                const confirmedSearch = reactive({ billNo: '' });
+
+                const pendingBills = computed(() => allBills.filter(b => b.status === '待确认'));
+                const confirmedBills = computed(() => allBills.filter(b => b.status === '已确认' || b.status === '部分核销'));
+                const settledBills = computed(() => allBills.filter(b => b.status === '已核销'));
+
+                const filteredPendingBills = computed(() => {
+                    let data = pendingBills.value;
+                    if (pendingSearch.billNo) data = data.filter(b => b.billNo.includes(pendingSearch.billNo));
+                    if (pendingSearch.currency) data = data.filter(b => b.currency === pendingSearch.currency);
+                    return data;
+                });
+                const filteredConfirmedBills = computed(() => {
+                    let data = confirmedBills.value;
+                    if (confirmedSearch.billNo) data = data.filter(b => b.billNo.includes(confirmedSearch.billNo));
+                    return data;
+                });
+
+                const statusTag = (status) => {
+                    const map = { '待确认': 'warning', '已确认': 'primary', '部分核销': 'primary', '已核销': 'success' };
+                    return map[status] || 'info';
+                };
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetPendingSearch = () => { pendingSearch.billNo = ''; pendingSearch.currency = ''; };
+                const resetConfirmedSearch = () => { confirmedSearch.billNo = ''; };
+
+                const detailVisible = ref(false);
+                const currentBill = ref(null);
+                const currentDetails = ref([]);
+                const isConfirmMode = ref(false);
+
+                const openDetail = (bill) => {
+                    currentBill.value = bill;
+                    currentDetails.value = billDetails[bill.billNo] || [];
+                    isConfirmMode.value = false;
+                    detailVisible.value = true;
+                };
+                const openConfirm = (bill) => {
+                    currentBill.value = bill;
+                    currentDetails.value = billDetails[bill.billNo] || [];
+                    isConfirmMode.value = true;
+                    detailVisible.value = true;
+                };
+                const confirmBill = () => {
+                    ElMessageBox.confirm('确认后视为认可本账单金额，账单将进入财务核销流程。', '确认账单', {
+                        confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning'
+                    }).then(() => {
+                        const now = new Date();
+                        const pad = (n) => String(n).padStart(2, '0');
+                        currentBill.value.status = '已确认';
+                        currentBill.value.confirmedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                        detailVisible.value = false;
+                        ElMessage.success('账单已确认');
+                    }).catch(() => {});
+                };
+
+                return {
+                    activeTab, currencyOptions, currencySymbol, currencyName, formatMoney,
+                    pendingSearch, confirmedSearch,
+                    pendingBills, confirmedBills, settledBills,
+                    filteredPendingBills, filteredConfirmedBills,
+                    statusTag, handleSearch, resetPendingSearch, resetConfirmedSearch,
+                    detailVisible, currentBill, currentDetails, isConfirmMode,
+                    openDetail, openConfirm, confirmBill
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

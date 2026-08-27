@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>财务流水 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; overflow: auto; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+        .section-title {
+            font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 1px solid #E4E7ED; display: flex; align-items: center;
+        }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: #2DA44E; margin-right: 8px; border-radius: 2px; }
+        .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
+        .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="content-card">
+            <el-tabs v-model="activeTab">
+                <!-- Tab 1: 充值审核 -->
+                <el-tab-pane :label="'充值审核 (' + pendingApplies.length + ')'" name="audit">
+                    <div class="search-area">
+                        <el-input v-model="auditSearch.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
+                        <el-select v-model="auditSearch.status" placeholder="状态" clearable style="width: 130px;">
+                            <el-option label="待审核" value="待审核"></el-option>
+                            <el-option label="已通过" value="已通过"></el-option>
+                            <el-option label="已驳回" value="已驳回"></el-option>
+                        </el-select>
+                        <el-button class="btn-search-primary" @click="handleSearch">
+                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        </el-button>
+                        <el-button class="btn-search-reset" @click="resetAuditSearch">
+                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                    <el-table :data="filteredApplies" border style="width: 100%">
+                        <el-table-column prop="applyNo" label="充值单号" min-width="140"></el-table-column>
+                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
+                        <el-table-column prop="status" label="状态" min-width="90" align="center">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')" size="small">{{ scope.row.status }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="170" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openApplyDetail(scope.row)">详情</el-button>
+                                <template v-if="scope.row.status === '待审核'">
+                                    <el-button link type="success" size="small" @click="approveApply(scope.row)">通过</el-button>
+                                    <el-button link type="danger" size="small" @click="rejectApply(scope.row)">驳回</el-button>
+                                </template>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredApplies.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+
+                <!-- Tab 2: 客户充值（代充） -->
+                <el-tab-pane label="客户充值" name="recharge">
+                    <div class="search-area">
+                        <el-button type="primary" @click="openRecharge">
+                            <el-icon style="margin-right: 4px;"><Plus /></el-icon>代客户充值
+                        </el-button>
+                        <span style="color: #909399; font-size: 13px;">客户线下打款到账后，财务在此手动为客户入池</span>
+                    </div>
+                    <el-table :data="rechargeRecords" border style="width: 100%">
+                        <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
+                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="operator" label="操作人" min-width="100"></el-table-column>
+                        <el-table-column prop="time" label="操作时间" min-width="150"></el-table-column>
+                    </el-table>
+                </el-tab-pane>
+
+                <!-- Tab 3: 客户提现 -->
+                <el-tab-pane label="客户提现" name="withdraw">
+                    <div class="search-area">
+                        <el-button type="warning" @click="openWithdraw">
+                            <el-icon style="margin-right: 4px;"><Remove /></el-icon>客户提现
+                        </el-button>
+                        <span style="color: #909399; font-size: 13px;">客户线下申请提现，财务核对后在此扣减钱包余额</span>
+                    </div>
+                    <el-table :data="withdrawRecords" border style="width: 100%">
+                        <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
+                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="operator" label="操作人" min-width="100"></el-table-column>
+                        <el-table-column prop="time" label="操作时间" min-width="150"></el-table-column>
+                    </el-table>
+                </el-tab-pane>
+
+                <!-- Tab 4: 支付供应商 -->
+                <el-tab-pane label="支付供应商" name="supplier">
+                    <el-empty description="应付管理细节待展开，支付供应商功能后续上线" :image-size="120"></el-empty>
+                </el-tab-pane>
+            </el-tabs>
+        </div>
+
+        <!-- 充值申请详情弹窗 -->
+        <el-dialog v-model="applyDetailVisible" title="充值申请详情" width="620px" destroy-on-close>
+            <div v-if="currentApply">
+                <div class="section-title">申请信息</div>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">充值单号</span><div class="detail-value">{{ currentApply.applyNo }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">客户</span><div class="detail-value">{{ currentApply.customerName }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">主体</span><div class="detail-value">{{ currentApply.entityName }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(currentApply.currency) }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">金额</span><div class="detail-value">{{ currencySymbol(currentApply.currency) }}{{ formatMoney(currentApply.amount) }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">打款账户</span><div class="detail-value">{{ currentApply.bankAccount }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12"><span class="detail-label">申请时间</span><div class="detail-value">{{ currentApply.time }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">状态</span><div class="detail-value">{{ currentApply.status }}</div></el-col>
+                </el-row>
+                <div class="section-title" style="margin-top: 20px;">打款凭证</div>
+                <div style="background: #f8f9fa; border-radius: 4px; padding: 20px; text-align: center; color: #909399;">
+                    <el-icon style="font-size: 40px;"><Picture /></el-icon>
+                    <div style="margin-top: 8px;">{{ currentApply.voucher }}</div>
+                    <div style="font-size: 12px; margin-top: 4px;">财务线下核对银行流水，确认到账后点击「通过」</div>
+                </div>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="applyDetailVisible = false">关 闭</el-button>
+                    <el-button v-if="currentApply && currentApply.status === '待审核'" type="danger" @click="rejectApply(currentApply)">驳 回</el-button>
+                    <el-button v-if="currentApply && currentApply.status === '待审核'" type="primary" @click="approveApply(currentApply)">通过并入池</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 代充弹窗 -->
+        <el-dialog v-model="rechargeVisible" title="代客户充值" width="560px" destroy-on-close>
+            <el-form ref="rechargeFormRef" :model="rechargeForm" :rules="opRules" label-position="top">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="客户" prop="customerName">
+                            <el-select v-model="rechargeForm.customerName" placeholder="请选择客户" style="width: 100%" filterable>
+                                <el-option v-for="c in customers" :key="c" :label="c" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="主体" prop="entityName">
+                            <el-select v-model="rechargeForm.entityName" placeholder="请选择主体" style="width: 100%">
+                                <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="币种" prop="currency">
+                            <el-select v-model="rechargeForm.currency" placeholder="请选择币种" style="width: 100%">
+                                <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="金额" prop="amount">
+                            <el-input-number v-model="rechargeForm.amount" :min="0.01" :precision="2" :step="100" style="width: 100%" :controls="false" placeholder="请输入金额"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="rechargeVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitRecharge">确认入池</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 提现弹窗 -->
+        <el-dialog v-model="withdrawVisible" title="客户提现" width="560px" destroy-on-close>
+            <el-form ref="withdrawFormRef" :model="withdrawForm" :rules="opRules" label-position="top">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="客户" prop="customerName">
+                            <el-select v-model="withdrawForm.customerName" placeholder="请选择客户" style="width: 100%" filterable @change="onWithdrawCustomerChange">
+                                <el-option v-for="c in customers" :key="c" :label="c" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="主体" prop="entityName">
+                            <el-select v-model="withdrawForm.entityName" placeholder="请选择主体" style="width: 100%">
+                                <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="币种" prop="currency">
+                            <el-select v-model="withdrawForm.currency" placeholder="请选择币种" style="width: 100%">
+                                <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="金额" prop="amount">
+                            <el-input-number v-model="withdrawForm.amount" :min="0.01" :precision="2" :step="100" style="width: 100%" :controls="false" placeholder="请输入金额"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <div v-if="withdrawForm.customerName && withdrawForm.entityName && withdrawForm.currency" style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #606266; font-size: 13px;">
+                    当前钱包余额：{{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(currentBalance) }}
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="withdrawVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitWithdraw">确认提现</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富利顿', '墨链'];
+                const customers = ['深圳市华美科技有限公司', '广州迅达贸易有限公司', '东莞新锐电子有限公司'];
+
+                const activeTab = ref('audit');
+
+                // === 充值审核 ===
+                const auditSearch = reactive({ customerName: '', status: '' });
+                const rechargeApplies = reactive([
+                    { applyNo: 'FD20260827001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 5000.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', voucher: '转账回单-华美-0827.png', time: '2026-08-27 10:23', status: '待审核' },
+                    { applyNo: 'FD20260827002', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', amount: 2000.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', voucher: '转账回单-迅达-0827.png', time: '2026-08-27 09:10', status: '待审核' },
+                    { applyNo: 'FD20260826003', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, bankAccount: '广东飞点-工商银行(4000 1111 2222)', voucher: '转账回单-新锐-0826.pdf', time: '2026-08-26 15:40', status: '已通过' },
+                    { applyNo: 'FD20260825004', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', voucher: '转账回单-华美-0825.png', time: '2026-08-25 14:10', status: '已通过' }
+                ]);
+                const pendingApplies = computed(() => rechargeApplies.filter(a => a.status === '待审核'));
+                const filteredApplies = computed(() => {
+                    let data = rechargeApplies;
+                    if (auditSearch.customerName) data = data.filter(a => a.customerName.includes(auditSearch.customerName));
+                    if (auditSearch.status) data = data.filter(a => a.status === auditSearch.status);
+                    return data;
+                });
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetAuditSearch = () => { auditSearch.customerName = ''; auditSearch.status = ''; };
+
+                const applyDetailVisible = ref(false);
+                const currentApply = ref(null);
+                const openApplyDetail = (row) => { currentApply.value = row; applyDetailVisible.value = true; };
+
+                const approveApply = (row) => {
+                    ElMessageBox.confirm(`确认已核对银行到账，将 ${currencySymbol(row.currency)}${formatMoney(row.amount)} 入池到「${row.customerName}-${row.entityName}-${currencyName(row.currency)}」钱包？`, '充值审核通过', { confirmButtonText: '确认通过', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        row.status = '已通过';
+                        applyDetailVisible.value = false;
+                        ElMessage.success('已通过并入池');
+                    }).catch(() => {});
+                };
+                const rejectApply = (row) => {
+                    ElMessageBox.confirm('确认驳回该充值申请？', '驳回充值', { confirmButtonText: '确认驳回', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        row.status = '已驳回';
+                        applyDetailVisible.value = false;
+                        ElMessage.success('已驳回');
+                    }).catch(() => {});
+                };
+
+                // === 客户充值（代充） ===
+                const rechargeVisible = ref(false);
+                const rechargeFormRef = ref(null);
+                const rechargeForm = reactive({ customerName: '', entityName: '', currency: '', amount: null });
+                const rechargeRecords = reactive([
+                    { flowNo: 'FL20260826001', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, operator: '张珊', time: '2026-08-26 15:45' },
+                    { flowNo: 'FL20260825001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, operator: '张珊', time: '2026-08-25 14:15' }
+                ]);
+
+                const opRules = {
+                    customerName: [{ required: true, message: '请选择客户', trigger: 'change' }],
+                    entityName: [{ required: true, message: '请选择主体', trigger: 'change' }],
+                    currency: [{ required: true, message: '请选择币种', trigger: 'change' }],
+                    amount: [{ required: true, message: '请输入金额', trigger: 'blur' }]
+                };
+
+                const openRecharge = () => {
+                    rechargeForm.customerName = ''; rechargeForm.entityName = ''; rechargeForm.currency = ''; rechargeForm.amount = null;
+                    rechargeVisible.value = true;
+                };
+                const submitRecharge = () => {
+                    if (!rechargeForm.customerName || !rechargeForm.entityName || !rechargeForm.currency || !rechargeForm.amount) {
+                        ElMessage.warning('请填写完整信息'); return;
+                    }
+                    ElMessageBox.confirm(`确认将 ${currencySymbol(rechargeForm.currency)}${formatMoney(rechargeForm.amount)} 入池到「${rechargeForm.customerName}-${rechargeForm.entityName}-${currencyName(rechargeForm.currency)}」钱包？`, '确认代充', { confirmButtonText: '确认入池', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        const now = new Date();
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                        rechargeRecords.unshift({
+                            flowNo: `FL${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
+                            customerName: rechargeForm.customerName, entityName: rechargeForm.entityName,
+                            currency: rechargeForm.currency, amount: rechargeForm.amount, operator: '张珊', time: timeStr
+                        });
+                        rechargeVisible.value = false;
+                        ElMessage.success('已入池');
+                    }).catch(() => {});
+                };
+
+                // === 客户提现 ===
+                const withdrawVisible = ref(false);
+                const withdrawFormRef = ref(null);
+                const withdrawForm = reactive({ customerName: '', entityName: '', currency: '', amount: null });
+                const withdrawRecords = reactive([
+                    { flowNo: 'FL20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, operator: '李伟', time: '2026-08-20 11:05' }
+                ]);
+
+                const walletBalances = {
+                    '深圳市华美科技有限公司-广州飞点-CNY': 3719.50,
+                    '深圳市华美科技有限公司-深圳飞点-CNY': 3200.00,
+                    '广州迅达贸易有限公司-广州飞点-CNY': 5800.00,
+                    '广州迅达贸易有限公司-香港富利顿-HKD': 25000.00,
+                    '东莞新锐电子有限公司-广东飞点-CNY': 12000.00
+                };
+                const currentBalance = computed(() => {
+                    const key = `${withdrawForm.customerName}-${withdrawForm.entityName}-${withdrawForm.currency}`;
+                    return walletBalances[key] || 0;
+                });
+                const onWithdrawCustomerChange = () => {};
+
+                const openWithdraw = () => {
+                    withdrawForm.customerName = ''; withdrawForm.entityName = ''; withdrawForm.currency = ''; withdrawForm.amount = null;
+                    withdrawVisible.value = true;
+                };
+                const submitWithdraw = () => {
+                    if (!withdrawForm.customerName || !withdrawForm.entityName || !withdrawForm.currency || !withdrawForm.amount) {
+                        ElMessage.warning('请填写完整信息'); return;
+                    }
+                    if (withdrawForm.amount > currentBalance.value) {
+                        ElMessage.warning('提现金额不能大于钱包余额'); return;
+                    }
+                    ElMessageBox.confirm(`确认从「${withdrawForm.customerName}-${withdrawForm.entityName}-${currencyName(withdrawForm.currency)}」钱包提现 ${currencySymbol(withdrawForm.currency)}${formatMoney(withdrawForm.amount)}？`, '确认提现', { confirmButtonText: '确认提现', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        const now = new Date();
+                        const pad = (n) => String(n).padStart(2, '0');
+                        const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                        const key = `${withdrawForm.customerName}-${withdrawForm.entityName}-${withdrawForm.currency}`;
+                        walletBalances[key] = Number((walletBalances[key] - withdrawForm.amount).toFixed(2));
+                        withdrawRecords.unshift({
+                            flowNo: `FL${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
+                            customerName: withdrawForm.customerName, entityName: withdrawForm.entityName,
+                            currency: withdrawForm.currency, amount: withdrawForm.amount, operator: '李伟', time: timeStr
+                        });
+                        withdrawVisible.value = false;
+                        ElMessage.success('提现成功');
+                    }).catch(() => {});
+                };
+
+                return {
+                    activeTab, currencyOptions, entities, customers,
+                    currencySymbol, currencyName, formatMoney,
+                    auditSearch, rechargeApplies, pendingApplies, filteredApplies,
+                    handleSearch, resetAuditSearch,
+                    applyDetailVisible, currentApply, openApplyDetail, approveApply, rejectApply,
+                    rechargeVisible, rechargeFormRef, rechargeForm, rechargeRecords, opRules,
+                    openRecharge, submitRecharge,
+                    withdrawVisible, withdrawFormRef, withdrawForm, withdrawRecords,
+                    currentBalance, onWithdrawCustomerChange, openWithdraw, submitWithdraw
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

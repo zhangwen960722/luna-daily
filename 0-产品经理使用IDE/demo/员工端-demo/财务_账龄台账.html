@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账龄台账 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+        .section-title {
+            font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 1px solid #E4E7ED; display: flex; align-items: center;
+        }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: #2DA44E; margin-right: 8px; border-radius: 2px; }
+        .total-amount { color: #303133; font-weight: bold; }
+        .overdue { color: #F56C6C; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="content-card">
+            <div class="search-area">
+                <el-input v-model="searchForm.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
+                <el-select v-model="searchForm.entityName" placeholder="主体" clearable style="width: 140px;">
+                    <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                </el-select>
+                <el-select v-model="searchForm.currency" placeholder="币种" clearable style="width: 130px;">
+                    <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                </el-select>
+                <el-button class="btn-search-primary" @click="handleSearch">
+                    <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                </el-button>
+                <el-button class="btn-search-reset" @click="resetSearch">
+                    <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                </el-button>
+                <span style="margin-left: auto; color: #909399; font-size: 13px;">账龄口径：账单日 + 账期天数（含首日），分币种不折算</span>
+            </div>
+
+            <el-table :data="filteredSummary" border style="width: 100%">
+                <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column label="未收总额" min-width="130" align="right">
+                    <template #default="scope"><span class="total-amount">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.total) }}</span></template>
+                </el-table-column>
+                <el-table-column label="未到期" min-width="110" align="right">
+                    <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.notDue) }}</template>
+                </el-table-column>
+                <el-table-column label="逾期 0-30天" min-width="120" align="right">
+                    <template #default="scope"><span class="overdue">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.due030) }}</span></template>
+                </el-table-column>
+                <el-table-column label="逾期 31-60天" min-width="120" align="right">
+                    <template #default="scope"><span class="overdue">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.due3160) }}</span></template>
+                </el-table-column>
+                <el-table-column label="逾期 61-90天" min-width="120" align="right">
+                    <template #default="scope"><span class="overdue">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.due6190) }}</span></template>
+                </el-table-column>
+                <el-table-column label="逾期 90天以上" min-width="120" align="right">
+                    <template #default="scope"><span class="overdue">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.due90) }}</span></template>
+                </el-table-column>
+                <el-table-column label="操作" width="100" fixed="right" align="center">
+                    <template #default="scope">
+                        <el-button link type="primary" size="small" @click="openDetail(scope.row)">明细</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="filteredSummary.length"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 账龄明细弹窗 -->
+        <el-dialog v-model="detailVisible" title="账龄明细" width="860px" destroy-on-close>
+            <div v-if="currentRow">
+                <div class="section-title">
+                    {{ currentRow.customerName }} · {{ currentRow.entityName }} · {{ currencyName(currentRow.currency) }}
+                </div>
+                <el-table :data="currentRow.bills" border style="width: 100%">
+                    <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
+                    <el-table-column prop="billingDate" label="账单日" min-width="100"></el-table-column>
+                    <el-table-column label="账期" min-width="120">
+                        <template #default="scope">{{ scope.row.paymentTermsDays }} 天</template>
+                    </el-table-column>
+                    <el-table-column label="未收金额" min-width="120" align="right">
+                        <template #default="scope">{{ currencySymbol(currentRow.currency) }}{{ formatMoney(scope.row.unreceivedAmount) }}</template>
+                    </el-table-column>
+                    <el-table-column prop="age" label="账龄段" min-width="110" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.age === '未到期' ? 'success' : 'danger'" size="small">{{ scope.row.age }}</el-tag>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="detailVisible = false">关 闭</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富利顿', '墨链'];
+                const TODAY = '2026-08-27';
+
+                const searchForm = reactive({ customerName: '', entityName: '', currency: '' });
+
+                const bills = [
+                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, unreceivedAmount: 1280.50 },
+                    { billNo: 'AR-GZ-202608-002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-25', paymentTermsDays: 30, unreceivedAmount: 2000.00 },
+                    { billNo: 'AR-GZ-202607-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', paymentTermsDays: 15, unreceivedAmount: 800.00 },
+                    { billNo: 'AR-SZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'USD', billingDate: '2026-08-15', paymentTermsDays: 30, unreceivedAmount: 1200.00 },
+                    { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', paymentTermsDays: 30, unreceivedAmount: 1280.50 },
+                    { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', paymentTermsDays: 15, unreceivedAmount: 1500.00 },
+                    { billNo: 'AR-GZ-202604-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-04-01', paymentTermsDays: 15, unreceivedAmount: 600.00 }
+                ];
+
+                const calcAge = (bill) => {
+                    const d = new Date(bill.billingDate + 'T00:00:00');
+                    const overdueStart = new Date(d.getTime() + bill.paymentTermsDays * 86400000); // D + N = 逾期第1天
+                    const today = new Date(TODAY + 'T00:00:00');
+                    if (today < overdueStart) return '未到期';
+                    const overdueDays = Math.floor((today - overdueStart) / 86400000);
+                    if (overdueDays <= 30) return '逾期0-30天';
+                    if (overdueDays <= 60) return '逾期31-60天';
+                    if (overdueDays <= 90) return '逾期61-90天';
+                    return '逾期90天以上';
+                };
+
+                const summary = computed(() => {
+                    const map = {};
+                    bills.forEach(b => {
+                        const key = `${b.customerName}|${b.entityName}|${b.currency}`;
+                        if (!map[key]) {
+                            map[key] = { customerName: b.customerName, entityName: b.entityName, currency: b.currency, total: 0, notDue: 0, due030: 0, due3160: 0, due6190: 0, due90: 0, bills: [] };
+                        }
+                        const age = calcAge(b);
+                        map[key].total += b.unreceivedAmount;
+                        if (age === '未到期') map[key].notDue += b.unreceivedAmount;
+                        else if (age === '逾期0-30天') map[key].due030 += b.unreceivedAmount;
+                        else if (age === '逾期31-60天') map[key].due3160 += b.unreceivedAmount;
+                        else if (age === '逾期61-90天') map[key].due6190 += b.unreceivedAmount;
+                        else map[key].due90 += b.unreceivedAmount;
+                        map[key].bills.push({ ...b, age });
+                    });
+                    return Object.values(map).map(r => ({
+                        ...r,
+                        total: Number(r.total.toFixed(2)),
+                        notDue: Number(r.notDue.toFixed(2)),
+                        due030: Number(r.due030.toFixed(2)),
+                        due3160: Number(r.due3160.toFixed(2)),
+                        due6190: Number(r.due6190.toFixed(2)),
+                        due90: Number(r.due90.toFixed(2))
+                    }));
+                });
+
+                const filteredSummary = computed(() => {
+                    let data = summary.value;
+                    if (searchForm.customerName) data = data.filter(r => r.customerName.includes(searchForm.customerName));
+                    if (searchForm.entityName) data = data.filter(r => r.entityName === searchForm.entityName);
+                    if (searchForm.currency) data = data.filter(r => r.currency === searchForm.currency);
+                    return data;
+                });
+
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => { searchForm.customerName = ''; searchForm.entityName = ''; searchForm.currency = ''; };
+
+                const detailVisible = ref(false);
+                const currentRow = ref(null);
+                const openDetail = (row) => { currentRow.value = row; detailVisible.value = true; };
+
+                return {
+                    currencyOptions, entities, currencySymbol, currencyName, formatMoney,
+                    searchForm, filteredSummary, handleSearch, resetSearch,
+                    detailVisible, currentRow, openDetail
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

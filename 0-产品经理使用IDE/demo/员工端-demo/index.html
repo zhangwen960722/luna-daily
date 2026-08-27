@@ -265,6 +265,10 @@
                             <el-icon><HomeFilled /></el-icon>
                             <template #title><span>首页</span></template>
                         </el-menu-item>
+                        <el-menu-item index="Waybill.html">
+                            <el-icon><Tickets /></el-icon>
+                            <template #title><span>运单管理</span></template>
+                        </el-menu-item>
                         <el-sub-menu index="5">
                             <template #title>
                                 <el-icon><Setting /></el-icon>
@@ -280,6 +284,16 @@
                                 <span>客商中心</span>
                             </template>
                             <el-menu-item v-for="item in merchantMenuList" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                        </el-sub-menu>
+
+                        <el-sub-menu index="7">
+                            <template #title>
+                                <el-icon><Money /></el-icon>
+                                <span>财务</span>
+                            </template>
+                            <el-menu-item v-for="item in financeMenuList" :key="item.index" :index="item.index">
                                 <template #title>{{ item.name }}</template>
                             </el-menu-item>
                         </el-sub-menu>
@@ -499,7 +513,7 @@
         const app = createApp({
             setup() {
                 // 模拟当前登录用户的权限列表
-                const userPermissions = ['首页', '基础资料', '头程管理', '邀请入驻', '客商中心', '系统设置', '商品管理', '地址管理', '异常处理池', '箱唛案例', '运输服务', '服务组合', '海外仓库列表', '港口管理', 'VAT管理', '标识管理', '企业客户档案', '自然人客户档案', '客户管理', '供应商管理', '等级管理', '用户管理', '员工管理', '角色管理', '亚马逊物流事件', '费用类型', '物流事件', '超级运价'];
+                const userPermissions = ['首页', '基础资料', '头程管理', '邀请入驻', '客商中心', '系统设置', '商品管理', '地址管理', '异常处理池', '箱唛案例', '运输服务', '服务组合', '海外仓库列表', '港口管理', 'VAT管理', '标识管理', '企业客户档案', '自然人客户档案', '客户管理', '供应商管理', '等级管理', '用户管理', '员工管理', '角色管理', '亚马逊物流事件', '费用类型', '物流事件', '超级运价', '财务', '运单审计', '账单管理', '收款核销', '账龄台账', '钱包', '财务流水', '资金流水'];
 
                 /**
                  * 检查是否有权限
@@ -570,6 +584,17 @@
                     { index: '等级管理.html', name: '等级管理', permission: '等级管理' }
                 ].filter(item => hasPermission(item.permission));
 
+                // 财务菜单列表
+                const financeMenuList = [
+                    { index: '财务_运单审计.html', name: '运单审计', permission: '运单审计' },
+                    { index: '财务_账单管理.html', name: '账单管理', permission: '账单管理' },
+                    { index: '财务_收款核销.html', name: '收款核销', permission: '收款核销' },
+                    { index: '财务_账龄台账.html', name: '账龄台账', permission: '账龄台账' },
+                    { index: '财务_钱包.html', name: '钱包', permission: '钱包' },
+                    { index: '财务_财务流水.html', name: '财务流水', permission: '财务流水' },
+                    { index: '财务_资金流水.html', name: '资金流水', permission: '资金流水' }
+                ].filter(item => hasPermission(item.permission));
+
                 // 系统设置菜单列表
                 const systemSettingsMenuList = [
                     { index: '用户管理_主列表.html', name: '用户管理', permission: '用户管理' },
@@ -587,6 +612,7 @@
 
                 const currentMenuName = computed(() => {
                     if (activeMenu.value === '首页.html') return '数据看板';
+                    if (activeMenu.value === 'Waybill.html') return '运单管理';
                     let item = menuList.find(m => m.index === activeMenu.value);
                     if (!item) {
                         item = headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value);
@@ -621,6 +647,9 @@
                     if (!item) {
                         item = systemSettingsMenuList.find(m => m.index === activeMenu.value);
                     }
+                    if (!item) {
+                        item = financeMenuList.find(m => m.index === activeMenu.value);
+                    }
                     return item ? item.name : '';
                 });
 
@@ -651,6 +680,7 @@
 
                 const currentTopMenuName = computed(() => {
                     if (activeMenu.value === '首页.html') return '首页';
+                    if (activeMenu.value === 'Waybill.html') return '运单管理';
                     if (menuList.find(m => m.index === activeMenu.value)) {
                         return '基础资料';
                     }
@@ -672,6 +702,9 @@
                     }
                     if (systemSettingsMenuList.find(m => m.index === activeMenu.value)) {
                         return '系统设置';
+                    }
+                    if (financeMenuList.find(m => m.index === activeMenu.value)) {
+                        return '财务';
                     }
                     return '基础资料';
                 });
@@ -726,10 +759,12 @@
                                     ...headTransportMenuList.basicConfiguration,
                                     ...headTransportMenuList.freightRate,
                                     ...headTransportMenuList.others,
-                                    ...inviteMenuList, 
-                                    ...merchantMenuList, 
+                                    ...inviteMenuList,
+                                    ...merchantMenuList,
                                     ...systemSettingsMenuList,
+                                    ...financeMenuList,
                                     { index: '首页.html', name: '首页' },
+                                    { index: 'Waybill.html', name: '运单管理' },
                                     { index: '仓库列表_主列表.html', name: '仓库列表' }
                                 ];
                                 
@@ -756,6 +791,7 @@
                     inviteMenuList,
                     merchantMenuList,
                     systemSettingsMenuList,
+                    financeMenuList,
                     activeMenu,
                     currentIframeSrc,
                     currentMenuName,
