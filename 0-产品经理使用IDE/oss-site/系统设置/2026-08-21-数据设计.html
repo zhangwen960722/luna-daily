@@ -18,8 +18,8 @@
 </div>
 <div class="layout">
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-关键设计说明">四、关键设计说明</a></li></ul></nav>
-<div class="content"><div class="doc-content"><p><h1 id="数据设计-系统设置">数据设计 — 系统设置</h1></p><p><blockquote><strong>版本</strong>: v3.1 | <strong>日期</strong>: 2026-06-16 | <strong>作者</strong>: AI PM
-<strong>关联 RDD</strong>: <code>2026-06-16-用户需求.md</code> v3.1</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
+<div class="content"><div class="doc-content"><p><h1 id="数据设计-系统设置">数据设计 — 系统设置</h1></p><p><blockquote><strong>版本</strong>: v3.2 | <strong>日期</strong>: 2026-08-21 | <strong>作者</strong>: AI PM
+<strong>关联 RDD</strong>: <code>2026-08-21-用户需求.md</code> v3.2</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
 <tr><td>客户账号</td><td><code>customer_account</code></td><td>独立表</td><td>系统设置核心聚合根，管理客户入驻全生命周期</td></tr>
 <tr><td>合同</td><td><code>customer_contract</code></td><td>1:N 子表</td><td>通过 <code>account_id</code> 关联 customer_account；一个客户可签多份合同</td></tr>
@@ -69,8 +69,8 @@
 <tr><td><code>sign_status</code></td><td>合同签署状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:未签约, 20:签约中, 30:已签约, 40:已过期（过期由系统根据 contract_end_date 动态判断，不持久化）</td></tr>
 <tr><td><code>is_simple</code></td><td>是否简易合同</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:是, 20:否</td></tr>
 <tr><td><code>is_standard</code></td><td>是否标准合同</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:是, 20:否</td></tr>
-<tr><td><code>contract_start_date</code></td><td>合同开始日期</td><td>Date</td><td>No</td><td>—</td><td>除简易标准合同外均必填，默认当天</td></tr>
-<tr><td><code>contract_end_date</code></td><td>合同结束日期</td><td>Date</td><td>No</td><td>—</td><td>除简易标准合同外均必填，自动计算</td></tr>
+<tr><td><code>contract_start_date</code></td><td>合同开始日期</td><td>Date</td><td>No</td><td>—</td><td>非简易合同时必填，默认当天；简易合同由签订日期自动推导</td></tr>
+<tr><td><code>contract_end_date</code></td><td>合同结束日期</td><td>Date</td><td>No</td><td>—</td><td>非简易合同时必填，自动计算；简易合同=签订日期+期限-1天</td></tr>
 <tr><td><code>sign_date</code></td><td>签订日期</td><td>Date</td><td>No</td><td>—</td><td>默认当天（简易合同时必填）</td></tr>
 <tr><td><code>modify_content</code></td><td>合同修改内容</td><td>Text</td><td>No</td><td>—</td><td>非标准合同时必填</td></tr>
 <tr><td><code>contract_years</code></td><td>合同有效期限</td><td>TinyInt</td><td>No</td><td>—</td><td>1:1年, 2:2年, 3:3年</td></tr>

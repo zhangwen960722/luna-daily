@@ -206,7 +206,7 @@ erDiagram
 <tr><td></code>end_value<code></td><td>结束值</td><td>小数(10,2)</td><td>null=以上</td></tr>
 <tr><td></code>is_enabled<code></td><td>是否启用</td><td>布尔</td><td>✅</td><td>Default:1</td></tr>
 </table></div>
-<strong>唯一约束</strong>：</code>UNIQUE(transport_mode, unit, tier_name)<code>。</p><p><strong>预置数据</strong>：
+<strong>唯一约束</strong>：</code>UNIQUE(transport_mode, unit, tier_name)<code>。</p><p><strong>区间不重叠校验</strong>：同（transport_mode, unit）下，启用段的 </code>[start_value, end_value)<code> 区间不可重叠（应用层校验）。启用冻结段时同样去重，若存在重叠的启用段则阻止并提示「X重量段已存在，请勿重复」。</p><p><strong>预置数据</strong>：
 <div class="table-wrapper"><table><tr><td>运输方式</td><td>计价单位</td><td>段名称</td><td>范围</td></tr>
 <tr><td>----------</td><td>----------</td><td>--------</td><td>------</td></tr>
 <tr><td>海运</td><td>KG</td><td>8KG+</td><td>8 ~ 101</td></tr>
@@ -217,7 +217,7 @@ erDiagram
 <tr><td>空运</td><td>KG</td><td>51KG+</td><td>51 ~ 101</td></tr>
 <tr><td>空运</td><td>KG</td><td>101KG+</td><td>101 ~ ∞</td></tr>
 </table></div>
-<strong>渠道引用扩展</strong>：渠道创建时根据运输方式自动匹配模板默认段。渠道编辑页面提供单段选择器，按渠道已选的 </code>运输方式 + 计费方式<code> 筛选匹配模板中尚未绑定的独立重量段，选中后自动绑定至渠道。绑定段参数由模板定义、不可编辑，可删除。</p><p><hr></p><p><h3 id="3-6-运价行-price_table_row">3.6 运价行 </code>price_table_row<code></h3></p><p><blockquote><strong>定价维度按尾程派送方式分叉</strong>：卡派 → 仓库组；快递派 → 邮编前缀（逗号拼接）。</code>仓库组<code> 与 </code>zip_prefixes<code> 互斥。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>约束/索引</td><td>备注</td></tr>
+<strong>渠道引用扩展</strong>：渠道创建时根据运输方式自动匹配模板默认段。渠道编辑页面提供单段选择器，按渠道已选的 </code>运输方式 + 计费方式<code> 筛选匹配模板中尚未绑定的独立重量段，选中后自动绑定至渠道。绑定段参数由模板定义、不可编辑，可删除。删除重量段时二次确认，同步级联删除渠道及组合快递派单价中引用该重量段（按段名称匹配）的费率行，硬删除不保留快照。</p><p><hr></p><p><h3 id="3-6-运价行-price_table_row">3.6 运价行 </code>price_table_row<code></h3></p><p><blockquote><strong>定价维度按尾程派送方式分叉</strong>：卡派 → 仓库组；快递派 → 邮编前缀（逗号拼接）。</code>仓库组<code> 与 </code>zip_prefixes<code> 互斥。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>约束/索引</td><td>备注</td></tr>
 <tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>----------</td><td>------</td></tr>
 <tr><td></code>batch_id<code></td><td>周批次</td><td>长整数</td><td>✅</td><td>Index, FK</td></tr>
 <tr><td></code>combination_id<code></td><td>服务组合</td><td>长整数</td><td>✅</td><td>Index, FK</td></tr>
@@ -324,6 +324,7 @@ erDiagram
 <li><strong>同步后不自动更新运价表</strong>：同步操作完成后，系统标记当前批次受影响运价行为"待重算"。运价管理员在工作台统一处理——[重算成本底价] 或 [已知晓，不调整]</li>
 </ul>
 <strong>D3a — 成本项删除的级联同步</strong></p><p><ul><li><strong>渠道成本项明细删除</strong>：有影响因素的成本项（拖车费交货地行 / 卡派仓点成本行 / 快递派单价费率行）在服务渠道中删除后，点击保存时自动查找关联服务组合中对应的成本明细行（按成本项名称 + 影响因素匹配）→ 同步硬删除组合侧对应行，不保留快照</li>
+<li><strong>重量段删除级联</strong>：在服务渠道中删除重量段时二次确认，删除后同步删除服务渠道及关联服务组合中「快递派单价」引用该重量段（按段名称匹配）的费率行，硬删除不保留快照</li>
 <li>删除级联与 D3 更新同步区分：更新同步"仅更新已有项不新增不删除"；删除同步为硬删除，不保留快照</li>
 </ul>
 <strong>D4 — 快递派单价不折算</strong></p><p>卡派仓点成本需要用 </code>tail_kg_standard / tail_cbm_standard<code> 折算为 per KG/m³。快递派单价已是最终 per KG/m³ 价格，直接累加。</p><p><strong>D5 — 单价静态链 × 批次周期计算</strong></p><p></code>`<code>
