@@ -649,16 +649,6 @@
                     </div>
 
                     <div class="a11y-form-group">
-                        <label for="sign-start-date-4" class="a11y-form-label is-required">合同开始日期</label>
-                        <el-date-picker id="sign-start-date-4" v-model="signForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
-                    </div>
-
-                    <div class="a11y-form-group">
-                        <label for="sign-end-date-4" class="a11y-form-label is-required">合同结束日期</label>
-                        <el-date-picker id="sign-end-date-4" v-model="signForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
-                    </div>
-
-                    <div class="a11y-form-group">
                         <label for="sign-modify-content-2" class="a11y-form-label is-required">合同修改内容</label>
                         <el-input 
                             id="sign-modify-content-2"
@@ -1089,6 +1079,24 @@
                     if (signForm.isSimple === '是' && !signForm.signDate) {
                         ElMessage.error('请选择签订日期');
                         return;
+                    }
+
+                    // 简易合同：开始/结束日期后台自动推导（开始=签订日期，结束=签订日期+期限-1天）
+                    if (signForm.isSimple === '是' && signForm.signDate) {
+                        const sd = new Date(signForm.signDate);
+                        const years = parseInt(signForm.contractYears, 10) || 1;
+                        const start = new Date(sd);
+                        const end = new Date(sd);
+                        end.setFullYear(end.getFullYear() + years);
+                        end.setDate(end.getDate() - 1);
+                        const fmtDate = (d) => {
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${day}`;
+                        };
+                        signForm.startDate = fmtDate(start);
+                        signForm.endDate = fmtDate(end);
                     }
 
                     if (currentSignRow.value) {

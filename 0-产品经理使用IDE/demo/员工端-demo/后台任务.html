@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台任务 - 主列表</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-color-primary-light-3: #6bc083;
+            --el-color-primary-light-5: #95cfa4;
+            --el-color-primary-light-7: #bee5c6;
+            --el-color-primary-light-8: #d3efe8;
+            --el-color-primary-light-9: #e9f7ea;
+            --el-color-primary-dark-2: #24833e;
+        }
+        body, html {
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif;
+            height: 100%;
+        }
+        #app {
+            padding: 20px;
+            box-sizing: border-box;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .content-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 4px rgba(0,21,41,.08);
+            margin-bottom: 16px;
+        }
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 0;
+        }
+        .search-area {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+        .search-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .search-item label {
+            color: #606266;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .btn-search-primary {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+            height: 32px;
+        }
+        .btn-search-primary:hover,
+        .btn-search-primary:focus,
+        .btn-search-primary:active {
+            background-color: #2DA44E !important;
+            border-color: #2DA44E !important;
+            color: #FFFFFF !important;
+        }
+        .btn-search-primary .el-icon {
+            color: #FFFFFF !important;
+        }
+        .btn-search-reset {
+            background-color: #FFFFFF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+            height: 32px;
+        }
+        .btn-search-reset:hover,
+        .btn-search-reset:focus,
+        .btn-search-reset:active {
+            background-color: #E6F2FF !important;
+            border-color: #DCDFE6 !important;
+            color: #000000 !important;
+        }
+        .btn-search-reset .el-icon {
+            color: #000000 !important;
+        }
+        .table-container {
+            flex: 1;
+            overflow: hidden;
+        }
+        .pagination-container {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .el-table th.el-table__cell {
+            background-color: #FAFAFA !important;
+            color: #303133;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 搜索区域 -->
+        <div class="content-card">
+            <div class="search-area">
+                <div class="search-item">
+                    <label>任务编号</label>
+                    <el-input v-model="searchForm.taskNo" placeholder="任务编号" clearable style="width: 220px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <label>模块名称</label>
+                    <el-input v-model="searchForm.moduleName" placeholder="模块名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div class="search-item">
+                    <label>任务状态</label>
+                    <el-select v-model="searchForm.taskStatus" placeholder="任务状态" clearable style="width: 160px;">
+                        <el-option label="完成" value="完成"></el-option>
+                        <el-option label="处理中" value="处理中"></el-option>
+                    </el-select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主体内容 -->
+        <div class="content-card main-content">
+            <div class="table-container">
+                <el-table :data="filteredTableData" border style="width: 100%" height="100%">
+                    <el-table-column prop="taskNo" label="任务编号" min-width="220" align="center"></el-table-column>
+                    <el-table-column prop="moduleName" label="模块名称" min-width="120" align="center"></el-table-column>
+                    <el-table-column prop="taskType" label="任务类型" min-width="100" align="center"></el-table-column>
+                    <el-table-column prop="taskStatus" label="任务状态" min-width="100" align="center">
+                        <template #default="scope">
+                            <el-tag :type="scope.row.taskStatus === '完成' ? 'success' : 'warning'" effect="plain">
+                                {{ scope.row.taskStatus }}
+                            </el-tag>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="任务结果" min-width="200" align="center">
+                        <template #default="scope">
+                            <span v-if="scope.row.taskStatus === '完成'">
+                                导入{{ scope.row.totalCount }}条，失败{{ scope.row.failCount }}条，成功{{ scope.row.successCount }}条
+                            </span>
+                            <span v-else style="color: #909399;">—</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="creator" label="创建人" min-width="100" align="center"></el-table-column>
+                    <el-table-column prop="createdAt" label="创建时间" min-width="160" align="center"></el-table-column>
+                    <el-table-column prop="finishedAt" label="完成时间" min-width="160" align="center">
+                        <template #default="scope">
+                            <span>{{ scope.row.finishedAt || '—' }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="操作" width="140" align="center" fixed="right">
+                        <template #default="scope">
+                            <el-button
+                                v-if="scope.row.taskStatus === '完成' && scope.row.failCount > 0"
+                                link type="primary" size="small" @click="downloadError(scope.row)">
+                                下载错误数据
+                            </el-button>
+                            <span v-else style="color: #c0c4cc;">—</span>
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </div>
+
+            <div class="pagination-container">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[10, 20, 50, 100]"
+                    layout="total, sizes, prev, pager, next, jumper"
+                    :total="filteredTableData.length">
+                </el-pagination>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+
+        const app = createApp({
+            setup() {
+                const searchForm = reactive({
+                    taskNo: '',
+                    moduleName: '',
+                    taskStatus: ''
+                });
+
+                const tableData = ref([
+                    { taskNo: 'EXP20260828143052123', moduleName: '商品管理', taskType: '导入', taskStatus: '完成', totalCount: 100, successCount: 70, failCount: 30, creator: '张三', createdAt: '2026-08-28 14:30:52', finishedAt: '2026-08-28 14:32:10' },
+                    { taskNo: 'EXP20260828150012345', moduleName: '地址管理', taskType: '导入', taskStatus: '处理中', totalCount: 0, successCount: 0, failCount: 0, creator: '李四', createdAt: '2026-08-28 15:00:12', finishedAt: '' },
+                    { taskNo: 'EXP20260827103000678', moduleName: '商品管理', taskType: '导入', taskStatus: '完成', totalCount: 50, successCount: 50, failCount: 0, creator: '张三', createdAt: '2026-08-27 10:30:00', finishedAt: '2026-08-27 10:31:05' },
+                    { taskNo: 'EXP20260827110000912', moduleName: '港口管理', taskType: '导入', taskStatus: '完成', totalCount: 200, successCount: 195, failCount: 5, creator: '王五', createdAt: '2026-08-27 11:00:00', finishedAt: '2026-08-27 11:05:30' },
+                    { taskNo: 'EXP20260826140000456', moduleName: '仓库列表', taskType: '导入', taskStatus: '完成', totalCount: 80, successCount: 80, failCount: 0, creator: '赵六', createdAt: '2026-08-26 14:00:00', finishedAt: '2026-08-26 14:02:15' }
+                ]);
+
+                const currentPage = ref(1);
+                const pageSize = ref(20);
+
+                const filteredTableData = computed(() => {
+                    return tableData.value.filter(item => {
+                        if (searchForm.taskNo && !item.taskNo.includes(searchForm.taskNo)) return false;
+                        if (searchForm.moduleName && !item.moduleName.includes(searchForm.moduleName)) return false;
+                        if (searchForm.taskStatus && item.taskStatus !== searchForm.taskStatus) return false;
+                        return true;
+                    });
+                });
+
+                const handleSearch = () => {
+                    ElementPlus.ElMessage.success('执行搜索');
+                };
+                const resetSearch = () => {
+                    searchForm.taskNo = '';
+                    searchForm.moduleName = '';
+                    searchForm.taskStatus = '';
+                    ElementPlus.ElMessage.success('已重置搜索条件');
+                };
+
+                const downloadError = (row) => {
+                    ElementPlus.ElMessage.success('开始下载错误数据：' + row.taskNo);
+                };
+
+                return {
+                    searchForm,
+                    tableData,
+                    filteredTableData,
+                    currentPage,
+                    pageSize,
+                    handleSearch,
+                    resetSearch,
+                    downloadError
+                };
+            }
+        });
+
+        if (window.ElementPlusIconsVue) {
+            for (const [key, component] of Object.entries(window.ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

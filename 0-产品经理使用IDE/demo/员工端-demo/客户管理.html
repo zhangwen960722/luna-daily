@@ -614,14 +614,6 @@
                                     <el-date-picker v-model="signForm.signDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
                                 </el-form-item>
 
-                                <el-form-item label="合同开始日期：" required>
-                                    <el-date-picker v-model="signForm.startDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
-                                </el-form-item>
-
-                                <el-form-item label="合同结束日期：" required>
-                                    <el-date-picker v-model="signForm.endDate" type="date" placeholder="请选择日期" style="width: 100%;"></el-date-picker>
-                                </el-form-item>
-
                                 <el-form-item label="合同修改内容：" required>
                                     <el-input
                                         type="textarea"
@@ -2411,6 +2403,27 @@ firstOrderTime: '2024-02-20 14:30:00',
                     if (active.length > 0) {
                         ElMessage.warning('该客户已存在有效合同，一个客户只能有一个有效合同');
                         return;
+                    }
+                    // 简易合同：校验签订日期 + 开始/结束日期后台自动推导（开始=签订日期，结束=签订日期+期限-1天）
+                    if (signForm.isSimple === '是') {
+                        if (!signForm.signDate) {
+                            ElMessage.error('请选择签订日期');
+                            return;
+                        }
+                        const sd = new Date(signForm.signDate);
+                        const years = parseInt(signForm.contractYears, 10) || 1;
+                        const start = new Date(sd);
+                        const end = new Date(sd);
+                        end.setFullYear(end.getFullYear() + years);
+                        end.setDate(end.getDate() - 1);
+                        const fmtDate = (d) => {
+                            const y = d.getFullYear();
+                            const m = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            return `${y}-${m}-${day}`;
+                        };
+                        signForm.startDate = fmtDate(start);
+                        signForm.endDate = fmtDate(end);
                     }
                     if (currentSignRow.value && currentSignRow.value.contracts) {
                         currentSignRow.value.contracts.push({

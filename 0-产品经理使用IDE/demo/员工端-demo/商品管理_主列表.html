@@ -332,14 +332,21 @@
                             </el-col>
                         </el-row>
 
+                        <!-- 是否用于一件代发 -->
+                        <el-row :gutter="24">
+                            <el-col :span="12">
+                                <el-form-item label="是否用于一件代发" prop="isDropshipping">
+                                    <el-select v-model="formData.isDropshipping" placeholder="请选择" style="width: 100%;">
+                                        <el-option label="是" :value="true"></el-option>
+                                        <el-option label="否" :value="false"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
                         <!-- 申报单价 -->
                         <el-form-item label="申报单价" prop="prices" style="margin-bottom: 0;">
                             <el-table :data="formData.prices" class="styled-table" style="width: 100%; margin-bottom: 12px;">
-                                <el-table-column label="默认" width="60" align="center">
-                                    <template #default="scope">
-                                        <el-radio v-model="formData.defaultCurrency" :label="scope.row.currency"><span></span></el-radio>
-                                    </template>
-                                </el-table-column>
                                 <el-table-column label="申报币种" width="160">
                                     <template #default="scope">
                                         <el-select v-model="scope.row.currency" style="width: 100%;" @change="(val) => handleCurrencyChange(val, scope.$index)">
@@ -390,7 +397,7 @@
                 <el-row :gutter="24">
                     <el-col :span="8"><el-form-item label="海关编码" prop="hsCode"><el-input v-model="formData.hsCode" placeholder="请输入HS Code"></el-input></el-form-item></el-col>
                     <el-col :span="8"><el-form-item label="材质" prop="material"><el-input v-model="formData.material" placeholder="请输入产品材质"></el-input></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="品牌" prop="brand"><el-input v-model="formData.brand" placeholder="请输入品牌名称"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="品牌" prop="brand"><el-select v-model="formData.brand" filterable allow-create default-first-option placeholder="请选择或输入品牌" style="width: 100%;" @change="handleBrandChange"><el-option v-for="b in brandOptions" :key="b" :label="b" :value="b"></el-option></el-select></el-form-item></el-col>
                 </el-row>
                 <el-row :gutter="24">
                     <el-col :span="8"><el-form-item label="型号" prop="model"><el-input v-model="formData.model" placeholder="请输入产品型号"></el-input></el-form-item></el-col>
@@ -474,6 +481,16 @@
                         <el-form-item label="其他条码" prop="otherBarcode"><el-input v-model="formData.otherBarcode" placeholder="支持内部编码或其他体系"></el-input></el-form-item>
                     </el-col>
                 </el-row>
+
+                <!-- 附件 -->
+                <div class="section-header">
+                    附件
+                </div>
+                <el-form-item label="附件">
+                    <el-upload action="#" :auto-upload="false" multiple :file-list="formData.attachments">
+                        <el-button type="primary" plain><el-icon><Upload /></el-icon> 上传附件</el-button>
+                    </el-upload>
+                </el-form-item>
             </el-form>
 
             <template #footer>
@@ -609,8 +626,11 @@
                     '粉末', '膏体', '木制品', '纺织品'
                 ];
 
+                // 客户品牌库（每个客户独立，输入新品牌自动存库 + 去重）
+                const brandOptions = ref(['无品牌', 'Apple', 'Samsung', 'Nike', 'Adidas']);
+
                 const formData = ref({
-                    sku: '', imageUrl: '', cnName: '', enName: '', hsCode: '', salesLink: '', attributes: ['普货'],
+                    sku: '', imageUrl: '', cnName: '', enName: '', hsCode: '', salesLink: '', attributes: ['普货'], isDropshipping: undefined,
                     material: '', brand: '', model: '', usage: '', length: undefined, width: undefined, height: undefined, weight: '',
                     prices: [{ currency: 'USD', price: undefined, isDefault: true }],
                     defaultCurrency: 'USD',
@@ -624,7 +644,7 @@
                         { warehouse: '墨链仓库1', invWarning: undefined, ageWarning: undefined },
                         { warehouse: '墨链仓库2', invWarning: undefined, ageWarning: undefined }
                     ],
-                    ean: '', otherBarcode: ''
+                    ean: '', otherBarcode: '', attachments: []
                 });
 
                 const rules = {
@@ -634,6 +654,7 @@
                     enName: [{ required: true, message: '请输入申报英文名', trigger: 'blur' }],
                     hsCode: [{ required: true, message: '请输入海关编码', trigger: 'blur' }],
                     attributes: [{ type: 'array', required: true, message: '请至少选择一个产品属性', trigger: 'change' }],
+                    isDropshipping: [{ required: true, message: '请选择是否用于一件代发', trigger: 'change' }],
                     material: [{ required: true, message: '请输入材质', trigger: 'blur' }],
                     brand: [{ required: true, message: '请输入品牌', trigger: 'blur' }],
                     model: [{ required: true, message: '请输入型号', trigger: 'blur' }],
@@ -643,7 +664,7 @@
                 const resetForm = () => {
                     if(formRef.value) formRef.value.resetFields();
                     formData.value = {
-                        sku: '', imageUrl: '', cnName: '', enName: '', hsCode: '', salesLink: '', attributes: ['普货'],
+                        sku: '', imageUrl: '', cnName: '', enName: '', hsCode: '', salesLink: '', attributes: ['普货'], isDropshipping: undefined,
                         material: '', brand: '', model: '', usage: '', length: undefined, width: undefined, height: undefined, weight: '',
                         prices: [{ currency: 'USD', price: undefined, isDefault: true }],
                         defaultCurrency: 'USD',
@@ -657,7 +678,7 @@
                             { warehouse: '墨链仓库1', invWarning: undefined, ageWarning: undefined },
                             { warehouse: '墨链仓库2', invWarning: undefined, ageWarning: undefined }
                         ],
-                        ean: '', otherBarcode: ''
+                        ean: '', otherBarcode: '', attachments: []
                     };
                 };
 
@@ -691,6 +712,18 @@
                 const preventNegative = (e) => {
                     if (e.key === '-' || e.key === 'e' || e.key === 'E') {
                         e.preventDefault();
+                    }
+                };
+
+                // 品牌变更：输入新品牌去重校验后自动入库
+                const handleBrandChange = (val) => {
+                    if (!val) return;
+                    const trimmed = String(val).trim();
+                    const exists = brandOptions.value.some(b => b.toLowerCase() === trimmed.toLowerCase());
+                    if (exists) {
+                        formData.value.brand = brandOptions.value.find(b => b.toLowerCase() === trimmed.toLowerCase());
+                    } else {
+                        brandOptions.value.push(trimmed);
                     }
                 };
 
@@ -766,8 +799,8 @@
                     activeTab, searchForm, filteredTableData, total, handleTabClick, handleSearch, resetSearch, 
                     handleAdd, handleEdit, handleAudit,
                     // 弹窗相关
-                    dialogVisible, dialogTitle, formRef, formData, rules, attrOptions, pageMode,
-                    preventNegative, handleSubmit, handleReject, handleApprove,
+                    dialogVisible, dialogTitle, formRef, formData, rules, attrOptions, brandOptions, pageMode,
+                    preventNegative, handleSubmit, handleReject, handleApprove, handleBrandChange,
                     availableCurrencies, addPrice, handleCurrencyChange, removePrice
                 };
             }

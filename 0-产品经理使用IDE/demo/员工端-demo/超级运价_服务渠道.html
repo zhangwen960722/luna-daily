@@ -161,7 +161,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
           <el-select v-model="selectedWeightSegment" placeholder="选择重量段绑定" size="small" style="width:280px" @change="bindWeightSegment" :disabled="availableWeightSegments.length===0" clearable>
             <el-option v-for="s in availableWeightSegments" :key="s._key" :label="s._label" :value="s._key"></el-option>
           </el-select>
-          <span style="font-size:11px;color:#909399">根据运输方式+计费方式筛选可选段，选中后自动绑定，不可编辑/删除</span>
+          <span style="font-size:11px;color:#909399">根据运输方式+计费方式筛选可选段，选中后自动绑定，参数不可编辑，可删除（删除级联清理快递派成本细项）</span>
         </div>
         <el-table :data="weightList" border style="width:100%" max-height="360" row-key="__idx">
           <el-table-column label="" width="36" align="center" fixed="left">
@@ -179,7 +179,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
           <el-table-column label="起始值" min-width="120"><template #default="s2"><el-input-number v-model="s2.row.min" :min="0" :precision="0" :step="1" style="width:100%" controls-position="right" @change="validateWeightRow(s2.row)" :disabled="s2.row._template"></el-input-number></template></el-table-column>
           <el-table-column label="结束值" min-width="120"><template #default="s2"><div style="display:flex;align-items:center;gap:4px"><el-input-number v-model="s2.row.max" :min="0" :precision="0" :step="1" style="flex:1" controls-position="right" @change="validateWeightRow(s2.row)" :disabled="s2.row._template"></el-input-number><span v-if="s2.row.max===null" style="font-size:12px;color:#909399;white-space:nowrap">无上限</span></div><div v-if="s2.row._err" style="font-size:11px;color:#F56C6C;margin-top:2px">{{s2.row._err}}</div></template></el-table-column>
           <el-table-column label="段名称" min-width="130"><template #default="s2"><el-input v-model="s2.row.label" placeholder="如 101KG+" :disabled="s2.row._template"></el-input></template></el-table-column>
-          <el-table-column label="启用" width="70" align="center"><template #default="s2"><el-switch v-model="s2.row.enabled" size="small" @change="validateWeightRow(s2.row)"></el-switch></template></el-table-column>
+          <el-table-column label="操作" width="70" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeWeightRow(s2.$index)">删除</el-button></template></el-table-column>
         </el-table>
       </el-tab-pane>
     </el-tabs>
@@ -395,7 +395,7 @@ var app = Vue.createApp({
       chCostData: {},
       chCostExpData: {},
       pickupRegions: ['珠三角','汕头','义乌','广州','中山'],
-      expWeightTiers: ['0.5KG+','1KG+','3KG+','5KG+','10KG+','21KG+','2m³+'],
+      expWeightTiers: ['8KG+','101KG+','2m³+'],
       allRoutes: [
         {code:'CLX', originCountry:'CN', destCountry:'US', portType:'海港'},
         {code:'MAX', originCountry:'CN', destCountry:'US', portType:'海港'},
@@ -581,6 +581,14 @@ var app = Vue.createApp({
       var ls = r._loadingStandards || [{type:'头程',transportMode:10,lastMile:'',kgStandard:12525,cbmStandard:75},{type:'派送',transportMode:10,lastMile:'卡派',kgStandard:350,cbmStandard:1.8}];
       this.loadingStandards = ls.map(function(s){ return {type:s.type, transportMode:s.transportMode||10, lastMile:s.lastMile||'', kgStandard:s.kgStandard, cbmStandard:s.cbmStandard}; });
       this.weightList = JSON.parse(JSON.stringify(row._weight||[]));
+      var _lms = this.editForm.lastMileMethods || [];
+      if(!this.chCostExpData[row.name] && _lms.indexOf('快递派') !== -1){
+        this.chCostExpData[row.name] = { enabled:true, rates:[
+          {weightTier:'8KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
+          {weightTier:'101KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
+          {weightTier:'2m³+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
+        ]};
+      }
       this.showDialog = true;
     },
 
@@ -616,7 +624,28 @@ var app = Vue.createApp({
       this.selectedWeightSegment='';
       ElementPlus.ElMessage.success('已绑定重量段：'+seg.label);
     },
-    removeWeightRow: function(i){ this.weightList.splice(i,1);
+    removeWeightRow: function(i){
+      var row = this.weightList[i];
+      if(!row) return;
+      var self = this;
+      var msg = '确定要删除该重量段【'+row.label+'】吗？<br><span style="color:#F56C6C;font-size:12px">删除后会影响服务渠道中快递派的成本报价，引用了该重量段的快递派成本细项将同步删除。</span>';
+      ElementPlus.ElMessageBox.confirm(msg, '删除重量段', {confirmButtonText:'确定删除',cancelButtonText:'取消',type:'warning',dangerouslyUseHTMLString:true})
+        .then(function(){
+          var label = row.label;
+          self.weightList.splice(i,1);
+          self.removeExpByWeightTier(label);
+          ElementPlus.ElMessage.success('已删除重量段【'+label+'】及引用它的快递派成本细项');
+        })
+        .catch(function(){});
+    },
+    removeExpByWeightTier: function(label){
+      var chName = this.editForm.name;
+      var d = this.chCostExpData[chName];
+      if(d && d.rates && d.rates.length){
+        var before = d.rates.length;
+        d.rates = d.rates.filter(function(r){ return r.weightTier !== label; });
+        if(d.rates.length < before) this._costDirty = true;
+      }
     },
     onWeightDragStart: function(e, idx){ this.dragWeightIdx = idx; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); },
     onWeightDragOver: function(e, idx){ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; },
@@ -731,9 +760,9 @@ var app = Vue.createApp({
           var nLms=row._raw&&row._raw.lastMileMethods?row._raw.lastMileMethods:[];
           if(!self.chCostExpData[row.name]&&nLms.includes('快递派')){
             self.chCostExpData[row.name] = { enabled:true, rates:[
-              {weightTier:'0.5KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
-              {weightTier:'1KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
-              {weightTier:'3KG+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
+              {weightTier:'8KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
+              {weightTier:'101KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
+              {weightTier:'2m³+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
             ]};
           }
           if(isGenerate){self._addChannelCombos(row.name);self._setChannelComboSig(row.name,self._makeDimSig());ElementPlus.ElMessageBox.confirm('已保存并生成服务组合。<br><br>前往服务组合菜单查看？','保存成功',{confirmButtonText:'前往服务组合',cancelButtonText:'稍后',type:'success',dangerouslyUseHTMLString:true}).then(function(){window.parent.postMessage({type:'navigate',url:'超级运价_服务组合.html'},'*')}).catch(function(){})}else{ElementPlus.ElMessageBox.alert('新增 '+row.name+' 成功','保存成功',{confirmButtonText:'已知晓'})}
@@ -767,9 +796,9 @@ var app = Vue.createApp({
       var lms=row._raw&&row._raw.lastMileMethods?row._raw.lastMileMethods:[];
       if(!this.chCostExpData[this.chCostChannel]&&lms.includes('快递派')){
         this.chCostExpData[this.chCostChannel] = { enabled:true, rates:[
-          {weightTier:'0.5KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
-          {weightTier:'1KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
-          {weightTier:'3KG+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
+          {weightTier:'8KG+',zipPrefixes:'8,9',price:15.0,cur:'RMB'},
+          {weightTier:'101KG+',zipPrefixes:'8,9',price:12.0,cur:'RMB'},
+          {weightTier:'2m³+',zipPrefixes:'8,9',price:10.0,cur:'RMB'}
         ]};
       }
       this.showChCostDialog = true;this._costDirty=false;
@@ -851,7 +880,7 @@ var app = Vue.createApp({
       this._costDirty=true;
       var d=this.chCostExpData[this.chCostChannel];
       if(!d) this.chCostExpData[this.chCostChannel]={enabled:true,rates:[]};
-      this.chCostExpData[this.chCostChannel].rates.push({weightTier:'1KG+',zipPrefixes:'',price:null,cur:'RMB'});
+      this.chCostExpData[this.chCostChannel].rates.push({weightTier:'8KG+',zipPrefixes:'',price:null,cur:'RMB'});
     },
     removeExpRow: function(i){ this._costDirty=true;var d=this.chCostExpData[this.chCostChannel]; if(d&&d.rates) d.rates.splice(i,1); },
     syncChCostToCombos: function(){
