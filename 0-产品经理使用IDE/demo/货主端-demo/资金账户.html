@@ -47,29 +47,44 @@
 <body>
     <div id="app">
         <div class="content-card">
-            <!-- 余额总览 -->
-            <div class="overview-header">
-                <span class="overview-title">账户余额</span>
-                <el-button type="primary" @click="openRecharge">
-                    <el-icon style="margin-right: 4px;"><Plus /></el-icon>充值
-                </el-button>
-            </div>
-            <el-row :gutter="16">
-                <el-col :span="6" v-for="w in wallets" :key="w.id" style="margin-bottom: 16px;">
-                    <div class="wallet-card">
-                        <div>
-                            <div class="entity">{{ w.entityName }}</div>
-                            <div class="currency">{{ currencyName(w.currency) }}</div>
-                        </div>
-                        <div class="balance">{{ currencySymbol(w.currency) }}{{ formatMoney(w.balance) }}</div>
-                    </div>
-                </el-col>
-            </el-row>
-
-            <!-- 流水 / 充值记录 -->
             <el-tabs v-model="activeTab">
+                <el-tab-pane label="账户余额" name="balance">
+                    <div class="overview-header">
+                        <span class="overview-title">账户余额</span>
+                        <el-button type="primary" @click="openRecharge">
+                            <el-icon style="margin-right: 4px;"><Plus /></el-icon>充值
+                        </el-button>
+                    </div>
+                    <el-table :data="wallets" border style="width: 100%;">
+                        <el-table-column prop="entityName" label="账户主体" min-width="120"></el-table-column>
+                        <el-table-column label="币种" min-width="90" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="accountName" label="账户名称" min-width="150"></el-table-column>
+                        <el-table-column label="余额" min-width="130" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.balance) }}</template>
+                        </el-table-column>
+                        <el-table-column label="待核销欠款" min-width="130" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.pendingWriteoff) }}</template>
+                        </el-table-column>
+                        <el-table-column label="待确认账单" min-width="130" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.pendingConfirm) }}</template>
+                        </el-table-column>
+                        <el-table-column label="实际金额" min-width="130" align="right">
+                            <template #default="scope">
+                                <span :class="actualAmount(scope.row) < 0 ? 'amount-out' : ''">
+                                    {{ actualAmount(scope.row) < 0 ? '-' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(Math.abs(actualAmount(scope.row))) }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </el-tab-pane>
+
                 <el-tab-pane label="资金流水" name="flow">
                     <div class="search-area">
+                        <el-select v-model="flowSearch.entityName" placeholder="主体" clearable style="width: 140px;">
+                            <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                        </el-select>
                         <el-select v-model="flowSearch.type" placeholder="流水类型" clearable style="width: 160px;">
                             <el-option v-for="t in flowTypes" :key="t" :label="t" :value="t"></el-option>
                         </el-select>
@@ -130,6 +145,33 @@
                             <template #default="scope">
                                 <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')" size="small">{{ scope.row.status }}</el-tag>
                             </template>
+                        </el-table-column>
+                    </el-table>
+                </el-tab-pane>
+
+                <el-tab-pane :label="'入账记录 (' + creditRecords.length + ')'" name="credit">
+                    <el-table :data="creditRecords" border style="width: 100%">
+                        <el-table-column prop="recordNo" label="记录编号" min-width="140"></el-table-column>
+                        <el-table-column prop="creditType" label="赔付类型" min-width="100" align="center"></el-table-column>
+                        <el-table-column prop="waybillNo" label="关联运单号" min-width="130"></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="100"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="赔付金额" min-width="110" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="status" label="状态" min-width="90" align="center">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.status === '已入账' ? 'success' : 'warning'" size="small">{{ scope.row.status }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="createdAt" label="产生时间" min-width="150"></el-table-column>
+                        <el-table-column label="入账时间" min-width="150" align="center">
+                            <template #default="scope">{{ scope.row.bookedAt || '—' }}</template>
+                        </el-table-column>
+                        <el-table-column label="关联账单号" min-width="150">
+                            <template #default="scope">{{ scope.row.billNo || '—' }}</template>
                         </el-table-column>
                     </el-table>
                 </el-tab-pane>
@@ -218,14 +260,17 @@
 
                 const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富利顿'];
 
-                // === 钱包余额（客户×主体×币种） ===
+                // === 资金账户（客户×主体×币种）；默认钱包=入驻/签约自动开人民币，余额 0 也展示 ===
                 const wallets = reactive([
-                    { id: 1, entityName: '广州飞点', currency: 'CNY', balance: 3719.50 },
-                    { id: 2, entityName: '广州飞点', currency: 'USD', balance: 1200.00 },
-                    { id: 3, entityName: '深圳飞点', currency: 'CNY', balance: 3200.00 },
-                    { id: 4, entityName: '广东飞点', currency: 'CNY', balance: 800.00 },
-                    { id: 5, entityName: '香港富利顿', currency: 'HKD', balance: 15000.00 }
+                    { id: 1, entityName: '广州飞点', currency: 'CNY', accountName: '1000001 CNY', balance: 3719.50, pendingWriteoff: 1280.50, pendingConfirm: 800.00 },
+                    { id: 2, entityName: '广州飞点', currency: 'USD', accountName: '1000002 USD', balance: 1200.00, pendingWriteoff: 0.00, pendingConfirm: 500.00 },
+                    { id: 3, entityName: '深圳飞点', currency: 'CNY', accountName: '1000003 CNY', balance: 3200.00, pendingWriteoff: 3500.00, pendingConfirm: 200.00 },
+                    { id: 4, entityName: '广东飞点', currency: 'CNY', accountName: '1000004 CNY', balance: 800.00, pendingWriteoff: 1200.00, pendingConfirm: 0.00 },
+                    { id: 5, entityName: '香港富利顿', currency: 'HKD', accountName: '1000005 HKD', balance: 0.00, pendingWriteoff: 0.00, pendingConfirm: 0.00 }
                 ]);
+
+                // 实际金额 = 余额 - 待核销欠款（负数红色带负号，正数正常色）
+                const actualAmount = (row) => row.balance - row.pendingWriteoff;
 
                 // === 我方银行账户（充值时选择） ===
                 const bankAccounts = [
@@ -238,7 +283,7 @@
 
                 // === 资金流水 ===
                 const flowTypes = ['充值', '充值退回', '提现', '账单核销', '账单核销撤销', '转汇'];
-                const flowSearch = reactive({ type: '', currency: '' });
+                const flowSearch = reactive({ type: '', currency: '', entityName: '' });
 
                 const allFlows = [
                     { time: '2026-08-27 10:25', type: '充值', entityName: '广州飞点', currency: 'CNY', amount: 5000.00, balance: 5000.00 },
@@ -251,6 +296,7 @@
 
                 const filteredFlows = computed(() => {
                     let data = allFlows;
+                    if (flowSearch.entityName) data = data.filter(item => item.entityName === flowSearch.entityName);
                     if (flowSearch.type) data = data.filter(item => item.type === flowSearch.type);
                     if (flowSearch.currency) data = data.filter(item => item.currency === flowSearch.currency);
                     return data;
@@ -261,7 +307,7 @@
                     return map[type] || 'info';
                 };
                 const handleFlowSearch = () => { ElMessage.success('执行查询'); };
-                const resetFlowSearch = () => { flowSearch.type = ''; flowSearch.currency = ''; };
+                const resetFlowSearch = () => { flowSearch.type = ''; flowSearch.currency = ''; flowSearch.entityName = ''; };
 
                 // === 充值记录 ===
                 const rechargeRecords = reactive([
@@ -269,6 +315,14 @@
                     { applyNo: 'FD20260825002', time: '2026-08-25 14:10', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', status: '已通过' },
                     { applyNo: 'FD20260824003', time: '2026-08-24 09:45', entityName: '香港富利顿', currency: 'HKD', amount: 15000.00, bankAccount: '香港富利顿-汇丰银行(HSBC 123-456-789)', status: '已通过' },
                     { applyNo: 'FD20260822004', time: '2026-08-22 16:30', entityName: '广州飞点', currency: 'USD', amount: 1200.00, bankAccount: '广州飞点-中国银行美元户(6217 8888 6666)', status: '已通过' }
+                ]);
+
+                // === 入账记录（我司退款/赔偿，待入账→已入账，入账时归最新一期账单抵扣） ===
+                const creditRecords = reactive([
+                    { id: 1, recordNo: 'CR20260829001', creditType: '超时赔付', waybillNo: 'WB20260812001', entityName: '广州飞点', currency: 'CNY', amount: 120.00, status: '待入账', createdAt: '2026-08-29 10:00', bookedAt: '', billNo: '' },
+                    { id: 2, recordNo: 'CR20260829002', creditType: '货损赔偿', waybillNo: 'WB20260815002', entityName: '广州飞点', currency: 'CNY', amount: 350.00, status: '待入账', createdAt: '2026-08-29 11:00', bookedAt: '', billNo: '' },
+                    { id: 3, recordNo: 'CR20260818001', creditType: '超时赔付', waybillNo: 'WB20260805003', entityName: '深圳飞点', currency: 'CNY', amount: 80.00, status: '已入账', createdAt: '2026-08-18 09:00', bookedAt: '2026-08-20 15:00', billNo: 'AR-SZ-202608-001' },
+                    { id: 4, recordNo: 'CR20260815001', creditType: '丢件赔付', waybillNo: 'WB20260801004', entityName: '香港富利顿', currency: 'HKD', amount: 500.00, status: '已入账', createdAt: '2026-08-15 14:00', bookedAt: '2026-08-16 10:00', billNo: 'AR-HK-202608-001' }
                 ]);
 
                 // === 充值弹窗 ===
@@ -338,14 +392,14 @@
                     activeTab.value = 'recharge';
                 };
 
-                const activeTab = ref('flow');
+                const activeTab = ref('balance');
 
                 return {
                     activeTab, wallets, currencyOptions, entities,
-                    currencySymbol, currencyName, formatMoney,
+                    currencySymbol, currencyName, formatMoney, actualAmount,
                     flowTypes, flowSearch, filteredFlows, flowTypeTag,
                     handleFlowSearch, resetFlowSearch,
-                    rechargeRecords,
+                    rechargeRecords, creditRecords,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRules,
                     voucherList, availableBankAccounts,
                     onRechargeEntityChange, onRechargeCurrencyChange,

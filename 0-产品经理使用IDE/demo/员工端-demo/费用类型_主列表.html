@@ -202,6 +202,18 @@
                             </el-tag>
                         </template>
                     </el-table-column>
+                    <el-table-column prop="isSystem" label="是否系统预置" min-width="110" align="center">
+                        <template #default="scope">
+                            <el-tag v-if="scope.row.isSystem" type="info" size="small">系统预置</el-tag>
+                            <span v-else>—</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="creditType" label="赔付类型" min-width="120" align="center">
+                        <template #default="scope">
+                            <el-tag v-if="scope.row.creditType" type="warning" size="small">{{ scope.row.creditType }}</el-tag>
+                            <span v-else>—</span>
+                        </template>
+                    </el-table-column>
                     <el-table-column prop="status" label="状态" min-width="100" align="center">
                         <template #default="scope">
                             <el-tag :type="scope.row.status === '正常' ? 'success' : 'danger'">
@@ -212,13 +224,14 @@
                     <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
                     <el-table-column label="操作" width="180" align="center" fixed="right">
                         <template #default="scope">
-                            <el-button link type="primary" size="small" @click="openDialog('edit', scope.row)">
-                                编辑
+                            <el-button link type="primary" size="small" @click="openDialog('view', scope.row)">
+                                查看
                             </el-button>
-                            <el-button 
-                                link 
-                                :type="scope.row.status === '正常' ? 'danger' : 'success'" 
-                                size="small" 
+                            <el-button
+                                v-if="!scope.row.isSystem"
+                                link
+                                :type="scope.row.status === '正常' ? 'danger' : 'success'"
+                                size="small"
                                 @click="toggleStatus(scope.row)">
                                 {{ scope.row.status === '正常' ? '冻结' : '启用' }}
                             </el-button>
@@ -241,7 +254,7 @@
 
         <!-- 新增/编辑弹窗 -->
         <el-dialog 
-            :title="dialogType === 'add' ? '新增费用类型' : (isReadonly ? '查看费用类型' : '编辑费用类型')" 
+            :title="dialogType === 'add' ? '新增费用类型' : '查看费用类型'"
             v-model="dialogVisible" 
             width="650px"
             destroy-on-close>
@@ -250,10 +263,11 @@
                     <label for="fee-name-input" class="a11y-form-label">
                         <span style="color: #F56C6C; margin-right: 4px;">*</span>费用名称
                     </label>
-                    <el-input 
+                    <el-input
                         id="fee-name-input"
-                        v-model="formData.feeName" 
-                        placeholder="请输入费用名称">
+                        v-model="formData.feeName"
+                        placeholder="请输入费用名称"
+                        :disabled="isReadonly">
                     </el-input>
                 </div>
                 
@@ -261,13 +275,34 @@
                     <label for="fee-direction-select" class="a11y-form-label">
                         <span style="color: #F56C6C; margin-right: 4px;">*</span>费用方向
                     </label>
-                    <el-select 
+                    <el-select
                         id="fee-direction-select"
-                        v-model="formData.feeDirection" 
+                        v-model="formData.feeDirection"
                         placeholder="请选择费用方向"
-                        style="width: 100%;">
+                        style="width: 100%;"
+                        :disabled="isReadonly"
+                        @change="onFeeDirectionChange">
                         <el-option label="应收" value="应收"></el-option>
                         <el-option label="应付" value="应付"></el-option>
+                    </el-select>
+                </div>
+
+                <div class="a11y-form-group" v-if="formData.feeDirection === '应收'">
+                    <label class="a11y-form-label">是否赔付类型</label>
+                    <el-switch v-model="formData.isCredit" active-text="赔付" inactive-text="否" :disabled="isReadonly"></el-switch>
+                    <div style="color: #909399; font-size: 12px; margin-top: 4px; line-height: 1.6;">标记为赔付类型后，运营新增该费用类型的业务流水时，系统自动挂入账记录（退款/赔偿待入账，抵扣账单）</div>
+                </div>
+
+                <div class="a11y-form-group" v-if="formData.isCredit">
+                    <label class="a11y-form-label">
+                        <span style="color: #F56C6C; margin-right: 4px;">*</span>赔付类型
+                    </label>
+                    <el-select
+                        v-model="formData.creditType"
+                        placeholder="请选择赔付类型"
+                        style="width: 100%;"
+                        :disabled="isReadonly">
+                        <el-option v-for="t in creditTypeOptions" :key="t" :label="t" :value="t"></el-option>
                     </el-select>
                 </div>
             </div>
@@ -293,8 +328,11 @@
 
                 // 表格数据
                 const tableData = ref([
-                    { id: 1, feeName: '周六派送费', feeDirection: '应收', status: '正常', operator: '张三' },
-                    { id: 2, feeName: '超重费', feeDirection: '应付', status: '冻结', operator: '李四' }
+                    { id: 1, feeName: '运费', feeDirection: '应收', status: '正常', operator: '系统', creditType: '', isSystem: true },
+                    { id: 2, feeName: '周六派送费', feeDirection: '应收', status: '正常', operator: '张三', creditType: '', isSystem: false },
+                    { id: 3, feeName: '超时赔付', feeDirection: '应收', status: '正常', operator: '张三', creditType: '超时赔付', isSystem: false },
+                    { id: 4, feeName: '货损赔偿', feeDirection: '应收', status: '正常', operator: '李四', creditType: '货损赔偿', isSystem: false },
+                    { id: 5, feeName: '超重费', feeDirection: '应付', status: '冻结', operator: '李四', creditType: '', isSystem: false }
                 ]);
                 
                 const isReadonly = ref(false);
@@ -302,7 +340,7 @@
                 // 分页相关
                 const currentPage = ref(1);
                 const pageSize = ref(10);
-                const total = ref(2);
+                const total = ref(5);
                 
                 // 搜索逻辑
                 const handleSearch = () => {
@@ -316,7 +354,12 @@
 
                 // 切换状态 (启用/禁用)
                 const toggleStatus = (row) => {
-                    const action = row.status === '正常' ? '冻结' : '启用';
+                    const isEnable = row.status !== '正常';
+                    const action = isEnable ? '启用' : '冻结';
+                    if (isEnable && hasActiveDuplicate(row.feeName, row.feeDirection, row.id)) {
+                        ElMessage.warning('该费用方向下已存在启用的同名费用类型，无法启用');
+                        return;
+                    }
                     ElMessageBox.confirm(
                         `确定要${action}该费用类型吗？`,
                         '提示',
@@ -326,7 +369,7 @@
                             type: 'warning',
                         }
                     ).then(() => {
-                        row.status = row.status === '正常' ? '已冻结' : '正常';
+                        row.status = isEnable ? '正常' : '冻结';
                         ElMessage({
                             type: 'success',
                             message: `${action}成功`
@@ -340,21 +383,48 @@
                 const formData = reactive({
                     id: null,
                     feeName: '',
-                    feeDirection: ''
+                    feeDirection: '',
+                    isCredit: false,
+                    creditType: ''
                 });
+
+                // 赔付类型枚举（来自系统枚举配置，可自定义）
+                const creditTypeOptions = ['超时赔付', '丢件赔付', '货损赔偿'];
+
+                // 费用方向切换：应付方向无赔付，重置赔付标记
+                const onFeeDirectionChange = () => {
+                    if (formData.feeDirection !== '应收') {
+                        formData.isCredit = false;
+                        formData.creditType = '';
+                    }
+                };
+
+                // 唯一校验：同方向 + 同名 + 启用 只能有一个
+                const hasActiveDuplicate = (feeName, feeDirection, excludeId) => {
+                    return tableData.value.some(t =>
+                        t.id !== excludeId &&
+                        t.feeName === feeName &&
+                        t.feeDirection === feeDirection &&
+                        t.status === '正常'
+                    );
+                };
 
                 // 打开弹窗
                 const openDialog = (type, row = null) => {
                     dialogType.value = type;
-                    isReadonly.value = type === 'edit' && row && row.status !== '正常';
-                    if (type === 'edit' && row) {
+                    isReadonly.value = type !== 'add';
+                    if (type === 'view' && row) {
                         formData.id = row.id;
                         formData.feeName = row.feeName;
                         formData.feeDirection = row.feeDirection;
+                        formData.isCredit = !!row.creditType;
+                        formData.creditType = row.creditType || '';
                     } else {
                         formData.id = null;
                         formData.feeName = '';
                         formData.feeDirection = '';
+                        formData.isCredit = false;
+                        formData.creditType = '';
                     }
                     dialogVisible.value = true;
                 };
@@ -369,8 +439,16 @@
                         ElementPlus.ElMessage.warning('请选择费用方向');
                         return;
                     }
-                    
-                    ElementPlus.ElMessage.success(dialogType.value === 'add' ? '新增成功' : '编辑成功');
+                    if (formData.isCredit && !formData.creditType) {
+                        ElementPlus.ElMessage.warning('请选择赔付类型');
+                        return;
+                    }
+                    if (hasActiveDuplicate(formData.feeName, formData.feeDirection, formData.id)) {
+                        ElementPlus.ElMessage.warning('该费用方向下已存在启用的同名费用类型，请先禁用原费用类型再新增');
+                        return;
+                    }
+
+                    ElementPlus.ElMessage.success('新增成功');
                     dialogVisible.value = false;
                 };
 
@@ -387,6 +465,8 @@
                     dialogVisible,
                     isReadonly,
                     formData,
+                    creditTypeOptions,
+                    onFeeDirectionChange,
                     openDialog,
                     saveData
                 };

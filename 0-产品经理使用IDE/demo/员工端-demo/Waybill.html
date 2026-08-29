@@ -592,7 +592,7 @@
         <!-- ================== 抽屉模块 ================== -->
 
         <!-- 1. 创建/编辑运单 -->
-        <el-drawer v-model="drawerCreate" :title="isEditMode ? '编辑运单' : '创建运单'" size="1300px" :close-on-click-modal="false">
+        <el-drawer v-model="drawerCreate" :title="isEditMode ? '编辑运单' : '创建运单'" size="100%" :close-on-click-modal="false" append-to-body>
             <div style="display: flex; flex-direction: column; height: 100%; background-color: #f0f2f5;">
                 <div style="flex: 1; overflow-y: auto; padding: 16px;">
                     <el-form :model="formCreate" label-width="100px" label-position="top">
@@ -1478,7 +1478,7 @@
         </el-dialog>
 
         <!-- 2. 运单详情 (基于图片设计) -->
-        <el-drawer v-model="drawerDetail" :show-close="false" size="100%" :with-header="false" style="background-color: var(--el-bg-color-page);">
+        <el-drawer v-model="drawerDetail" :show-close="false" size="100%" :with-header="false" append-to-body style="background-color: var(--el-bg-color-page);">
             <div style="display: flex; flex-direction: column; height: 100vh; background: var(--el-bg-color-page);">
                 
                 <!-- 顶部 Header -->
@@ -2197,32 +2197,36 @@
                                 <el-tabs type="card">
                                     <el-tab-pane label="应收">
                                         <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-                                            <div><span style="color:var(--el-text-color-regular);">总费用：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-primary);">1200.00 CNY</span></div>
+                                            <div><span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-primary);">{{ feeArFlows.length }}</span></div>
                                             <el-button type="primary" size="small" @click="dialogFeeAr = true">添加应收</el-button>
                                         </div>
-                                        <el-table :data="[{type:'运费', unit:'20.00', currency:'CNY', rate:'1.00', desc:'首重费用', time:'2026-04-13', creator:'Admin'}]" border size="small">
-                                            <el-table-column prop="type" label="费用类型"></el-table-column>
-                                            <el-table-column prop="unit" label="单位费用"></el-table-column>
-                                            <el-table-column prop="currency" label="币种"></el-table-column>
-                                            <el-table-column prop="rate" label="汇率"></el-table-column>
-                                            <el-table-column prop="desc" label="描述"></el-table-column>
-                                            <el-table-column prop="time" label="账单时间"></el-table-column>
-                                            <el-table-column prop="creator" label="创建人"></el-table-column>
+                                        <el-table :data="feeArFlows" border size="small">
+                                            <el-table-column prop="type" label="费用类型" min-width="110"></el-table-column>
+                                            <el-table-column label="币种" width="80" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
+                                            <el-table-column label="金额" width="100" align="right"><template #default="scope">{{ scope.row.amount }}</template></el-table-column>
+                                            <el-table-column prop="rate" label="汇率" width="70" align="center"></el-table-column>
+                                            <el-table-column prop="quantity" label="数量" width="70" align="center"></el-table-column>
+                                            <el-table-column prop="remark" label="备注" min-width="110"></el-table-column>
+                                            <el-table-column prop="time" label="业务时间" width="150"></el-table-column>
+                                            <el-table-column prop="source" label="数据来源" width="90" align="center"></el-table-column>
+                                            <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeArFlows.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
                                         </el-table>
                                     </el-tab-pane>
                                     <el-tab-pane label="应付">
                                         <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-                                            <div><span style="color:var(--el-text-color-regular);">总费用：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">800.00 CNY</span></div>
+                                            <div><span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">{{ feeApFlows.length }}</span></div>
                                             <el-button type="primary" size="small" @click="dialogFeeAp = true">添加应付</el-button>
                                         </div>
-                                        <el-table :data="[{type:'操作费', unit:'10.00', currency:'CNY', rate:'1.00', desc:'分拣操作', time:'2026-04-13', creator:'Admin'}]" border size="small">
-                                            <el-table-column prop="type" label="费用类型"></el-table-column>
-                                            <el-table-column prop="unit" label="单位费用"></el-table-column>
-                                            <el-table-column prop="currency" label="币种"></el-table-column>
-                                            <el-table-column prop="rate" label="汇率"></el-table-column>
-                                            <el-table-column prop="desc" label="描述"></el-table-column>
-                                            <el-table-column prop="time" label="账单时间"></el-table-column>
-                                            <el-table-column prop="creator" label="创建人"></el-table-column>
+                                        <el-table :data="feeApFlows" border size="small">
+                                            <el-table-column prop="type" label="费用类型" min-width="110"></el-table-column>
+                                            <el-table-column label="币种" width="80" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
+                                            <el-table-column label="金额" width="100" align="right"><template #default="scope">{{ scope.row.amount }}</template></el-table-column>
+                                            <el-table-column prop="rate" label="汇率" width="70" align="center"></el-table-column>
+                                            <el-table-column prop="quantity" label="数量" width="70" align="center"></el-table-column>
+                                            <el-table-column prop="remark" label="备注" min-width="110"></el-table-column>
+                                            <el-table-column prop="time" label="业务时间" width="150"></el-table-column>
+                                            <el-table-column prop="source" label="数据来源" width="90" align="center"></el-table-column>
+                                            <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeApFlows.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
                                         </el-table>
                                     </el-tab-pane>
                                 </el-tabs>
@@ -2629,21 +2633,21 @@
         </el-dialog>
 
         <!-- 费用管理拆分弹窗 -->
-        <el-dialog v-model="dialogFeeAr" title="添加应收" width="900px" append-to-body>
+        <el-dialog v-model="dialogFeeAr" title="添加应收" width="1000px" append-to-body>
             <div style="margin-bottom:16px;">
                 <el-form label-width="80px" inline>
                     <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos.join(', ') || '未选择数据'" style="width:300px"></el-input></el-form-item>
                 </el-form>
             </div>
-            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeArList.push({})">添加一行</el-button></div>
+            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeArList.push(newFeeRow())">添加一行</el-button></div>
             <el-table :data="feeArList" border size="small">
-                <el-table-column label="业务时间" width="160"><template #default="scope"><el-date-picker v-model="scope.row.time" type="datetime" size="small" style="width:100%"></el-date-picker></template></el-table-column>
-                <el-table-column label="费用类型" width="120"><template #default="scope"><el-select v-model="scope.row.type" size="small"><el-option label="运费" value="1"></el-option></el-select></template></el-table-column>
-                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small"><el-option label="CNY" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="业务时间" width="170"><template #default="scope"><el-date-picker v-model="scope.row.time" type="datetime" size="small" style="width:100%"></el-date-picker></template></el-table-column>
+                <el-table-column label="费用类型" width="130"><template #default="scope"><el-select v-model="scope.row.type" size="small" style="width:100%" @change="handleFeeTypeChange(scope.row, 'ar')"><el-option v-for="t in feeTypeArOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></template></el-table-column>
+                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small" style="width:100%" @change="handleFeeCurrencyChange(scope.row)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></template></el-table-column>
                 <el-table-column label="汇率" width="80"><template #default="scope"><el-input v-model="scope.row.rate" size="small"></el-input></template></el-table-column>
-                <el-table-column label="单位" width="80"><template #default="scope"><el-select v-model="scope.row.unit" size="small"><el-option label="票" value="1"></el-option></el-select></template></el-table-column>
-                <el-table-column label="单位费用" width="100"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false"></el-input-number></template></el-table-column>
-                <el-table-column label="描述" min-width="120"><template #default="scope"><el-input v-model="scope.row.desc" size="small"></el-input></template></el-table-column>
+                <el-table-column label="数量" width="90"><template #default="scope"><el-input-number v-model="scope.row.quantity" size="small" style="width:100%" :controls="false" @change="handleFeeTypeChange(scope.row, 'ar')"></el-input-number></template></el-table-column>
+                <el-table-column label="金额" width="110"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></template></el-table-column>
+                <el-table-column label="备注" min-width="120"><template #default="scope"><el-input v-model="scope.row.remark" size="small"></el-input></template></el-table-column>
                 <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeArList.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
             </el-table>
             <template #footer><el-button @click="dialogFeeAr = false">取消</el-button><el-button type="primary">保存</el-button></template>
@@ -2868,21 +2872,21 @@
             <template #footer><el-button @click="dialogAddVat = false">取消</el-button><el-button type="primary" @click="handleSaveVat">保存</el-button></template>
         </el-dialog>
 
-        <el-dialog v-model="dialogFeeAp" title="添加应付" width="900px" append-to-body>
+        <el-dialog v-model="dialogFeeAp" title="添加应付" width="1000px" append-to-body>
             <div style="margin-bottom:16px;">
                 <el-form label-width="80px" inline>
                     <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos.join(', ') || '未选择数据'" style="width:300px"></el-input></el-form-item>
                 </el-form>
             </div>
-            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeApList.push({})">添加一行</el-button></div>
+            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeApList.push(newFeeRow())">添加一行</el-button></div>
             <el-table :data="feeApList" border size="small">
-                <el-table-column label="业务时间" width="160"><template #default="scope"><el-date-picker v-model="scope.row.time" type="datetime" size="small" style="width:100%"></el-date-picker></template></el-table-column>
-                <el-table-column label="费用类型" width="120"><template #default="scope"><el-select v-model="scope.row.type" size="small"><el-option label="操作费" value="1"></el-option></el-select></template></el-table-column>
-                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small"><el-option label="CNY" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="业务时间" width="170"><template #default="scope"><el-date-picker v-model="scope.row.time" type="datetime" size="small" style="width:100%"></el-date-picker></template></el-table-column>
+                <el-table-column label="费用类型" width="130"><template #default="scope"><el-select v-model="scope.row.type" size="small" style="width:100%" @change="handleFeeTypeChange(scope.row, 'ap')"><el-option v-for="t in feeTypeApOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></template></el-table-column>
+                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small" style="width:100%" @change="handleFeeCurrencyChange(scope.row)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></template></el-table-column>
                 <el-table-column label="汇率" width="80"><template #default="scope"><el-input v-model="scope.row.rate" size="small"></el-input></template></el-table-column>
-                <el-table-column label="单位" width="80"><template #default="scope"><el-select v-model="scope.row.unit" size="small"><el-option label="票" value="1"></el-option></el-select></template></el-table-column>
-                <el-table-column label="单位费用" width="100"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false"></el-input-number></template></el-table-column>
-                <el-table-column label="描述" min-width="120"><template #default="scope"><el-input v-model="scope.row.desc" size="small"></el-input></template></el-table-column>
+                <el-table-column label="数量" width="90"><template #default="scope"><el-input-number v-model="scope.row.quantity" size="small" style="width:100%" :controls="false" @change="handleFeeTypeChange(scope.row, 'ap')"></el-input-number></template></el-table-column>
+                <el-table-column label="金额" width="110"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></template></el-table-column>
+                <el-table-column label="备注" min-width="120"><template #default="scope"><el-input v-model="scope.row.remark" size="small"></el-input></template></el-table-column>
                 <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeApList.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
             </el-table>
             <template #footer><el-button @click="dialogFeeAp = false">取消</el-button><el-button type="primary">保存</el-button></template>
@@ -2891,30 +2895,25 @@
         <el-dialog v-model="dialogFeeAudit" title="审计" width="400px" append-to-body>
             <el-form label-width="80px">
                 <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos"></el-input></el-form-item>
-                <el-form-item label="类型">
-                    <el-checkbox-group v-model="auditTypes" style="display:flex; flex-direction:column;">
-                        <el-checkbox label="应收-仅流水">应收-仅流水</el-checkbox>
-                        <el-checkbox label="应付-仅流水">应付-仅流水</el-checkbox>
-                        <el-checkbox label="应收-运单及流水">应收-运单及流水</el-checkbox>
-                        <el-checkbox label="应付-运单及流水">应付-运单及流水</el-checkbox>
-                    </el-checkbox-group>
+                <el-form-item label="审计">
+                    <div style="color: var(--el-text-color-regular); line-height: 1.6;">将对所选运单的应收/应付业务流水进行整单审计，审计通过后流水锁定，进入待账单生成。</div>
                 </el-form-item>
             </el-form>
-            <template #footer><el-button @click="dialogFeeAudit = false">取消</el-button><el-button type="primary">执行审计</el-button></template>
+            <template #footer><el-button @click="dialogFeeAudit = false">取消</el-button><el-button type="primary">整单审计通过</el-button></template>
         </el-dialog>
-        
-        <el-dialog v-model="dialogFeeAntiAudit" title="反审计" width="400px" append-to-body>
+
+        <el-dialog v-model="dialogFeeAntiAudit" title="反审计" width="420px" append-to-body>
             <el-form label-width="80px">
                 <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos"></el-input></el-form-item>
-                <el-form-item label="操作">
-                    <el-checkbox-group v-model="auditTypes" style="display:flex; flex-direction:column;">
-                        <el-checkbox label="应收-仅流水">应收-仅流水</el-checkbox>
-                        <el-checkbox label="应付-仅流水">应付-仅流水</el-checkbox>
-                        <el-checkbox label="应收-运单及流水">应收-运单及流水</el-checkbox>
-                        <el-checkbox label="应付-运单及流水">应付-运单及流水</el-checkbox>
-                    </el-checkbox-group>
+                <el-form-item label="反审计粒度">
+                    <el-radio-group v-model="antiAuditScope" style="display:flex; flex-direction:column;">
+                        <el-radio label="运单级" value="运单级">运单级（整单反审计，业务重改后重新审计）</el-radio>
+                        <el-radio label="应收大类" value="应收大类" :disabled="billLinked">应收大类（仅反审计应收流水）</el-radio>
+                        <el-radio label="应付大类" value="应付大类" :disabled="billLinked">应付大类（仅反审计应付流水）</el-radio>
+                    </el-radio-group>
                 </el-form-item>
             </el-form>
+            <el-alert v-if="billLinked" title="所选运单流水已关联账单，仅可整单反审计（红冲），红冲流水归入下一期账单" type="warning" :closable="false" show-icon style="margin-top: 4px;"></el-alert>
             <template #footer><el-button @click="dialogFeeAntiAudit = false">取消</el-button><el-button type="danger" @click="handleDelete('确认执行反审计吗')">执行反审计</el-button></template>
         </el-dialog>
 
@@ -5349,14 +5348,64 @@
                 const printFormatSup = ref('标签纸');
                 const extractTypes = ref(['提取供应商重量']);
                 const markType = ref('添加');
-                const auditTypes = ref(['应收-运单及流水']);
+                const antiAuditScope = ref('运单级');
+                const billLinked = ref(false);
                 const insureType = ref('按货值');
                 const podStatus = ref('否');
                 const podVisible = ref('否');
                 const buyInsurance = ref('是');
                 const fileVisible = ref('是');
-                const feeArList = ref([{}]);
-                const feeApList = ref([{}]);
+                const newFeeRow = () => {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    return {
+                        type: '', currency: 'CNY', rate: 1, quantity: 1, amount: null, remark: '',
+                        time: `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+                    };
+                };
+                const feeArList = ref([newFeeRow()]);
+                const feeApList = ref([newFeeRow()]);
+
+                // 费用类型字典（引用头程管理 fee_type，unitPrice=null 表示直接填金额）
+                const feeTypeArOptions = [
+                    { name: '运费', unitPrice: null, unit: '' },
+                    { name: '周六派送费', unitPrice: 50, unit: '票' },
+                    { name: '超重费', unitPrice: 20, unit: 'kg' },
+                    { name: '地址附加费', unitPrice: 15, unit: '票' },
+                    { name: '商品附加费', unitPrice: 5, unit: '件' },
+                    { name: '报关费', unitPrice: 120, unit: '票' },
+                    { name: '库内贴标费', unitPrice: 0.5, unit: '张' }
+                ];
+                const feeTypeApOptions = [
+                    { name: '操作费', unitPrice: 10, unit: '票' },
+                    { name: '提货费', unitPrice: 30, unit: '票' },
+                    { name: '拖车费', unitPrice: null, unit: '' },
+                    { name: '干线运输费', unitPrice: null, unit: '' }
+                ];
+
+                // 费用 tab 展示的业务流水（粒度=费用类型×币种；数据来源=报价/操作人）
+                const feeArFlows = ref([
+                    { type: '运费', currency: 'CNY', amount: 1200.00, rate: 1, quantity: 1, remark: '首重费用', time: '2026-04-13 10:00', source: '报价' },
+                    { type: '库内贴标费', currency: 'CNY', amount: 50.00, rate: 1, quantity: 100, remark: '贴标100张', time: '2026-04-13 10:00', source: '张三' },
+                    { type: '报关费', currency: 'CNY', amount: 120.00, rate: 1, quantity: 1, remark: '出口报关', time: '2026-04-13 10:00', source: '报价' }
+                ]);
+                const feeApFlows = ref([
+                    { type: '操作费', currency: 'CNY', amount: 80.00, rate: 1, quantity: 8, remark: '分拣操作', time: '2026-04-13 10:00', source: '李四' }
+                ]);
+
+                // 选费用类型：有单价规则的自动按 单价×数量 算金额
+                const handleFeeTypeChange = (row, direction) => {
+                    const opts = direction === 'ar' ? feeTypeArOptions : feeTypeApOptions;
+                    const opt = opts.find(o => o.name === row.type);
+                    if (opt && opt.unitPrice != null && row.quantity) {
+                        row.amount = Number((opt.unitPrice * row.quantity).toFixed(2));
+                    }
+                };
+                // 选币种：人民币默认1，外币自动取实时汇率（mock）
+                const handleFeeCurrencyChange = (row) => {
+                    const rateMap = { CNY: 1, USD: 7.25, HKD: 0.92, EUR: 7.85 };
+                    row.rate = rateMap[row.currency] || 1;
+                };
 
                 const handleSelectionChange = (val) => { selection.value = val; };
                 const isEditMode = ref(false);
@@ -5566,8 +5615,8 @@
                     dialogExport, exportSelected, exportScope, exportTemplates, exportFileName, executeExport,
                     openDialog, handlePrintCommand, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn, canFee,
                     compareChecks, compareTableData, compareRefNos, compareSelected, compareMockData, onChannelCheck, handleRecompare, handleRecompareAll, onChannelSelect, handleConfirmCompare,
-                    printFormat, printFormatInv, printFormatSup, extractTypes, markType, auditTypes, insureType,
-                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList,
+                    printFormat, printFormatInv, printFormatSup, extractTypes, markType, antiAuditScope, billLinked, insureType,
+                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeApFlows, feeTypeArOptions, feeTypeApOptions, handleFeeTypeChange, handleFeeCurrencyChange, newFeeRow,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,
