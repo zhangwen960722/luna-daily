@@ -11,32 +11,31 @@
 *{box-sizing:border-box}
 #app{display:flex;flex-direction:column;height:100%}
 body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);font-size:14px;line-height:1.5;height:100vh;overflow:hidden;display:flex;flex-direction:column}
-.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:16px 20px;margin-bottom:16px;flex-shrink:0}
-.top-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.card{background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:16px 20px;margin-bottom:14px;flex-shrink:0}
+.top-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed #e4e7ed}
+.filter-bar .f-label{font-size:13px;color:#606266;white-space:nowrap;font-weight:600}
 .pkg-trigger{padding:6px 12px;border:1px dashed #2DA44E;border-radius:4px;color:#2DA44E;cursor:pointer;font-size:13px;background:#f6ffed;display:inline-flex;align-items:center;gap:6px}
 .pkg-trigger:hover{background:#d9f7be;border-style:solid}
-.layout{display:flex;gap:16px;flex:1;overflow:hidden;min-height:0}
-.left-panel{width:190px;flex-shrink:0;background:var(--card-bg);border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.left-panel .section-title{font-size:13px;font-weight:600;color:#303133;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee}
-.left-panel .el-checkbox{margin-bottom:2px;display:flex}
-.right-panel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
-.right-scroll{flex:1;overflow-y:auto;min-height:0}
-.right-top-filter{display:flex;align-items:center;gap:12px;padding:8px 12px;background:#f5f7fa;border-radius:6px;margin-bottom:10px;flex-wrap:wrap}
-.right-top-filter .label{font-size:12px;color:#606266;white-space:nowrap}
-.mode-section{margin-bottom:10px}
-.mode-header{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:#f5f7fa;border-radius:6px;cursor:pointer;user-select:none;margin-bottom:5px;border:1px solid #e4e7ed}
+.cargo-panel{background:#f0f9eb;border:1px solid #d9f7be;border-radius:6px;padding:12px;margin-top:12px}
+.cargo-summary{padding:6px 10px;background:#fff;border-radius:4px;font-size:12px;display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+.cargo-summary .item{display:flex;align-items:center;gap:4px}
+.cargo-summary .label{color:var(--text-secondary)}
+.cargo-summary .value{font-weight:600}
+.result{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.result-filter{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--card-bg);border-radius:8px;margin-bottom:10px;flex-wrap:wrap;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.result-filter .label{font-size:12px;color:#606266;white-space:nowrap}
+.result-scroll{flex:1;overflow-y:auto;min-height:0}
+.mode-section{margin-bottom:10px;background:var(--card-bg);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.mode-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;background:#fafafa;border-bottom:1px solid #f0f0f0}
 .mode-header:hover{background:#e8f4e8}
 .mode-header .title{font-weight:600;font-size:14px}
+.mode-body{padding:10px 16px 14px}
 .el-table th{background:#FAFAFA!important;color:#606266;font-weight:600;font-size:13px}
 .el-table td{font-size:13px}
 .price-red{color:#F53F3F;font-weight:bold}
 .price-yellow{color:#E6A23C;font-weight:bold}
 .price-green{color:#2DA44E;font-weight:bold}
-.result-bar{padding:6px 12px;background:#f0f9eb;border-radius:6px;margin-bottom:10px;font-size:13px;display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px}
-.cargo-summary{padding:6px 10px;background:#f0f9eb;border-radius:4px;font-size:12px;display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
-.cargo-summary .item{display:flex;align-items:center;gap:4px}
-.cargo-summary .label{color:var(--text-secondary)}
-.cargo-summary .value{font-weight:600}
 .cost-detail-table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
 .cost-detail-table th{background:#f5f7fa;padding:6px 10px;text-align:left;font-weight:600;color:#606266;border:1px solid #e4e7ed}
 .cost-detail-table td{padding:6px 10px;border:1px solid #e4e7ed;color:#303133}
@@ -46,110 +45,103 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 <body>
 <div id="app">
 
-<!-- ====== 顶部查询栏 ====== -->
-<div class="card" style="margin-bottom:16px">
+<!-- ====== 顶部查询区 ====== -->
+<div class="card">
   <h3 style="margin:0 0 10px;font-size:16px;font-weight:600">运价查询</h3>
   <div class="top-bar">
     <el-select v-model="query.dest" placeholder="请选择国家" style="width:130px"><el-option v-for="o in destCountryOptions" :key="o" :label="o" :value="o"></el-option></el-select>
     <el-select v-model="query.wh" filterable placeholder="请选择仓库代码" style="width:150px"><el-option v-for="o in warehouseOptions" :key="o" :label="o" :value="o"></el-option></el-select>
-    <span class="pkg-trigger" @click="cargoDialogVisible=true">
+    <span class="pkg-trigger" @click="cargoPanelOpen=!cargoPanelOpen">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
       <span v-if="hasCargoData" style="font-weight:600;color:#303133">{{ totalWeight.toFixed(1) }}KG、<span v-if="hasAnyDims">{{ totalVolume.toFixed(4) }}m³、</span>{{ totalPieces }}件</span>
       <span v-else style="color:#C0C4CC">请输入包裹信息</span>
     </span>
     <el-button type="primary" @click="doQuery" style="margin-left:auto">查询报价</el-button>
   </div>
-</div>
 
-<!-- ====== 包裹信息弹窗 ====== -->
-<el-dialog v-model="cargoDialogVisible" title="包裹信息（多件装箱）" width="800px" :close-on-click-modal="false" class="cargo-dialog">
-  <el-table :data="cargoItems" border size="small">
-    <el-table-column width="100"><template #header><span style="color:#F53F3F">*</span> 件数</template><template #default="s"><el-input-number v-model="s.row.qty" :min="1" style="width:88px" controls-position="right"></el-input-number></template></el-table-column>
-    <el-table-column width="130"><template #header><span style="color:#F53F3F">*</span> 长(cm)</template><template #default="s"><el-input-number v-model="s.row.l" :min="0" :precision="1" style="width:118px" controls-position="right"></el-input-number></template></el-table-column>
-    <el-table-column width="130"><template #header><span style="color:#F53F3F">*</span> 宽(cm)</template><template #default="s"><el-input-number v-model="s.row.w" :min="0" :precision="1" style="width:118px" controls-position="right"></el-input-number></template></el-table-column>
-    <el-table-column width="130"><template #header><span style="color:#F53F3F">*</span> 高(cm)</template><template #default="s"><el-input-number v-model="s.row.h" :min="0" :precision="1" style="width:118px" controls-position="right"></el-input-number></template></el-table-column>
-    <el-table-column width="150"><template #header><span style="color:#F53F3F">*</span> 单件实重(kg)</template><template #default="s"><el-input-number v-model="s.row.wt" :min="0.1" :step="0.1" :precision="1" style="width:138px" controls-position="right"></el-input-number></template></el-table-column>
-    <el-table-column label="操作" width="80" align="center"><template #default="s">
-        <el-button size="small" circle text @click="copyCargoItem(s.$index)" style="color:#2DA44E" title="复制">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        </el-button>
-        <el-button v-if="s.$index>0" size="small" circle text @click="removeCargoItem(s.$index)" style="color:#F53F3F" title="删除">
-          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        </el-button>
-      </template></el-table-column>
-  </el-table>
-  <div style="margin-top:4px"><el-button size="small" type="primary" text @click="addCargoItem">+ 添加规格</el-button></div>
-  <div class="cargo-summary" v-if="totalPieces>0">
-    <div class="item"><span class="label">总件数</span><span class="value">{{ totalPieces }} 件</span></div>
-    <div class="item"><span class="label">总实重</span><span class="value">{{ totalWeight.toFixed(1) }} kg</span></div>
-    <div class="item" v-if="hasAnyDims"><span class="label">总体积</span><span class="value">{{ totalVolume.toFixed(4) }} m³</span></div>
-    <div class="item" v-if="hasAnyDims"><span class="label">总材重</span><span class="value">{{ totalVolWeight.toFixed(1) }} kg</span></div>
+  <!-- 包裹信息内联面板 -->
+  <div class="cargo-panel" v-show="cargoPanelOpen">
+    <div style="font-size:13px;font-weight:600;color:#303133;margin-bottom:8px">包裹信息（多件装箱）</div>
+    <el-table :data="cargoItems" border size="small">
+      <el-table-column width="100"><template #header><span style="color:#F53F3F">*</span> 件数</template><template #default="s"><el-input-number v-model="s.row.qty" :min="1" style="width:88px" controls-position="right"></el-input-number></template></el-table-column>
+      <el-table-column width="130"><template #header><span style="color:#F53F3F">*</span> 长(cm)</template><template #default="s"><el-input-number v-model="s.row.l" :min="0" :precision="1" style="width:118px" controls-position="right"></el-input-number></template></el-table-column>
+      <el-table-column width="130"><template #header><span style="color:#F53F3F">*</span> 宽(cm)</template><template #default="s"><el-input-number v-model="s.row.w" :min="0" :precision="1" style="width:118px" controls-position="right"></el-input-number></template></el-table-column>
+      <el-table-column width="130"><template #header><span style="color:#F53F3F">*</span> 高(cm)</template><template #default="s"><el-input-number v-model="s.row.h" :min="0" :precision="1" style="width:118px" controls-position="right"></el-input-number></template></el-table-column>
+      <el-table-column width="150"><template #header><span style="color:#F53F3F">*</span> 单件实重(kg)</template><template #default="s"><el-input-number v-model="s.row.wt" :min="0.1" :step="0.1" :precision="1" style="width:138px" controls-position="right"></el-input-number></template></el-table-column>
+      <el-table-column label="操作" width="80" align="center"><template #default="s">
+          <el-button size="small" circle text @click="copyCargoItem(s.$index)" style="color:#2DA44E" title="复制">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </el-button>
+          <el-button v-if="s.$index>0" size="small" circle text @click="removeCargoItem(s.$index)" style="color:#F53F3F" title="删除">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </el-button>
+        </template></el-table-column>
+    </el-table>
+    <div style="margin-top:4px"><el-button size="small" type="primary" text @click="addCargoItem">+ 添加规格</el-button></div>
+    <div class="cargo-summary" v-if="totalPieces>0">
+      <div class="item"><span class="label">总件数</span><span class="value">{{ totalPieces }} 件</span></div>
+      <div class="item"><span class="label">总实重</span><span class="value">{{ totalWeight.toFixed(1) }} kg</span></div>
+      <div class="item" v-if="hasAnyDims"><span class="label">总体积</span><span class="value">{{ totalVolume.toFixed(4) }} m³</span></div>
+      <div class="item" v-if="hasAnyDims"><span class="label">总材重</span><span class="value">{{ totalVolWeight.toFixed(1) }} kg</span></div>
+    </div>
   </div>
-  <template #footer><el-button @click="cargoDialogVisible=false">确定</el-button></template>
-</el-dialog>
 
-<!-- ====== 下：左右布局 ====== -->
-<div class="layout" v-if="showResult">
-  <!-- 左侧筛选 -->
-  <div class="left-panel">
-    <div class="section-title">渠道专线</div>
-    <el-checkbox-group v-model="filter.lines">
-      <el-checkbox v-for="ln in lineOptions" :key="ln" :label="ln" style="margin-bottom:2px;display:flex">{{ln}}</el-checkbox>
+  <!-- 查询条件筛选 -->
+  <div class="filter-bar">
+    <span class="f-label">渠道专线</span>
+    <el-checkbox-group v-model="filter.lines" size="small">
+      <el-checkbox v-for="ln in lineOptions" :key="ln" :label="ln">{{ln}}</el-checkbox>
     </el-checkbox-group>
-    <div class="section-title" style="margin-top:14px">货物属性</div>
-    <el-select v-model="filter.prodTypes" multiple placeholder="不限" style="width:100%" size="small">
+    <span class="f-label" style="margin-left:8px">货物属性</span>
+    <el-select v-model="filter.prodTypes" multiple placeholder="不限" style="width:200px" size="small">
       <el-option v-for="o in productTypeOptions" :key="o" :label="o" :value="o"></el-option>
     </el-select>
-    <div class="section-title" style="margin-top:14px">包税方式</div>
-    <el-select v-model="filter.taxMethods" multiple placeholder="不限" style="width:100%" size="small">
+    <span class="f-label" style="margin-left:8px">包税方式</span>
+    <el-select v-model="filter.taxMethods" multiple placeholder="不限" style="width:160px" size="small">
       <el-option v-for="o in taxMethodOptions" :key="o" :label="o" :value="o"></el-option>
     </el-select>
-    <div style="margin-top:14px"><el-button size="small" @click="clearFilter" text>重置筛选</el-button></div>
+    <el-button size="small" @click="clearFilter" text style="margin-left:auto">重置筛选</el-button>
+  </div>
+</div>
+
+<!-- ====== 结果区 ====== -->
+<div class="result" v-if="showResult">
+  <div class="result-filter">
+    <span class="label">服务组合</span><el-input v-model="filter.comboName" placeholder="输入服务组合名称" size="small" style="width:160px" clearable></el-input>
+    <span class="label">目的港</span><el-select v-model="filter.destPort" placeholder="不限" size="small" clearable style="width:120px"><el-option v-for="o in destPortOptions" :key="o" :label="o" :value="o"></el-option></el-select>
+    <span class="label">计费方式</span><el-checkbox-group v-model="filter.billingUnits" size="small"><el-checkbox label="KG">KG</el-checkbox><el-checkbox label="CBM">m³</el-checkbox></el-checkbox-group>
   </div>
 
-  <!-- 右侧结果 -->
-  <div class="right-panel">
-    <!-- 右上二次筛选 -->
-    <div class="right-top-filter">
-      <span class="label">服务组合</span><el-input v-model="filter.comboName" placeholder="输入服务组合名称" size="small" style="width:160px" clearable></el-input>
-      <span class="label">目的港</span><el-select v-model="filter.destPort" placeholder="不限" size="small" clearable style="width:120px"><el-option v-for="o in destPortOptions" :key="o" :label="o" :value="o"></el-option></el-select>
-      <span class="label">计费方式</span><el-checkbox-group v-model="filter.billingUnits" size="small"><el-checkbox label="KG">KG</el-checkbox><el-checkbox label="CBM">m³</el-checkbox></el-checkbox-group>
-    </div>
-
-    <div class="right-scroll">
-    <div v-for="grp in filteredGroups" :key="grp.mode" class="mode-section">
-      <div class="mode-header" @click="grp._open=!grp._open">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span class="title">{{ grp.mode }}</span>
-          <el-tag size="small" :type="grp.rows.length?'success':'info'">{{ grp.rows.length }} 个报价</el-tag>
-        </div>
-        <span style="font-size:12px;color:#909399">{{ grp._open ? '收起 ▲' : '展开 ▼' }}</span>
+  <div class="result-scroll">
+  <div v-for="grp in filteredGroups" :key="grp.mode" class="mode-section">
+    <div class="mode-header" @click="grp._open=!grp._open">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="title">{{ grp.mode }}</span>
+        <el-tag size="small" :type="grp.rows.length?'success':'info'">{{ grp.rows.length }} 个报价</el-tag>
       </div>
-      <div v-show="grp._open">
-      <el-table :data="grp.rows" border stripe size="small">
-        <el-table-column prop="ch" label="渠道" width="110"></el-table-column>
-        <el-table-column prop="bill" label="计价" width="50"></el-table-column>
-        <el-table-column label="公布价" width="95"><template #default="s"><span :class="s.row._pubClass">{{ s.row.pub }}</span></template></el-table-column>
-        <el-table-column label="成本底价" width="95"><template #default="s"><span v-if="s.row._matched">¥{{ s.row.cost }}/{{ s.row.bill }}</span><span v-else style="color:#C0C4CC">—</span></template></el-table-column>
-        <el-table-column label="运费优惠" width="140"><template #default="s"><span v-if="s.row.discRule" style="font-size:12px">{{ s.row.discRule }}</span><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
-        <el-table-column label="优惠后" width="85"><template #default="s"><span v-if="s.row._matched">{{ s.row.disc }}</span><span v-else style="color:#C0C4CC">—</span></template></el-table-column>
-        <el-table-column label="附加费" min-width="170"><template #default="s"><span v-for="x in s.row.surch" style="margin-right:6px;font-size:11px">{{ x }}</span><span v-if="!s.row.surch.length" style="color:#C0C4CC">无</span></template></el-table-column>
-        <el-table-column label="最终报价" width="105"><template #default="s"><span :class="s.row._fpClass" v-if="s.row._matched">{{ s.row.fp }}</span><span v-else style="color:#E6A23C">暂未报价</span></template></el-table-column>
-        <el-table-column label="盈亏" width="60" align="center"><template #default="s"><el-tag :type="s.row._profitTag" size="small" v-if="s.row._matched">{{ s.row._profitLabel }}</el-tag><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
-        <el-table-column prop="sail" label="船期/运输" min-width="160"></el-table-column>
-        <el-table-column prop="pick" label="最快提取" width="80"></el-table-column>
-        <el-table-column label="操作" width="150" fixed="right"><template #default="s">
-          <el-button size="small" type="primary" text @click="expandDetail(s.row)" :disabled="!s.row._matched">[费用明细]</el-button>
-          <el-button size="small" type="primary" text @click="expandSail(s.row)">[运输详情]</el-button>
-        </template></el-table-column>
-      </el-table>
-      </div>
+      <span style="font-size:12px;color:#909399">{{ grp._open ? '收起 ▲' : '展开 ▼' }}</span>
     </div>
+    <div class="mode-body" v-show="grp._open">
+    <el-table :data="grp.rows" border stripe size="small">
+      <el-table-column prop="ch" label="渠道" width="110"></el-table-column>
+      <el-table-column prop="bill" label="计价" width="50"></el-table-column>
+      <el-table-column label="公布价" width="95"><template #default="s"><span :class="s.row._pubClass">{{ s.row.pub }}</span></template></el-table-column>
+      <el-table-column label="运费优惠" width="140"><template #default="s"><span v-if="s.row.discRule" style="font-size:12px">{{ s.row.discRule }}</span><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
+      <el-table-column label="优惠后" width="85"><template #default="s"><span v-if="s.row._matched">{{ s.row.disc }}</span><span v-else style="color:#C0C4CC">—</span></template></el-table-column>
+      <el-table-column label="附加费" min-width="170"><template #default="s"><span v-for="x in s.row.surch" style="margin-right:6px;font-size:11px">{{ x }}</span><span v-if="!s.row.surch.length" style="color:#C0C4CC">无</span></template></el-table-column>
+      <el-table-column label="最终报价" width="105"><template #default="s"><span :class="s.row._fpClass" v-if="s.row._matched">{{ s.row.fp }}</span><span v-else style="color:#E6A23C">暂未报价</span></template></el-table-column>
+      <el-table-column label="船期/最快提取" min-width="180"><template #default="s"><div>{{ s.row.sail }}</div><div v-if="s.row.pick!=='—'" style="font-size:11px;color:#909399">最快提取 {{ s.row.pick }}</div></template></el-table-column>
+      <el-table-column label="操作" width="150" fixed="right"><template #default="s">
+        <el-button size="small" type="primary" text @click="expandDetail(s.row)" :disabled="!s.row._matched">[费用明细]</el-button>
+        <el-button size="small" type="primary" text @click="expandSail(s.row)">[运输详情]</el-button>
+      </template></el-table-column>
+    </el-table>
+    </div>
+  </div>
 
-    <div v-if="filteredResultCount===0" style="text-align:center;padding:40px;color:#909399">
-      当前筛选条件下无匹配报价，请调整筛选条件
-    </div>
-    </div>
+  <div v-if="filteredResultCount===0" style="text-align:center;padding:40px;color:#909399;background:#fff;border-radius:8px">
+    当前筛选条件下无匹配报价，请调整筛选条件
+  </div>
   </div>
 </div>
 
@@ -162,7 +154,7 @@ var app = Vue.createApp({
     return {
       query: { dest:'', wh:'' },
       cargoItems: [{ qty:1, l:undefined, w:undefined, h:undefined, wt:undefined }],
-      cargoDialogVisible: false,
+      cargoPanelOpen: false,
       filter: { lines:['海卡','海派','空卡','空派'], prodTypes:[], taxMethods:[], comboName:'', destPort:'', billingUnits:['KG','CBM'] },
       showResult: false, allResults: []
     };
@@ -209,10 +201,10 @@ var app = Vue.createApp({
       if(self.filter.billingUnits&&self.filter.billingUnits.length) arr=arr.filter(function(r){return self.filter.billingUnits.indexOf(r.bill)!==-1;});
       var lineOrder=['海卡','海派','空卡','空派'];
       var groups={};
-      lineOrder.forEach(function(ln){groups[ln]={mode:ln,rows:[],_open:true};});
+      lineOrder.forEach(function(ln){groups[ln]={mode:ln,rows:[],_open:false};});
       arr.forEach(function(r){
         var ln=r.专线||'海卡';
-        if(!groups[ln]) groups[ln]={mode:ln,rows:[],_open:true};
+        if(!groups[ln]) groups[ln]={mode:ln,rows:[],_open:false};
         groups[ln].rows.push(r);
       });
       return lineOrder.map(function(ln){return groups[ln];}).filter(function(g){return g.rows.length>0;});
@@ -233,7 +225,7 @@ var app = Vue.createApp({
       var q=this.query, self=this;
       if(!q.dest){ this._warn('请选择国家'); return; }
       if(!q.wh){ this._warn('请选择仓库代码'); return; }
-      if(!this.cargoItems.some(function(i){return i.qty&&i.wt;})){ this._warn('请填写包裹信息'); this.cargoDialogVisible=true; return; }
+      if(!this.cargoItems.some(function(i){return i.qty&&i.wt;})){ this._warn('请填写包裹信息'); this.cargoPanelOpen=true; return; }
 
       var wh=q.wh, totalWt=this.totalWeight, totalCbm=this.totalVolume||null;
       var hasDims=this.hasAnyDims, flt=this.filter;
