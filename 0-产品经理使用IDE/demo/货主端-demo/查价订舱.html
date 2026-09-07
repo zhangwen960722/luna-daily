@@ -47,11 +47,13 @@
     <div class="card">
         <h3 style="margin-bottom:10px">在线询价</h3>
         <div class="top-bar">
-            <el-select v-model="form.destCountry" placeholder="请选择国家" style="width:120px"><el-option v-for="o in destCountryOptions" :key="o" :label="o" :value="o"/></el-select>
-            <el-select v-model="form.warehouse" filterable placeholder="请选择仓库代码" style="width:140px"><el-option v-for="o in warehouseOptions" :key="o" :label="o" :value="o"/></el-select>
+            <el-select v-model="form.destCountry" placeholder="请选择国家" style="width:120px"><el-option v-for="o in destCountryOptions" :key="o" :label="o" :value="o"></el-option></el-select>
+            <el-select v-model="form.warehouse" filterable clearable placeholder="请选择仓库代码" style="width:140px"><el-option v-for="o in warehouseOptions" :key="o" :label="o" :value="o"></el-option></el-select>
+            <el-select v-model="form.deliveryRegion" clearable placeholder="收货仓(交货地·选填)" style="width:150px"><el-option v-for="o in deliveryRegionOptions" :key="o" :label="o" :value="o"></el-option></el-select>
+            <el-input v-model="form.zip" clearable placeholder="邮编(快递派)" style="width:130px"></el-input>
             <span class="pkg-trigger" @click="cargoPanelOpen=!cargoPanelOpen">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-                <span v-if="hasCargoData" style="font-weight:600;color:#303133">{{ totalWeight.toFixed(1) }}KG、<span v-if="hasAnyDims">{{ totalVolume.toFixed(4) }}m³、</span>{{ totalPieces }}件</span>
+                <span v-if="hasCargoData" style="font-weight:600;color:#303133">{{ totalWeight.toFixed(1) }}KG<span v-if="totalVolume>0">、{{ totalVolume.toFixed(3) }}m³</span><span v-if="cargoMode==='detail'">、{{ totalPieces }}件</span></span>
                 <span v-else style="color:#C0C4CC">请输入包裹信息</span>
             </span>
             <el-button type="primary" @click="search" style="margin-left:auto">查询报价</el-button>
@@ -59,24 +61,44 @@
 
         <!-- 包裹信息内联面板 -->
         <div class="cargo-panel" v-show="cargoPanelOpen">
-            <div style="font-size:13px;font-weight:600;color:#303133;margin-bottom:8px">包裹信息（多件装箱）</div>
-            <el-table :data="cargoItems" border size="small">
-                <el-table-column width="92"><template #header><span style="color:#F53F3F">*</span> 件数</template><template #default="s"><el-input-number v-model="s.row.qty" :min="1" style="width:80px" controls-position="right"/></template></el-table-column>
-                <el-table-column width="122"><template #header><span style="color:#F53F3F">*</span> 长(cm)</template><template #default="s"><el-input-number v-model="s.row.l" :min="0" :precision="1" style="width:110px" controls-position="right"/></template></el-table-column>
-                <el-table-column width="122"><template #header><span style="color:#F53F3F">*</span> 宽(cm)</template><template #default="s"><el-input-number v-model="s.row.w" :min="0" :precision="1" style="width:110px" controls-position="right"/></template></el-table-column>
-                <el-table-column width="122"><template #header><span style="color:#F53F3F">*</span> 高(cm)</template><template #default="s"><el-input-number v-model="s.row.h" :min="0" :precision="1" style="width:110px" controls-position="right"/></template></el-table-column>
-                <el-table-column width="144"><template #header><span style="color:#F53F3F">*</span> 单件实重(kg)</template><template #default="s"><el-input-number v-model="s.row.wt" :min="0.1" :step="0.1" :precision="1" style="width:132px" controls-position="right"/></template></el-table-column>
-                <el-table-column label="操作" width="76" align="center"><template #default="s">
-                    <el-button size="small" circle text @click="copyCargoItem(s.$index)" style="color:#2DA44E" title="复制"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></el-button>
-                    <el-button v-if="s.$index>0" size="small" circle text @click="removeCargoItem(s.$index)" style="color:#F53F3F" title="删除"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></el-button>
-                  </template></el-table-column>
-            </el-table>
-            <div style="margin-top:4px"><el-button size="small" type="primary" text @click="addCargoItem">+ 添加规格</el-button></div>
-            <div class="cargo-summary" v-if="totalPieces>0">
-                <div class="item"><span class="label">总件数</span><span class="value">{{ totalPieces }} 件</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="font-size:13px;font-weight:600;color:#303133">包裹信息</div>
+                <el-radio-group v-model="cargoMode" size="small">
+                    <el-radio-button label="simple">简易录入</el-radio-button>
+                    <el-radio-button label="detail">多件装箱</el-radio-button>
+                </el-radio-group>
+            </div>
+
+            <div v-if="cargoMode==='simple'">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                    <span style="font-size:13px;color:#606266;font-weight:600">总重量(kg)</span>
+                    <el-input-number v-model="cargoSimple.weight" :min="0.1" :step="1" :precision="1" controls-position="right" style="width:150px"></el-input-number>
+                    <span style="font-size:13px;color:#606266;font-weight:600;margin-left:16px">总体积(m³)</span>
+                    <el-input-number v-model="cargoSimple.volume" :min="0" :step="0.1" :precision="3" controls-position="right" style="width:150px"></el-input-number>
+                </div>
+            </div>
+
+            <template v-else>
+                <el-table :data="cargoItems" border size="small">
+                    <el-table-column width="92"><template #header><span style="color:#F53F3F">*</span> 件数</template><template #default="s"><el-input-number v-model="s.row.qty" :min="1" style="width:80px" controls-position="right"></el-input-number></template></el-table-column>
+                    <el-table-column width="122"><template #header><span style="color:#F53F3F">*</span> 长(cm)</template><template #default="s"><el-input-number v-model="s.row.l" :min="0" :precision="1" style="width:110px" controls-position="right"></el-input-number></template></el-table-column>
+                    <el-table-column width="122"><template #header><span style="color:#F53F3F">*</span> 宽(cm)</template><template #default="s"><el-input-number v-model="s.row.w" :min="0" :precision="1" style="width:110px" controls-position="right"></el-input-number></template></el-table-column>
+                    <el-table-column width="122"><template #header><span style="color:#F53F3F">*</span> 高(cm)</template><template #default="s"><el-input-number v-model="s.row.h" :min="0" :precision="1" style="width:110px" controls-position="right"></el-input-number></template></el-table-column>
+                    <el-table-column width="144"><template #header><span style="color:#F53F3F">*</span> 单件实重(kg)</template><template #default="s"><el-input-number v-model="s.row.wt" :min="0.1" :step="0.1" :precision="1" style="width:132px" controls-position="right"></el-input-number></template></el-table-column>
+                    <el-table-column label="操作" width="76" align="center"><template #default="s">
+                        <el-button size="small" circle text @click="copyCargoItem(s.$index)" style="color:#2DA44E" title="复制"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></el-button>
+                        <el-button v-if="s.$index>0" size="small" circle text @click="removeCargoItem(s.$index)" style="color:#F53F3F" title="删除"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></el-button>
+                      </template></el-table-column>
+                </el-table>
+                <div style="margin-top:4px"><el-button size="small" type="primary" text @click="addCargoItem">+ 添加规格</el-button></div>
+            </template>
+
+            <div class="cargo-summary" v-if="hasCargoData">
+                <div class="item" v-if="cargoMode==='detail'"><span class="label">总件数</span><span class="value">{{ totalPieces }} 件</span></div>
                 <div class="item"><span class="label">总实重</span><span class="value">{{ totalWeight.toFixed(1) }} kg</span></div>
-                <div class="item" v-if="hasAnyDims"><span class="label">总体积</span><span class="value">{{ totalVolume.toFixed(4) }} m³</span></div>
-                <div class="item" v-if="hasAnyDims"><span class="label">总材重</span><span class="value">{{ totalVolWeight.toFixed(1) }} kg</span></div>
+                <div class="item" v-if="totalVolume>0"><span class="label">总体积</span><span class="value">{{ totalVolume.toFixed(3) }} m³</span></div>
+                <div class="item" v-if="cargoMode==='detail' && hasAnyDims"><span class="label">总材重</span><span class="value">{{ totalVolWeight.toFixed(1) }} kg</span></div>
+                <div class="item" v-if="density>0"><span class="label">泡比(实重÷体积)</span><span class="value">{{ density.toFixed(0) }} kg/m³</span></div>
             </div>
         </div>
 
@@ -87,9 +109,9 @@
                 <el-checkbox v-for="ln in lineOptions" :key="ln" :label="ln">{{ln}}</el-checkbox>
             </el-checkbox-group>
             <span class="f-label" style="margin-left:8px">货物属性</span>
-            <el-select v-model="filter.prodTypes" multiple placeholder="不限" style="width:200px" size="small"><el-option v-for="o in productTypeOptions" :key="o" :label="o" :value="o"/></el-select>
+            <el-select v-model="filter.prodTypes" multiple placeholder="不限" style="width:200px" size="small"><el-option v-for="o in productTypeOptions" :key="o" :label="o" :value="o"></el-option></el-select>
             <span class="f-label" style="margin-left:8px">包税方式</span>
-            <el-select v-model="filter.taxMethods" multiple placeholder="不限" style="width:160px" size="small"><el-option v-for="o in taxMethodOptions" :key="o" :label="o" :value="o"/></el-select>
+            <el-select v-model="filter.taxMethods" multiple placeholder="不限" style="width:160px" size="small"><el-option v-for="o in taxMethodOptions" :key="o" :label="o" :value="o"></el-option></el-select>
             <el-button size="small" @click="clearFilter" text style="margin-left:auto">重置筛选</el-button>
         </div>
     </div>
@@ -97,25 +119,28 @@
     <!-- ====== 结果区 ====== -->
     <div class="result" v-if="searched">
         <div class="result-filter">
-            <span class="label">服务组合</span><el-input v-model="filter.comboName" placeholder="输入服务组合名称" size="small" style="width:150px" clearable/>
-            <span class="label">目的港</span><el-select v-model="filter.destPort" placeholder="不限" size="small" clearable style="width:110px"><el-option v-for="o in destPortOptions" :key="o" :label="o" :value="o"/></el-select>
+            <span class="label">服务组合</span><el-input v-model="filter.comboName" placeholder="输入服务组合名称" size="small" style="width:150px" clearable></el-input>
+            <span class="label">目的港</span><el-select v-model="filter.destPort" placeholder="不限" size="small" clearable style="width:110px"><el-option v-for="o in destPortOptions" :key="o" :label="o" :value="o"></el-option></el-select>
             <span class="label">计费方式</span><el-checkbox-group v-model="filter.billingUnits" size="small"><el-checkbox label="KG">KG</el-checkbox><el-checkbox label="CBM">m³</el-checkbox></el-checkbox-group>
         </div>
         <div class="result-scroll">
             <div v-for="grp in filteredGroups" :key="grp.mode" class="mode-section">
-                <div class="mode-header" @click="grp._open=!grp._open">
+                <div class="mode-header" @click="toggleMode(grp.mode)">
                     <div style="display:flex;align-items:center;gap:10px"><span class="title">{{ grp.mode }}</span><el-tag size="small" :type="grp.rows.length?'success':'info'">{{ grp.rows.length }} 个报价</el-tag></div>
-                    <span style="font-size:12px;color:#909399">{{ grp._open ? '收起 ▲' : '展开 ▼' }}</span>
+                    <span style="font-size:12px;color:#909399">{{ openModes[grp.mode] ? '收起 ▲' : '展开 ▼' }}</span>
                 </div>
-                <div class="mode-body" v-show="grp._open">
+                <div class="mode-body" v-show="openModes[grp.mode]">
                 <el-table :data="grp.rows" border stripe size="small">
-                    <el-table-column prop="channel" label="渠道" width="105"/>
-                    <el-table-column prop="billing" label="计价" width="50"/>
+                    <el-table-column prop="channel" label="服务组合" min-width="230"/>
+                    <el-table-column label="交货地" min-width="120"><template #default="s"><span style="font-size:12px">{{ s.row.regions }}</span></template></el-table-column>
+                    <el-table-column label="计价" width="50"><template #default="s">{{ s.row.billing==='CBM'?'m³':s.row.billing }}</template></el-table-column>
                     <el-table-column label="公布价" width="95"><template #default="s"><span v-if="s.row._matched">{{ s.row.price }}</span><span v-else style="color:#C0C4CC">—</span></template></el-table-column>
-                    <el-table-column label="附加费" min-width="170"><template #default="s"><span v-for="(x,i) in s.row.surcharges" :key="i" style="margin-right:6px;font-size:11px">{{x}}</span><span v-if="!s.row.surcharges.length" style="color:#C0C4CC">无</span></template></el-table-column>
+                    <el-table-column label="运费优惠" width="125"><template #default="s"><span v-if="s.row.discRule" style="font-size:12px">{{ s.row.discRule }}</span><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
+                    <el-table-column label="泡比优惠" width="120"><template #default="s"><span v-if="s.row.ddRule" style="font-size:12px">{{ s.row.ddRule }}</span><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
+                    <el-table-column label="附加费" min-width="150"><template #default="s"><span v-for="(x,i) in s.row.surcharges" :key="i" style="margin-right:6px;font-size:11px">{{x}}</span><span v-if="!s.row.surcharges.length" style="color:#C0C4CC">无</span></template></el-table-column>
+                    <el-table-column label="附加费优惠" min-width="140"><template #default="s"><div v-for="(x,i) in s.row.scDiscs" :key="i" style="font-size:11px">{{x}}</div><span v-if="!s.row.scDiscs || !s.row.scDiscs.length" style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
                     <el-table-column label="最终报价" width="105"><template #default="s"><span style="font-weight:bold" v-if="s.row._matched">{{ s.row.finalPrice }}</span><span v-else style="color:#E6A23C;font-size:12px">暂未报价</span></template></el-table-column>
-                    <el-table-column label="船期/最快提取" width="195"><template #default="s"><div>{{ s.row.sailing }}</div><div v-if="s.row.pickup!=='—'" style="font-size:11px;color:#909399">最快提取 {{ s.row.pickup }}</div></template></el-table-column>
-                    <el-table-column label="操作" width="90" fixed="right"><template #default="s"><el-button size="small" type="primary" text @click="expandDetail(s.row)" :disabled="!s.row._matched">[明细]</el-button></template></el-table-column>
+                    <el-table-column label="操作" width="110" fixed="right"><template #default="s"><el-button size="small" type="primary" text @click="expandSail(s.row)">[查看运输详情]</el-button></template></el-table-column>
                 </el-table>
                 </div>
             </div>
@@ -127,42 +152,71 @@
 <script>
     var {createApp}=Vue;
     var app=createApp({data:function(){return{searched:false,
-        form:{destCountry:'',warehouse:''},
+        form:{destCountry:'',warehouse:'',deliveryRegion:'',zip:''},
+        cargoMode:'simple',
+        cargoSimple:{weight:undefined,volume:undefined},
         cargoItems:[{qty:1,l:undefined,w:undefined,h:undefined,wt:undefined}],
-        cargoPanelOpen:false,
-        filter:{lines:['海卡','海派','空卡','空派'],prodTypes:[],taxMethods:[],comboName:'',destPort:'',billingUnits:['KG','CBM']},
-        allResults:[]
+        cargoPanelOpen:true,
+        filter:{lines:['海卡','空卡'],prodTypes:[],taxMethods:[],comboName:'',destPort:'',billingUnits:['KG','CBM']},
+        allResults:[],
+        openModes:{}
     }},
     computed:{
         totalPieces:function(){return this.cargoItems.reduce(function(s,i){return s+(i.qty||0);},0);},
-        totalWeight:function(){return this.cargoItems.reduce(function(s,i){return s+(i.qty||0)*(i.wt||0);},0);},
-        totalVolume:function(){return this.cargoItems.reduce(function(s,i){var has=i.l&&i.w&&i.h;return s+(has?i.l*i.w*i.h/1e6*(i.qty||0):0);},0);},
+        detailWeight:function(){return this.cargoItems.reduce(function(s,i){return s+(i.qty||0)*(i.wt||0);},0);},
+        detailVolume:function(){return this.cargoItems.reduce(function(s,i){var has=i.l&&i.w&&i.h;return s+(has?i.l*i.w*i.h/1e6*(i.qty||0):0);},0);},
+        totalWeight:function(){return this.cargoMode==='simple'?(this.cargoSimple.weight||0):this.detailWeight;},
+        totalVolume:function(){return this.cargoMode==='simple'?(this.cargoSimple.volume||0):this.detailVolume;},
         totalVolWeight:function(){return this.cargoItems.reduce(function(s,i){var has=i.l&&i.w&&i.h;return s+(has?i.l*i.w*i.h/6000*(i.qty||0):0);},0);},
         hasAnyDims:function(){return this.cargoItems.some(function(i){return i.l&&i.w&&i.h;});},
-        hasCargoData:function(){return this.cargoItems.some(function(i){return i.qty&&i.wt;});},
+        hasCargoData:function(){return this.cargoMode==='simple'?!!(this.cargoSimple.weight):this.cargoItems.some(function(i){return i.qty&&i.wt;});},
+        density:function(){return (this.totalWeight>0&&this.totalVolume>0)?(this.totalWeight/this.totalVolume):0;},
         destCountryOptions:function(){return['美国'];},
         warehouseOptions:function(){return['ONT8','LAX9','LGB8','SBD1','DFW6','SMF3'];},
-        allChannels:function(){return[
-            {name:'美森360',transportMode:'海运',lastMile:'卡派',destCountry:'美国'},
-            {name:'美森432',transportMode:'海运',lastMile:'卡派',destCountry:'美国'},
-            {name:'EX456',transportMode:'海运',lastMile:'快递派',destCountry:'美国'},
-            {name:'洛杉矶600',transportMode:'海运',lastMile:'卡派',destCountry:'美国'},
-            {name:'空运快线',transportMode:'空运',lastMile:'快递派',destCountry:'美国'}
-        ];},
-        allCombos:function(){return[
-            {channel:'美森360',billing:'KG',taxMethod:'包税',svcType:'散货',专线:'海卡'},
-            {channel:'美森360',billing:'CBM',taxMethod:'包税',svcType:'散货',专线:'海卡'},
-            {channel:'美森432',billing:'KG',taxMethod:'不包税',svcType:'散货',专线:'海卡'},
-            {channel:'美森432',billing:'CBM',taxMethod:'不包税',svcType:'散货',专线:'海卡'},
-            {channel:'EX456',billing:'KG',taxMethod:'不包税',svcType:'散货',专线:'海派'},
-            {channel:'洛杉矶600',billing:'KG',taxMethod:'包税',svcType:'散货',专线:'海卡'},
-            {channel:'空运快线',billing:'KG',taxMethod:'不包税',svcType:'散货',专线:'空派'},
-            {channel:'空运快线',billing:'CBM',taxMethod:'不包税',svcType:'散货',专线:'空派'}
-        ];},
+        deliveryRegionOptions:function(){return['珠三角','汕头','义乌','宁波'];},
         lineOptions:function(){return['海卡','海派','空卡','空派'];},
         productTypeOptions:function(){return['粉末','液体','带电','超大','超重','易碎','普货'];},
         taxMethodOptions:function(){return['包税','不包税'];},
         destPortOptions:function(){return['长滩港','洛杉矶港','奥克兰港','洛杉矶机场'];},
+        truckingAdjust:function(){return{
+            '珠三角':{kg:0,cbm:0},
+            '汕头':{kg:0.2,cbm:30},
+            '义乌':{kg:0.5,cbm:60},
+            '宁波':{kg:0.3,cbm:40}
+        };},
+        expressAdjust:function(){return{
+            '8xxxx':{kg:0,cbm:0},
+            '9xxxx':{kg:0.3,cbm:40},
+            '其他':{kg:0.15,cbm:20}
+        };},
+        allCombos:function(){return[
+            {code:'美森360-海运-卡派-KG-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'KG',taxMethod:'包税',svcType:'散货',专线:'海卡'},
+            {code:'美森360-海运-卡派-m³-包税-散货',channel:'美森360',transport:'海运',lastMile:'卡派',billing:'CBM',taxMethod:'包税',svcType:'散货',专线:'海卡'},
+            {code:'美森432-海运-卡派-KG-不包税-散货',channel:'美森432',transport:'海运',lastMile:'卡派',billing:'KG',taxMethod:'不包税',svcType:'散货',专线:'海卡'},
+            {code:'美森432-海运-卡派-m³-不包税-散货',channel:'美森432',transport:'海运',lastMile:'卡派',billing:'CBM',taxMethod:'不包税',svcType:'散货',专线:'海卡'},
+            {code:'EX456-海运-快递派-KG-不包税-散货',channel:'EX456',transport:'海运',lastMile:'快递派',billing:'KG',taxMethod:'不包税',svcType:'散货',专线:'海派'},
+            {code:'洛杉矶600-海运-卡派-KG-包税-散货',channel:'洛杉矶600',transport:'海运',lastMile:'卡派',billing:'KG',taxMethod:'包税',svcType:'散货',专线:'海卡'},
+            {code:'空运快线-空运-快递派-KG-不包税-散货',channel:'空运快线',transport:'空运',lastMile:'快递派',billing:'KG',taxMethod:'不包税',svcType:'散货',专线:'空派'},
+            {code:'空运快线-空运-快递派-m³-不包税-散货',channel:'空运快线',transport:'空运',lastMile:'快递派',billing:'CBM',taxMethod:'不包税',svcType:'散货',专线:'空派'}
+        ];},
+        freightDiscounts:function(){return[
+            {targetType:'customer',targetId:'C001',mode:'fixed',val:1.5,priority:10,scope:['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-m³-包税-散货','美森432-海运-卡派-KG-不包税-散货']},
+            {targetType:'level',targetId:'S',mode:'fixed',val:1.0,priority:30,scope:['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-m³-包税-散货']}
+        ];},
+        surchargeDiscounts:function(){return[
+            {ruleId:'R001',targetType:'customer',targetId:'C001',mode:'rate',val:0,priority:10},
+            {ruleId:'R001',targetType:'level',targetId:'S',mode:'fixed',val:0.3,priority:30}
+        ];},
+        densityDiscounts:function(){return[
+            {threshold:400,val:1.0},
+            {threshold:250,val:0.5}
+        ];},
+        surchargeRules:function(){return[
+            {id:'R001',label:'粉末品名加收',trigger:'粉末',kg:1.5,cbm:200},
+            {id:'R002',label:'液体品名加收',trigger:'液体',kg:1.0,cbm:150},
+            {id:'R003',label:'带电品加收',trigger:'带电',kg:2.0,cbm:250},
+            {id:'R004',label:'超大件加收',trigger:'超大',kg:3.0,cbm:300}
+        ];},
         filteredGroups:function(){
             var self=this, arr=this.allResults;
             if(self.filter.lines.length) arr=arr.filter(function(r){return self.filter.lines.indexOf(r.专线)!==-1;});
@@ -171,83 +225,183 @@
             if(self.filter.destPort) arr=arr.filter(function(r){return r._destPort===self.filter.destPort;});
             if(self.filter.billingUnits&&self.filter.billingUnits.length) arr=arr.filter(function(r){return self.filter.billingUnits.indexOf(r.billing)!==-1;});
             var lo=['海卡','海派','空卡','空派'], g={};
-            lo.forEach(function(ln){g[ln]={mode:ln,rows:[],_open:false};});
-            arr.forEach(function(r){var ln=r.专线||'海卡';if(!g[ln])g[ln]={mode:ln,rows:[],_open:false};g[ln].rows.push(r);});
+            lo.forEach(function(ln){g[ln]={mode:ln,rows:[]};});
+            arr.forEach(function(r){var ln=r.专线||'海卡';if(!g[ln])g[ln]={mode:ln,rows:[]};g[ln].rows.push(r);});
             return lo.map(function(ln){return g[ln];}).filter(function(x){return x.rows.length>0;});
         },
         filteredResultCount:function(){var n=0;this.filteredGroups.forEach(function(g){n+=g.rows.length;});return n;}
     },
     methods:{
         _warn:function(msg){ElementPlus.ElMessage.warning(msg);},
+        _cust:function(){return {id:'C001',name:'深圳市XX科技',level:'S'};},
+        _zipKey:function(zip){if(!zip)return '';var s=String(zip).trim();if(!s)return '';var c=s[0];if(c==='8')return '8xxxx';if(c==='9')return '9xxxx';return '其他';},
+        _matchFreightDisc:function(comboCode,cust){
+            if(!cust)return null;
+            var c=null,l=null;
+            this.freightDiscounts.forEach(function(d){if(d.scope.indexOf(comboCode)===-1)return;if(d.targetType==='customer'&&d.targetId===cust.id)c=d;if(d.targetType==='level'&&d.targetId===cust.level)l=d;});
+            return c||l;
+        },
+        _matchSurchargeDisc:function(ruleId,cust){
+            if(!cust)return null;
+            var c=null,l=null;
+            this.surchargeDiscounts.forEach(function(d){if(d.ruleId!==ruleId)return;if(d.targetType==='customer'&&d.targetId===cust.id)c=d;if(d.targetType==='level'&&d.targetId===cust.level)l=d;});
+            return c||l;
+        },
+        _discLabel:function(d,targetName){
+            if(!d)return '';
+            var tname=d.targetType==='customer'?('特批·'+targetName):(d.targetId+'级');
+            if(d.mode==='fixed')return tname+' -¥'+d.val.toFixed(2);
+            if(d.val===0)return tname+' 全免';
+            return tname+' ×'+d.val.toFixed(2);
+        },
         addCargoItem:function(){this.cargoItems.push({qty:1,l:undefined,w:undefined,h:undefined,wt:undefined});},
         copyCargoItem:function(idx){var src=this.cargoItems[idx];this.cargoItems.splice(idx+1,0,{qty:src.qty,l:src.l,w:src.w,h:src.h,wt:src.wt});},
         removeCargoItem:function(idx){if(this.cargoItems.length>1)this.cargoItems.splice(idx,1);},
         clearFilter:function(){this.filter={lines:this.lineOptions.slice(),prodTypes:[],taxMethods:[],comboName:'',destPort:'',billingUnits:['KG','CBM']};},
+        toggleMode:function(mode){this.openModes[mode]=!this.openModes[mode];},
         search:function(){
             var f=this.form, self=this, flt=this.filter;
             if(!f.destCountry){this._warn('请选择国家');return;}
-            if(!f.warehouse){this._warn('请选择仓库代码');return;}
-            if(!this.cargoItems.some(function(i){return i.qty&&i.wt;})){this._warn('请填写包裹信息');this.cargoPanelOpen=true;return;}
+            if(!f.warehouse && !f.zip){this._warn('请选择仓库代码或填写邮编');return;}
+            if(!this.hasCargoData){this._warn('请填写包裹信息');this.cargoPanelOpen=true;return;}
 
-            var wh=f.warehouse, totalWt=this.totalWeight, totalCbm=this.totalVolume||null;
-            var hasDims=this.hasAnyDims;
-            var channels=this.allChannels;
-            var candCh=channels.filter(function(c){return c.destCountry===f.destCountry;});
-            var candChNames=candCh.map(function(c){return c.name;});
+            var wh=f.warehouse, zip=f.zip, dr=f.deliveryRegion, totalWt=this.totalWeight, totalCbm=this.totalVolume||0;
+            var hasDims=this.hasAnyDims, cust=this._cust();
             var combos=this.allCombos;
             var candCombos=combos.filter(function(cb){
-                if(candChNames.indexOf(cb.channel)===-1)return false;
                 if(flt.lines.length&&flt.lines.indexOf(cb.专线)===-1)return false;
                 if(flt.taxMethods.length&&flt.taxMethods.indexOf(cb.taxMethod)===-1)return false;
+                if(cb.lastMile==='快递派' && !zip)return false;
+                if(cb.lastMile==='卡派' && zip)return false;
                 return true;
             });
             var priceTable=[
-                {ch:'美森360',comboKey:'美森360-KG-包税-散货',专线:'海卡',taxMethod:'包税',bill:'KG',whg:'ONT8,LAX9,LGB8,SBD1,SMF3,DFW6',deliveryRegion:'珠三角,汕头,义乌,宁波',tiers:[{range:'100KG+',start:100,end:999999,pub:10.0,cost:9.24}],sail:'长滩港 → ETD 1/28 → ETA 2/8 航程11天',etd:'1/28',eta:'2/8',td:11,dp:'长滩港',pick:'2/10',_destPort:'长滩港'},
-                {ch:'美森360',comboKey:'美森360-CBM-包税-散货',专线:'海卡',taxMethod:'包税',bill:'CBM',whg:'ONT8,LAX9,LGB8,SBD1',deliveryRegion:'珠三角,汕头',tiers:[{range:'1m³+',start:1,end:999999,pub:1488.0,cost:1558.84}],sail:'长滩港 → ETD 1/28 → ETA 2/8 航程11天',etd:'1/28',eta:'2/8',td:11,dp:'长滩港',pick:'2/10',_destPort:'长滩港'},
-                {ch:'美森432',comboKey:'美森432-KG-不包税-散货',专线:'海卡',taxMethod:'不包税',bill:'KG',whg:'ONT8,LAX9,SBD1',deliveryRegion:'珠三角,汕头,义乌,宁波',tiers:[{range:'100KG+',start:100,end:999999,pub:9.7,cost:8.66}],sail:'洛杉矶港 → ETD 1/29 → ETA 2/9 航程11天',etd:'1/29',eta:'2/9',td:11,dp:'洛杉矶港',pick:'2/11',_destPort:'洛杉矶港'},
-                {ch:'美森432',comboKey:'美森432-CBM-不包税-散货',专线:'海卡',taxMethod:'不包税',bill:'CBM',whg:'ONT8,LAX9,SBD1',deliveryRegion:'珠三角,汕头',tiers:[{range:'1m³+',start:1,end:999999,pub:1420.0,cost:1350.0}],sail:'洛杉矶港 → ETD 1/29 → ETA 2/9 航程11天',etd:'1/29',eta:'2/9',td:11,dp:'洛杉矶港',pick:'2/11',_destPort:'洛杉矶港'},
-                {ch:'EX456',comboKey:'EX456-KG-不包税-散货',专线:'海派',taxMethod:'不包税',bill:'KG',whg:'ONT8,SBD1',deliveryRegion:'珠三角,义乌',tiers:[{range:'100KG+',start:100,end:999999,pub:5.6,cost:4.80}],sail:'长滩港 → ETD 1/28 → ETA 2/11 航程14天',etd:'1/28',eta:'2/11',td:14,dp:'长滩港',pick:'2/14',_destPort:'长滩港'},
-                {ch:'洛杉矶600',comboKey:'洛杉矶600-KG-包税-散货',专线:'海卡',taxMethod:'包税',bill:'KG',whg:'ONT8',deliveryRegion:'珠三角,汕头',tiers:[{range:'100KG+',start:100,end:999999,pub:null,cost:null}],sail:'洛杉矶港 → ETD 1/28 → ETA 2/10 航程12天',etd:'1/28',eta:'2/10',td:12,dp:'洛杉矶港',pick:'2/12',_destPort:'洛杉矶港'},
-                {ch:'空运快线',comboKey:'空运快线-KG-不包税-散货',专线:'空派',taxMethod:'不包税',bill:'KG',whg:'ONT8,LAX9,SBD1,DFW6',deliveryRegion:'珠三角,上海,厦门',tiers:[{range:'100KG+',start:100,end:999999,pub:28.5,cost:24.0}],sail:'洛杉矶机场 → ETD 2/1 → ETA 2/3 航程2天',etd:'2/1',eta:'2/3',td:2,dp:'洛杉矶机场',pick:'2/4',_destPort:'洛杉矶机场'},
-                {ch:'空运快线',comboKey:'空运快线-CBM-不包税-散货',专线:'空派',taxMethod:'不包税',bill:'CBM',whg:'ONT8,LAX9,SBD1',deliveryRegion:'珠三角,上海',tiers:[{range:'1m³+',start:1,end:999999,pub:3800.0,cost:3200.0}],sail:'洛杉矶机场 → ETD 2/1 → ETA 2/3 航程2天',etd:'2/1',eta:'2/3',td:2,dp:'洛杉矶机场',pick:'2/4',_destPort:'洛杉矶机场'}
+                {code:'美森360-海运-卡派-KG-包税-散货',ch:'美森360',专线:'海卡',taxMethod:'包税',bill:'KG',whg:'ONT8,LAX9,LGB8,SBD1,SMF3,DFW6',deliveryRegion:'珠三角,汕头,义乌,宁波',tiers:[{range:'100KG+',start:100,end:999999,pub:10.0,cost:9.24}],dp:'长滩港',pick:'2/10',_destPort:'长滩港',sailings:[{rn:'CLX 上海港→长滩港(MATSON)',etd:'1/28',eta:'2/8',td:11,pick:'2/10',cutoffs:{'珠三角':'1/26','汕头':'1/26','义乌':'1/25','宁波':'1/25'}},{rn:'MAX 上海港→长滩港(MATSON)',etd:'1/30',eta:'2/11',td:12,pick:'2/13',cutoffs:{'珠三角':'1/28','汕头':'1/28','义乌':'1/27','宁波':'1/27'}}]},
+                {code:'美森360-海运-卡派-m³-包税-散货',ch:'美森360',专线:'海卡',taxMethod:'包税',bill:'CBM',whg:'ONT8,LAX9,LGB8,SBD1',deliveryRegion:'珠三角,汕头',tiers:[{range:'1m³+',start:1,end:999999,pub:1488.0,cost:1558.84}],dp:'长滩港',pick:'2/10',_destPort:'长滩港',sailings:[{rn:'CLX 上海港→长滩港(MATSON)',etd:'1/28',eta:'2/8',td:11,pick:'2/10',cutoffs:{'珠三角':'1/26','汕头':'1/26'}},{rn:'MAX 上海港→长滩港(MATSON)',etd:'1/30',eta:'2/11',td:12,pick:'2/13',cutoffs:{'珠三角':'1/28','汕头':'1/28'}}]},
+                {code:'美森432-海运-卡派-KG-不包税-散货',ch:'美森432',专线:'海卡',taxMethod:'不包税',bill:'KG',whg:'ONT8,LAX9,SBD1',deliveryRegion:'珠三角,汕头,义乌,宁波',tiers:[{range:'100KG+',start:100,end:999999,pub:9.7,cost:8.66}],dp:'洛杉矶港',pick:'2/11',_destPort:'洛杉矶港',sailings:[{rn:'CLX+ 宁波港→洛杉矶港(MATSON)',etd:'1/29',eta:'2/9',td:11,pick:'2/11',cutoffs:{'珠三角':'1/27','汕头':'1/27','义乌':'1/26','宁波':'1/26'}}]},
+                {code:'美森432-海运-卡派-m³-不包税-散货',ch:'美森432',专线:'海卡',taxMethod:'不包税',bill:'CBM',whg:'ONT8,LAX9,SBD1',deliveryRegion:'珠三角,汕头',tiers:[{range:'1m³+',start:1,end:999999,pub:1420.0,cost:1350.0}],dp:'洛杉矶港',pick:'2/11',_destPort:'洛杉矶港',sailings:[{rn:'CLX+ 宁波港→洛杉矶港(MATSON)',etd:'1/29',eta:'2/9',td:11,pick:'2/11',cutoffs:{'珠三角':'1/27','汕头':'1/27'}}]},
+                {code:'EX456-海运-快递派-KG-不包税-散货',ch:'EX456',专线:'海派',taxMethod:'不包税',bill:'KG',whg:'ONT8,SBD1',deliveryRegion:'珠三角,义乌',tiers:[{range:'100KG+',start:100,end:999999,pub:5.6,cost:4.80}],dp:'长滩港',pick:'2/14',_destPort:'长滩港',sailings:[{rn:'EX-A 盐田港→长滩港(ONE)',etd:'1/28',eta:'2/11',td:14,pick:'2/14',cutoffs:{'珠三角':'1/25','义乌':'1/24'}},{rn:'EX-B 盐田港→长滩港(ONE)',etd:'1/31',eta:'2/14',td:14,pick:'2/17',cutoffs:{'珠三角':'1/28','义乌':'1/27'}}]},
+                {code:'洛杉矶600-海运-卡派-KG-包税-散货',ch:'洛杉矶600',专线:'海卡',taxMethod:'包税',bill:'KG',whg:'ONT8',deliveryRegion:'珠三角,汕头',tiers:[{range:'100KG+',start:100,end:999999,pub:null,cost:null}],dp:'洛杉矶港',pick:'2/12',_destPort:'洛杉矶港',sailings:[]},
+                {code:'空运快线-空运-快递派-KG-不包税-散货',ch:'空运快线',专线:'空派',taxMethod:'不包税',bill:'KG',whg:'ONT8,LAX9,SBD1,DFW6',deliveryRegion:'珠三角,上海,厦门',tiers:[{range:'100KG+',start:100,end:999999,pub:28.5,cost:24.0}],dp:'洛杉矶机场',pick:'2/4',_destPort:'洛杉矶机场',sailings:[{rn:'CA981 浦东机场→洛杉矶机场',etd:'2/1',eta:'2/3',td:2,pick:'2/4',cutoffs:{'珠三角':'1/31','上海':'1/31','厦门':'1/30'}}]},
+                {code:'空运快线-空运-快递派-m³-不包税-散货',ch:'空运快线',专线:'空派',taxMethod:'不包税',bill:'CBM',whg:'ONT8,LAX9,SBD1',deliveryRegion:'珠三角,上海',tiers:[{range:'1m³+',start:1,end:999999,pub:3800.0,cost:3200.0}],dp:'洛杉矶机场',pick:'2/4',_destPort:'洛杉矶机场',sailings:[{rn:'CA981 浦东机场→洛杉矶机场',etd:'2/1',eta:'2/3',td:2,pick:'2/4',cutoffs:{'珠三角':'1/31','上海':'1/31'}}]}
             ];
             var matchedRows={};
-            var candComboKeys=candCombos.map(function(cb){return cb.channel+'-'+cb.billing+'-'+cb.taxMethod+'-'+cb.svcType;});
+            var candCodes=candCombos.map(function(cb){return cb.code;});
             priceTable.forEach(function(row){
-                if(candComboKeys.indexOf(row.comboKey)===-1)return;
-                if(row.whg.split(',').map(function(s){return s.trim();}).indexOf(wh)===-1)return;
+                if(candCodes.indexOf(row.code)===-1)return;
+                if(wh && row.whg.split(',').map(function(s){return s.trim();}).indexOf(wh)===-1)return;
+                if(dr){
+                    if((row.deliveryRegion||'').split(',').map(function(s){return s.trim();}).indexOf(dr)===-1)return;
+                }else if(row.deliveryRegion){
+                    return;
+                }
                 var checkWt=row.bill==='KG'?totalWt:(totalCbm||0), mt=null;
                 row.tiers.forEach(function(t){if(checkWt>=t.start&&checkWt<t.end)mt=t;});
                 if(!mt)return;
-                matchedRows[row.comboKey]={row:row,tier:mt};
+                matchedRows[row.code]={row:row,tier:mt};
             });
-            var surcharges=[], scTotal=0, prods=flt.prodTypes;
-            if(prods.indexOf('粉末')!==-1){surcharges.push({label:'粉末品名加收',amount:1.5,unit:'/KG'});scTotal+=1.5;}
-            if(prods.indexOf('液体')!==-1){surcharges.push({label:'液体品名加收',amount:1.0,unit:'/KG'});scTotal+=1.0;}
-            if(prods.indexOf('带电')!==-1){surcharges.push({label:'带电品加收',amount:2.0,unit:'/KG'});scTotal+=2.0;}
-            if(prods.indexOf('超大')!==-1){surcharges.push({label:'超大件加收',amount:3.0,unit:'/KG'});scTotal+=3.0;}
-            if(prods.indexOf('超重')!==-1){surcharges.push({label:'超重件加收',amount:200,unit:'/件'});scTotal+=200/this.totalPieces;}
-            if(hasDims){var hasOversize=false;this.cargoItems.forEach(function(item){if(!item.l||!item.w||!item.h)return;if((item.l+item.w)*2+item.h>300||item.l+item.w*2+item.h*2>265)hasOversize=true;});if(hasOversize&&prods.indexOf('超大')===-1&&prods.indexOf('超重')===-1){surcharges.push({label:'超重超长',amount:200,unit:'/箱'});scTotal+=200/this.totalPieces;}}
+            var prods=flt.prodTypes, density=this.density;
             var matchedKeys={};Object.keys(matchedRows).forEach(function(k){matchedKeys[k]=matchedRows[k];});
             var allResults=[];
             candCombos.forEach(function(cb){
-                var cKey=cb.channel+'-'+cb.billing+'-'+cb.taxMethod+'-'+cb.svcType, match=matchedKeys[cKey];
+                var match=matchedKeys[cb.code];
                 if(match){var tier=match.tier, row=match.row, pub=tier.pub;
-                    allResults.push({专线:row.专线,_taxMethod:row.taxMethod,_destPort:row._destPort,channel:cb.channel,billing:cb.billing,price:pub!=null?'¥'+pub.toFixed(1)+'/'+cb.billing:'—',surcharges:surcharges.map(function(s){return s.label+' +¥'+s.amount.toFixed(1)+s.unit;}),finalPrice:pub!=null?'¥'+(pub+scTotal).toFixed(1)+'/'+cb.billing:'—',sailing:row.sail||'—',etd:row.etd||'',eta:row.eta||'',transitDays:row.td||0,destPort:row.dp||'',pickup:row.pick||'—',_matched:true,_pubRaw:pub,_costRaw:tier.cost,_scTotal:scTotal,_tier:tier,_surcharges:surcharges});
-                }else{allResults.push({专线:cb.专线,_taxMethod:cb.taxMethod,_destPort:'',channel:cb.channel,billing:cb.billing,price:'—',surcharges:[],finalPrice:'暂未报价',sailing:'—',etd:'',eta:'',transitDays:0,destPort:'',pickup:'—',_matched:false,_pubRaw:null,_costRaw:null,_scTotal:0,_tier:null,_surcharges:[]});}
+                    var unit=cb.billing==='KG'?'KG':'m³';
+                    var trucking=self.truckingAdjust[dr]||{kg:0,cbm:0};
+                    var truckingAdj=cb.billing==='KG'?trucking.kg:trucking.cbm;
+                    var expressAdj=0;
+                    if(cb.lastMile==='快递派'){var ex=self.expressAdjust[self._zipKey(zip)]||{kg:0,cbm:0};expressAdj=cb.billing==='KG'?ex.kg:ex.cbm;}
+                    var pubAdj=pub!=null?(pub+truckingAdj+expressAdj):null;
+                    var fd=self._matchFreightDisc(cb.code,cust);
+                    var fdVal=fd?(fd.mode==='fixed'?fd.val:pubAdj*(1-fd.val)):0;
+                    var afterFreight=pubAdj!=null?(pubAdj-fdVal):null;
+                    var discLabel=fd?self._discLabel(fd,cust.name||cust.id):'';
+                    var surcharges=[],scTotal=0;
+                    self.surchargeRules.forEach(function(rule){
+                        if(prods.indexOf(rule.trigger)===-1)return;
+                        var amount=cb.billing==='KG'?rule.kg:rule.cbm;
+                        var sd=self._matchSurchargeDisc(rule.id,cust);
+                        var after=amount;
+                        if(sd)after=sd.mode==='fixed'?(amount-sd.val):(amount*sd.val);
+                        surcharges.push({label:rule.label,amount:amount,after:after,unit:'/'+unit,sd:sd,discLabel:sd?self._discLabel(sd,cust.name||cust.id):''});
+                        scTotal+=after;
+                    });
+                    if(self.cargoMode==='detail'){
+                        if(prods.indexOf('超重')!==-1&&self.totalPieces>0){surcharges.push({label:'超重件加收',amount:200,after:200,unit:'/件',sd:null,discLabel:''});scTotal+=200/self.totalPieces;}
+                        if(hasDims){var hasOversize=false;self.cargoItems.forEach(function(item){if(!item.l||!item.w||!item.h)return;if((item.l+item.w)*2+item.h>300||item.l+item.w*2+item.h*2>265)hasOversize=true;});if(hasOversize&&prods.indexOf('超大')===-1&&prods.indexOf('超重')===-1&&self.totalPieces>0){surcharges.push({label:'超重超长',amount:200,after:200,unit:'/箱',sd:null,discLabel:''});scTotal+=200/self.totalPieces;}}
+                    }
+                    var ddVal=0,ddLabel='';
+                    if(cb.billing==='KG'&&density>0){var hit=self.densityDiscounts.slice().sort(function(a,b){return b.threshold-a.threshold;}).filter(function(d){return density>=d.threshold;});if(hit.length){ddVal=hit[0].val;ddLabel='泡比'+density.toFixed(0)+'≥'+hit[0].threshold+' -¥'+ddVal.toFixed(1);}}
+                    var finalUnit=pubAdj!=null?(afterFreight+scTotal-ddVal):null;
+                    allResults.push({专线:row.专线,_taxMethod:row.taxMethod,_destPort:row._destPort,channel:cb.code,billing:cb.billing,regions:(row.deliveryRegion||'').split(',').map(function(s){return s.trim();}).filter(Boolean).join('、'),price:pubAdj!=null?'¥'+pubAdj.toFixed(1)+'/'+unit:'—',discRule:discLabel,ddRule:ddLabel,surcharges:surcharges.map(function(s){return s.label+' +¥'+s.after.toFixed(2)+s.unit;}),scDiscs:surcharges.filter(function(s){return s.sd;}).map(function(s){return s.label+' · '+s.discLabel;}),finalPrice:finalUnit!=null?'¥'+finalUnit.toFixed(1)+'/'+unit:'—',_regions:(row.deliveryRegion||'').split(',').map(function(s){return s.trim();}).filter(Boolean),_sailings:row.sailings||[],_matched:pubAdj!=null,_pubRaw:pubAdj,_costRaw:null,_afterFreight:afterFreight,_scTotal:scTotal,_ddVal:ddVal,_ddLabel:ddLabel,_fd:fd,_fdVal:fdVal,_fdLabel:discLabel,_surcharges:surcharges,_tier:tier,_unit:unit,_chargeQty:(cb.billing==='KG'?totalWt:(totalCbm||0)),_cust:cust});
+                }
             });
-            this.allResults=allResults;this.searched=true;
+            this.allResults=allResults;this.searched=true;this.cargoPanelOpen=false;this.openModes={ '海卡':true, '海派':true, '空卡':true, '空派':true };
         },
         expandDetail:function(row){
             if(!row._matched)return;
+            var unit=row._unit, qty=row._chargeQty;
             var h='<div style="font-size:13px;line-height:1.8"><div style="font-weight:600;margin-bottom:6px">'+row.channel+' — 费用明细</div>';
-            h+='<table class="cost-detail-table"><tr><th colspan="2">公布价</th></tr><tr><td>匹配重量段</td><td><b>'+row._tier.range+'</b></td></tr><tr class="total-row"><td>公布价</td><td><b>¥'+row._pubRaw.toFixed(1)+'/'+row.billing+'</b></td></tr></table>';
-            h+='<table class="cost-detail-table" style="margin-top:5px"><tr><th colspan="2">附加费</th></tr>';
-            if(row._surcharges.length){row._surcharges.forEach(function(s){h+='<tr><td>'+s.label+'</td><td>+¥'+s.amount.toFixed(1)+s.unit+'</td></tr>';});h+='<tr class="total-row"><td>附加费合计</td><td><b>+¥'+row._scTotal.toFixed(2)+'/'+row.billing+'</b></td></tr>';}
-            else{h+='<tr><td colspan="2" style="color:#C0C4CC">无附加费</td></tr>';}h+='</table>';
-            h+='<table class="cost-detail-table" style="margin-top:5px"><tr><th colspan="2">最终报价</th></tr><tr class="total-row"><td>最终报价</td><td><b>¥'+(row._pubRaw+row._scTotal).toFixed(2)+'/'+row.billing+'</b></td></tr></table>';
-            h+='<p style="color:#909399;font-size:11px;margin-top:6px">*不含成本底价和盈亏标识，实际结算以运单为准</p></div>';
-            ElementPlus.ElMessageBox.alert(h,'费用明细 — '+row.channel,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:440px'});
+            h+='<table class="cost-detail-table"><tr><th colspan="2">① 公布价</th></tr><tr><td>匹配重量段</td><td><b>'+row._tier.range+'</b></td></tr><tr class="total-row"><td>公布价</td><td><b>¥'+row._pubRaw.toFixed(1)+'/'+unit+'</b></td></tr></table>';
+            h+='<table class="cost-detail-table"><tr><th colspan="2">② 运费优惠</th></tr>';
+            if(row._fd){h+='<tr><td>'+row._fdLabel+'</td><td>-¥'+row._fdVal.toFixed(2)+'/'+unit+'</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>';}
+            else{h+='<tr><td colspan="2" style="color:#C0C4CC">当前客户无运费优惠</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>';}
+            h+='</table>';
+            h+='<table class="cost-detail-table"><tr><th colspan="2">③ 附加费</th></tr>';
+            if(row._surcharges.length){row._surcharges.forEach(function(s){h+='<tr><td>'+s.label+'</td><td>原价 +¥'+s.amount.toFixed(2)+s.unit+(s.sd?'（'+s.discLabel+'）→ +¥'+s.after.toFixed(2)+s.unit:'')+'</td></tr>';});h+='<tr class="total-row"><td>附加费合计（优惠后）</td><td><b>+¥'+row._scTotal.toFixed(2)+'/'+unit+'</b></td></tr>';}
+            else{h+='<tr><td colspan="2" style="color:#C0C4CC">无附加费</td></tr>';}
+            h+='</table>';
+            h+='<table class="cost-detail-table"><tr><th colspan="2">④ 泡比优惠</th></tr>';
+            if(row._ddVal>0){h+='<tr><td>'+row._ddLabel+'</td><td>-¥'+row._ddVal.toFixed(2)+'/'+unit+'</td></tr>';}
+            else{h+='<tr><td colspan="2" style="color:#C0C4CC">未命中泡比优惠（实重÷体积 < 阈值）</td></tr>';}
+            h+='</table>';
+            var finalUnit=row._afterFreight+row._scTotal-row._ddVal;
+            h+='<table class="cost-detail-table"><tr><th colspan="2">⑤ 最终报价</th></tr><tr class="total-row"><td>最终报价（公布价-运费优惠+附加费-泡比优惠）</td><td><b>¥'+finalUnit.toFixed(2)+'/'+unit+'</b></td></tr><tr><td>计费量</td><td>'+qty.toFixed(qty%1===0?0:2)+' '+unit+'</td></tr><tr class="total-row"><td>估算运费</td><td><b>¥'+(finalUnit*qty).toFixed(0)+'</b></td></tr></table>';
+            h+='<p style="color:#909399;font-size:11px;margin-top:6px">*不含成本底价和盈亏标识，估算运费为演示参考，实际结算以运单为准</p></div>';
+            ElementPlus.ElMessageBox.alert(h,'费用明细 — '+row.channel,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:460px'});
+        },
+        expandSail:function(row){
+            var regions=row._regions||[], sailings=row._sailings||[];
+            var h='<div style="font-size:13px;line-height:1.7">';
+            h+='<div style="font-weight:600;margin-bottom:8px">'+row.channel+' — 当周船期与截单</div>';
+            if(!sailings.length){
+                h+='<div style="padding:20px;text-align:center;color:#E6A23C;background:#fdf6ec;border-radius:6px">当周暂无船期</div></div>';
+                ElementPlus.ElMessageBox.alert(h,'运输详情 — '+row.channel,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:640px'});
+                return;
+            }
+            h+='<table class="cost-detail-table" style="margin:0">';
+            h+='<tr><th>船期</th><th style="text-align:center">ETD</th><th style="text-align:center">ETA</th><th style="text-align:center">最快提取</th>';
+            regions.forEach(function(r){h+='<th style="text-align:center;color:#F53F3F">'+r+' 截单</th>';});
+            h+='</tr>';
+            sailings.forEach(function(s){
+                h+='<tr><td><b>'+s.rn+'</b></td>';
+                h+='<td style="text-align:center">'+s.etd+'</td><td style="text-align:center">'+s.eta+'</td>';
+                h+='<td style="text-align:center">'+(s.pick||'—')+'</td>';
+                regions.forEach(function(r){
+                    var c=s.cutoffs&&s.cutoffs[r];
+                    h+='<td style="text-align:center">'+(c?'<b style="color:#F53F3F">'+c+'</b>':'<span style="color:#C0C4CC">—</span>')+'</td>';
+                });
+                h+='</tr>';
+            });
+            h+='</table>';
+            h+='<div style="margin-top:8px;font-size:12px;color:#909399">※ 截单日为该交货地最晚收货/截单时间，请在对应日期前将货交至该地。</div></div>';
+            ElementPlus.ElMessageBox.alert(h,'运输详情 — '+row.channel,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:640px'});
+        }
+    },
+    watch:{
+        'form.warehouse':function(val){
+            if(val&&this.form.zip){this.form.zip='';this._warn('仓库代码与邮编不能同时存在，已清空邮编');}
+        },
+        'form.zip':function(val){
+            if(val&&this.form.warehouse){this.form.warehouse='';this._warn('仓库代码与邮编不能同时存在，已清空仓库代码');return;}
+            var kd=['海派','空派'],cp=['海卡','空卡'];
+            if(val){
+                this.filter.lines=this.filter.lines.filter(function(l){return kd.indexOf(l)!==-1;});
+                if(!this.filter.lines.length)this.filter.lines=kd.slice();
+            }else{
+                this.filter.lines=this.filter.lines.filter(function(l){return cp.indexOf(l)!==-1;});
+                if(!this.filter.lines.length)this.filter.lines=cp.slice();
+            }
         }
     }});
     app.use(ElementPlus);
