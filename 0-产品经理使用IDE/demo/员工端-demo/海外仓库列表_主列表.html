@@ -105,17 +105,11 @@
         </div>
 
         <div class="content-card" style="height: calc(100vh - 106px);">
-            <!-- Tab 页签 -->
-            <el-tabs v-model="activeTab" @tab-click="handleTabClick">
-                <el-tab-pane label="FBA仓库列表" name="FBA仓库列表"></el-tab-pane>
-                <el-tab-pane label="其他平台仓库列表" name="其他平台仓库列表"></el-tab-pane>
-            </el-tabs>
-
             <!-- 表格 -->
             <div class="table-container">
                 <el-table :data="filteredTableData" border height="100%" style="width: 100%" @selection-change="handleSelectionChange">
                     <el-table-column type="selection" width="55" align="center"></el-table-column>
-                    <el-table-column prop="platform" label="仓库所属平台" min-width="120" v-if="activeTab === '其他平台仓库列表'"></el-table-column>
+                    <el-table-column prop="platform" label="仓库所属平台" min-width="120"></el-table-column>
                     <el-table-column prop="warehouseCode" label="仓库代码" min-width="120"></el-table-column>
                     <el-table-column prop="countryCode" label="国家代码" min-width="100"></el-table-column>
                     <el-table-column prop="dataSource" label="数据来源" min-width="120"></el-table-column>
@@ -150,7 +144,9 @@
                 <el-row :gutter="24">
                     <el-col :span="12">
                         <el-form-item label="仓库所属平台" prop="platform">
-                            <el-input v-model="form.platform" :disabled="activeTab === 'FBA仓库列表'" :placeholder="activeTab === 'FBA仓库列表' ? '只读，默认FBA' : '请输入仓库所属平台'"></el-input>
+                            <el-select v-model="form.platform" placeholder="请选择仓库所属平台" style="width: 100%;">
+                                <el-option v-for="p in platformOptions" :key="p" :label="p" :value="p"></el-option>
+                            </el-select>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
@@ -206,6 +202,23 @@
                         <el-col :span="8">
                             <el-form-item label="地址简称">
                                 <el-input v-model="address.addressAbbr" readonly placeholder="自动生成" style="background-color: #f5f7fa; border-radius: 4px;"></el-input>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="是否快递承运商专用地址" :prop="'addresses.' + index + '.isCarrierDedicated'" :rules="{ required: true, message: '请选择是否快递承运商专用地址', trigger: 'change' }">
+                                <el-select v-model="address.isCarrierDedicated" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="是" value="是"></el-option>
+                                    <el-option label="否" value="否"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="16">
+                            <el-form-item label="快递承运商SCAC">
+                                <el-select v-model="address.carrierScac" multiple filterable placeholder="请选择快递承运商（选填）" style="width: 100%;">
+                                    <el-option v-for="c in carrierOptions" :key="c.scac" :label="c.name" :value="c.scac"></el-option>
+                                </el-select>
                             </el-form-item>
                         </el-col>
                     </el-row>
@@ -268,6 +281,23 @@
                             </el-form-item>
                         </el-col>
                     </el-row>
+                    <el-row :gutter="24">
+                        <el-col :span="8">
+                            <el-form-item label="是否快递承运商专用地址" prop="isCarrierDedicated">
+                                <el-select v-model="addAddressForm.isCarrierDedicated" placeholder="请选择" style="width: 100%;">
+                                    <el-option label="是" value="是"></el-option>
+                                    <el-option label="否" value="否"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                        <el-col :span="16">
+                            <el-form-item label="快递承运商SCAC">
+                                <el-select v-model="addAddressForm.carrierScac" multiple filterable placeholder="请选择快递承运商（选填）" style="width: 100%;">
+                                    <el-option v-for="c in carrierOptions" :key="c.scac" :label="c.name" :value="c.scac"></el-option>
+                                </el-select>
+                            </el-form-item>
+                        </el-col>
+                    </el-row>
                 </div>
             </el-form>
             <template #footer>
@@ -285,22 +315,22 @@
 
         const app = createApp({
             setup() {
-                const activeTab = ref('FBA仓库列表');
                 const searchForm = reactive({ warehouseCode: '', countryCode: '', confirmStatus: '' });
                 const tableData = ref([
-                    { platform: 'FBA', warehouseCode: 'BWI1', countryCode: 'US', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-25 14:30:00', creator: '系统管理员' },
-                    { platform: 'FBA', warehouseCode: 'MEM1s', countryCode: 'US', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-26 10:00:00', creator: '张三' },
-                    { platform: 'FBA', warehouseCode: 'BHX4', countryCode: 'GB', dataSource: '系统同步', confirmStatus: '否', updateTime: '2023-10-24 09:15:00', creator: '李四' },
-                    { platform: 'WALMART', warehouseCode: 'IND2', countryCode: 'US', province: 'IN', city: 'Plainfield', detail: '9360 All Points Parkway', zipCode: '46168', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-25 11:20:00', creator: '王五' }
+                    { platform: 'Amazon', warehouseCode: 'BWI1', countryCode: 'US', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-25 14:30:00', creator: '系统管理员' },
+                    { platform: 'Amazon', warehouseCode: 'MEM1s', countryCode: 'US', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-26 10:00:00', creator: '张三' },
+                    { platform: 'Amazon', warehouseCode: 'BHX4', countryCode: 'GB', dataSource: '系统同步', confirmStatus: '否', updateTime: '2023-10-24 09:15:00', creator: '李四' },
+                    { platform: 'Walmart', warehouseCode: 'IND2', countryCode: 'US', province: 'IN', city: 'Plainfield', detail: '9360 All Points Parkway', zipCode: '46168', dataSource: '客户录入', confirmStatus: '是', updateTime: '2023-10-25 11:20:00', creator: '王五' }
                 ]);
 
-                const filteredTableData = computed(() => {
-                    if (activeTab.value === 'FBA仓库列表') {
-                        return tableData.value.filter(item => item.platform === 'FBA');
-                    } else {
-                        return tableData.value.filter(item => item.platform !== 'FBA');
-                    }
-                });
+                const platformOptions = ['Amazon', 'Walmart', 'eBay', 'SHEIN', 'Temu', 'TikTok Shop', 'AliExpress', 'Mercado Libre', 'OTTO', 'Newegg', 'Shopify'];
+                const carrierOptions = [
+                    { name: 'UPS', scac: 'UPSN' },
+                    { name: 'FedEx', scac: 'FDXE' },
+                    { name: 'DHL', scac: 'DHLH' }
+                ];
+
+                const filteredTableData = computed(() => tableData.value);
 
                 const total = computed(() => filteredTableData.value.length);
 
@@ -308,12 +338,11 @@
                 const dialogVisible = ref(false);
                 const dialogType = ref('add'); // 'add' or 'edit'
                 const dialogTitle = computed(() => {
-                    const platformName = activeTab.value === 'FBA仓库列表' ? 'FBA' : '其他';
-                    return dialogType.value === 'add' ? `新增${platformName}平台仓库` : `编辑${platformName}平台仓库`;
+                    return dialogType.value === 'add' ? '新增平台仓库' : '编辑平台仓库';
                 });
                 const formRef = ref(null);
                 const form = reactive({
-                    platform: 'FBA',
+                    platform: '',
                     warehouseCode: '',
                     addresses: [{
                         countryCode: '',
@@ -321,7 +350,9 @@
                         city: '',
                         detail: '',
                         zipCode: '',
-                        addressAbbr: ''
+                        addressAbbr: '',
+                        isCarrierDedicated: '',
+                        carrierScac: []
                     }]
                 });
 
@@ -342,7 +373,7 @@
                 );
 
                 const rules = {
-                    platform: [{ required: true, message: '请输入仓库所属平台', trigger: 'blur' }],
+                    platform: [{ required: true, message: '请选择仓库所属平台', trigger: 'change' }],
                     warehouseCode: [{ required: true, message: '请输入仓库代码', trigger: 'blur' }]
                 };
 
@@ -353,7 +384,9 @@
                         city: '',
                         detail: '',
                         zipCode: '',
-                        addressAbbr: ''
+                        addressAbbr: '',
+                        isCarrierDedicated: '',
+                        carrierScac: []
                     });
                 };
 
@@ -365,27 +398,25 @@
                     if (!formRef.value) return;
                     await formRef.value.validate((valid) => {
                         if (valid) {
-                            const platformName = activeTab.value === 'FBA仓库列表' ? 'FBA' : '其他';
-                            ElMessage.success(dialogType.value === 'add' ? `${platformName}仓库新增成功` : `${platformName}仓库编辑成功`);
+                            ElMessage.success(dialogType.value === 'add' ? '平台仓库新增成功' : '平台仓库编辑成功');
                             dialogVisible.value = false;
                             // Reset form (simplified)
                             form.warehouseCode = '';
-                            form.addresses = [{ countryCode: '', province: '', city: '', detail: '', zipCode: '', addressAbbr: '' }];
+                            form.addresses = [{ countryCode: '', province: '', city: '', detail: '', zipCode: '', addressAbbr: '', isCarrierDedicated: '', carrierScac: [] }];
                         } else {
                             ElMessage.warning('请完善必填信息');
                         }
                     });
                 };
 
-                const handleTabClick = () => { ElMessage.success('切换标签：' + activeTab.value); };
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetSearch = () => { searchForm.warehouseCode = ''; searchForm.countryCode = ''; searchForm.confirmStatus = ''; };
 
                 const handleAdd = () => {
                     dialogType.value = 'add';
-                    form.platform = activeTab.value === 'FBA仓库列表' ? 'FBA' : '';
+                    form.platform = '';
                     form.warehouseCode = '';
-                    form.addresses = [{ countryCode: '', province: '', city: '', detail: '', zipCode: '', addressAbbr: '' }];
+                    form.addresses = [{ countryCode: '', province: '', city: '', detail: '', zipCode: '', addressAbbr: '', isCarrierDedicated: '', carrierScac: [] }];
                     dialogVisible.value = true;
                 };
                 const handleEdit = (row) => {
@@ -399,7 +430,9 @@
                         city: row.city || '',
                         detail: row.detail || '',
                         zipCode: row.zipCode || '',
-                        addressAbbr: (row.warehouseCode && row.zipCode) ? `${row.warehouseCode}-${row.zipCode}` : ''
+                        addressAbbr: (row.warehouseCode && row.zipCode) ? `${row.warehouseCode}-${row.zipCode}` : '',
+                        isCarrierDedicated: row.isCarrierDedicated || '',
+                        carrierScac: row.carrierScac || []
                     }];
                     dialogVisible.value = true;
                 };
@@ -413,7 +446,9 @@
                     city: '',
                     detail: '',
                     zipCode: '',
-                    addressAbbr: ''
+                    addressAbbr: '',
+                    isCarrierDedicated: '',
+                    carrierScac: []
                 });
 
                 const addAddressRules = {
@@ -421,7 +456,8 @@
                     province: [{ required: true, message: '请选择州/省', trigger: 'change' }],
                     city: [{ required: true, message: '请输入城市', trigger: 'blur' }],
                     detail: [{ required: true, message: '请输入详细地址', trigger: 'blur' }],
-                    zipCode: [{ required: true, message: '请输入邮编', trigger: 'blur' }]
+                    zipCode: [{ required: true, message: '请输入邮编', trigger: 'blur' }],
+                    isCarrierDedicated: [{ required: true, message: '请选择是否快递承运商专用地址', trigger: 'change' }]
                 };
 
                 watch(
@@ -442,7 +478,9 @@
                         city: '',
                         detail: '',
                         zipCode: '',
-                        addressAbbr: ''
+                        addressAbbr: '',
+                        isCarrierDedicated: '',
+                        carrierScac: []
                     });
                     addAddressDialogVisible.value = true;
                 };
@@ -498,11 +536,11 @@
                     }).catch(() => {});
                 };
 
-                return { 
-                    activeTab, searchForm, tableData, filteredTableData, total, 
+                return {
+                    searchForm, tableData, filteredTableData, total, platformOptions, carrierOptions,
                     dialogVisible, dialogType, dialogTitle, form, rules, formRef,
                     addAddress, removeAddress, submitForm,
-                    handleTabClick, handleSearch, resetSearch, handleAdd, handleEdit,
+                    handleSearch, resetSearch, handleAdd, handleEdit,
                     addAddressDialogVisible, addAddressForm, addAddressRules, addAddressFormRef, handleAddAddress, submitAddAddressForm,
                     handleSelectionChange, handleConfirmData
                 };

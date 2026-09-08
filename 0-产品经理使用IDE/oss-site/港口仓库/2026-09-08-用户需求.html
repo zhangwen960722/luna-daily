@@ -39,7 +39,7 @@
   本地仓录入 → 仓库代码/名称/收货人/手机号/地址
       ↓
 【按需配置】（中频）
-  海外平台仓库录入 → 平台选择(FBA/其他) → 多地址绑定 → 地址简称自动生成
+  海外平台仓库录入 → 平台选择(下拉枚举) → 多地址绑定 → 地址简称自动生成
       ↓
 【数据确认】（按需）
   勾选未确认数据 → 二次弹窗确认 → 标记为"已确认"
@@ -62,7 +62,7 @@ LocalWarehouse (本地仓)
 OverseasWarehouse (海外平台仓库)
   ├── 1:N WarehouseAddress (仓库地址)
   │     └── 地址简称自动生成: warehouseCode-zipCode
-  └── 独立实体，按平台区分(FBA / 其他平台)
+  └── 独立实体，按平台区分（11 个电商平台枚举）
       └── 确认状态: 已确认 / 未确认
 </code></pre></p><p><strong>2.4 核心业务流程图（泳道图）</strong></p><p><div class="mermaid">flowchart TD
     subgraph 仓库管理员
@@ -90,7 +90,7 @@ OverseasWarehouse (海外平台仓库)
     S2 --&gt; S3
 </div></p><p><hr></p><p><blockquote>以下按 <strong>2 条业务流程</strong> 组织，每条流程包含：流程概述 → 实体字段定义 → 业务规则 → 核心场景 → 相关 AC。</blockquote></p><p><h3 id="3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</h3></p><p><blockquote><strong>触发</strong>：新接入海外平台(FBA/Walmart等)需要录入仓库数据，或运单创建时需要引用/新增仓库 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>3.1 海外平台仓库 (OverseasWarehouse)</strong> — FBA或其他海外平台的仓库主记录，含确认状态管理</p><p><blockquote><strong>As a</strong> 仓库管理员 / 运单操作员 <strong>I want to</strong> 维护FBA和其他平台的仓库信息，一个仓库代码绑定多个收货地址 <strong>So that</strong> 运单创建时可以准确引用仓库数据，数据经确认后可信</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
-<tr><td>platform</td><td>文本</td><td>✅</td><td>仓库所属平台。FBA Tab下只读默认"FBA"；其他平台Tab下手动输入</td></tr>
+<tr><td>platform</td><td>下拉枚举</td><td>✅</td><td>仓库所属平台。枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td>warehouseCode</td><td>文本</td><td>✅</td><td>仓库代码，如"BWI1""MEM1s""IND2"。唯一性校验</td></tr>
 <tr><td>countryCode</td><td>文本</td><td>✅</td><td>国家代码，如 US/GB/DE/CN。列表展示和搜索用</td></tr>
 <tr><td>dataSource</td><td>文本</td><td>—</td><td>数据来源，如"系统同步""客户录入"</td></tr>
@@ -100,7 +100,7 @@ OverseasWarehouse (海外平台仓库)
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R01：仓库代码唯一性校验，新增/编辑时检查是否与已有记录重复，重复时Toast提示"仓库代码已存在"</li>
-<li>R02：FBA Tab下platform字段只读，值固定为"FBA"；其他平台Tab下platform字段为文本框手动输入</li>
+<li>R02：platform字段为下拉选择，枚举11个平台（Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify）</li>
 <li>R03：确认状态初始值：运单系统通过接口新建时默认为"未确认"；手动新增时默认"未确认"</li>
 <li>R04：确认数据操作：需先勾选表格行（checkbox），且仅"未确认"状态的行可被勾选确认；点击"确认数据"按钮后弹出二次确认弹窗（<code>ElMessageBox.confirm</code>，type: warning）</li>
 <li>R05：列表查询条件：仓库代码(模糊搜索)、国家代码(下拉选择)、确认状态(下拉选择)</li>
@@ -114,27 +114,28 @@ OverseasWarehouse (海外平台仓库)
 <tr><td>detail</td><td>文本</td><td>✅</td><td>详细地址，含街道门牌号</td></tr>
 <tr><td>zipCode</td><td>文本</td><td>✅</td><td>邮编</td></tr>
 <tr><td>addressAbbr</td><td>文本</td><td>—</td><td>地址简称，自动生成：<code>warehouseCode-zipCode</code></td></tr>
+<tr><td>isCarrierDedicated</td><td>枚举</td><td>✅</td><td>是否快递承运商专用地址：是/否</td></tr>
+<tr><td>carrierScac</td><td>数组</td><td>—</td><td>快递承运商SCAC数组，非必填；选项来自供应商明细含快递的供应商名称</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R07：地址简称自动生成规则：<code>warehouseCode + "-" + zipCode</code>，仓库代码或邮编变化时实时更新；任一方为空时addressAbbr为空</li>
 <li>R08：新增弹窗默认含1个空地址行；支持"添加新地址"追加地址；地址数量≤1时隐藏"删除地址"按钮（至少保留1个地址）</li>
-<li>R09：FBA Tab新增弹窗：platform只读"FBA"；其他平台Tab新增弹窗：platform手动输入文本框</li>
+<li>R09：新增/编辑弹窗中platform为下拉选择（11平台枚举）；地址信息含"是否快递承运商专用地址"（必填，是/否）和"快递承运商SCAC"（非必填，多选，选项来自供应商明细含快递的供应商）</li>
 </ul>
-<strong>3.3 核心场景</strong></p><p><pre><code>场景：新增FBA仓库
-  1. 在"平台仓库列表"页面 → 选中"FBA仓库列表"Tab
-  2. 点击"新增" → 弹窗标题"新增FBA平台仓库"
-  3. 基础信息：仓库所属平台只读"FBA"，输入仓库代码"BWI2"
-  4. 地址信息：选择国家US → 州CA → 城市LA → 详细地址 → 邮编90001
+<strong>3.3 核心场景</strong></p><p><pre><code>场景：新增平台仓库(Amazon)
+  1. 在"平台仓库列表"页面 → 点击"新增"
+  2. 弹窗标题"新增平台仓库"
+  3. 基础信息：仓库所属平台下拉选择"Amazon"，输入仓库代码"BWI2"
+  4. 地址信息：选择国家US → 州CA → 城市LA → 详细地址 → 邮编90001 → 是否快递承运商专用地址"否"
   5. 地址简称自动生成为"BWI2-90001"
   6. 确定 → 校验仓库代码唯一性 → Toast"新增成功" → 关闭弹窗，列表刷新
 
-场景：新增其他平台仓库(Walmart)
-  1. 切换到"其他平台仓库列表"Tab → 点击"新增"
-  2. 弹窗标题"新增其他平台仓库"
-  3. 基础信息：输入平台"WALMART"，仓库代码"IND2"
-  4. 地址1：填写基本信息
-  5. 点击"添加新地址" → 地址2出现
-  6. 确定 → Toast"新增成功"
+场景：新增平台仓库(Walmart)
+  1. 点击"新增" → 弹窗标题"新增平台仓库"
+  2. 基础信息：平台下拉选择"Walmart"，仓库代码"IND2"
+  3. 地址1：填写基本信息，是否快递承运商专用地址"是"，快递承运商SCAC多选"UPS"
+  4. 点击"添加新地址" → 地址2出现
+  5. 确定 → Toast"新增成功"
 
 场景：确认数据(批量)
   1. 勾选2条"未确认"的数据行
@@ -235,10 +236,10 @@ OverseasWarehouse (海外平台仓库)
   1. 点击已冻结港口的"编辑"按钮 → 弹窗标题"查看港口（已禁用）"
   2. 表单所有字段只读 → 底部仅显示"关闭"按钮
 </code></pre></p><p><strong>相关 AC</strong>：<code>AC12</code> <code>AC13</code> <code>AC14</code> <code>AC15</code></p><p><hr></p><p><h3 id="6-验收标准总览-AC">6. 验收标准总览 (AC)</h3></p><p><blockquote>按流程分组，每条 AC 格式：<code>AC[N]-[简称]：[可测试的完整验收条件]</code></blockquote></p><p><strong>流程一：海外平台仓库管理</strong>
-<ul><li>[ ] <strong>AC01-海外仓库列表与Tab</strong>：页面含"FBA仓库列表""其他平台仓库列表"两个Tab；FBA Tab表格含仓库所属平台(文本)、仓库代码、国家代码、数据来源、确认状态、操作人、操作列；其他平台Tab含相同列（仓库所属平台列显示文本）；均有checkbox选择列用于批量确认数据</li>
+<ul><li>[ ] <strong>AC01-海外仓库列表</strong>：单一列表（无Tab表头），表格列含仓库所属平台、仓库代码、国家代码、数据来源、确认状态、更新时间、操作人、操作列；有checkbox选择列用于批量确认数据</li>
 <li>[ ] <strong>AC02-海外仓库搜索</strong>：查询区含仓库代码(输入框)、国家代码(下拉)、确认状态(下拉)；支持模糊搜索和精确筛选；点击"重置"清空所有条件</li>
-<li>[ ] <strong>AC03-海外仓库新增(FBA)</strong>：FBA Tab点击"新增"→弹窗标题"新增FBA平台仓库"→平台字段只读默认"FBA"→输入仓库代码→填写地址(国家代码/州省/城市/详细地址/邮编)→地址简称自动生成(仓库代码-邮编)→支持"添加新地址"追加地址行→确定前校验仓库代码唯一性</li>
-<li>[ ] <strong>AC04-海外仓库新增(其他平台)</strong>：其他平台Tab点击"新增"→弹窗标题"新增其他平台仓库"→平台字段为文本框手动输入→其余同FBA新增</li>
+<li>[ ] <strong>AC03-海外仓库新增</strong>：点击"新增"→弹窗标题"新增平台仓库"→平台字段为下拉选择(11平台枚举)→输入仓库代码→填写地址(国家代码/州省/城市/详细地址/邮编/是否快递承运商专用地址/快递承运商SCAC)→地址简称自动生成(仓库代码-邮编)→支持"添加新地址"追加地址行→确定前校验仓库代码唯一性</li>
+<li>[ ] <strong>AC04-海外仓库编辑</strong>：点击"编辑"→弹窗标题"编辑平台仓库"→回显数据可修改→平台下拉可改→其余同新增</li>
 <li>[ ] <strong>AC05-确认数据(批量)</strong>：勾选未确认行→点击"确认数据"→二次确认弹窗→确认状态变为"已确认"；勾选已确认行→Toast"只能勾选'未确认'状态的数据进行确认操作"；未勾选→Toast"请先勾选需要确认的数据"</li>
 <li>[ ] <strong>AC06-仓库代码唯一校验</strong>：新增/编辑时输入已存在的仓库代码→确定时Toast"仓库代码已存在，请核对后重新输入"→提交被阻断</li>
 </ul>
@@ -263,10 +264,10 @@ OverseasWarehouse (海外平台仓库)
 </ul>
 <h3 id="7-功能清单">7. 功能清单</h3></p><p><blockquote>基于 2 条业务流程，共 <strong>2 个模块、10 项功能</strong>。P0 = MVP。</blockquote></p><p><strong>模块 A：海外平台仓库管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
 <tr><td>------</td><td>------</td><td>--------</td><td>-----</td></tr>
-<tr><td>A1</td><td>FBA/其他平台仓库Tab及列表展示</td><td>P0</td><td>AC01</td></tr>
+<tr><td>A1</td><td>平台仓库单一列表展示（平台下拉枚举）</td><td>P0</td><td>AC01</td></tr>
 <tr><td>A2</td><td>搜索与筛选（仓库代码/国家代码/确认状态）</td><td>P0</td><td>AC02</td></tr>
-<tr><td>A3</td><td>新增FBA仓库（多地址+地址简称自动生成）</td><td>P0</td><td>AC03, AC06</td></tr>
-<tr><td>A4</td><td>新增其他平台仓库（多地址+自由输入平台）</td><td>P0</td><td>AC04, AC06</td></tr>
+<tr><td>A3</td><td>新增平台仓库（多地址+地址简称自动生成+平台下拉枚举）</td><td>P0</td><td>AC03, AC06</td></tr>
+<tr><td>A4</td><td>编辑平台仓库（回显+地址维护）</td><td>P0</td><td>AC04, AC06</td></tr>
 <tr><td>A5</td><td>批量确认数据</td><td>P0</td><td>AC05</td></tr>
 <tr><td>A6</td><td>仓库代码唯一性校验</td><td>P0</td><td>AC06</td></tr>
 </table></div>
@@ -293,8 +294,7 @@ OverseasWarehouse (海外平台仓库)
 │   ├── 新增/编辑港口：类型(海港/空港) + 代码长度校验(5位/3位)
 │   └── 禁用/启用
 ├── 海外平台仓库管理（按需配置 + 确认流程）
-│   ├── FBA仓库Tab：列表 + 搜索 + 新增(多地址)
-│   ├── 其他平台仓库Tab：列表 + 搜索 + 新增(多地址+自由平台)
+│   ├── 平台仓库单一列表：搜索 + 新增(多地址) + 平台下拉枚举
 │   ├── 仓库代码唯一性校验
 │   └── 批量确认数据
 ├── 本地仓管理（按需配置）
@@ -308,7 +308,7 @@ OverseasWarehouse (海外平台仓库)
 <ul><li>海外仓Tab的实际内容（仓库列表页的海外仓Tab显示空状态"显示后期提供"）</li>
 <li>Excel批量导入仓库数据</li>
 <li>仓库地址地图可视化</li>
-<li>供应商专用地址标记（<code>isSupplierOnly</code>/<code>supplier</code>）：经确认不纳入本期。Demo <code>其他平台仓库新增.html</code> 中 <code>isSupplierOnly</code>/<code>supplier</code> 为预埋字段，本期暂不启用，后续需从 Demo 中移除</li>
+<li>供应商专用地址标记：已从「明确不做」调整为「本期纳入」——地址信息新增「是否快递承运商专用地址」（必填）+「快递承运商SCAC」（非必填）两字段</li>
 <li>角色级权限管控（Excel源数据标注"无权限管控"）</li>
 </ul>
 <strong>理想方案（Phase 2-3）</strong>

@@ -25,16 +25,16 @@
 <li>评审人：产品/研发/测试/业务代表</li>
 <li>计划里程碑：评审 TBD / 提测 TBD / 上线 TBD</li>
 </ul>
-<strong>0.1 关联链接</strong></p><p><ul><li>用户需求(RDD)：<code><a href="2026-08-28-用户需求.html">用户需求</a></code></li>
-<li>数据设计：<code><a href="2026-08-28-数据设计.html">数据设计</a></code></li>
+<strong>0.1 关联链接</strong></p><p><ul><li>用户需求(RDD)：<code><a href="2026-09-08-用户需求.html">用户需求</a></code></li>
+<li>数据设计：<code><a href="2026-09-08-数据设计.html">数据设计</a></code></li>
 <li>需求背景：Excel 表单 "平台仓库列表" + "仓库列表"</li>
 <li>原型：</li>
 </ul>  - <code>demo/员工端-demo/仓库列表_主列表.html</code>
   - <code>demo/员工端-demo/海外仓库列表_主列表.html</code></p><p><hr></p><p><h3 id="1-需求定义">1. 需求定义</h3></p><p><strong>1.1 背景与现状</strong></p><p>跨境物流业务中，海外平台仓库(FBA/Walmart等)地址信息复杂，一个仓库代码对应多个物理地址，数据分散在Excel和即时通讯记录中。运单系统创建运单时需要引用仓库数据，但缺乏标准化的数据接口和唯一性校验，容易出现重复录入。国内本地仓的基础信息（收货人、手机号、地址）录入不规范，手机号无格式校验，收货人常漏填。海外仓库数据确认机制缺失，下游系统可能引用到未经核实的数据。</p><p><strong>1.2 目标与成功口径</strong></p><p><ul><li>目标：为飞点TMS搭建仓库基础数据管理模块，实现本地仓和海外平台仓库的结构化管理，支持运单系统查询和新增</li>
 <li>成功口径：海外仓库查询耗时从3-5分钟降至30秒内；仓库代码重复率从约10%降至接近0；手机号格式合规率100%</li>
 </ul>
-<strong>1.3 范围与边界</strong></p><p><ul><li>In Scope（本期 P0）：港口管理(海港/空港，CRUD+禁用/启用)、海外平台仓库管理(FBA+其他平台，Tab切换、多地址、批量确认)、本地仓管理(Tab切换、CRUD+冻结/启用)、运单接口(查询+新增)</li>
-<li>Out of Scope：海外仓Tab实际内容（仓库列表页的海外仓Tab为空状态占位）、Excel批量导入、地址地图可视化、供应商专用地址标记（<code>isSupplierOnly</code>/<code>supplier</code>，经确认不纳入本期）、角色级权限管控（Excel源数据标注"无权限管控"）</li>
+<strong>1.3 范围与边界</strong></p><p><ul><li>In Scope（本期 P0）：港口管理(海港/空港，CRUD+禁用/启用)、海外平台仓库管理(单列表+平台下拉枚举、多地址、批量确认)、本地仓管理(Tab切换、CRUD+冻结/启用)、运单接口(查询+新增)</li>
+<li>Out of Scope：海外仓Tab实际内容（仓库列表页的海外仓Tab为空状态占位）、Excel批量导入、地址地图可视化、角色级权限管控（Excel源数据标注"无权限管控"）</li>
 </ul>
 <strong>1.4 影响范围</strong></p><p><ul><li>影响角色：仓库管理员、运单操作员</li>
 <li>依赖系统：无外部系统依赖（本模块为被引用方，被运单模块依赖）</li>
@@ -50,6 +50,8 @@
 <tr><td>WarehouseStatus</td><td>20</td><td>FROZEN</td><td>已冻结</td><td>warehouse</td></tr>
 <tr><td>ConfirmStatus</td><td>10</td><td>UNCONFIRMED</td><td>未确认</td><td>overseas_warehouse</td></tr>
 <tr><td>ConfirmStatus</td><td>20</td><td>CONFIRMED</td><td>已确认</td><td>overseas_warehouse</td></tr>
+<tr><td>Platform</td><td>—</td><td>—</td><td>仓库所属平台(String)，取值：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td><td>overseas_warehouse</td></tr>
+<tr><td>CarrierDedicated</td><td>—</td><td>—</td><td>是否快递承运商专用地址：是/否</td><td>overseas_warehouse_address</td></tr>
 </table></div>
 <blockquote><strong>v2.1 恢复</strong>：PortType (海港/空港) 和 PortStatus (正常/已冻结) — v2.0 曾因 Excel 源数据不含港口而移除，v2.1 基于 Demo 原型恢复。</blockquote></p><p><hr></p><p><h3 id="3-状态机">3. 状态机</h3></p><p><strong>3.1 LocalWarehouse (本地仓) 状态流转</strong></p><p><pre><code>[正常] ──{冻结}──&gt; [已冻结]
   ^                  │
@@ -77,10 +79,9 @@
 <tr><td>港口管理</td><td>港口列表与搜索</td><td>P0</td><td>港口管理_主列表</td><td>列表页</td></tr>
 <tr><td>港口管理</td><td>新增/编辑港口(海港/空港)</td><td>P0</td><td>港口管理_主列表 (弹窗)</td><td>弹窗表单</td></tr>
 <tr><td>港口管理</td><td>禁用/启用港口</td><td>P0</td><td>港口管理_主列表 (行内操作)</td><td>确认弹窗</td></tr>
-<tr><td>海外平台仓库管理</td><td>FBA仓库列表与Tab</td><td>P0</td><td>海外仓库列表_主列表</td><td>列表页</td></tr>
-<tr><td>海外平台仓库管理</td><td>其他平台仓库列表与Tab</td><td>P0</td><td>海外仓库列表_主列表</td><td>列表页</td></tr>
-<tr><td>海外平台仓库管理</td><td>新增FBA仓库(多地址)</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
-<tr><td>海外平台仓库管理</td><td>新增其他平台仓库(多地址)</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
+<tr><td>海外平台仓库管理</td><td>平台仓库单一列表</td><td>P0</td><td>海外仓库列表_主列表</td><td>列表页</td></tr>
+<tr><td>海外平台仓库管理</td><td>新增平台仓库(多地址)</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
+<tr><td>海外平台仓库管理</td><td>编辑平台仓库(多地址)</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
 <tr><td>海外平台仓库管理</td><td>批量确认数据</td><td>P0</td><td>海外仓库列表_主列表 (行内操作)</td><td>确认弹窗</td></tr>
 <tr><td>海外平台仓库管理</td><td>仓库代码唯一性校验</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>前端校验+后端接口</td></tr>
 <tr><td>本地仓管理</td><td>本地仓列表与Tab</td><td>P0</td><td>仓库列表_主列表</td><td>列表页</td></tr>
@@ -97,30 +98,25 @@
     P1 --&gt;|港口CRUD| P1
     W1 --&gt;|本地仓Tab(默认)| W1
     W1 --&gt;|海外仓Tab(空状态)| W1
-    O1 --&gt;|FBA仓库列表Tab| O1
-    O1 --&gt;|其他平台仓库列表Tab| O1
-</div></p><p><blockquote><strong>说明</strong>：本模块共3个页面，页面间无跳转关系，各自独立。港口管理页为独立列表页；仓库列表页通过Tab切换本地仓/海外仓视图；海外仓库列表页通过Tab切换FBA/其他平台视图。</blockquote></p><p><hr></p><p><h3 id="5-页面规格">5. 页面规格</h3></p><p><strong>5.1 海外仓库列表_主列表</strong></p><p><strong>页面信息</strong>：
+    O1 --&gt;|平台仓库列表(单列表)| O1
+</div></p><p><blockquote><strong>说明</strong>：本模块共3个页面，页面间无跳转关系，各自独立。港口管理页为独立列表页；仓库列表页通过Tab切换本地仓/海外仓视图；海外仓库列表页为单一列表（无Tab，平台字段下拉筛选）。</blockquote></p><p><hr></p><p><h3 id="5-页面规格">5. 页面规格</h3></p><p><strong>5.1 海外仓库列表_主列表</strong></p><p><strong>页面信息</strong>：
 <ul><li>路径：仓库管理 > 海外仓库列表</li>
-<li>类型：列表页（含Tab + 选择列）</li>
+<li>类型：列表页（单列表 + 选择列）</li>
 <li>访问角色：仓库管理员、运单操作员（无权限管控）</li>
 </ul>
-<strong>Tab结构</strong>：</p><p><div class="table-wrapper"><table><tr><td>Tab名称</td><td>说明</td></tr>
-<tr><td>---------</td><td>------</td></tr>
-<tr><td>FBA仓库列表</td><td>platform="FBA"的仓库，列表不含"仓库所属平台"列</td></tr>
-<tr><td>其他平台仓库列表</td><td>platform!="FBA"的仓库，列表含"仓库所属平台"列</td></tr>
-</table></div>
-<strong>字段表（列表 — FBA Tab）</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>数据来源</td><td>备注</td></tr>
+<strong>字段表（列表 — 单一列表）</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>数据来源</td><td>备注</td></tr>
 <tr><td>--------</td><td>--------</td><td>------</td><td>---------</td><td>------</td></tr>
 <tr><td>selection</td><td>选择</td><td>checkbox</td><td>—</td><td>用于批量确认数据</td></tr>
+<tr><td>platform</td><td>仓库所属平台</td><td>文本</td><td>overseas_warehouse.platform</td><td>Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td>warehouseCode</td><td>仓库代码</td><td>文本</td><td>overseas_warehouse.warehouse_code</td><td>—</td></tr>
 <tr><td>countryCode</td><td>国家代码</td><td>文本</td><td>overseas_warehouse.country_code</td><td>—</td></tr>
 <tr><td>dataSource</td><td>数据来源</td><td>文本</td><td>overseas_warehouse.data_source</td><td>系统同步/客户录入</td></tr>
 <tr><td>confirmStatus</td><td>确认状态</td><td>标签</td><td>overseas_warehouse.confirm_status</td><td>已确认:success, 未确认:warning</td></tr>
 <tr><td>updateTime</td><td>更新时间</td><td>文本</td><td>overseas_warehouse.update_time</td><td>—</td></tr>
 <tr><td>creator</td><td>操作人</td><td>文本</td><td>overseas_warehouse.creator</td><td>—</td></tr>
-<tr><td>operations</td><td>操作</td><td>按钮组</td><td>—</td><td>编辑</td></tr>
+<tr><td>operations</td><td>操作</td><td>按钮组</td><td>—</td><td>编辑 / 增加地址</td></tr>
 </table></div>
-<strong>字段表（列表 — 其他平台Tab）</strong>：FBA Tab基础上增加 <code>platform</code>（仓库所属平台）列，位于 selection 和 warehouseCode 之间</p><p><strong>搜索条件</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>控件</td><td>说明</td></tr>
+<strong>搜索条件</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>控件</td><td>说明</td></tr>
 <tr><td>--------</td><td>------</td><td>------</td></tr>
 <tr><td>warehouseCode</td><td>el-input (200px)</td><td>仓库代码，模糊搜索</td></tr>
 <tr><td>countryCode</td><td>el-select (200px)</td><td>国家代码：US-美国/CN-中国/GB-英国/DE-德国</td></tr>
@@ -130,12 +126,12 @@
 <tr><td>------</td><td>------</td></tr>
 <tr><td>查询</td><td>执行搜索</td></tr>
 <tr><td>重置</td><td>清空搜索条件</td></tr>
-<tr><td>新增</td><td>按当前Tab打开对应新增弹窗</td></tr>
+<tr><td>新增</td><td>打开新增平台仓库弹窗</td></tr>
 <tr><td>确认数据</td><td>批量确认勾选的"未确认"数据（需至少勾选1条+校验仅未确认行被勾选+二次弹窗）</td></tr>
 </table></div>
 <strong>字段表（新增/编辑弹窗 — 800px）</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>默认值</td><td>分组</td><td>备注</td></tr>
 <tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>--------</td><td>------</td><td>------</td></tr>
-<tr><td>platform</td><td>仓库所属平台</td><td>input</td><td>✅</td><td>FBA Tab:"FBA"(disabled); 其他Tab:""(手动输入)</td><td>基础信息</td><td>FBA Tab下只读灰色</td></tr>
+<tr><td>platform</td><td>仓库所属平台</td><td>select</td><td>✅</td><td>—</td><td>基础信息</td><td>下拉枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td>warehouseCode</td><td>仓库代码</td><td>input</td><td>✅</td><td>—</td><td>基础信息</td><td>提交时校验唯一性</td></tr>
 <tr><td>addresses[].countryCode</td><td>国家代码</td><td>select</td><td>✅</td><td>—</td><td>地址信息</td><td>US-美国/GB-英国/CN-中国/DE-德国</td></tr>
 <tr><td>addresses[].province</td><td>州/省</td><td>select</td><td>✅</td><td>—</td><td>地址信息</td><td>根据国家联动(如US:CA/TX/NY; CN:GD/ZJ/SH)</td></tr>
@@ -143,11 +139,11 @@
 <tr><td>addresses[].detail</td><td>详细地址</td><td>input</td><td>✅</td><td>—</td><td>地址信息</td><td>街道门牌号</td></tr>
 <tr><td>addresses[].zipCode</td><td>邮编</td><td>input</td><td>✅</td><td>—</td><td>地址信息</td><td>—</td></tr>
 <tr><td>addresses[].addressAbbr</td><td>地址简称</td><td>input(readonly)</td><td>—</td><td>自动生成</td><td>地址信息</td><td>规则: warehouseCode + "-" + zipCode</td></tr>
+<tr><td>addresses[].isCarrierDedicated</td><td>是否快递承运商专用地址</td><td>select</td><td>✅</td><td>—</td><td>地址信息</td><td>是/否</td></tr>
+<tr><td>addresses[].carrierScac</td><td>快递承运商SCAC</td><td>select(multiple)</td><td>—</td><td>—</td><td>地址信息</td><td>选项来自供应商明细含快递的供应商名称，存SCAC</td></tr>
 </table></div>
 <strong>交互行为</strong>：
-<ul><li>[Tab切换]：FBA仓库列表 / 其他平台仓库列表。Tab切换时搜索条件和列表数据按Tab独立管理（或共用搜索区、仅列表过滤条件变化）</li>
-<li>[新增—FBA Tab]：点击"新增" → 弹窗标题"新增FBA平台仓库" → platform只读"FBA" → 默认含1个空地址行 → 支持"添加新地址"(追加行)</li>
-<li>[新增—其他平台Tab]：点击"新增" → 弹窗标题"新增其他平台仓库" → platform为空文本框 → 手动输入 → 其余同FBA</li>
+<ul><li>[新增]：点击"新增" → 弹窗标题"新增平台仓库" → platform为下拉选择(11平台枚举) → 默认含1个空地址行 → 支持"添加新地址"(追加行)</li>
 <li>[编辑]：点击行内"编辑" → 弹窗标题"编辑仓库" → 回显platform/warehouseCode/地址列表</li>
 <li>[添加地址]：弹窗内点击"添加新地址" → 新增一行空地址 → 至少保留1个地址(<=1时隐藏"删除地址"按钮)</li>
 <li>[删除地址]：点击地址行右上角"删除地址" → 从列表移除</li>
@@ -275,8 +271,8 @@
 <hr></p><p><h3 id="6-业务规则">6. 业务规则</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
 <tr><td>------</td><td>--------</td><td>----------</td><td>------</td><td>---------</td></tr>
 <tr><td>R01</td><td>海外仓库仓库代码提交</td><td>前端校验: warehouseCode 与已有记录重复; 后端: tenant_id+warehouse_code 联合唯一索引冲突</td><td>阻断提交</td><td>Toast "仓库代码已存在，请核对后重新输入"</td></tr>
-<tr><td>R02</td><td>海外仓库新增(FBA Tab)</td><td>activeTab === 'FBA'</td><td>platform 字段只读(disabled)，值固定"FBA"</td><td>—</td></tr>
-<tr><td>R03</td><td>海外仓库新增(其他平台Tab)</td><td>activeTab === 'OTHER'</td><td>platform 字段为空文本框，手动输入</td><td>—</td></tr>
+<tr><td>R02</td><td>海外仓库新增/编辑</td><td>弹窗内</td><td>platform 字段为下拉选择(11平台枚举)，必选</td><td>—</td></tr>
+<tr><td>R03</td><td>地址快递承运商字段</td><td>弹窗地址信息内</td><td>isCarrierDedicated(是否快递承运商专用地址)必填(是/否)；carrierScac(快递承运商SCAC)非必填，多选，选项来自供应商明细含快递的供应商</td><td>—</td></tr>
 <tr><td>R04</td><td>地址简称生成</td><td>warehouseCode 或 zipCode 变化</td><td>addressAbbr = warehouseCode + "-" + zipCode</td><td>任一方为空时 addressAbbr 为空字符串</td></tr>
 <tr><td>R05</td><td>地址数量控制</td><td>form.addresses.length <= 1</td><td>隐藏"删除地址"按钮，至少保留1个地址</td><td>—</td></tr>
 <tr><td>R06</td><td>批量确认数据-未勾选</td><td>selectedRows.length === 0</td><td>Toast "请先勾选需要确认的数据"</td><td>—</td></tr>
@@ -351,10 +347,10 @@
 </table></div>
 <hr></p><p><h3 id="11-验收标准">11. 验收标准</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>验收项</td><td>验收方式</td><td>通过标准</td><td>关联 AC</td></tr>
 <tr><td>------</td><td>--------</td><td>---------</td><td>---------</td><td>---------</td></tr>
-<tr><td>A01</td><td>海外仓库Tab与列表</td><td>手动</td><td>FBA/其他平台Tab切换正确；FBA Tab列表不含"仓库所属平台"列；其他平台Tab含该列；均有checkbox选择列</td><td>AC01</td></tr>
+<tr><td>A01</td><td>海外仓库列表</td><td>手动</td><td>单一列表(无Tab)，含仓库所属平台/仓库代码/国家代码/数据来源/确认状态/更新时间/操作人/操作列；均有checkbox选择列</td><td>AC01</td></tr>
 <tr><td>A02</td><td>海外仓库搜索</td><td>手动</td><td>仓库代码模糊搜索、国家代码下拉筛选、确认状态下拉筛选均正确过滤；重置清空所有条件</td><td>AC02</td></tr>
-<tr><td>A03</td><td>海外仓库新增(FBA)</td><td>手动</td><td>FBA Tab新增弹窗platform只读"FBA"；支持多地址；地址简称自动生成；仓库代码唯一性校验</td><td>AC03, AC06</td></tr>
-<tr><td>A04</td><td>海外仓库新增(其他平台)</td><td>手动</td><td>其他平台Tab新增弹窗platform手动输入；其余同FBA新增</td><td>AC04, AC06</td></tr>
+<tr><td>A03</td><td>海外仓库新增</td><td>手动</td><td>新增弹窗platform下拉(11平台枚举)；支持多地址；地址含是否快递承运商专用地址(必填)+快递承运商SCAC(非必填)；地址简称自动生成；仓库代码唯一性校验</td><td>AC03, AC06</td></tr>
+<tr><td>A04</td><td>海外仓库编辑</td><td>手动</td><td>编辑弹窗回显数据可修改；platform下拉可改；其余同新增</td><td>AC04, AC06</td></tr>
 <tr><td>A05</td><td>批量确认数据</td><td>手动</td><td>勾选未确认行→确认成功→状态变为"已确认"；勾选已确认行→拦截提示；未勾选→拦截提示</td><td>AC05</td></tr>
 <tr><td>A06</td><td>本地仓列表与Tab</td><td>手动</td><td>本地仓Tab正常显示列表含十列+操作列；海外仓Tab显示空状态"待梳理，敬请期待"</td><td>AC07, AC11</td></tr>
 <tr><td>A07</td><td>本地仓新增</td><td>手动</td><td>弹窗含基本信息+地址详情分区；全部必填；手机号11位校验；国家默认"中国"</td><td>AC08</td></tr>
@@ -364,19 +360,18 @@
 <tr><td>A11</td><td>港口禁用/启用</td><td>手动</td><td>操作列按钮按状态切换(正常→禁用/已冻结→启用)；二次确认弹窗(含港口名称)；确认后状态切换+按钮同步切换</td><td>AC15</td></tr>
 </table></div>
 <hr></p><p><h3 id="12-附录">12. 附录</h3></p><p><ul><li>术语表：</li>
-</ul>  - FBA：Fulfillment by Amazon，亚马逊物流服务
-  - 海外平台仓库：FBA、Walmart等第三方平台的仓库，由平台管理地址
+</ul>  - 海外平台仓库：Amazon(原FBA)、Walmart、eBay、SHEIN、Temu、TikTok Shop、AliExpress、Mercado Libre、OTTO、Newegg、Shopify 等第三方平台的仓库，由平台管理地址
   - 本地仓：国内集货仓/中转仓，由飞点自行管理
   - 确认状态：标记海外仓库数据是否经过人工核实，未确认的数据可能不准确
 <ul><li>原型链接：<code>demo/员工端-demo/</code></li>
-<li>用户需求(RDD)（完整业务流程+字段表）：<code><a href="2026-08-28-用户需求.html">用户需求</a></code></li>
-<li>数据设计（完整 Schema+ER 图）：<code><a href="2026-08-28-数据设计.html">数据设计</a></code></li>
+<li>用户需求(RDD)（完整业务流程+字段表）：<code><a href="2026-09-08-用户需求.html">用户需求</a></code></li>
+<li>数据设计（完整 Schema+ER 图）：<code><a href="2026-09-08-数据设计.html">数据设计</a></code></li>
 </ul>
 <blockquote><strong>完整原型文件清单（4个页面）</strong>：
 <ul><li><code>demo/员工端-demo/港口管理_主列表.html</code> — 港口CRUD + 禁用/启用</li>
 <li><code>demo/员工端-demo/仓库列表_主列表.html</code> — 本地仓Tab(含CRUD) + 海外仓Tab(空状态)</li>
-<li><code>demo/员工端-demo/海外仓库列表_主列表.html</code> — FBA/其他平台Tab + 批量确认 + 多地址管理</li>
-<li><code>demo/员工端-demo/其他平台仓库新增.html</code> — 其他平台仓库新增独立页。注意：该 Demo 中 <code>isSupplierOnly</code>/<code>supplier</code> 为预埋字段，本期暂不启用，后续需从 Demo 中移除</blockquote></li>
+<li><code>demo/员工端-demo/海外仓库列表_主列表.html</code> — 平台仓库单列表 + 批量确认 + 多地址管理（含快递承运商专用地址/SCAC字段）</li>
+<li><code>demo/员工端-demo/其他平台仓库新增.html</code> — 其他平台仓库新增独立页（已废弃，合并进主列表）</blockquote></li>
 </ul></p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>

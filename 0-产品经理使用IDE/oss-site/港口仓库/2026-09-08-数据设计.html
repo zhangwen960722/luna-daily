@@ -24,7 +24,7 @@
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
 <tr><td>Port (港口)</td><td><code>port</code></td><td>独立表</td><td>海运港口和空运港口基础数据，供运单系统引用</td></tr>
 <tr><td>LocalWarehouse (本地仓)</td><td><code>warehouse</code></td><td>独立表</td><td>国内集货仓/中转仓，地址内联在单表中。海外仓Tab待二期实现</td></tr>
-<tr><td>OverseasWarehouse (海外平台仓库)</td><td><code>overseas_warehouse</code></td><td>独立表</td><td>FBA/其他平台仓库主记录，1:N 地址</td></tr>
+<tr><td>OverseasWarehouse (海外平台仓库)</td><td><code>overseas_warehouse</code></td><td>独立表</td><td>各电商平台仓库主记录（平台下拉枚举），1:N 地址</td></tr>
 <tr><td>WarehouseAddress (仓库地址)</td><td><code>overseas_warehouse_address</code></td><td>子表</td><td>通过 <code>overseas_warehouse_id</code> 关联父表</td></tr>
 </table></div>
 <blockquote><strong>已恢复实体</strong>：Port (港口) — v2.0 曾基于 Excel 源数据缺失而移除。v2.1 经 Demo+Excel 数据融合后恢复：Demo <code>港口管理_主列表.html</code> 中存在完整的港口管理功能，Excel 无港口 Sheet 但不代表不需要。港口管理为运单系统的基础依赖数据。</blockquote></p><p><hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><h4 id="表0-port-对应实体-Port-港口">表0: <code>port</code> | 对应实体: Port (港口)</h4></p><p><blockquote><strong>设计说明</strong>: 存储海运港口和空运港口的基础数据。港口代码根据类型有不同长度约束（海港5位、空港3位），前后端均需校验。港口为运单系统的基础依赖数据，供起运港/目的港选择引用。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
@@ -70,11 +70,11 @@
 <strong>关联关系</strong>:
 <ul><li>无内部关联</li>
 </ul>
-<hr></p><p><h4 id="表2-overseas_warehouse-对应实体-OverseasWarehouse-海外平台仓库">表2: <code>overseas_warehouse</code> | 对应实体: OverseasWarehouse (海外平台仓库)</h4></p><p><blockquote><strong>设计说明</strong>: 存储FBA和其他海外平台的仓库主记录。<code>country_code</code> 冗余存储便于列表展示和搜索，与首个地址的国家代码保持同步。<code>warehouse_code</code> 需唯一性约束，防止重复录入。运单系统通过接口查询和新增此表数据。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<hr></p><p><h4 id="表2-overseas_warehouse-对应实体-OverseasWarehouse-海外平台仓库">表2: <code>overseas_warehouse</code> | 对应实体: OverseasWarehouse (海外平台仓库)</h4></p><p><blockquote><strong>设计说明</strong>: 存储各电商平台（Amazon/Walmart/eBay等）的海外仓库主记录。<code>country_code</code> 冗余存储便于列表展示和搜索，与首个地址的国家代码保持同步。<code>warehouse_code</code> 需唯一性约束，防止重复录入。运单系统通过接口查询和新增此表数据。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:----------</td><td>:----------</td><td>:-----------</td><td>:---</td><td>:--------</td><td>:--------</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
-<tr><td><code>platform</code></td><td>仓库所属平台</td><td>String(50)</td><td>Yes</td><td>—</td><td>FBA Tab下默认"FBA"；其他平台手动输入如"WALMART"</td></tr>
+<tr><td><code>platform</code></td><td>仓库所属平台</td><td>String(50)</td><td>Yes</td><td>—</td><td>下拉枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td><code>warehouse_code</code></td><td>仓库代码</td><td>String(50)</td><td>Yes</td><td><strong>Unique</strong> (tenant_id + warehouse_code 联合唯一索引)</td><td>如"BWI1""MEM1s""IND2"。唯一性校验</td></tr>
 <tr><td><code>country_code</code></td><td>国家代码</td><td>String(10)</td><td>Yes</td><td>—</td><td>如 US/GB/DE/CN，列表展示和搜索用</td></tr>
 <tr><td><code>data_source</code></td><td>数据来源</td><td>String(20)</td><td>No</td><td>—</td><td>系统同步 / 客户录入</td></tr>
@@ -91,7 +91,7 @@
 <strong>关联关系</strong>:
 <ul><li><code>One-to-Many</code> with <code>overseas_warehouse_address</code> (通过 <code>id</code> → <code>overseas_warehouse_id</code>)</li>
 </ul>
-<hr></p><p><h4 id="表3-overseas_warehouse_address-对应实体-WarehouseAddress-仓库地址">表3: <code>overseas_warehouse_address</code> | 对应实体: WarehouseAddress (仓库地址)</h4></p><p><blockquote><strong>设计说明</strong>: 海外平台仓库的物理地址子表。一个仓库可绑定多个地址。<code>address_abbr</code> 为派生字段（仓库代码-邮编），由前端实时计算并提交存储。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<hr></p><p><h4 id="表3-overseas_warehouse_address-对应实体-WarehouseAddress-仓库地址">表3: <code>overseas_warehouse_address</code> | 对应实体: WarehouseAddress (仓库地址)</h4></p><p><blockquote><strong>设计说明</strong>: 海外平台仓库的物理地址子表。一个仓库可绑定多个地址。<code>address_abbr</code> 为派生字段（仓库代码-邮编），由前端实时计算并提交存储。<code>is_carrier_dedicated</code> 标记该地址是否为快递承运商专用地址；<code>carrier_scac</code> 存储快递承运商 SCAC 数组（来源供应商明细含快递的供应商）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:----------</td><td>:----------</td><td>:-----------</td><td>:---</td><td>:--------</td><td>:--------</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
@@ -102,6 +102,8 @@
 <tr><td><code>detail</code></td><td>详细地址</td><td>String(255)</td><td>Yes</td><td>—</td><td>街道、门牌号</td></tr>
 <tr><td><code>zip_code</code></td><td>邮编</td><td>String(20)</td><td>Yes</td><td>—</td><td>—</td></tr>
 <tr><td><code>address_abbr</code></td><td>地址简称</td><td>String(100)</td><td>No</td><td>—</td><td>派生字段：warehouse_code-zip_code，自动生成。前后端均存储</td></tr>
+<tr><td><code>is_carrier_dedicated</code></td><td>是否快递承运商专用地址</td><td>String(10)</td><td>Yes</td><td>—</td><td>是/否</td></tr>
+<tr><td><code>carrier_scac</code></td><td>快递承运商SCAC</td><td>String(255)</td><td>No</td><td>—</td><td>数组，逗号分隔存储；选项来自供应商明细含快递的供应商</td></tr>
 <tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>自动生成</td></tr>
 <tr><td><code>created_by</code></td><td>创建人</td><td>String</td><td>Yes</td><td>—</td><td>当前用户</td></tr>
 <tr><td><code>updated_at</code></td><td>更新时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>自动维护</td></tr>
@@ -160,6 +162,8 @@
         String detail
         String zip_code
         String address_abbr
+        String is_carrier_dedicated
+        String carrier_scac
     }
 
     OVERSEAS_WAREHOUSE ||--o{ OVERSEAS_WAREHOUSE_ADDRESS : "1:N (overseas_warehouse_id)"
