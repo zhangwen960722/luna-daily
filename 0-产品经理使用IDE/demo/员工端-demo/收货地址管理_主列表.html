@@ -54,46 +54,6 @@
         .btn-search-reset .el-icon {
             color: #000000 !important;
         }
-
-        /* 审核详情弹窗样式 */
-        .section-title {
-            font-size: 15px;
-            font-weight: bold;
-            color: #303133;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--el-border-color-light, #E4E7ED);
-            display: flex;
-            align-items: center;
-        }
-        .section-title::before {
-            content: '';
-            display: inline-block;
-            width: 4px;
-            height: 14px;
-            background-color: var(--el-color-primary);
-            margin-right: 8px;
-            border-radius: 2px;
-        }
-        .detail-row {
-            margin-bottom: 16px;
-        }
-        .detail-label {
-            color: #909399;
-            font-size: 13px;
-            margin-bottom: 6px;
-            display: block;
-        }
-        .detail-value {
-            color: #303133;
-            font-size: 14px;
-            padding: 6px 10px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #e4e7ed;
-            min-height: 20px;
-            word-break: break-all;
-        }
     </style>
 </head>
 <body>
@@ -111,13 +71,6 @@
                     <div class="search-item">
                         <el-input v-model="searchForm.phone" placeholder="联系电话" clearable style="width: 200px;"></el-input>
                     </div>
-                    <div class="search-item">
-                        <el-select v-model="searchForm.status" placeholder="审核状态" clearable style="width: 150px;">
-                            <el-option label="待审核" value="待审核"></el-option>
-                            <el-option label="已通过" value="已通过"></el-option>
-                            <el-option label="已拒绝" value="已拒绝"></el-option>
-                        </el-select>
-                    </div>
                     <div>
                         <el-button class="btn-search-primary" @click="handleSearch">
                             <el-icon style="margin-right: 4px;"><Search /></el-icon>搜索
@@ -127,7 +80,7 @@
                         </el-button>
                     </div>
                 </template>
-                <template v-else>
+                <template v-else-if="mainTab === 'pickup'">
                     <div class="search-item">
                         <el-input v-model="pickupSearch.customerName" placeholder="用户名称" clearable style="width: 200px;"></el-input>
                     </div>
@@ -143,6 +96,35 @@
                         </el-button>
                         <el-button class="btn-search-reset" @click="resetPickupSearch">
                             <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="search-item">
+                        <el-select v-model="remoteSearch.country" placeholder="国家" clearable style="width: 200px;">
+                            <el-option v-for="c in countryOptions" :key="c" :label="c" :value="c"></el-option>
+                        </el-select>
+                    </div>
+                    <div class="search-item">
+                        <el-input v-model="remoteSearch.zipCode" placeholder="邮编" clearable style="width: 200px;"></el-input>
+                    </div>
+                    <div>
+                        <el-button class="btn-search-primary" @click="handleRemoteSearch">
+                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        </el-button>
+                        <el-button class="btn-search-reset" @click="resetRemoteSearch">
+                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                    <div style="margin-left: auto;">
+                        <el-button type="primary" @click="handleRemoteImport">
+                            <el-icon style="margin-right: 4px;"><Upload /></el-icon>导入
+                        </el-button>
+                        <el-button type="success" @click="handleRemoteExport">
+                            <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                        </el-button>
+                        <el-button type="danger" @click="handleRemoteDelete">
+                            <el-icon style="margin-right: 4px;"><Delete /></el-icon>删除
                         </el-button>
                     </div>
                 </template>
@@ -164,18 +146,6 @@
                             <el-table-column prop="zip" label="邮编" min-width="100"></el-table-column>
                             <el-table-column prop="address" label="详细地址" min-width="200" show-overflow-tooltip></el-table-column>
                             <el-table-column prop="customerName" label="用户名称" min-width="180" show-overflow-tooltip></el-table-column>
-                            <el-table-column prop="status" label="审核状态" min-width="100" align="center">
-                                <template #default="scope">
-                                    <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')">
-                                        {{ scope.row.status === '待审核' ? '未审核' : (scope.row.status === '已通过' ? '已审核' : scope.row.status) }}
-                                    </el-tag>
-                                </template>
-                            </el-table-column>
-                            <el-table-column label="操作" width="120" fixed="right" align="center">
-                                <template #default="scope">
-                                    <el-button v-if="scope.row.status === '待审核'" link type="primary" size="small" @click="handleAudit(scope.row)">审核</el-button>
-                                </template>
-                            </el-table-column>
                         </el-table>
                     </div>
                     <div class="pagination-area">
@@ -206,58 +176,25 @@
                         <el-pagination background layout="total, prev, pager, next" :total="pickupTotal"></el-pagination>
                     </div>
                 </el-tab-pane>
+
+                <!-- ===== 偏远邮编管理 ===== -->
+                <el-tab-pane label="偏远邮编管理" name="remote">
+                    <div class="table-container" style="margin-top: 16px;">
+                        <el-table :data="remoteTableData" border height="100%" style="width: 100%" @selection-change="handleRemoteSelectionChange">
+                            <el-table-column type="selection" width="55" align="center"></el-table-column>
+                            <el-table-column prop="country" label="国家" min-width="120"></el-table-column>
+                            <el-table-column prop="zipCode" label="邮编" min-width="160"></el-table-column>
+                            <el-table-column prop="createTime" label="创建时间" min-width="170"></el-table-column>
+                            <el-table-column prop="creator" label="创建人" min-width="120"></el-table-column>
+                        </el-table>
+                    </div>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="remoteTotal"></el-pagination>
+                    </div>
+                </el-tab-pane>
             </el-tabs>
         </div>
 
-        <!-- 审核弹窗（仅收货地址） -->
-        <el-dialog v-model="auditDialogVisible" title="收货地址审核" width="600px" destroy-on-close>
-            <div class="audit-detail-section">
-                <div class="section-title">收货人信息</div>
-                <el-row :gutter="20" class="detail-row">
-                    <el-col :span="12">
-                        <span class="detail-label">联系人</span>
-                        <div class="detail-value">{{ currentAuditRow?.contact }}</div>
-                    </el-col>
-                    <el-col :span="12">
-                        <span class="detail-label">联系电话</span>
-                        <div class="detail-value">{{ currentAuditRow?.phone }}</div>
-                    </el-col>
-                </el-row>
-
-                <div class="section-title" style="margin-top: 20px;">地址详情</div>
-                <el-row :gutter="20" class="detail-row">
-                    <el-col :span="8">
-                        <span class="detail-label">国家</span>
-                        <div class="detail-value">{{ currentAuditRow?.country }}</div>
-                    </el-col>
-                    <el-col :span="8">
-                        <span class="detail-label">省/州</span>
-                        <div class="detail-value">{{ currentAuditRow?.state }}</div>
-                    </el-col>
-                    <el-col :span="8">
-                        <span class="detail-label">城市</span>
-                        <div class="detail-value">{{ currentAuditRow?.city }}</div>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="20" class="detail-row">
-                    <el-col :span="8">
-                        <span class="detail-label">邮编</span>
-                        <div class="detail-value">{{ currentAuditRow?.zip }}</div>
-                    </el-col>
-                    <el-col :span="16">
-                        <span class="detail-label">详细地址</span>
-                        <div class="detail-value">{{ currentAuditRow?.address }}</div>
-                    </el-col>
-                </el-row>
-            </div>
-            <template #footer>
-                <span class="dialog-footer">
-                    <el-button @click="auditDialogVisible = false">返回</el-button>
-                    <el-button type="danger" @click="handleReject">审核拒绝</el-button>
-                    <el-button type="success" @click="handleApprove">审核通过</el-button>
-                </span>
-            </template>
-        </el-dialog>
     </div>
 
     <script>
@@ -269,12 +206,12 @@
                 // V2.3: 顶层Tab
                 const mainTab = ref('shipping');
 
-                const searchForm = reactive({ customerName: '', contact: '', phone: '', status: '' });
+                const searchForm = reactive({ customerName: '', contact: '', phone: '' });
                 const total = ref(2);
-                
+
                 const allData = [
-                    { customerName: '深圳市大卖科技有限公司', contact: 'Greg Bailys', phone: '904-559-3808', country: 'US', state: 'FL', city: 'Jacksonville', zip: '32256', address: '7800 Bayberry Road', status: '待审核' },
-                    { customerName: '义乌市星光进出口有限公司', contact: 'Sunny', phone: '+1 (626) 838-2088', country: 'US', state: 'CA', city: 'Commerce', zip: '90040', address: '2638 Yates Ave', status: '已通过' }
+                    { customerName: '深圳市大卖科技有限公司', contact: 'Greg Bailys', phone: '904-559-3808', country: 'US', state: 'FL', city: 'Jacksonville', zip: '32256', address: '7800 Bayberry Road' },
+                    { customerName: '义乌市星光进出口有限公司', contact: 'Sunny', phone: '+1 (626) 838-2088', country: 'US', state: 'CA', city: 'Commerce', zip: '90040', address: '2638 Yates Ave' }
                 ];
 
                 const tableData = computed(() => {
@@ -282,50 +219,12 @@
                     if (searchForm.customerName) data = data.filter(item => item.customerName.includes(searchForm.customerName));
                     if (searchForm.contact) data = data.filter(item => item.contact.includes(searchForm.contact));
                     if (searchForm.phone) data = data.filter(item => item.phone.includes(searchForm.phone));
-                    if (searchForm.status) data = data.filter(item => item.status === searchForm.status);
                     return data;
                 });
 
                 const handleMainTabClick = () => {};
                 const handleSearch = () => { ElMessage.success('执行搜索'); };
-                const resetSearch = () => { searchForm.customerName = ''; searchForm.contact = ''; searchForm.phone = ''; searchForm.status = ''; };
-                
-                const auditDialogVisible = ref(false);
-                const currentAuditRow = ref(null);
-
-                const handleAudit = (row) => { 
-                    currentAuditRow.value = row;
-                    auditDialogVisible.value = true;
-                };
-
-                const handleReject = () => {
-                    ElMessageBox.prompt('请输入拒绝原因', '审核拒绝', {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        inputPattern: /\S+/,
-                        inputErrorMessage: '拒绝原因不能为空'
-                    }).then(({ value }) => {
-                        if (currentAuditRow.value) {
-                            currentAuditRow.value.status = '已拒绝';
-                        }
-                        ElMessage.error(`地址审核已拒绝，原因：${value}`);
-                        auditDialogVisible.value = false;
-                    }).catch(() => {});
-                };
-
-                const handleApprove = () => {
-                    ElMessageBox.confirm('确认该收货地址信息无误并审核通过？', '审核通过', {
-                        confirmButtonText: '确定',
-                        cancelButtonText: '取消',
-                        type: 'success'
-                    }).then(() => {
-                        if (currentAuditRow.value) {
-                            currentAuditRow.value.status = '已通过';
-                        }
-                        ElMessage.success('地址审核已通过！');
-                        auditDialogVisible.value = false;
-                    }).catch(() => {});
-                };
+                const resetSearch = () => { searchForm.customerName = ''; searchForm.contact = ''; searchForm.phone = ''; };
 
                 // === 取件地址 ===
                 const pickupSearch = reactive({ customerName: '', contact: '', phone: '' });
@@ -344,13 +243,55 @@
                 const handlePickupSearch = () => { ElMessage.success('执行搜索'); };
                 const resetPickupSearch = () => { pickupSearch.customerName = ''; pickupSearch.contact = ''; pickupSearch.phone = ''; };
 
+                // === 偏远邮编 ===
+                const countryOptions = ['美国', '英国', '加拿大', '澳大利亚', '德国'];
+                const remoteSearch = reactive({ country: '', zipCode: '' });
+                const remoteTotal = ref(5);
+                const remoteAllData = [
+                    { country: '美国', zipCode: '32256', createTime: '2026-09-01 10:00:00', creator: '张三' },
+                    { country: '美国', zipCode: '90040', createTime: '2026-09-02 14:30:00', creator: '李四' },
+                    { country: '英国', zipCode: 'SW1A 1AA', createTime: '2026-09-03 09:15:00', creator: '王五' },
+                    { country: '加拿大', zipCode: 'K1A 0B1', createTime: '2026-09-05 16:00:00', creator: '赵六' },
+                    { country: '澳大利亚', zipCode: '2000', createTime: '2026-09-06 11:20:00', creator: '张三' }
+                ];
+                const remoteTableData = computed(() => {
+                    let data = remoteAllData;
+                    if (remoteSearch.country) data = data.filter(item => item.country === remoteSearch.country);
+                    if (remoteSearch.zipCode) data = data.filter(item => item.zipCode.includes(remoteSearch.zipCode));
+                    return data;
+                });
+                const remoteSelectedRows = ref([]);
+                const handleRemoteSelectionChange = (val) => { remoteSelectedRows.value = val; };
+                const handleRemoteSearch = () => { ElMessage.success('执行查询'); };
+                const resetRemoteSearch = () => { remoteSearch.country = ''; remoteSearch.zipCode = ''; };
+                const handleRemoteImport = () => { ElMessage.success('偏远邮编导入模板下载中…'); };
+                const handleRemoteExport = () => { ElMessage.success('偏远邮编导出中…'); };
+                const handleRemoteDelete = () => {
+                    if (remoteSelectedRows.value.length === 0) {
+                        ElMessage.warning('请先勾选需要删除的偏远邮编');
+                        return;
+                    }
+                    ElMessageBox.confirm(`确定删除选中的 ${remoteSelectedRows.value.length} 条偏远邮编吗？`, '删除确认', {
+                        confirmButtonText: '确定删除',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        const ids = remoteSelectedRows.value.map(r => r.zipCode);
+                        remoteAllData.splice(0, remoteAllData.length, ...remoteAllData.filter(r => !ids.includes(r.zipCode)));
+                        remoteTotal.value = remoteAllData.length;
+                        ElMessage.success('删除成功');
+                    }).catch(() => {});
+                };
+
                 return {
                     mainTab,
                     searchForm, tableData, total,
                     handleMainTabClick, handleSearch, resetSearch,
                     pickupSearch, pickupTableData, pickupTotal,
                     handlePickupSearch, resetPickupSearch,
-                    auditDialogVisible, currentAuditRow, handleAudit, handleReject, handleApprove
+                    countryOptions, remoteSearch, remoteTableData, remoteTotal,
+                    handleRemoteSelectionChange, handleRemoteSearch, resetRemoteSearch,
+                    handleRemoteImport, handleRemoteExport, handleRemoteDelete
                 };
             }
         });

@@ -378,6 +378,25 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-button v-else type="primary" @click="savePrice">创建运价行</el-button>
   </template>
 </el-dialog>
+
+<el-dialog v-model="recalcDialogVisible" :title="recalcMode==='recalc' ? '重算成本底价' : '已知晓，不调整'" width="560px" :close-on-click-modal="false">
+  <div style="font-size:13px;color:#606266;margin-bottom:12px;line-height:1.7">
+    {{ recalcMode==='recalc' ? '以下带 ⚠ 的服务组合存在待重算运价行，请勾选需要重算成本底价的服务组合（可多选）：' : '以下带 ⚠ 的服务组合存在待重算运价行，请勾选已知晓、无需调整的服务组合（可多选）：' }}
+  </div>
+  <div style="max-height:320px;overflow:auto;border:1px solid #EBEEF5;border-radius:4px;padding:4px 0">
+    <el-checkbox-group v-model="recalcSelection">
+      <div v-for="g in pendingGroups" :key="g._key" style="padding:8px 14px;border-bottom:1px solid #F0F2F5;">
+        <el-checkbox :label="g._key">
+          <span style="color:#E6A23C">⚠</span> {{ g.comboName }}<span v-if="g.deliveryGroup" style="color:#909399;font-size:12px;margin-left:6px">（{{ g.deliveryGroup }}）</span>
+        </el-checkbox>
+      </div>
+    </el-checkbox-group>
+  </div>
+  <template #footer>
+    <el-button @click="recalcDialogVisible=false">取消</el-button>
+    <el-button type="primary" @click="confirmRecalc">确定</el-button>
+  </template>
+</el-dialog>
 </div>
 
 <script>
@@ -390,6 +409,7 @@ var app = Vue.createApp({
       selectedBatchName: '2026-W05（1/26-2/1）',
       showBatchDialog: false, showBatchInfoDialog: false,
       showPriceDialog: false, editPriceMode: false, editPriceIdx: -1,
+      recalcDialogVisible: false, recalcMode: '', recalcSelection: [],
       showImportDialog: false, importType: '', importFileName: '', importTitle: '',
       importColumns: [], importPreview: [], importAffectedCombos: 0,
 
@@ -564,6 +584,7 @@ var app = Vue.createApp({
     priceRowCount: function(){ return this.priceList.length; },
     hasCurrentBatch: function(){ return this.batches.some(function(b){return b.status==='当前';}); },
     pendingRecalcCount: function(){ return this.priceList.filter(function(p){return p._pendingRecalc;}).length; },
+    pendingGroups: function(){ return this.priceGroups.filter(function(g){return g._hasPending;}); },
     editMatrixWeightTiers: function(){
       var self=this; var tiers=[]; var seen={};
       var plist=this.allPriceData[this.selectedBatchName]||[];
@@ -821,8 +842,9 @@ var app = Vue.createApp({
     voidBatch: function(){var self=this;var label=self.selectedBatchName;ElementPlus.ElMessageBox.confirm('确定作废批次【'+label+'】？作废后数据保留但不可再使用。','作废批次确认',{confirmButtonText:'确定作废',cancelButtonText:'取消',type:'warning'}).then(function(){self.selectedBatch.status='已作废';self.selectedBatchName=self.selectedBatch.name;ElementPlus.ElMessage.success('批次已作废')}).catch(function(){});},
     addExchangeRate: function(){this.batchForm.exchangeRates.push({from:'USD',to:'RMB',rate:7.2500});},
     removeExchangeRate: function(i){if(this.batchForm.exchangeRates.length>1){this.batchForm.exchangeRates.splice(i,1)}else{ElementPlus.ElMessage.warning('至少保留一条汇率')}},
-    recalcCost: function(){var plist=this.allPriceData[this.selectedBatchName];if(plist)plist.forEach(function(p){p._pendingRecalc=false});ElementPlus.ElMessage.success('成本底价已重算');},
-    markKnown: function(){var plist=this.allPriceData[this.selectedBatchName];if(plist)plist.forEach(function(p){p._pendingRecalc=false});ElementPlus.ElMessage.success('已知晓');},
+    recalcCost: function(){this.recalcMode='recalc';this.recalcSelection=this.pendingGroups.map(function(g){return g._key;});this.recalcDialogVisible=true;},
+    markKnown: function(){this.recalcMode='known';this.recalcSelection=this.pendingGroups.map(function(g){return g._key;});this.recalcDialogVisible=true;},
+    confirmRecalc: function(){var self=this;if(!this.recalcSelection.length){ElementPlus.ElMessage.warning('请至少勾选一个服务组合');return}var plist=this.allPriceData[this.selectedBatchName];if(plist){plist.forEach(function(p){var key=p.comboName+'|||'+(p.deliveryGroup||'');if(self.recalcSelection.indexOf(key)!==-1){p._pendingRecalc=false;}});}this.recalcDialogVisible=false;ElementPlus.ElMessage.success(this.recalcMode==='recalc'?'成本底价已重算':'已知晓');},
     onAddComboChange: function(){var self=this;var combo=this.enabledCombos.find(function(c){return c.code===self.priceForm.comboName});self._addCombo=combo||null;},
     openAddPrice: function(){this.editPriceMode=false;this.priceForm={comboName:''};this._addCombo=null;this.showPriceDialog=true;this.showCostDetail=false;this.costDetail=null;this.costDetailBilling='KG';},
     openEditMatrix: function(group){
