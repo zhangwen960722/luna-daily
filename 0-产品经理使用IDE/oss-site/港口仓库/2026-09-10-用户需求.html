@@ -20,12 +20,11 @@
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#1-核心洞察-Insight">1. 核心洞察 (Insight)</a></li><li class="toc-lv3"><a href="#2-业务全景图">2. 业务全景图</a></li><li class="toc-lv3"><a href="#3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</a></li><li class="toc-lv3"><a href="#4-流程二-本地仓管理-仓库列表">4. 流程二：本地仓管理（仓库列表）</a></li><li class="toc-lv3"><a href="#5-流程三-港口管理-港口管理_主列表">5. 流程三：港口管理（港口管理_主列表）</a></li><li class="toc-lv3"><a href="#6-验收标准总览-AC">6. 验收标准总览 (AC)</a></li><li class="toc-lv3"><a href="#7-NFR-非功能性需求">7. NFR（非功能性需求）</a></li><li class="toc-lv3"><a href="#7-功能清单">7. 功能清单</a></li><li class="toc-lv3"><a href="#8-MVP-方案与建议">8. MVP 方案与建议</a></li><li class="toc-lv3"><a href="#下一步">下一步</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="需求定义卡片-RDD-仓库管理">需求定义卡片 (RDD) — 仓库管理</h1></p><p><blockquote><strong>原始需求</strong>：为飞点TMS搭建仓库基础数据管理模块，支持港口管理、本地仓和海外平台仓库(FBA/其他)的结构化管理，供运单系统查询和引用
 <strong>文档版本</strong>: v2.2 | <strong>日期</strong>: 2026-08-28 | <strong>作者</strong>: AI PM
-<strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 "平台仓库列表" + "仓库列表"</blockquote></p><p><hr></p><p><h3 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h3></p><p><strong>真实痛点</strong>：跨境物流业务中，海外平台仓库(FBA/Walmart等)的地址信息复杂，一个仓库代码可能对应多个物理地址。当前数据分散管理在各业务人员的Excel表格和即时通讯记录中，没有统一的结构化管理入口。运单系统需要查询和新增仓库数据，但缺乏标准化的数据接口和唯一性校验，容易出现重复录入和数据不一致。</p><p>国内本地仓（集货仓/中转仓）的基础信息（收货人、手机号、地址）散落在不同业务人员手中，信息查找成本高。仓库名称、收货人、手机号等关键字段缺乏强制校验，录入不规范导致发货时联系不到收货人。</p><p>海外平台仓库的数据确认机制缺失：新入库的数据无法快速标记为"已确认"，导致下游系统引用到未经核实的数据。</p><p><strong>JTBD</strong>：
+<strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 "平台仓库列表" + "仓库列表"</blockquote></p><p><hr></p><p><h3 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h3></p><p><strong>真实痛点</strong>：跨境物流业务中，海外平台仓库(FBA/Walmart等)的地址信息复杂，一个仓库代码可能对应多个物理地址。当前数据分散管理在各业务人员的Excel表格和即时通讯记录中，没有统一的结构化管理入口。运单系统需要查询和新增仓库数据，但缺乏标准化的数据接口和唯一性校验，容易出现重复录入和数据不一致。</p><p>国内本地仓（集货仓/中转仓）的基础信息（收货人、手机号、地址）散落在不同业务人员手中，信息查找成本高。仓库名称、收货人、手机号等关键字段缺乏强制校验，录入不规范导致发货时联系不到收货人。</p><p><strong>JTBD</strong>：
 <blockquote><code>仓库管理员</code> 雇佣"仓库管理"不是为了"填表单存数据"，而是为了：<strong>当客户问"货到了哪个仓"时，能在一个系统里查到所有平台仓库的地址和归属，不用在Excel和网页后台之间来回切换。</strong></blockquote></p><p><blockquote><code>运单操作员</code> 雇佣"仓库管理"不是为了"管理仓库"，而是为了：<strong>创建运单时能直接查询已有仓库并新增新仓库，不用跳出运单页面去翻表格。</strong></blockquote></p><p><strong>业务价值</strong>：当前 vs 目标 的量化对比表</p><p><div class="table-wrapper"><table><tr><td>维度</td><td>当前</td><td>目标</td></tr>
 <tr><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>海外仓库地址查询</td><td>翻Excel/聊天记录，平均3-5分钟</td><td>列表检索，30秒内</td></tr>
 <tr><td>仓库代码重复率</td><td>无校验，约10%重复录入</td><td>唯一性校验，重复率接近0</td></tr>
-<tr><td>数据确认状态</td><td>无标记，靠人工记忆</td><td>已确认/未确认标签，批量确认</td></tr>
 <tr><td>本地仓信息规范性</td><td>手机号无格式校验，收货人常漏填</td><td>11位手机号强制校验，必填字段全覆盖</td></tr>
 </table></div>
 <h3 id="2-业务全景图">2. 业务全景图</h3></p><p><blockquote><strong>目的</strong>：给读者一张地图，在深入细节前先建立全局认知。</blockquote></p><p><strong>2.1 角色与工作节奏</strong></p><p><div class="table-wrapper"><table><tr><td>角色</td><td>核心任务</td><td>频率</td></tr>
@@ -40,9 +39,6 @@
       ↓
 【按需配置】（中频）
   海外平台仓库录入 → 平台选择(下拉枚举) → 多地址绑定 → 地址简称自动生成
-      ↓
-【数据确认】（按需）
-  勾选未确认数据 → 二次弹窗确认 → 标记为"已确认"
       ↓
 【查询使用】（高频）
   运单系统调用接口 → 查询已有仓库 → 新增新仓库
@@ -63,7 +59,6 @@ OverseasWarehouse (海外平台仓库)
   ├── 1:N WarehouseAddress (仓库地址)
   │     └── 地址简称自动生成: warehouseCode-zipCode
   └── 独立实体，按平台区分（11 个电商平台枚举）
-      └── 确认状态: 已确认 / 未确认
 </code></pre></p><p><strong>2.4 核心业务流程图（泳道图）</strong></p><p><div class="mermaid">flowchart TD
     subgraph 仓库管理员
         P1[新增港口] --&gt; P2[管理港口状态: 编辑/禁用/启用]
@@ -88,25 +83,21 @@ OverseasWarehouse (海外平台仓库)
     C2 --&gt; S1
     C5 --&gt; S2
     S2 --&gt; S3
-</div></p><p><hr></p><p><blockquote>以下按 <strong>2 条业务流程</strong> 组织，每条流程包含：流程概述 → 实体字段定义 → 业务规则 → 核心场景 → 相关 AC。</blockquote></p><p><h3 id="3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</h3></p><p><blockquote><strong>触发</strong>：新接入海外平台(FBA/Walmart等)需要录入仓库数据，或运单创建时需要引用/新增仓库 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>3.1 海外平台仓库 (OverseasWarehouse)</strong> — FBA或其他海外平台的仓库主记录，含确认状态管理</p><p><blockquote><strong>As a</strong> 仓库管理员 / 运单操作员 <strong>I want to</strong> 维护FBA和其他平台的仓库信息，一个仓库代码绑定多个收货地址 <strong>So that</strong> 运单创建时可以准确引用仓库数据，数据经确认后可信</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+</div></p><p><hr></p><p><blockquote>以下按 <strong>2 条业务流程</strong> 组织，每条流程包含：流程概述 → 实体字段定义 → 业务规则 → 核心场景 → 相关 AC。</blockquote></p><p><h3 id="3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</h3></p><p><blockquote><strong>触发</strong>：新接入海外平台(FBA/Walmart等)需要录入仓库数据，或运单创建时需要引用/新增仓库 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>3.1 海外平台仓库 (OverseasWarehouse)</strong> — FBA或其他海外平台的仓库主记录</p><p><blockquote><strong>As a</strong> 仓库管理员 / 运单操作员 <strong>I want to</strong> 维护FBA和其他平台的仓库信息，一个仓库代码绑定多个收货地址 <strong>So that</strong> 运单创建时可以准确引用仓库数据</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>platform</td><td>下拉枚举</td><td>✅</td><td>仓库所属平台。枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td>warehouseCode</td><td>文本</td><td>✅</td><td>仓库代码，如"BWI1""MEM1s""IND2"。唯一性校验</td></tr>
 <tr><td>countryCode</td><td>文本</td><td>✅</td><td>国家代码，如 US/GB/DE/CN。列表展示和搜索用</td></tr>
-<tr><td>dataSource</td><td>文本</td><td>—</td><td>数据来源，如"系统同步""客户录入"</td></tr>
-<tr><td>confirmStatus</td><td>枚举</td><td>—</td><td>确认状态：已确认 / 未确认。运单新建时默认"未确认"</td></tr>
 <tr><td>updateTime</td><td>文本</td><td>—</td><td>最后更新时间</td></tr>
 <tr><td>creator</td><td>文本</td><td>—</td><td>操作人</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R01：仓库代码唯一性校验，新增/编辑时检查是否与已有记录重复，重复时Toast提示"仓库代码已存在"</li>
 <li>R02：platform字段为下拉选择，枚举11个平台（Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify）</li>
-<li>R03：确认状态初始值：运单系统通过接口新建时默认为"未确认"；手动新增时默认"未确认"</li>
-<li>R04：确认数据操作：需先勾选表格行（checkbox），且仅"未确认"状态的行可被勾选确认；点击"确认数据"按钮后弹出二次确认弹窗（<code>ElMessageBox.confirm</code>，type: warning）</li>
-<li>R05：列表查询条件：仓库代码(模糊搜索)、国家代码(下拉选择)、确认状态(下拉选择)</li>
+<li>R05：列表查询条件：仓库代码(模糊搜索)、国家代码(下拉选择)</li>
 <li>R06：运单系统可通过接口查询已有仓库列表，也可通过接口新增仓库</li>
 </ul>
-<strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code> <code>AC05</code></p><p><strong>3.2 仓库地址 (WarehouseAddress)</strong> — 一个海外平台仓库可绑定多个物理地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 为一个仓库代码绑定多个收货地址 <strong>So that</strong> 发货时可以根据实际派送地址选择对应仓库地址</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+<strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code></p><p><strong>3.2 仓库地址 (WarehouseAddress)</strong> — 一个海外平台仓库可绑定多个物理地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 为一个仓库代码绑定多个收货地址 <strong>So that</strong> 发货时可以根据实际派送地址选择对应仓库地址</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>countryCode</td><td>单选</td><td>✅</td><td>国家代码，如 US/GB/CN</td></tr>
 <tr><td>province</td><td>单选</td><td>✅</td><td>州/省，如 CA/TX/GD</td></tr>
@@ -137,21 +128,11 @@ OverseasWarehouse (海外平台仓库)
   4. 点击"添加新地址" → 地址2出现
   5. 确定 → Toast"新增成功"
 
-场景：确认数据(批量)
-  1. 勾选2条"未确认"的数据行
-  2. 点击"确认数据" → 二次确认弹窗"确定要确认选中的2条仓库数据吗？"
-  3. 确认 → 选中行的确认状态变为"已确认"
-
-场景：确认数据(校验拦截)
-  1. 勾选1条"已确认"的数据 + 1条"未确认"的数据
-  2. 点击"确认数据" → Toast提示"只能勾选'未确认'状态的数据进行确认操作"
-  3. 操作被拦截
-
 场景：仓库代码重复校验
   1. 新增仓库，输入仓库代码"BWI1"（已存在）
   2. 点击确定 → Toast"仓库代码已存在，请核对后重新输入"
   3. 提交被阻断
-</code></pre></p><p><strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code> <code>AC05</code> <code>AC06</code></p><p><hr></p><p><h3 id="4-流程二-本地仓管理-仓库列表">4. 流程二：本地仓管理（仓库列表）</h3></p><p><blockquote><strong>触发</strong>：业务需要新增国内集货仓或中转仓 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>4.1 本地仓 (LocalWarehouse)</strong> — 国内仓库基础信息，含收货人联系方式和完整地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 维护本地仓库信息 <strong>So that</strong> 发货时可以准确填写收货地址和联系人</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+</code></pre></p><p><strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code> <code>AC06</code></p><p><hr></p><p><h3 id="4-流程二-本地仓管理-仓库列表">4. 流程二：本地仓管理（仓库列表）</h3></p><p><blockquote><strong>触发</strong>：业务需要新增国内集货仓或中转仓 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>4.1 本地仓 (LocalWarehouse)</strong> — 国内仓库基础信息，含收货人联系方式和完整地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 维护本地仓库信息 <strong>So that</strong> 发货时可以准确填写收货地址和联系人</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>warehouseCode</td><td>文本</td><td>✅</td><td>仓库代码</td></tr>
 <tr><td>warehouseName</td><td>文本</td><td>✅</td><td>仓库名称，如"花都仓""白云仓"</td></tr>
@@ -236,11 +217,10 @@ OverseasWarehouse (海外平台仓库)
   1. 点击已冻结港口的"编辑"按钮 → 弹窗标题"查看港口（已禁用）"
   2. 表单所有字段只读 → 底部仅显示"关闭"按钮
 </code></pre></p><p><strong>相关 AC</strong>：<code>AC12</code> <code>AC13</code> <code>AC14</code> <code>AC15</code></p><p><hr></p><p><h3 id="6-验收标准总览-AC">6. 验收标准总览 (AC)</h3></p><p><blockquote>按流程分组，每条 AC 格式：<code>AC[N]-[简称]：[可测试的完整验收条件]</code></blockquote></p><p><strong>流程一：海外平台仓库管理</strong>
-<ul><li>[ ] <strong>AC01-海外仓库列表</strong>：单一列表（无Tab表头），表格列含仓库所属平台、仓库代码、国家代码、数据来源、确认状态、更新时间、操作人、操作列；有checkbox选择列用于批量确认数据</li>
-<li>[ ] <strong>AC02-海外仓库搜索</strong>：查询区含仓库代码(输入框)、国家代码(下拉)、确认状态(下拉)；支持模糊搜索和精确筛选；点击"重置"清空所有条件</li>
+<ul><li>[ ] <strong>AC01-海外仓库列表</strong>：单一列表（无Tab表头），表格列含仓库所属平台、仓库代码、国家代码、更新时间、操作人、操作列</li>
+<li>[ ] <strong>AC02-海外仓库搜索</strong>：查询区含仓库代码(输入框)、国家代码(下拉)；支持模糊搜索和精确筛选；点击"重置"清空所有条件</li>
 <li>[ ] <strong>AC03-海外仓库新增</strong>：点击"新增"→弹窗标题"新增平台仓库"→平台字段为下拉选择(11平台枚举)→输入仓库代码→填写地址(国家代码/州省/城市/详细地址/邮编/是否快递承运商专用地址/快递承运商SCAC)→地址简称自动生成(仓库代码-邮编)→支持"添加新地址"追加地址行→确定前校验仓库代码唯一性</li>
 <li>[ ] <strong>AC04-海外仓库编辑</strong>：点击"编辑"→弹窗标题"编辑平台仓库"→回显数据可修改→平台下拉可改→其余同新增</li>
-<li>[ ] <strong>AC05-确认数据(批量)</strong>：勾选未确认行→点击"确认数据"→二次确认弹窗→确认状态变为"已确认"；勾选已确认行→Toast"只能勾选'未确认'状态的数据进行确认操作"；未勾选→Toast"请先勾选需要确认的数据"</li>
 <li>[ ] <strong>AC06-仓库代码唯一校验</strong>：新增/编辑时输入已存在的仓库代码→确定时Toast"仓库代码已存在，请核对后重新输入"→提交被阻断</li>
 </ul>
 <strong>流程二：本地仓管理</strong>
@@ -262,13 +242,12 @@ OverseasWarehouse (海外平台仓库)
 <li><strong>安全</strong>：按租户隔离数据（tenant_id）；无角色级权限管控（当前阶段所有登录用户均可操作）</li>
 <li><strong>外部接口</strong>：运单系统需调用查询接口(GET)和新增接口(POST)获取/创建海外平台仓库数据</li>
 </ul>
-<h3 id="7-功能清单">7. 功能清单</h3></p><p><blockquote>基于 2 条业务流程，共 <strong>2 个模块、10 项功能</strong>。P0 = MVP。</blockquote></p><p><strong>模块 A：海外平台仓库管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
+<h3 id="7-功能清单">7. 功能清单</h3></p><p><blockquote>基于 2 条业务流程，共 <strong>2 个模块、11 项功能</strong>。P0 = MVP。</blockquote></p><p><strong>模块 A：海外平台仓库管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
 <tr><td>------</td><td>------</td><td>--------</td><td>-----</td></tr>
 <tr><td>A1</td><td>平台仓库单一列表展示（平台下拉枚举）</td><td>P0</td><td>AC01</td></tr>
-<tr><td>A2</td><td>搜索与筛选（仓库代码/国家代码/确认状态）</td><td>P0</td><td>AC02</td></tr>
+<tr><td>A2</td><td>搜索与筛选（仓库代码/国家代码）</td><td>P0</td><td>AC02</td></tr>
 <tr><td>A3</td><td>新增平台仓库（多地址+地址简称自动生成+平台下拉枚举）</td><td>P0</td><td>AC03, AC06</td></tr>
 <tr><td>A4</td><td>编辑平台仓库（回显+地址维护）</td><td>P0</td><td>AC04, AC06</td></tr>
-<tr><td>A5</td><td>批量确认数据</td><td>P0</td><td>AC05</td></tr>
 <tr><td>A6</td><td>仓库代码唯一性校验</td><td>P0</td><td>AC06</td></tr>
 </table></div>
 <strong>模块 B：本地仓管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
@@ -285,7 +264,7 @@ OverseasWarehouse (海外平台仓库)
 </table></div>
 <strong>分期汇总</strong></p><p><div class="table-wrapper"><table><tr><td>分期</td><td>模块范围</td><td>功能数</td></tr>
 <tr><td>------</td><td>----------</td><td>--------</td></tr>
-<tr><td><strong>Phase 1 (MVP)</strong></td><td>海外平台仓库管理 + 本地仓管理 + 港口管理</td><td><strong>12</strong></td></tr>
+<tr><td><strong>Phase 1 (MVP)</strong></td><td>海外平台仓库管理 + 本地仓管理 + 港口管理</td><td><strong>11</strong></td></tr>
 <tr><td><strong>Phase 2</strong></td><td>海外仓Tab实际内容（仓库列表页的海外仓Tab）</td><td>+?</td></tr>
 </table></div>
 <h3 id="8-MVP-方案与建议">8. MVP 方案与建议</h3></p><p><strong>MVP 方案（Phase 1 — 仓库基础数据管理）</strong></p><p><pre><code>运营端 仓库管理
@@ -293,10 +272,9 @@ OverseasWarehouse (海外平台仓库)
 │   ├── 港口列表：搜索 + 分页
 │   ├── 新增/编辑港口：类型(海港/空港) + 代码长度校验(5位/3位)
 │   └── 禁用/启用
-├── 海外平台仓库管理（按需配置 + 确认流程）
+├── 海外平台仓库管理（按需配置）
 │   ├── 平台仓库单一列表：搜索 + 新增(多地址) + 平台下拉枚举
-│   ├── 仓库代码唯一性校验
-│   └── 批量确认数据
+│   └── 仓库代码唯一性校验
 ├── 本地仓管理（按需配置）
 │   ├── 本地仓Tab：列表 + 搜索 + 新增
 │   ├── 编辑 + 冻结/启用
@@ -317,9 +295,8 @@ OverseasWarehouse (海外平台仓库)
 </ul>
 <strong>专家建议</strong>：
 <ul><li><strong>建议1 — 仓库代码唯一性后端校验</strong>：前端校验配合后端数据库唯一索引，防止并发场景下重复插入</li>
-<li><strong>建议2 — 确认状态与冻结状态分离</strong>：海外仓库的confirmStatus（确认状态，数据质量标记）和本地仓的status（正常/已冻结，生命周期控制）是两个不同维度的状态，不要混淆</li>
-<li><strong>建议3 — 运单接口幂等性</strong>：运单系统调用新增接口时需做幂等处理（基于仓库代码去重），防止网络重试导致重复创建</li>
-<li><strong>建议4 — 手机号校验后端同步</strong>：前端11位校验是UX优化，后端也需校验，防止API直调绕过</li>
+<li><strong>建议2 — 运单接口幂等性</strong>：运单系统调用新增接口时需做幂等处理（基于仓库代码去重），防止网络重试导致重复创建</li>
+<li><strong>建议3 — 手机号校验后端同步</strong>：前端11位校验是UX优化，后端也需校验，防止API直调绕过</li>
 </ul>
 <h3 id="下一步">下一步</h3></p><p>当前阶段：Phase 1 RDD v2.1 完成（Demo+Excel数据融合，恢复港口管理），进入数据设计联动更新阶段。</p><p><hr>
 </p></div></div>

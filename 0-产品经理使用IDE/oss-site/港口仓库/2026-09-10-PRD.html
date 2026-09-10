@@ -25,15 +25,15 @@
 <li>评审人：产品/研发/测试/业务代表</li>
 <li>计划里程碑：评审 TBD / 提测 TBD / 上线 TBD</li>
 </ul>
-<strong>0.1 关联链接</strong></p><p><ul><li>用户需求(RDD)：<code><a href="2026-09-08-用户需求.html">用户需求</a></code></li>
-<li>数据设计：<code><a href="2026-09-08-数据设计.html">数据设计</a></code></li>
+<strong>0.1 关联链接</strong></p><p><ul><li>用户需求(RDD)：<code><a href="2026-09-10-用户需求.html">用户需求</a></code></li>
+<li>数据设计：<code><a href="2026-09-10-数据设计.html">数据设计</a></code></li>
 <li>需求背景：Excel 表单 "平台仓库列表" + "仓库列表"</li>
 <li>原型：</li>
 </ul>  - <code>demo/员工端-demo/仓库列表_主列表.html</code>
   - <code>demo/员工端-demo/海外仓库列表_主列表.html</code></p><p><hr></p><p><h3 id="1-需求定义">1. 需求定义</h3></p><p><strong>1.1 背景与现状</strong></p><p>跨境物流业务中，海外平台仓库(FBA/Walmart等)地址信息复杂，一个仓库代码对应多个物理地址，数据分散在Excel和即时通讯记录中。运单系统创建运单时需要引用仓库数据，但缺乏标准化的数据接口和唯一性校验，容易出现重复录入。国内本地仓的基础信息（收货人、手机号、地址）录入不规范，手机号无格式校验，收货人常漏填。海外仓库数据确认机制缺失，下游系统可能引用到未经核实的数据。</p><p><strong>1.2 目标与成功口径</strong></p><p><ul><li>目标：为飞点TMS搭建仓库基础数据管理模块，实现本地仓和海外平台仓库的结构化管理，支持运单系统查询和新增</li>
 <li>成功口径：海外仓库查询耗时从3-5分钟降至30秒内；仓库代码重复率从约10%降至接近0；手机号格式合规率100%</li>
 </ul>
-<strong>1.3 范围与边界</strong></p><p><ul><li>In Scope（本期 P0）：港口管理(海港/空港，CRUD+禁用/启用)、海外平台仓库管理(单列表+平台下拉枚举、多地址、批量确认)、本地仓管理(Tab切换、CRUD+冻结/启用)、运单接口(查询+新增)</li>
+<strong>1.3 范围与边界</strong></p><p><ul><li>In Scope（本期 P0）：港口管理(海港/空港，CRUD+禁用/启用)、海外平台仓库管理(单列表+平台下拉枚举、多地址)、本地仓管理(Tab切换、CRUD+冻结/启用)、运单接口(查询+新增)</li>
 <li>Out of Scope：海外仓Tab实际内容（仓库列表页的海外仓Tab为空状态占位）、Excel批量导入、地址地图可视化、角色级权限管控（Excel源数据标注"无权限管控"）</li>
 </ul>
 <strong>1.4 影响范围</strong></p><p><ul><li>影响角色：仓库管理员、运单操作员</li>
@@ -61,12 +61,7 @@
 <tr><td>正常</td><td>冻结</td><td>已冻结</td><td>仓库管理员</td><td>二次弹窗确认 (ElMessageBox.confirm, type:warning)</td></tr>
 <tr><td>已冻结</td><td>启用</td><td>正常</td><td>仓库管理员</td><td>二次弹窗确认 (ElMessageBox.confirm, type:warning)</td></tr>
 </table></div>
-<strong>3.2 OverseasWarehouse (海外平台仓库) 确认状态流转</strong></p><p><pre><code>[未确认] ──{确认数据(批量勾选)}──&gt; [已确认]
-</code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
-<tr><td>---------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr>
-<tr><td>未确认</td><td>确认数据</td><td>已确认</td><td>仓库管理员</td><td>1.至少勾选1条 2.勾选均为"未确认" 3.二次弹窗确认</td></tr>
-</table></div>
-<blockquote><strong>说明</strong>：确认状态仅单向流转（未确认→已确认），不支持从"已确认"回退到"未确认"。运单系统新建仓库时默认"未确认"。</blockquote></p><p><strong>3.3 Port (港口) 状态流转</strong></p><p><pre><code>[正常] ──{禁用}──&gt; [已冻结]
+<strong>3.2 Port (港口) 状态流转</strong></p><p><pre><code>[正常] ──{禁用}──&gt; [已冻结]
   ^                 │
   └────{启用}───────┘
 </code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
@@ -82,7 +77,6 @@
 <tr><td>海外平台仓库管理</td><td>平台仓库单一列表</td><td>P0</td><td>海外仓库列表_主列表</td><td>列表页</td></tr>
 <tr><td>海外平台仓库管理</td><td>新增平台仓库(多地址)</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
 <tr><td>海外平台仓库管理</td><td>编辑平台仓库(多地址)</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
-<tr><td>海外平台仓库管理</td><td>批量确认数据</td><td>P0</td><td>海外仓库列表_主列表 (行内操作)</td><td>确认弹窗</td></tr>
 <tr><td>海外平台仓库管理</td><td>仓库代码唯一性校验</td><td>P0</td><td>海外仓库列表_主列表 (弹窗)</td><td>前端校验+后端接口</td></tr>
 <tr><td>本地仓管理</td><td>本地仓列表与Tab</td><td>P0</td><td>仓库列表_主列表</td><td>列表页</td></tr>
 <tr><td>本地仓管理</td><td>新增本地仓</td><td>P0</td><td>仓库列表_主列表 (弹窗)</td><td>弹窗表单</td></tr>
@@ -106,12 +100,9 @@
 </ul>
 <strong>字段表（列表 — 单一列表）</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>数据来源</td><td>备注</td></tr>
 <tr><td>--------</td><td>--------</td><td>------</td><td>---------</td><td>------</td></tr>
-<tr><td>selection</td><td>选择</td><td>checkbox</td><td>—</td><td>用于批量确认数据</td></tr>
 <tr><td>platform</td><td>仓库所属平台</td><td>文本</td><td>overseas_warehouse.platform</td><td>Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td>warehouseCode</td><td>仓库代码</td><td>文本</td><td>overseas_warehouse.warehouse_code</td><td>—</td></tr>
 <tr><td>countryCode</td><td>国家代码</td><td>文本</td><td>overseas_warehouse.country_code</td><td>—</td></tr>
-<tr><td>dataSource</td><td>数据来源</td><td>文本</td><td>overseas_warehouse.data_source</td><td>系统同步/客户录入</td></tr>
-<tr><td>confirmStatus</td><td>确认状态</td><td>标签</td><td>overseas_warehouse.confirm_status</td><td>已确认:success, 未确认:warning</td></tr>
 <tr><td>updateTime</td><td>更新时间</td><td>文本</td><td>overseas_warehouse.update_time</td><td>—</td></tr>
 <tr><td>creator</td><td>操作人</td><td>文本</td><td>overseas_warehouse.creator</td><td>—</td></tr>
 <tr><td>operations</td><td>操作</td><td>按钮组</td><td>—</td><td>编辑 / 增加地址</td></tr>
@@ -120,14 +111,12 @@
 <tr><td>--------</td><td>------</td><td>------</td></tr>
 <tr><td>warehouseCode</td><td>el-input (200px)</td><td>仓库代码，模糊搜索</td></tr>
 <tr><td>countryCode</td><td>el-select (200px)</td><td>国家代码：US-美国/CN-中国/GB-英国/DE-德国</td></tr>
-<tr><td>confirmStatus</td><td>el-select (200px)</td><td>确认状态：已确认/未确认</td></tr>
 </table></div>
 <strong>按钮</strong>：</p><p><div class="table-wrapper"><table><tr><td>按钮</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td></tr>
 <tr><td>查询</td><td>执行搜索</td></tr>
 <tr><td>重置</td><td>清空搜索条件</td></tr>
 <tr><td>新增</td><td>打开新增平台仓库弹窗</td></tr>
-<tr><td>确认数据</td><td>批量确认勾选的"未确认"数据（需至少勾选1条+校验仅未确认行被勾选+二次弹窗）</td></tr>
 </table></div>
 <strong>字段表（新增/编辑弹窗 — 800px）</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>默认值</td><td>分组</td><td>备注</td></tr>
 <tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>--------</td><td>------</td><td>------</td></tr>
@@ -149,19 +138,17 @@
 <li>[删除地址]：点击地址行右上角"删除地址" → 从列表移除</li>
 <li>[地址简称联动]：watch warehouseCode + addresses[].zipCode → 实时更新 addressAbbr = warehouseCode + "-" + zipCode</li>
 <li>[仓库代码唯一性校验]：提交时前后端均校验 warehouseCode 是否重复 → 重复则 Toast "仓库代码已存在，请核对后重新输入" → 提交阻断</li>
-<li>[确认数据(批量)]：勾选行 → 点击"确认数据" → 校验：(1)至少1条 (2)选中行均为"未确认" → <code>ElMessageBox.confirm("确定要确认选中的N条仓库数据吗？","确认提示",{type:'warning'})</code> → 确认后选中行 confirmStatus 变为"已确认" → Toast"确认成功"</li>
 <li>[查询]：点击"查询"执行搜索</li>
 <li>[重置]：清空所有搜索条件</li>
 </ul>
 <strong>关联接口</strong>：
-<ul><li>查询：<code>GET /api/overseas-warehouses</code> (params: warehouseCode, countryCode, confirmStatus, platform, page, pageSize)</li>
-<li>新增：<code>POST /api/overseas-warehouses</code> (body: platform, warehouseCode, countryCode, dataSource, addresses[])</li>
+<ul><li>查询：<code>GET /api/overseas-warehouses</code> (params: warehouseCode, countryCode, platform, page, pageSize)</li>
+<li>新增：<code>POST /api/overseas-warehouses</code> (body: platform, warehouseCode, countryCode, addresses[])</li>
 <li>编辑：<code>PUT /api/overseas-warehouses/{id}</code> (body: platform, warehouseCode, addresses[])</li>
-<li>批量确认：<code>PUT /api/overseas-warehouses/confirm</code> (body: ids[])</li>
 </ul>
 <blockquote><strong>运单接口</strong>（供运单系统调用）：
 <ul><li>查询：<code>GET /api/overseas-warehouses</code> (同上)</li>
-<li>新增：<code>POST /api/overseas-warehouses</code> (同上，新增时 confirmStatus 默认=10 未确认)</blockquote></li>
+<li>新增：<code>POST /api/overseas-warehouses</code> (同上)</blockquote></li>
 </ul>
 <hr></p><p><strong>5.2 仓库列表_主列表</strong></p><p><strong>页面信息</strong>：
 <ul><li>路径：仓库管理 > 仓库列表</li>
@@ -275,14 +262,10 @@
 <tr><td>R03</td><td>地址快递承运商字段</td><td>弹窗地址信息内</td><td>isCarrierDedicated(是否快递承运商专用地址)必填(是/否)；carrierScac(快递承运商SCAC)非必填，多选，选项来自供应商明细含快递的供应商</td><td>—</td></tr>
 <tr><td>R04</td><td>地址简称生成</td><td>warehouseCode 或 zipCode 变化</td><td>addressAbbr = warehouseCode + "-" + zipCode</td><td>任一方为空时 addressAbbr 为空字符串</td></tr>
 <tr><td>R05</td><td>地址数量控制</td><td>form.addresses.length <= 1</td><td>隐藏"删除地址"按钮，至少保留1个地址</td><td>—</td></tr>
-<tr><td>R06</td><td>批量确认数据-未勾选</td><td>selectedRows.length === 0</td><td>Toast "请先勾选需要确认的数据"</td><td>—</td></tr>
-<tr><td>R07</td><td>批量确认数据-已确认行</td><td>selectedRows 中含 confirmStatus === '已确认'</td><td>Toast "只能勾选'未确认'状态的数据进行确认操作"</td><td>—</td></tr>
-<tr><td>R08</td><td>批量确认数据-执行</td><td>校验通过 → ElMessageBox.confirm("确定要确认选中的N条仓库数据吗？")</td><td>confirmStatus 变为"已确认"</td><td>取消不做任何操作</td></tr>
 <tr><td>R09</td><td>本地仓手机号校验</td><td>phone.length !== 11 或 非数字</td><td>Toast "请输入11位手机号"</td><td>提交被阻断，弹窗不关闭</td></tr>
 <tr><td>R10</td><td>本地仓新增国家默认</td><td>dialogType === 'add'</td><td>country 默认"中国"</td><td>—</td></tr>
 <tr><td>R11</td><td>本地仓编辑(已冻结)</td><td>row.status === '已冻结'</td><td>弹窗只读，标题"查看本地仓"，仅显示"关闭"按钮</td><td>—</td></tr>
 <tr><td>R12</td><td>本地仓冻结/启用</td><td>点击行内冻结/启用按钮</td><td>二次弹窗确认(ElMessageBox.confirm type:warning) → 状态切换</td><td>取消不做任何操作</td></tr>
-<tr><td>R13</td><td>海外仓库新增确认状态默认值</td><td>新增提交(手动或运单接口)</td><td>confirmStatus 默认 = 未确认(10)</td><td>—</td></tr>
 <tr><td>R14</td><td>表单必填校验</td><td>提交时</td><td>所有标记required字段非空</td><td>Toast "请完善必填信息"</td></tr>
 <tr><td>R15</td><td>港口代码长度校验-海港</td><td>port.type === '海港' 且 portCode.length !== 5</td><td>阻断提交</td><td>Toast "海港代码必须为5位"</td></tr>
 <tr><td>R16</td><td>港口代码长度校验-空港</td><td>port.type === '空港' 且 portCode.length !== 3</td><td>阻断提交</td><td>Toast "空港代码必须为3位"</td></tr>
@@ -309,17 +292,15 @@
 <tr><td>港口管理-禁用/启用</td><td>✅</td><td>✅</td></tr>
 <tr><td>海外仓库列表-查看</td><td>✅</td><td>✅</td></tr>
 <tr><td>海外仓库列表-新增/编辑</td><td>✅</td><td>✅</td></tr>
-<tr><td>海外仓库列表-确认数据</td><td>✅</td><td>✅</td></tr>
 <tr><td>本地仓管理-查看</td><td>✅</td><td>✅</td></tr>
 <tr><td>本地仓管理-新增/编辑</td><td>✅</td><td>✅</td></tr>
 <tr><td>本地仓管理-冻结/启用</td><td>✅</td><td>✅</td></tr>
 </table></div>
 <blockquote><strong>说明</strong>：未来如需引入权限控制，可在本表基础上增加角色并调整权限分配。</blockquote></p><p><hr></p><p><h3 id="9-接口清单">9. 接口清单</h3></p><p><div class="table-wrapper"><table><tr><td>接口</td><td>方法</td><td>路径</td><td>触发页面</td><td>请求参数</td><td>返回字段</td><td>失败处理</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td><td>---------</td></tr>
-<tr><td>海外仓库列表查询</td><td>GET</td><td>/api/overseas-warehouses</td><td>海外仓库列表_主列表 / 运单系统</td><td>warehouseCode, countryCode, confirmStatus, platform, page, pageSize</td><td>id, platform, warehouseCode, countryCode, dataSource, confirmStatus, updateTime, creator, 分页信息</td><td>Toast提示错误</td></tr>
-<tr><td>海外仓库新增</td><td>POST</td><td>/api/overseas-warehouses</td><td>海外仓库列表_主列表(弹窗) / 运单系统</td><td>platform, warehouseCode, countryCode, dataSource, addresses[]</td><td>id</td><td>Toast提示错误</td></tr>
+<tr><td>海外仓库列表查询</td><td>GET</td><td>/api/overseas-warehouses</td><td>海外仓库列表_主列表 / 运单系统</td><td>warehouseCode, countryCode, platform, page, pageSize</td><td>id, platform, warehouseCode, countryCode, updateTime, creator, 分页信息</td><td>Toast提示错误</td></tr>
+<tr><td>海外仓库新增</td><td>POST</td><td>/api/overseas-warehouses</td><td>海外仓库列表_主列表(弹窗) / 运单系统</td><td>platform, warehouseCode, countryCode, addresses[]</td><td>id</td><td>Toast提示错误</td></tr>
 <tr><td>海外仓库编辑</td><td>PUT</td><td>/api/overseas-warehouses/{id}</td><td>海外仓库列表_主列表(弹窗)</td><td>platform, warehouseCode, addresses[]</td><td>—</td><td>Toast提示错误</td></tr>
-<tr><td>海外仓库批量确认</td><td>PUT</td><td>/api/overseas-warehouses/confirm</td><td>海外仓库列表_主列表(行内)</td><td>ids[]</td><td>—</td><td>Toast提示错误</td></tr>
 <tr><td>仓库列表查询</td><td>GET</td><td>/api/warehouses</td><td>仓库列表_主列表</td><td>warehouseCode, warehouseName, page, pageSize</td><td>id, 完整字段, 分页信息</td><td>Toast提示错误</td></tr>
 <tr><td>仓库新增</td><td>POST</td><td>/api/warehouses</td><td>仓库列表_主列表(弹窗)</td><td>完整字段</td><td>id</td><td>Toast提示错误</td></tr>
 <tr><td>仓库编辑</td><td>PUT</td><td>/api/warehouses/{id}</td><td>仓库列表_主列表(弹窗)</td><td>完整字段</td><td>—</td><td>Toast提示错误</td></tr>
@@ -334,9 +315,6 @@
 <tr><td>E01</td><td>仓库代码重复</td><td>"仓库代码已存在，请核对后重新输入"</td><td>阻断</td></tr>
 <tr><td>E02</td><td>手机号非11位</td><td>"请输入11位手机号"</td><td>阻断</td></tr>
 <tr><td>E03</td><td>必填字段为空</td><td>"请完善必填信息"</td><td>阻断</td></tr>
-<tr><td>E04</td><td>未勾选确认数据</td><td>"请先勾选需要确认的数据"</td><td>阻断</td></tr>
-<tr><td>E05</td><td>勾选了已确认数据</td><td>"只能勾选'未确认'状态的数据进行确认操作"</td><td>阻断</td></tr>
-<tr><td>E06</td><td>确认数据二次确认</td><td>"确定要确认选中的N条仓库数据吗？"</td><td>确认</td></tr>
 <tr><td>E07</td><td>仓库冻结确认</td><td>"确定要冻结该仓库吗？"</td><td>确认</td></tr>
 <tr><td>E08</td><td>仓库启用确认</td><td>"确定要启用该仓库吗？"</td><td>确认</td></tr>
 <tr><td>E09</td><td>海外仓Tab</td><td>"待梳理，敬请期待"</td><td>提示</td></tr>
@@ -347,11 +325,10 @@
 </table></div>
 <hr></p><p><h3 id="11-验收标准">11. 验收标准</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>验收项</td><td>验收方式</td><td>通过标准</td><td>关联 AC</td></tr>
 <tr><td>------</td><td>--------</td><td>---------</td><td>---------</td><td>---------</td></tr>
-<tr><td>A01</td><td>海外仓库列表</td><td>手动</td><td>单一列表(无Tab)，含仓库所属平台/仓库代码/国家代码/数据来源/确认状态/更新时间/操作人/操作列；均有checkbox选择列</td><td>AC01</td></tr>
-<tr><td>A02</td><td>海外仓库搜索</td><td>手动</td><td>仓库代码模糊搜索、国家代码下拉筛选、确认状态下拉筛选均正确过滤；重置清空所有条件</td><td>AC02</td></tr>
+<tr><td>A01</td><td>海外仓库列表</td><td>手动</td><td>单一列表(无Tab)，含仓库所属平台/仓库代码/国家代码/更新时间/操作人/操作列</td><td>AC01</td></tr>
+<tr><td>A02</td><td>海外仓库搜索</td><td>手动</td><td>仓库代码模糊搜索、国家代码下拉筛选均正确过滤；重置清空所有条件</td><td>AC02</td></tr>
 <tr><td>A03</td><td>海外仓库新增</td><td>手动</td><td>新增弹窗platform下拉(11平台枚举)；支持多地址；地址含是否快递承运商专用地址(必填)+快递承运商SCAC(非必填)；地址简称自动生成；仓库代码唯一性校验</td><td>AC03, AC06</td></tr>
 <tr><td>A04</td><td>海外仓库编辑</td><td>手动</td><td>编辑弹窗回显数据可修改；platform下拉可改；其余同新增</td><td>AC04, AC06</td></tr>
-<tr><td>A05</td><td>批量确认数据</td><td>手动</td><td>勾选未确认行→确认成功→状态变为"已确认"；勾选已确认行→拦截提示；未勾选→拦截提示</td><td>AC05</td></tr>
 <tr><td>A06</td><td>本地仓列表与Tab</td><td>手动</td><td>本地仓Tab正常显示列表含十列+操作列；海外仓Tab显示空状态"待梳理，敬请期待"</td><td>AC07, AC11</td></tr>
 <tr><td>A07</td><td>本地仓新增</td><td>手动</td><td>弹窗含基本信息+地址详情分区；全部必填；手机号11位校验；国家默认"中国"</td><td>AC08</td></tr>
 <tr><td>A08</td><td>本地仓编辑与冻结</td><td>手动</td><td>正常仓库可编辑；已冻结仓库编辑弹窗只读；冻结/启用二次确认后切换状态；操作列按钮同步切换</td><td>AC09, AC10</td></tr>
@@ -362,15 +339,14 @@
 <hr></p><p><h3 id="12-附录">12. 附录</h3></p><p><ul><li>术语表：</li>
 </ul>  - 海外平台仓库：Amazon(原FBA)、Walmart、eBay、SHEIN、Temu、TikTok Shop、AliExpress、Mercado Libre、OTTO、Newegg、Shopify 等第三方平台的仓库，由平台管理地址
   - 本地仓：国内集货仓/中转仓，由飞点自行管理
-  - 确认状态：标记海外仓库数据是否经过人工核实，未确认的数据可能不准确
 <ul><li>原型链接：<code>demo/员工端-demo/</code></li>
-<li>用户需求(RDD)（完整业务流程+字段表）：<code><a href="2026-09-08-用户需求.html">用户需求</a></code></li>
-<li>数据设计（完整 Schema+ER 图）：<code><a href="2026-09-08-数据设计.html">数据设计</a></code></li>
+<li>用户需求(RDD)（完整业务流程+字段表）：<code><a href="2026-09-10-用户需求.html">用户需求</a></code></li>
+<li>数据设计（完整 Schema+ER 图）：<code><a href="2026-09-10-数据设计.html">数据设计</a></code></li>
 </ul>
 <blockquote><strong>完整原型文件清单（4个页面）</strong>：
 <ul><li><code>demo/员工端-demo/港口管理_主列表.html</code> — 港口CRUD + 禁用/启用</li>
 <li><code>demo/员工端-demo/仓库列表_主列表.html</code> — 本地仓Tab(含CRUD) + 海外仓Tab(空状态)</li>
-<li><code>demo/员工端-demo/海外仓库列表_主列表.html</code> — 平台仓库单列表 + 批量确认 + 多地址管理（含快递承运商专用地址/SCAC字段）</li>
+<li><code>demo/员工端-demo/海外仓库列表_主列表.html</code> — 平台仓库单列表 + 多地址管理（含快递承运商专用地址/SCAC字段）</li>
 <li><code>demo/员工端-demo/其他平台仓库新增.html</code> — 其他平台仓库新增独立页（已废弃，合并进主列表）</blockquote></li>
 </ul></p></div></div>
 </div>

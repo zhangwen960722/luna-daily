@@ -53,6 +53,7 @@
   │     ├── 1:N 包材配置(ProductPackage) → 子表（二期，条件：need_package=true）
   │     └── 1:N 产品条码(ProductBarcode) → 子表（二期）
   ├── 1:N 收货地址(ShippingAddress) → 独立实体
+  ├── 偏远邮编(RemotePostcode) → 独立实体（员工端维护，供附加费规则匹配）
   └── 标识(Tag) → 独立实体（员工端维护，用于运单/提单/附加费打标）
 </code></pre></p><p><h3 id="2-4-核心业务流程图-泳道图">2.4 核心业务流程图（泳道图）</h3></p><p><div class="mermaid">flowchart TD
     subgraph 货主
@@ -195,14 +196,22 @@
   4. 点击"返回" → 二次确认后关闭弹窗
 
 场景：员工审核收货地址
-  1. 员工打开地址管理 → "收货地址管理"Tab → 默认"待审核"子Tab
+  1. 员工打开「地址审核」页（独立页面）→ 查看待审核收货地址
   2. 点击"审核" → 弹窗展示详情（可编辑）
   3. 审核通过 → 二次确认 → 状态=已通过
   4. 审核拒绝 → 输入拒绝原因 → 状态=已拒绝
+  5. 员工端「收货地址管理」Tab 仅展示地址列表，不再展示审核状态/审核按钮
 
 场景：员工查看取件地址
   1. 员工打开地址管理 → "取件地址管理"Tab
   2. 取件地址平铺列表，可编辑，无需审核
+
+场景：员工维护偏远邮编
+  1. 员工打开地址管理 → "偏远邮编管理"Tab
+  2. 查看偏远邮编列表（国家/邮编/创建时间/创建人）
+  3. 点击"导入" → 下载模板 → 填写国家+邮编 → 上传批量写入
+  4. 勾选若干行 → 点击"删除" → 二次确认 → 删除
+  5. 点击"导出" → 导出当前列表
 </code></pre></p><p><strong>相关 AC</strong>：<code>AC08</code>, <code>AC09</code>, <code>AC10</code>, <code>AC11</code>, <code>AC12</code>, <code>AC13</code></p><p><hr></p><p><h2 id="5-流程三-标识管理-按需维护">5. 流程三：标识管理（按需维护）</h2></p><p><blockquote><strong>触发</strong>：员工需要为运单、提单、附加费等业务场景配置新的标识
 <strong>频率</strong>：运维低频（新增标识类型/模块范围时）
 <strong>前置依赖</strong>：员工已登录系统</blockquote></p><p><h3 id="5-1-标识-Tag-独立实体-用于业务打标">5.1 标识 (Tag) — 独立实体，用于业务打标</h3></p><p><blockquote><strong>As a</strong> 运营人员 <strong>I want to</strong> 维护标识库（含名称、颜色、类型、模块范围） <strong>So that</strong> 运单打标、附加费规则引用等场景可使用统一标识</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
@@ -245,8 +254,9 @@
 <strong>流程二：收货地址管理</strong>
 <ul><li>[ ] <strong>AC08-新增收货地址(货主端)</strong>：货主新增地址填写联系人/电话/国家/省州/城市/邮编/详细地址（全部必填），点击"确定"提交后状态=待审核；点击"返回"二次确认"确定要放弃编辑吗？"后关闭弹窗</li>
 <li>[ ] <strong>AC09-地址简称唯一性</strong>：同客户下"联系人-详细地址"拼接值不可重复，重复时阻断提示</li>
-<li>[ ] <strong>AC10-员工审核地址</strong>：员工点击"审核"查看地址详情，通过/拒绝流程同商品审核（拒绝需原因，通过需二次确认）</li>
+<li>[ ] <strong>AC10-员工审核地址</strong>：员工在「地址审核」页点击"审核"查看地址详情，通过/拒绝流程同商品审核（拒绝需原因，通过需二次确认）；员工端「收货地址管理」主列表不再展示审核状态/审核按钮</li>
 <li>[ ] <strong>AC11-货主端查看和编辑地址</strong>：待审核/已通过仅可"查看"（只读），已拒绝可"编辑"后重新提交；同一客户下root/子账户共享地址数据</li>
+<li>[ ] <strong>AC22-偏远邮编管理</strong>：员工端地址管理新增「偏远邮编管理」Tab，列表含国家/邮编/创建时间/创建人；支持导入(Excel模板+批量写入)、导出、删除(勾选+二次确认)；邮编字段不限类型（数字开头如 32256 或字母开头如 SW1A 1AA 均可）</li>
 </ul>
 <strong>通用</strong>
 <ul><li>[ ] <strong>AC12-货主端数据隔离</strong>：货主仅能查看/操作自己租户的商品和地址（tenant_id隔离）</li>
@@ -284,8 +294,9 @@
 <tr><td>B3</td><td>货主端查看地址详情（只读）</td><td>P0</td><td>AC11</td></tr>
 <tr><td>B4</td><td>货主端编辑已拒绝地址并重新提交</td><td>P0</td><td>AC11</td></tr>
 <tr><td>B5</td><td>员工端地址列表（含搜索：用户名称/联系人/电话 + 用户名称列）</td><td>P0</td><td>AC13, AC14</td></tr>
-<tr><td>B6</td><td>员工端审核地址（通过/拒绝+原因）</td><td>P0</td><td>AC10</td></tr>
+<tr><td>B6</td><td>员工端审核地址（通过/拒绝+原因，走独立审核页）</td><td>P0</td><td>AC10</td></tr>
 <tr><td>B7</td><td>员工端编辑地址</td><td>P0</td><td>AC10</td></tr>
+<tr><td>B8</td><td>员工端偏远邮编管理（导入/导出/删除）</td><td>P0</td><td>AC22</td></tr>
 </table></div>
 <strong>模块 C：标识管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
 <tr><td>------</td><td>------</td><td>--------</td><td>-----</td></tr>
@@ -296,7 +307,7 @@
 </table></div>
 <strong>分期汇总</strong></p><p><div class="table-wrapper"><table><tr><td>分期</td><td>模块范围</td><td>功能数</td></tr>
 <tr><td>------</td><td>----------</td><td>--------</td></tr>
-<tr><td><strong>Phase 1 (MVP)</strong></td><td>商品管理(A1-A8) + 收货地址管理(B1-B7) + 标识管理(C1-C4)</td><td><strong>18</strong></td></tr>
+<tr><td><strong>Phase 1 (MVP)</strong></td><td>商品管理(A1-A8) + 收货地址管理(B1-B8) + 标识管理(C1-C4)</td><td><strong>19</strong></td></tr>
 <tr><td><strong>Phase 2</strong></td><td>包材配置 + 产品条码 + 库存预警 + 批量审核 + Excel导入</td><td>待规划</td></tr>
 </table></div>
 <hr></p><p><h2 id="8-MVP-方案与建议">8. MVP 方案与建议</h2></p><p><strong>MVP 方案（Phase 1 — 基础资料核心CRUD+审核流程）</strong></p><p><pre><code>货主端

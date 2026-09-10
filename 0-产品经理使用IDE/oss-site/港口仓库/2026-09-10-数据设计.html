@@ -18,8 +18,8 @@
 </div>
 <div class="layout">
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-关键设计说明">四、关键设计说明</a></li></ul></nav>
-<div class="content"><div class="doc-content"><p><h1 id="数据设计-仓库管理">数据设计 — 仓库管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.2 | <strong>日期</strong>: 2026-08-28 | <strong>作者</strong>: AI PM
-<strong>上游文档</strong>: <code>2026-08-28-用户需求.md</code>
+<div class="content"><div class="doc-content"><p><h1 id="数据设计-仓库管理">数据设计 — 仓库管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.3 | <strong>日期</strong>: 2026-09-10 | <strong>作者</strong>: AI PM
+<strong>上游文档</strong>: <code>2026-09-10-用户需求.md</code>
 <strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 "平台仓库列表" + "仓库列表"</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
 <tr><td>Port (港口)</td><td><code>port</code></td><td>独立表</td><td>海运港口和空运港口基础数据，供运单系统引用</td></tr>
@@ -77,8 +77,6 @@
 <tr><td><code>platform</code></td><td>仓库所属平台</td><td>String(50)</td><td>Yes</td><td>—</td><td>下拉枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
 <tr><td><code>warehouse_code</code></td><td>仓库代码</td><td>String(50)</td><td>Yes</td><td><strong>Unique</strong> (tenant_id + warehouse_code 联合唯一索引)</td><td>如"BWI1""MEM1s""IND2"。唯一性校验</td></tr>
 <tr><td><code>country_code</code></td><td>国家代码</td><td>String(10)</td><td>Yes</td><td>—</td><td>如 US/GB/DE/CN，列表展示和搜索用</td></tr>
-<tr><td><code>data_source</code></td><td>数据来源</td><td>String(20)</td><td>No</td><td>—</td><td>系统同步 / 客户录入</td></tr>
-<tr><td><code>confirm_status</code></td><td>确认状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:未确认, 20:已确认。运单新建时默认10</td></tr>
 <tr><td><code>update_time</code></td><td>更新时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>最后更新时间</td></tr>
 <tr><td><code>creator</code></td><td>操作人</td><td>String(50)</td><td>No</td><td>—</td><td>创建/更新人</td></tr>
 <tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>自动生成</td></tr>
@@ -146,8 +144,6 @@
         String platform
         String warehouse_code
         String country_code
-        String data_source
-        TinyInt confirm_status
         DateTime update_time
         String creator
     }
@@ -173,7 +169,7 @@
 <li><strong>唯一约束</strong>：<code>overseas_warehouse</code> 表在 <code>(tenant_id, warehouse_code)</code> 上建立联合唯一索引，确保同一租户下仓库代码不重复。前端提交前校验 + 后端唯一索引双重保障。</li>
 <li><strong>派生字段说明</strong>：<code>address_abbr</code> 由前端根据 <code>warehouse_code + zip_code</code> 实时计算，后端同时存储一份便于列表展示和搜索。更新仓库代码或邮编时需同步更新所有关联地址的 <code>address_abbr</code>。</li>
 <li><strong>country_code 冗余</strong>：<code>overseas_warehouse.country_code</code> 与首个地址的 <code>country_code</code> 保持同步，支持列表级别的国家代码搜索，避免每次查询都需要 JOIN 地址表。</li>
-<li><strong>状态分离</strong>：<code>warehouse.status</code> 的"正常/已冻结"是生命周期控制；<code>overseas_warehouse.confirm_status</code> 的"已确认/未确认"是数据质量标记。两者互不干扰，各自独立流转。</li>
+<li><strong>状态分离</strong>：<code>warehouse.status</code> 的"正常/已冻结"是生命周期控制，独立流转。</li>
 <li><strong>手机号约束</strong>：<code>warehouse.phone</code> 限定为 <code>String(11)</code>，前端校验11位数字格式，后端 API 层同步校验。</li>
 <li><strong>外部接口</strong>：运单系统需通过 <code>GET /api/overseas-warehouses</code> 查询仓库列表，通过 <code>POST /api/overseas-warehouses</code> 新增仓库。新增接口需做幂等处理（基于 warehouse_code 去重），防止网络重试导致重复创建。</li>
 </ul></p></div></div>
