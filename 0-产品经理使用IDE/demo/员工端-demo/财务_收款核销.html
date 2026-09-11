@@ -31,19 +31,31 @@
 </head>
 <body>
     <div id="app">
-        <div class="content-card">
+        <!-- 上层卡片：查询区（按当前 Tab 切换条件） -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px;" v-if="activeTab === 'pending'">
+            <div class="search-area" style="flex-wrap: nowrap;">
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
+                    <el-input v-model="pendingSearch.billNo" placeholder="账单号" clearable style="width: 180px;"></el-input>
+                    <el-input v-model="pendingSearch.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
+                </div>
+                <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetPendingSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                    <el-button @click="handleExport">
+                        <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：Tab + 表格 -->
+        <div class="content-card" style="height: calc(100vh - 106px);">
             <el-tabs v-model="activeTab">
                 <el-tab-pane :label="'待核销 (' + pendingBills.length + ')'" name="pending">
-                    <div class="search-area">
-                        <el-input v-model="pendingSearch.billNo" placeholder="账单号" clearable style="width: 180px;"></el-input>
-                        <el-input v-model="pendingSearch.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
-                        <el-button class="btn-search-primary" @click="handleSearch">
-                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
-                        </el-button>
-                        <el-button class="btn-search-reset" @click="resetPendingSearch">
-                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
-                        </el-button>
-                    </div>
                     <el-table :data="filteredPendingBills" border style="width: 100%">
                         <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
                         <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
@@ -186,6 +198,7 @@
                     { writeoffNo: 'WO20260826001', billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', currency: 'CNY', amount: 2219.50, type: '核销', operator: '李伟', time: '2026-08-26 09:30', billRef: null }
                 ]);
 
+                const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetPendingSearch = () => { pendingSearch.billNo = ''; pendingSearch.customerName = ''; };
 
@@ -257,7 +270,7 @@
                 return {
                     activeTab, currencySymbol, currencyName, formatMoney,
                     pendingSearch, pendingBills, filteredPendingBills, walletBalance,
-                    writeoffs, handleSearch, resetPendingSearch,
+                    writeoffs, handleExport, handleSearch, resetPendingSearch,
                     writeoffVisible, writeoffForm, openWriteoff, submitWriteoff, reverseWriteoff
                 };
             }
@@ -271,3 +284,4 @@
     </script>
 </body>
 </html>
+

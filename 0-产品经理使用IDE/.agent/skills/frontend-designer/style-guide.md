@@ -187,6 +187,69 @@ const toggleStatus = (row) => {
 - 搜索字段描述写在 `placeholder` 内，不外部放 label
 - 不同 Tab 搜索条件独立（各自 `reactive` 对象）
 
+### 多 Tab 页面查询区规范 ★（统一标准，参考 `收货地址管理_主列表.html`）
+
+**位置：查询区永远在 Tab 上方，不放进 `el-tab-pane` 内。**
+
+两种等价写法，按页面是否需要表格撑满高度选择：
+
+- **两层卡片（推荐，表格需撑满可视高度时）**：上层 `height: auto; margin-bottom: 16px;` 放查询区，下层 `height: calc(100vh - 106px);` 放 Tab + 表格（参考 `收货地址管理_主列表.html`）
+- **同一卡片内**：查询行直接写在 `<el-tabs>` 之前（参考 `财务_账单管理.html`：查询条件 + 查询/重置/导出在左，页面级主操作按钮 `margin-left: auto` 在右）
+
+```html
+<!-- 两层卡片写法 -->
+<div class="content-card" style="height: auto; margin-bottom: 16px;">
+    <div class="search-area">
+        <template v-if="mainTab === 'a'"> …Tab A 条件 + 查询/重置 </template>
+        <template v-else-if="mainTab === 'b'"> …Tab B 条件 + 查询/重置 </template>
+    </div>
+</div>
+<div class="content-card" style="height: calc(100vh - 106px);">
+    <el-tabs v-model="mainTab"> … </el-tabs>
+</div>
+```
+
+- 条件按当前 Tab 用 `v-if` / `v-else-if` 分组切换（**不同 Tab 用各自的 `reactive` 对象**，互不清空）
+- 当前 Tab **没有任何查询条件时，整个查询区不渲染**（`v-if` 包住外层卡片）
+- Tab 内的「新增/生成/代充」等**操作按钮**与说明文字留在 Tab 内（它们不是查询条件）；**「查询/重置/导出」按钮随查询区放在上方**
+- 只有**单 Tab（无 `el-tabs`）**页面，查询区才直接放在内容卡片顶部
+
+### 查询条件数量与「更多」收起规范 ★
+
+- **≤ 3 个条件**：全部平铺展示，不出现「更多」
+- **> 3 个条件**：默认只显示**前 3 个**，其余收进「更多」；点击「更多」展开（图标切 `ArrowUp`），再点收起（`ArrowDown`）
+- 收起状态默认收起（`searchExpanded = false`）
+- 按钮组（查询 / 重置 / 导出 / 更多）**必须与条件同一行不换行**：条件区 `flex: 1; flex-wrap: wrap`，按钮组 `flex-shrink: 0`
+
+```html
+<div class="search-area" style="flex-wrap: nowrap;">
+    <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
+        <!-- 前 3 个条件 -->
+        <el-input …></el-input>
+        <el-select …></el-select>
+        <el-input …></el-input>
+        <template v-if="searchExpanded"><!-- 第 4 个及以后 --></template>
+    </div>
+    <div style="display: flex; gap: 16px; flex-shrink: 0;">
+        <el-button class="btn-search-primary" @click="handleSearch">…查询</el-button>
+        <el-button class="btn-search-reset" @click="resetSearch">…重置</el-button>
+        <el-button v-if="hasMoreCondition" @click="searchExpanded = !searchExpanded">
+            <el-icon style="margin-right: 4px;"><component :is="searchExpanded ? 'ArrowUp' : 'ArrowDown'" /></el-icon>{{ searchExpanded ? '收起' : '更多' }}
+        </el-button>
+        <el-button @click="handleExport">…导出</el-button>
+    </div>
+</div>
+```
+
+### 列表页标准按钮顺序
+
+查询 → 重置 → 更多（有则）→ 导出（有则）→ 右侧主操作按钮（新增/生成等，`margin-left: auto`）
+
+### 导出入口（Phase 1 占位）
+
+- 财务等模块的导出能力**需求已登记但一期不实现**：列表页统一保留「导出」按钮，点击提示「导出功能开发中，导出范围待确认」，不写真实导出逻辑
+- 参考先例：`财务_财务流水.html` 的「支付供应商」空态 Tab（`el-empty`）同为占位做法
+
 ## PDA 端代码模板
 
 ### 页面导航

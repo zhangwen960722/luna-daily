@@ -34,14 +34,17 @@
 </head>
 <body>
     <div id="app">
-        <div class="content-card">
-            <el-tabs v-model="activeTab">
-                <el-tab-pane :label="'待确认 (' + pendingBills.length + ')'" name="pending">
-                    <div class="search-area">
+        <!-- 查询区（上层独立卡片）：条件按当前 Tab 切换；「已核销」无查询条件，整卡不渲染 -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px;" v-if="activeTab === 'pending' || activeTab === 'confirmed'">
+            <div class="search-area" style="flex-wrap: nowrap;">
+                <template v-if="activeTab === 'pending'">
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
                         <el-input v-model="pendingSearch.billNo" placeholder="账单号" clearable style="width: 200px;"></el-input>
                         <el-select v-model="pendingSearch.currency" placeholder="币种" clearable style="width: 140px;">
                             <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
                         </el-select>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-shrink: 0;">
                         <el-button class="btn-search-primary" @click="handleSearch">
                             <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
                         </el-button>
@@ -49,6 +52,27 @@
                             <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
                         </el-button>
                     </div>
+                </template>
+                <template v-else-if="activeTab === 'confirmed'">
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
+                        <el-input v-model="confirmedSearch.billNo" placeholder="账单号" clearable style="width: 200px;"></el-input>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                        <el-button class="btn-search-primary" @click="handleSearch">
+                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        </el-button>
+                        <el-button class="btn-search-reset" @click="resetConfirmedSearch">
+                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        </el-button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- 内容区（下层卡片：Tab + 表格） -->
+        <div class="content-card" style="height: calc(100vh - 106px);">
+            <el-tabs v-model="activeTab">
+                <el-tab-pane :label="'待确认 (' + pendingBills.length + ')'" name="pending">
                     <el-table :data="filteredPendingBills" border style="width: 100%">
                         <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
                         <el-table-column prop="billingDate" label="账单日" min-width="110"></el-table-column>
@@ -75,15 +99,6 @@
                 </el-tab-pane>
 
                 <el-tab-pane :label="'已确认 (' + confirmedBills.length + ')'" name="confirmed">
-                    <div class="search-area">
-                        <el-input v-model="confirmedSearch.billNo" placeholder="账单号" clearable style="width: 200px;"></el-input>
-                        <el-button class="btn-search-primary" @click="handleSearch">
-                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
-                        </el-button>
-                        <el-button class="btn-search-reset" @click="resetConfirmedSearch">
-                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
-                        </el-button>
-                    </div>
                     <el-table :data="filteredConfirmedBills" border style="width: 100%">
                         <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
                         <el-table-column prop="billingDate" label="账单日" min-width="110"></el-table-column>

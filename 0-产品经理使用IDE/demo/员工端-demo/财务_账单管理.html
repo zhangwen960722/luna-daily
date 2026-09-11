@@ -31,24 +31,30 @@
 <body>
     <div id="app">
         <div class="content-card">
+            <!-- 查询区（Tab 上方，条件按当前 Tab 切换）+ 页面级操作 -->
             <div class="search-area" style="margin-bottom: 0;">
-                <el-button type="primary" @click="openGenerate">
-                    <el-icon style="margin-right: 4px;"><Plus /></el-icon>生成账单
-                </el-button>
-                <span style="color: #909399; font-size: 13px;">财务按 客户×主体×账期×币种 聚合已锁定的业务流水生成账单</span>
+                <template v-if="activeTab === 'pending'">
+                    <el-input v-model="pendingSearch.billNo" placeholder="账单号" clearable style="width: 180px;"></el-input>
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetPendingSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                    <el-button @click="handleExport">
+                        <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                    </el-button>
+                </template>
+                <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+                    <span style="color: #909399; font-size: 13px;">财务按 客户×主体×账期×币种 聚合已锁定的业务流水生成账单</span>
+                    <el-button type="primary" @click="openGenerate">
+                        <el-icon style="margin-right: 4px;"><Plus /></el-icon>生成账单
+                    </el-button>
+                </div>
             </div>
 
             <el-tabs v-model="activeTab">
                 <el-tab-pane :label="'待发送 (' + pendingSend.length + ')'" name="pending">
-                    <div class="search-area">
-                        <el-input v-model="pendingSearch.billNo" placeholder="账单号" clearable style="width: 180px;"></el-input>
-                        <el-button class="btn-search-primary" @click="handleSearch">
-                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
-                        </el-button>
-                        <el-button class="btn-search-reset" @click="resetPendingSearch">
-                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
-                        </el-button>
-                    </div>
                     <el-table :data="filteredPendingSend" border style="width: 100%">
                         <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
                         <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
@@ -165,7 +171,17 @@
                             <el-date-picker v-model="generateForm.billingDate" type="date" value-format="YYYY-MM-DD" placeholder="请选择账单日" style="width: 100%"></el-date-picker>
                         </el-form-item>
                     </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="账期天数" :required="!contractTermsDays">
+                            <div v-if="contractTermsDays" class="detail-value">{{ contractTermsDays }} 天（来自合同账期）</div>
+                            <el-input-number v-else v-model="generateForm.paymentTermsDays" :min="1" :max="365" :precision="0" :controls="false" style="width: 100%" placeholder="合同账期未完善，请补录账期天数"></el-input-number>
+                        </el-form-item>
+                    </el-col>
                 </el-row>
+
+                <div v-if="generateForm.customerName && generateForm.entityName && !contractTermsDays" style="background: #fdf6ec; border-radius: 4px; padding: 10px 16px; color: #E6A23C; font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
+                    该客户在该主体下的合同账期未完善（账期主数据在客商中心「客户管理 → 合同/账期」维护）。此处补录的账期天数仅用于本账单的账龄计算，账单将标记为「账期手工补录」。
+                </div>
 
                 <div class="section-title">可聚合业务流水</div>
                 <el-table :data="generatableFlows" border style="width: 100%" max-height="240">
@@ -203,6 +219,16 @@
                 <el-row :gutter="20">
                     <el-col :span="12"><span class="detail-label">账单日</span><div class="detail-value">{{ currentBill.billingDate }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">账单金额</span><div class="detail-value">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(currentBill.billAmount) }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <span class="detail-label">账期天数</span>
+                        <div class="detail-value">
+                            {{ currentBill.paymentTermsDays ? currentBill.paymentTermsDays + ' 天' : '—' }}
+                            <el-tag v-if="currentBill.termSource === '手工补录'" type="warning" size="small" style="margin-left: 8px;">账期手工补录</el-tag>
+                        </div>
+                    </el-col>
+                    <el-col :span="12"><span class="detail-label">账期来源</span><div class="detail-value">{{ currentBill.termSource || '合同账期' }}</div></el-col>
                 </el-row>
                 <div class="section-title" style="margin-top: 20px;">费用明细</div>
                 <el-table :data="currentBillDetails" border style="width: 100%">
@@ -244,17 +270,17 @@
                 const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
                 const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富利顿', '墨链'];
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
                 const customers = ['深圳市华美科技有限公司', '广州迅达贸易有限公司', '东莞新锐电子有限公司'];
 
                 const activeTab = ref('pending');
                 const pendingSearch = reactive({ billNo: '' });
 
                 const bills = reactive([
-                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1280.50, receivedAmount: 0, status: '已生成' },
-                    { billNo: 'AR-SZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'USD', billingDate: '2026-08-15', billAmount: 1200.00, receivedAmount: 0, status: '已生成' },
-                    { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 3500.00, receivedAmount: 2219.50, status: '部分核销' },
-                    { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 2800.00, receivedAmount: 2800.00, status: '已核销' }
+                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1280.50, receivedAmount: 0, status: '已生成', paymentTermsDays: 15, termSource: '合同账期' },
+                    { billNo: 'AR-SZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'USD', billingDate: '2026-08-15', billAmount: 1200.00, receivedAmount: 0, status: '已生成', paymentTermsDays: 30, termSource: '合同账期' },
+                    { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 3500.00, receivedAmount: 2219.50, status: '部分核销', paymentTermsDays: 15, termSource: '合同账期' },
+                    { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 2800.00, receivedAmount: 2800.00, status: '已核销', paymentTermsDays: 20, termSource: '手工补录' }
                 ]);
 
                 const billDetailsMap = {
@@ -281,12 +307,26 @@
                     const map = { '已发送': 'primary', '已确认': 'primary', '部分核销': 'warning' };
                     return map[status] || 'info';
                 };
+                const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetPendingSearch = () => { pendingSearch.billNo = ''; };
 
                 // === 生成账单 ===
                 const generateVisible = ref(false);
-                const generateForm = reactive({ customerName: '', entityName: '', currency: '', billingDate: '' });
+                const generateForm = reactive({ customerName: '', entityName: '', currency: '', billingDate: '', paymentTermsDays: null });
+
+                // 合同账期（来源：客商中心「客户管理 → 合同/账期」；香港线下签约等场景账期可能留空，需财务在生成账单时补录）
+                const contractTerms = {
+                    '深圳市华美科技有限公司|广州飞点': 15,
+                    '深圳市华美科技有限公司|深圳飞点': 30,
+                    '广州迅达贸易有限公司|广州飞点': 15,
+                    '广州迅达贸易有限公司|香港富力顿': 0,
+                    '东莞新锐电子有限公司|广东飞点': 0
+                };
+                const contractTermsDays = computed(() => {
+                    if (!generateForm.customerName || !generateForm.entityName) return 0;
+                    return contractTerms[generateForm.customerName + '|' + generateForm.entityName] || 0;
+                });
                 const lockedFlows = [
                     { waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '运费', amount: 1280.50 },
                     { waybillNo: 'WB20260729001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '运费', amount: 860.00 }
@@ -298,18 +338,21 @@
                 const totalGeneratable = computed(() => generatableFlows.value.reduce((sum, f) => sum + f.amount, 0));
 
                 const openGenerate = () => {
-                    generateForm.customerName = ''; generateForm.entityName = ''; generateForm.currency = ''; generateForm.billingDate = '';
+                    generateForm.customerName = ''; generateForm.entityName = ''; generateForm.currency = ''; generateForm.billingDate = ''; generateForm.paymentTermsDays = null;
                     generateVisible.value = true;
                 };
                 const submitGenerate = () => {
                     if (!generateForm.customerName || !generateForm.entityName || !generateForm.currency || !generateForm.billingDate) {
                         ElMessage.warning('请填写完整的账单信息'); return;
                     }
+                    if (!contractTermsDays.value && !generateForm.paymentTermsDays) {
+                        ElMessage.warning('该主体合同账期未完善，请补录账期天数'); return;
+                    }
                     if (generatableFlows.value.length === 0) {
                         ElMessage.warning('该条件下没有可聚合的已锁定业务流水'); return;
                     }
                     const datePart = generateForm.billingDate.substring(0, 7).replace('-', '');
-                    const entityCodeMap = { '广州飞点': 'GZ', '深圳飞点': 'SZ', '广东飞点': 'GD', '香港富利顿': 'HK', '墨链': 'ML' };
+                    const entityCodeMap = { '广州飞点': 'GZ', '深圳飞点': 'SZ', '广东飞点': 'GD', '香港富力顿': 'HK', '墨链': 'ML' };
                     const entityCode = entityCodeMap[generateForm.entityName] || 'GZ';
                     const seq = String(bills.length + 1).padStart(3, '0');
                     bills.unshift({
@@ -320,10 +363,12 @@
                         billingDate: generateForm.billingDate,
                         billAmount: Number(totalGeneratable.value.toFixed(2)),
                         receivedAmount: 0,
-                        status: '已生成'
+                        status: '已生成',
+                        paymentTermsDays: contractTermsDays.value || generateForm.paymentTermsDays,
+                        termSource: contractTermsDays.value ? '合同账期' : '手工补录'
                     });
                     generateVisible.value = false;
-                    ElMessage.success('账单已生成');
+                    ElMessage.success(contractTermsDays.value ? '账单已生成' : '账单已生成（账期手工补录）');
                 };
 
                 // === 账单详情 ===
@@ -347,8 +392,8 @@
                     activeTab, currencyOptions, entities, customers,
                     currencySymbol, currencyName, formatMoney,
                     pendingSearch, pendingSend, sent, settled, filteredPendingSend,
-                    statusTag, handleSearch, resetPendingSearch,
-                    generateVisible, generateForm, generatableFlows, totalGeneratable,
+                    statusTag, handleExport, handleSearch, resetPendingSearch,
+                    generateVisible, generateForm, generatableFlows, totalGeneratable, contractTermsDays,
                     openGenerate, submitGenerate,
                     detailVisible, currentBill, currentBillDetails, openDetail, sendBill
                 };
@@ -363,3 +408,4 @@
     </script>
 </body>
 </html>
+

@@ -26,32 +26,45 @@
 <body>
     <div id="app">
         <div class="content-card">
-            <div class="search-area">
-                <el-input v-model="searchForm.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
-                <el-select v-model="searchForm.entityName" placeholder="主体" clearable style="width: 140px;">
-                    <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
-                </el-select>
-                <el-select v-model="searchForm.currency" placeholder="币种" clearable style="width: 130px;">
-                    <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
-                </el-select>
-                <el-select v-model="searchForm.flowType" placeholder="流水类型" clearable style="width: 140px;">
-                    <el-option v-for="t in flowTypes" :key="t" :label="t" :value="t"></el-option>
-                </el-select>
-                <el-date-picker
-                    v-model="searchForm.dateRange"
-                    type="daterange"
-                    value-format="YYYY-MM-DD"
-                    range-separator="至"
-                    start-placeholder="开始日期"
-                    end-placeholder="结束日期"
-                    style="width: 260px;">
-                </el-date-picker>
-                <el-button class="btn-search-primary" @click="handleSearch">
-                    <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
-                </el-button>
-                <el-button class="btn-search-reset" @click="resetSearch">
-                    <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
-                </el-button>
+            <div class="search-area" style="flex-wrap: nowrap;">
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
+                    <el-input v-model="searchForm.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
+                    <el-select v-model="searchForm.entityName" placeholder="主体" clearable style="width: 140px;">
+                        <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                    </el-select>
+                    <el-select v-model="searchForm.currency" placeholder="币种" clearable style="width: 130px;">
+                        <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                    </el-select>
+                    <template v-if="searchExpanded">
+                        <el-select v-model="searchForm.flowType" placeholder="流水类型" clearable style="width: 140px;">
+                            <el-option v-for="t in flowTypes" :key="t" :label="t" :value="t"></el-option>
+                        </el-select>
+                        <el-date-picker
+                            v-model="searchForm.dateRange"
+                            type="daterange"
+                            value-format="YYYY-MM-DD"
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            style="width: 260px;">
+                        </el-date-picker>
+                    </template>
+                </div>
+                <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                    <el-button @click="searchExpanded = !searchExpanded">
+                        <el-icon v-if="searchExpanded" style="margin-right: 4px;"><ArrowUp /></el-icon>
+                        <el-icon v-else style="margin-right: 4px;"><ArrowDown /></el-icon>{{ searchExpanded ? '收起' : '更多' }}
+                    </el-button>
+                    <el-button @click="handleExport">
+                        <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                    </el-button>
+                </div>
             </div>
 
             <el-table :data="filteredFlows" border style="width: 100%">
@@ -102,7 +115,7 @@
                 const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
                 const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富利顿', '墨链'];
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
                 const flowTypes = ['充值', '充值退回', '提现', '账单核销', '账单核销撤销', '转汇'];
 
                 const searchForm = reactive({ customerName: '', entityName: '', currency: '', flowType: '', dateRange: [] });
@@ -114,7 +127,7 @@
                     { time: '2026-08-25 14:12', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', flowType: '充值', amount: 3200.00, balanceAfter: 3200.00, operator: '张珊', relatedNo: 'FD20260825003' },
                     { time: '2026-08-24 10:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', flowType: '转汇', amount: 1200.00, balanceAfter: 1200.00, operator: '王强', relatedNo: 'TR20260824001' },
                     { time: '2026-08-24 10:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '转汇', amount: -8640.00, balanceAfter: 3719.50, operator: '王强', relatedNo: 'TR20260824001' },
-                    { time: '2026-08-22 17:00', customerName: '广州迅达贸易有限公司', entityName: '香港富利顿', currency: 'HKD', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, operator: '张珊', relatedNo: 'FD20260822005' },
+                    { time: '2026-08-22 17:00', customerName: '广州迅达贸易有限公司', entityName: '香港富力顿', currency: 'HKD', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, operator: '张珊', relatedNo: 'FD20260822005' },
                     { time: '2026-08-20 11:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '提现', amount: -500.00, balanceAfter: 4219.50, operator: '李伟', relatedNo: 'WD20260820001' }
                 ];
 
@@ -139,14 +152,16 @@
                     const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '账单核销': 'danger', '账单核销撤销': 'success', '转汇': 'primary' };
                     return map[type] || 'info';
                 };
+                const searchExpanded = ref(false);
+                const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetSearch = () => { searchForm.customerName = ''; searchForm.entityName = ''; searchForm.currency = ''; searchForm.flowType = ''; searchForm.dateRange = []; };
 
                 return {
                     currencyOptions, entities, flowTypes,
                     currencySymbol, currencyName, formatMoney,
-                    searchForm, filteredFlows, flowTypeTag,
-                    handleSearch, resetSearch
+                    searchForm, searchExpanded, filteredFlows, flowTypeTag,
+                    handleExport, handleSearch, resetSearch
                 };
             }
         });
@@ -159,3 +174,4 @@
     </script>
 </body>
 </html>
+

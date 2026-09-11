@@ -30,24 +30,36 @@
 </head>
 <body>
     <div id="app">
-        <div class="content-card">
+        <!-- 上层卡片：查询区（按当前 Tab 切换条件；代充/提现 Tab 无查询条件时不渲染） -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px;" v-if="activeTab === 'audit'">
+            <div class="search-area" style="flex-wrap: nowrap;">
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
+                    <el-input v-model="auditSearch.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
+                    <el-select v-model="auditSearch.status" placeholder="状态" clearable style="width: 130px;">
+                        <el-option label="待审核" value="待审核"></el-option>
+                        <el-option label="已通过" value="已通过"></el-option>
+                        <el-option label="已驳回" value="已驳回"></el-option>
+                    </el-select>
+                </div>
+                <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetAuditSearch">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                    <el-button @click="handleExport">
+                        <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：Tab + 表格 -->
+        <div class="content-card" style="height: calc(100vh - 106px);">
             <el-tabs v-model="activeTab">
                 <!-- Tab 1: 充值审核 -->
                 <el-tab-pane :label="'充值审核 (' + pendingApplies.length + ')'" name="audit">
-                    <div class="search-area">
-                        <el-input v-model="auditSearch.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
-                        <el-select v-model="auditSearch.status" placeholder="状态" clearable style="width: 130px;">
-                            <el-option label="待审核" value="待审核"></el-option>
-                            <el-option label="已通过" value="已通过"></el-option>
-                            <el-option label="已驳回" value="已驳回"></el-option>
-                        </el-select>
-                        <el-button class="btn-search-primary" @click="handleSearch">
-                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
-                        </el-button>
-                        <el-button class="btn-search-reset" @click="resetAuditSearch">
-                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
-                        </el-button>
-                    </div>
                     <el-table :data="filteredApplies" border style="width: 100%">
                         <el-table-column prop="applyNo" label="充值单号" min-width="140"></el-table-column>
                         <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
@@ -273,7 +285,7 @@
                 const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
                 const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富利顿', '墨链'];
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
                 const customers = ['深圳市华美科技有限公司', '广州迅达贸易有限公司', '东莞新锐电子有限公司'];
 
                 const activeTab = ref('audit');
@@ -293,6 +305,7 @@
                     if (auditSearch.status) data = data.filter(a => a.status === auditSearch.status);
                     return data;
                 });
+                const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetAuditSearch = () => { auditSearch.customerName = ''; auditSearch.status = ''; };
 
@@ -365,7 +378,7 @@
                     '深圳市华美科技有限公司-广州飞点-CNY': 3719.50,
                     '深圳市华美科技有限公司-深圳飞点-CNY': 3200.00,
                     '广州迅达贸易有限公司-广州飞点-CNY': 5800.00,
-                    '广州迅达贸易有限公司-香港富利顿-HKD': 25000.00,
+                    '广州迅达贸易有限公司-香港富力顿-HKD': 25000.00,
                     '东莞新锐电子有限公司-广东飞点-CNY': 12000.00
                 };
                 const currentBalance = computed(() => {
@@ -405,7 +418,7 @@
                     activeTab, currencyOptions, entities, customers,
                     currencySymbol, currencyName, formatMoney,
                     auditSearch, rechargeApplies, pendingApplies, filteredApplies,
-                    handleSearch, resetAuditSearch,
+                    handleExport, handleSearch, resetAuditSearch,
                     applyDetailVisible, currentApply, openApplyDetail, approveApply, rejectApply,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRecords, opRules,
                     openRecharge, submitRecharge,
@@ -423,3 +436,4 @@
     </script>
 </body>
 </html>
+

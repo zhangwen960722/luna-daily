@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>资金账户管理 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; overflow: auto; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+
+        .hint-bar { background: #f8f9fa; border-radius: 4px; padding: 10px 16px; color: #909399; font-size: 13px; line-height: 1.6; margin-bottom: 16px; border-left: 3px solid #2DA44E; }
+        .balance { color: #303133; font-weight: 500; }
+        .amount-in { color: #67C23A; font-weight: 500; }
+        .amount-out { color: #F56C6C; font-weight: 500; }
+        .unreceived { color: #F56C6C; }
+        .row-disabled { color: #C0C4CC; }
+
+        .section-title {
+            font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 1px solid #E4E7ED; display: flex; align-items: center;
+        }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: #2DA44E; margin-right: 8px; border-radius: 2px; }
+
+        .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
+        .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 上层卡片：查询区（按当前 Tab 切换条件；我司账户 >3 个条件时收进「更多」） -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px;">
+            <div class="search-area" style="flex-wrap: nowrap;">
+                <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
+                    <template v-if="activeTab === 'bank'">
+                        <el-select v-model="bankSearch.entityName" placeholder="账户主体" clearable style="width: 150px;">
+                            <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                        </el-select>
+                        <el-select v-model="bankSearch.currency" placeholder="币种" clearable style="width: 140px;">
+                            <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                        </el-select>
+                        <el-input v-model="bankSearch.keyword" placeholder="账户名称 / 账号" clearable style="width: 200px;"></el-input>
+                        <el-select v-if="searchExpanded" v-model="bankSearch.visible" placeholder="用户是否可见" clearable style="width: 150px;">
+                            <el-option label="可见" value="visible"></el-option>
+                            <el-option label="不可见" value="hidden"></el-option>
+                        </el-select>
+                    </template>
+                    <template v-else>
+                        <el-input v-model="walletSearch.customerName" placeholder="客户名称" clearable style="width: 220px;"></el-input>
+                        <el-select v-model="walletSearch.entityName" placeholder="账户主体" clearable style="width: 150px;">
+                            <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                        </el-select>
+                        <el-select v-model="walletSearch.currency" placeholder="币种" clearable style="width: 140px;">
+                            <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                        </el-select>
+                    </template>
+                </div>
+                <div style="display: flex; gap: 12px; flex-shrink: 0;">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="handleReset">
+                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    </el-button>
+                    <el-button v-if="activeTab === 'bank'" @click="searchExpanded = !searchExpanded">
+                        <el-icon v-if="searchExpanded" style="margin-right: 4px;"><ArrowUp /></el-icon>
+                        <el-icon v-else style="margin-right: 4px;"><ArrowDown /></el-icon>{{ searchExpanded ? '收起' : '更多' }}
+                    </el-button>
+                    <el-button @click="handleExport">
+                        <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                    </el-button>
+                    <el-button type="primary" @click="handleAdd">
+                        <el-icon style="margin-right: 4px;"><Plus /></el-icon>{{ activeTab === 'bank' ? '新增账户' : '新增钱包' }}
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：Tab + 表格 -->
+        <div class="content-card" style="height: calc(100vh - 106px);">
+            <el-tabs v-model="activeTab">
+                <!-- ============ Tab 1：我司账户 ============ -->
+                <el-tab-pane :label="'我司账户 (' + bankAccounts.length + ')'" name="bank">
+
+                    <div class="hint-bar">
+                        我司账户按主体维护，一主体可多账户（单币种）。「用户是否可见」= 是 时，客户在货主端充值时可将该账户作为打款账户；默认打款账户必须可见。「余额」为财务手工维护的账面余额，非银行实时余额。
+                    </div>
+
+                    <el-table :data="filteredBankAccounts" border style="width: 100%" :row-class-name="bankRowClass">
+                        <el-table-column prop="entityName" label="账户主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="accountName" label="账户名称" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="bankName" label="开户行" min-width="170" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="accountNo" label="账号" min-width="160"></el-table-column>
+                        <el-table-column label="余额" min-width="140" align="right">
+                            <template #default="scope"><span class="balance">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.balance) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="用户是否可见" min-width="120" align="center">
+                            <template #default="scope">
+                                <el-tag v-if="scope.row.status === '停用'" type="info" size="small">已停用</el-tag>
+                                <el-switch v-else :model-value="scope.row.visible" @change="toggleVisible(scope.row)"></el-switch>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="默认账户" min-width="100" align="center">
+                            <template #default="scope">
+                                <el-tag v-if="scope.row.isDefault" type="success" size="small">默认</el-tag>
+                                <span v-else style="color: #C0C4CC;">—</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="140" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openEditBank(scope.row)">编辑</el-button>
+                                <el-button v-if="scope.row.status === '启用'" link type="danger" size="small" @click="toggleBankStatus(scope.row)">停用</el-button>
+                                <el-button v-else link type="primary" size="small" @click="toggleBankStatus(scope.row)">启用</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredBankAccounts.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+
+                <!-- ============ Tab 2：客户资金账户 ============ -->
+                <el-tab-pane :label="'客户资金账户 (' + wallets.length + ')'" name="wallet">
+                    <div class="hint-bar">
+                        客户资金账户 = 客户 × 主体 × 币种，一行一个钱包。「实际金额 = 余额 − 待核销欠款」；客户敞口 = 待核销欠款 + 待确认账单。钱包余额不可透支；跨币种结算请先在行内做「币种互转」。
+                    </div>
+
+                    <el-table :data="filteredWallets" border style="width: 100%">
+                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="账户主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="accountName" label="账户名称" min-width="140"></el-table-column>
+                        <el-table-column label="余额" min-width="130" align="right">
+                            <template #default="scope"><span class="balance">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.balance) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="待核销欠款" min-width="130" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.pendingWriteoff) }}</template>
+                        </el-table-column>
+                        <el-table-column label="待确认账单" min-width="130" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.pendingConfirm) }}</template>
+                        </el-table-column>
+                        <el-table-column label="实际金额" min-width="130" align="right">
+                            <template #default="scope">
+                                <span :class="actualAmount(scope.row) < 0 ? 'amount-out' : 'balance'">
+                                    {{ actualAmount(scope.row) < 0 ? '-' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(Math.abs(actualAmount(scope.row))) }}
+                                </span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="开通方式" min-width="110" align="center">
+                            <template #default="scope">
+                                <el-tag :type="scope.row.openSource === '财务手工' ? 'warning' : 'success'" size="small">{{ scope.row.openSource }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="160" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openTransfer(scope.row)">币种互转</el-button>
+                                <el-button link type="primary" size="small" @click="openWalletFlows(scope.row)">查看流水</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredWallets.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
+        </div>
+
+        <!-- 新增 / 编辑银行账户弹窗 -->
+        <el-dialog v-model="bankDialogVisible" :title="isEdit ? '编辑银行账户' : '新增银行账户'" width="600px" destroy-on-close>
+            <el-form ref="bankFormRef" :model="bankForm" :rules="bankRules" label-position="top">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="账户主体" prop="entityName">
+                            <el-select v-model="bankForm.entityName" placeholder="请选择账户主体" style="width: 100%">
+                                <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="币种" prop="currency">
+                            <el-select v-model="bankForm.currency" placeholder="请选择币种" style="width: 100%">
+                                <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="账户名称" prop="accountName">
+                    <el-input v-model="bankForm.accountName" placeholder="请输入开户名（银行账户名称）"></el-input>
+                </el-form-item>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="开户行" prop="bankName">
+                            <el-input v-model="bankForm.bankName" placeholder="请输入开户行"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="账号" prop="accountNo">
+                            <el-input v-model="bankForm.accountNo" placeholder="请输入银行账号" :disabled="isEdit"></el-input>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col v-if="bankForm.currency && bankForm.currency !== 'CNY'" :span="12">
+                        <el-form-item label="SWIFT / BIC" prop="swiftCode">
+                            <el-input v-model="bankForm.swiftCode" placeholder="境外打款需填写，如 HSBCHKHHHKH"></el-input>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="账面余额" prop="balance">
+                            <el-input-number v-model="bankForm.balance" :min="0" :precision="2" :controls="false" style="width: 100%" placeholder="财务手工维护"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="用户是否可见" prop="visible">
+                            <el-switch v-model="bankForm.visible" @change="onVisibleChange"></el-switch>
+                            <span style="margin-left: 8px; color: #909399; font-size: 13px;">可见时客户充值可选该账户</span>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="是否默认打款账户" prop="isDefault">
+                            <el-switch v-model="bankForm.isDefault" :disabled="!bankForm.visible"></el-switch>
+                            <span v-if="!bankForm.visible" style="margin-left: 8px; color: #C0C4CC; font-size: 13px;">不可见账户不可设为默认</span>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
+                    用户是否可见 = 是 时，客户在货主端「资金账户 → 充值」中选择打款账户时可看到该账户；同一主体 + 币种下仅允许一个默认打款账户，默认账户必须可见。账号为账户唯一标识，创建后不可修改。
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="bankDialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitBank">{{ isEdit ? '保存' : '确认新增' }}</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 新增钱包弹窗 -->
+        <el-dialog v-model="addWalletVisible" title="新增钱包" width="560px" destroy-on-close>
+            <el-form ref="addWalletFormRef" :model="addWalletForm" :rules="addWalletRules" label-position="top">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="客户" prop="customerName">
+                            <el-select v-model="addWalletForm.customerName" placeholder="请选择客户" style="width: 100%" filterable @change="onWalletCustomerChange">
+                                <el-option v-for="c in customers" :key="c" :label="c" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="账户主体" prop="entityName">
+                            <el-select v-model="addWalletForm.entityName" placeholder="请选择账户主体" style="width: 100%" :disabled="!addWalletForm.customerName" @change="onWalletEntityChange">
+                                <el-option v-for="e in walletEntityOptions" :key="e.entityName" :label="e.entityName" :value="e.entityName"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="币种" prop="currency">
+                    <el-select v-model="addWalletForm.currency" placeholder="请选择币种" style="width: 100%" :disabled="!addWalletForm.entityName">
+                        <el-option v-for="c in walletCurrencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                    </el-select>
+                </el-form-item>
+                <div v-if="walletContractHint" style="background: #fdf6ec; border-radius: 4px; padding: 10px 16px; color: #E6A23C; font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
+                    {{ walletContractHint }}
+                </div>
+                <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
+                    系统已在合同签约完成时自动开通该主体的人民币钱包，此处用于补开其他币种（如美元、港币）。主体仅可选择该客户<strong>签约过</strong>的主体（含已过期/已解约，用于存量账单结算与赔付入账）；未签约主体请先前往客商中心完成合同签约。
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="addWalletVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitAddWallet">确认开通</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 币种互转弹窗 -->
+        <el-dialog v-model="transferVisible" title="币种互转" width="620px" destroy-on-close>
+            <el-form ref="transferFormRef" :model="transferForm" :rules="transferRules" label-position="top">
+                <div class="section-title">转出信息</div>
+                <el-row :gutter="20">
+                    <el-col :span="8">
+                        <span class="detail-label">客户</span>
+                        <div class="detail-value">{{ transferForm.customerName }}</div>
+                    </el-col>
+                    <el-col :span="8">
+                        <span class="detail-label">账户主体</span>
+                        <div class="detail-value">{{ transferForm.entityName }}</div>
+                    </el-col>
+                    <el-col :span="8">
+                        <span class="detail-label">转出币种</span>
+                        <div class="detail-value">{{ currencyName(transferForm.fromCurrency) }}（余额 {{ currencySymbol(transferForm.fromCurrency) }}{{ formatMoney(transferForm.fromBalance) }}）</div>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="20" style="margin-top: 16px;">
+                    <el-col :span="12">
+                        <el-form-item label="转出金额" prop="fromAmount">
+                            <el-input-number v-model="transferForm.fromAmount" :min="0.01" :precision="2" :step="100" style="width: 100%" :controls="false" placeholder="请输入转出金额"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="转入币种" prop="toCurrency">
+                            <el-select v-model="transferForm.toCurrency" placeholder="请选择转入币种" style="width: 100%" @change="onToCurrencyChange">
+                                <el-option v-for="c in toCurrencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+
+                <div class="section-title" style="margin-top: 20px;">汇率与转入金额</div>
+                <el-row :gutter="20">
+                    <el-col :span="8">
+                        <span class="detail-label">接口汇率（阿里实时获取）</span>
+                        <div class="detail-value">{{ transferForm.realtimeRate || '—' }}</div>
+                    </el-col>
+                    <el-col :span="8">
+                        <el-form-item label="手工覆盖汇率" prop="rate">
+                            <el-input-number v-model="transferForm.rate" :min="0.000001" :precision="6" style="width: 100%" :controls="false"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="8">
+                        <span class="detail-label">转入金额（自动计算）</span>
+                        <div class="detail-value balance">{{ currencySymbol(transferForm.toCurrency) }}{{ formatMoney(computedToAmount) }}</div>
+                    </el-col>
+                </el-row>
+                <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
+                    汇率说明：汇率由阿里汇率接口实时获取并以「接口汇率」预填，可手工覆盖（接口超时/异常时手工填写，来源记为手工覆盖）；1 {{ currencyName(transferForm.toCurrency || '—') }} = {{ transferForm.rate || '—' }} {{ currencyName(transferForm.fromCurrency || '—') }}；转入金额 = 转出金额 ÷ 汇率。一期暂不记汇损。
+                </div>
+            </el-form>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="transferVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitTransfer">确认互转</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 客户资金账户 · 资金流水弹窗（只读） -->
+        <el-dialog v-model="flowDialogVisible" title="资金流水（客户资金账户）" width="720px" destroy-on-close>
+            <div class="section-title">账户信息</div>
+            <el-row :gutter="20">
+                <el-col :span="12">
+                    <span class="detail-label">客户</span>
+                    <div class="detail-value">{{ currentWallet.customerName }}</div>
+                </el-col>
+                <el-col :span="12">
+                    <span class="detail-label">账户主体</span>
+                    <div class="detail-value">{{ currentWallet.entityName }}</div>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 12px;">
+                <el-col :span="12">
+                    <span class="detail-label">账户名称</span>
+                    <div class="detail-value">{{ currentWallet.accountName }}</div>
+                </el-col>
+                <el-col :span="12">
+                    <span class="detail-label">币种</span>
+                    <div class="detail-value">{{ currencyName(currentWallet.currency) }}</div>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 12px;">
+                <el-col :span="8">
+                    <span class="detail-label">余额</span>
+                    <div class="detail-value balance">{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(currentWallet.balance) }}</div>
+                </el-col>
+                <el-col :span="8">
+                    <span class="detail-label">待核销欠款</span>
+                    <div class="detail-value">{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(currentWallet.pendingWriteoff) }}</div>
+                </el-col>
+                <el-col :span="8">
+                    <span class="detail-label">实际金额</span>
+                    <div class="detail-value" :class="actualAmount(currentWallet) < 0 ? 'amount-out' : 'balance'">
+                        {{ actualAmount(currentWallet) < 0 ? '-' : '' }}{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(Math.abs(actualAmount(currentWallet))) }}
+                    </div>
+                </el-col>
+            </el-row>
+
+            <div class="section-title" style="margin-top: 20px;">资金流水</div>
+            <el-table :data="currentWalletFlows" border style="width: 100%">
+                <el-table-column prop="time" label="时间" min-width="150"></el-table-column>
+                <el-table-column prop="flowType" label="流水类型" min-width="110" align="center">
+                    <template #default="scope">
+                        <el-tag :type="flowTypeTag(scope.row.flowType)" size="small">{{ scope.row.flowType }}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="变动金额" min-width="120" align="right">
+                    <template #default="scope">
+                        <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">{{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(scope.row.amount) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="变动后余额" min-width="120" align="right">
+                    <template #default="scope">{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(scope.row.balanceAfter) }}</template>
+                </el-table-column>
+                <el-table-column prop="relatedNo" label="关联单号" min-width="150"></el-table-column>
+            </el-table>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="flowDialogVisible = false">关 闭</el-button>
+                </span>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' },
+                    'PHP': { symbol: '₱', name: '比索' },
+                    'JPY': { symbol: '¥', name: '日元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR', 'PHP', 'JPY'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
+                const customers = ['深圳市华美科技有限公司', '广州迅达贸易有限公司', '东莞新锐电子有限公司'];
+
+                const activeTab = ref('bank');
+
+                // ==================== Tab 1：我司账户 ====================
+                const bankAccounts = reactive([
+                    { id: 1, entityName: '广州飞点', currency: 'CNY', accountName: '广州飞点', bankName: '招商银行深圳分行', accountNo: '7559 1234 5678', swiftCode: '', balance: 1286430.50, visible: true, isDefault: true, status: '启用' },
+                    { id: 2, entityName: '广州飞点', currency: 'USD', accountName: '广州飞点', bankName: '中国银行深圳分行', accountNo: '7654 3210 9876', swiftCode: 'BKCHCNBJ', balance: 358200.00, visible: true, isDefault: true, status: '启用' },
+                    { id: 3, entityName: '深圳飞点', currency: 'CNY', accountName: '深圳飞点', bankName: '工商银行深圳分行', accountNo: '4000 1111 2222', swiftCode: '', balance: 642800.00, visible: true, isDefault: true, status: '启用' },
+                    { id: 4, entityName: '广东飞点', currency: 'CNY', accountName: '广东飞点', bankName: '建设银行广州分行', accountNo: '4400 2222 3333', swiftCode: '', balance: 512300.00, visible: true, isDefault: true, status: '启用' },
+                    { id: 5, entityName: '香港富力顿', currency: 'HKD', accountName: '香港富力顿', bankName: '汇丰银行香港总行', accountNo: '123-456-789', swiftCode: 'HSBCHKHHHKH', balance: 890000.00, visible: true, isDefault: true, status: '启用' },
+                    { id: 6, entityName: '香港富力顿', currency: 'USD', accountName: '香港富力顿', bankName: '汇丰银行香港总行（美元户）', accountNo: '123-456-790', swiftCode: 'HSBCHKHHHKH', balance: 120500.00, visible: false, isDefault: false, status: '启用' },
+                    { id: 7, entityName: '墨链', currency: 'CNY', accountName: '墨链', bankName: '平安银行广州分行', accountNo: '1500 8888 6666', swiftCode: '', balance: 96400.00, visible: true, isDefault: true, status: '启用' },
+                    { id: 8, entityName: '深圳飞点', currency: 'USD', accountName: '深圳飞点', bankName: '中国银行深圳分行（旧户）', accountNo: '7654 3210 1111', swiftCode: 'BKCHCNBJ', balance: 0.00, visible: false, isDefault: false, status: '停用' }
+                ]);
+
+                const bankSearch = reactive({ entityName: '', currency: '', keyword: '', visible: '' });
+
+                const filteredBankAccounts = computed(() => {
+                    let data = bankAccounts;
+                    if (bankSearch.entityName) data = data.filter(a => a.entityName === bankSearch.entityName);
+                    if (bankSearch.currency) data = data.filter(a => a.currency === bankSearch.currency);
+                    if (bankSearch.keyword) data = data.filter(a => a.accountName.includes(bankSearch.keyword) || a.accountNo.includes(bankSearch.keyword));
+                    if (bankSearch.visible === 'visible') data = data.filter(a => a.visible);
+                    if (bankSearch.visible === 'hidden') data = data.filter(a => !a.visible);
+                    return data;
+                });
+
+                const bankRowClass = ({ row }) => row.status === '停用' ? 'row-disabled' : '';
+
+                const resetBankSearch = () => {
+                    bankSearch.entityName = ''; bankSearch.currency = ''; bankSearch.keyword = ''; bankSearch.visible = '';
+                };
+
+                const toggleVisible = (row) => {
+                    const next = !row.visible;
+                    const text = next
+                        ? `确认将「${row.entityName} ${currencyName(row.currency)}」账户设为客户可见？客户充值可选择该账户打款。`
+                        : `确认将「${row.entityName} ${currencyName(row.currency)}」账户设为不可见？客户充值将无法选择该账户。`;
+                    ElMessageBox.confirm(text, next ? '设为可见' : '设为不可见', {
+                        confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning'
+                    }).then(() => {
+                        row.visible = next;
+                        if (!next && row.isDefault) {
+                            row.isDefault = false;
+                            ElMessage.success('已设为不可见，并同时取消其默认打款账户');
+                        } else {
+                            ElMessage.success(next ? '已设为客户可见' : '已设为客户不可见');
+                        }
+                    }).catch(() => {});
+                };
+
+                const toggleBankStatus = (row) => {
+                    const isDisable = row.status === '启用';
+                    const text = isDisable
+                        ? `确认停用「${row.entityName} ${currencyName(row.currency)} ${row.accountNo}」账户？停用后该账户不再出现在客户充值的打款账户中，历史充值单与资金流水不受影响。`
+                        : `确认启用「${row.entityName} ${currencyName(row.currency)} ${row.accountNo}」账户？`;
+                    ElMessageBox.confirm(text, isDisable ? '停用账户' : '启用账户', {
+                        confirmButtonText: isDisable ? '确认停用' : '确认启用', cancelButtonText: '取消', type: 'warning'
+                    }).then(() => {
+                        row.status = isDisable ? '停用' : '启用';
+                        if (isDisable) { row.visible = false; row.isDefault = false; }
+                        ElMessage.success(isDisable ? '账户已停用' : '账户已启用');
+                    }).catch(() => {});
+                };
+
+                const bankDialogVisible = ref(false);
+                const bankFormRef = ref(null);
+                const isEdit = ref(false);
+                const editId = ref(null);
+                const bankForm = reactive({
+                    entityName: '', currency: '', accountName: '', bankName: '', accountNo: '',
+                    swiftCode: '', balance: null, visible: true, isDefault: false
+                });
+                const bankRules = {
+                    entityName: [{ required: true, message: '请选择账户主体', trigger: 'change' }],
+                    currency: [{ required: true, message: '请选择币种', trigger: 'change' }],
+                    accountName: [{ required: true, message: '请输入账户名称', trigger: 'blur' }],
+                    bankName: [{ required: true, message: '请输入开户行', trigger: 'blur' }],
+                    accountNo: [{ required: true, message: '请输入账号', trigger: 'blur' }]
+                };
+
+                const openAddBank = () => {
+                    isEdit.value = false; editId.value = null;
+                    bankForm.entityName = ''; bankForm.currency = ''; bankForm.accountName = '';
+                    bankForm.bankName = ''; bankForm.accountNo = ''; bankForm.swiftCode = '';
+                    bankForm.balance = null; bankForm.visible = true; bankForm.isDefault = false;
+                    bankDialogVisible.value = true;
+                };
+
+                const openEditBank = (row) => {
+                    isEdit.value = true; editId.value = row.id;
+                    bankForm.entityName = row.entityName; bankForm.currency = row.currency;
+                    bankForm.accountName = row.accountName; bankForm.bankName = row.bankName;
+                    bankForm.accountNo = row.accountNo; bankForm.swiftCode = row.swiftCode || '';
+                    bankForm.balance = row.balance; bankForm.visible = row.visible; bankForm.isDefault = row.isDefault;
+                    bankDialogVisible.value = true;
+                };
+
+                const onVisibleChange = (val) => {
+                    if (!val) bankForm.isDefault = false;
+                };
+
+                const submitBank = () => {
+                    if (!bankForm.entityName || !bankForm.currency || !bankForm.accountName || !bankForm.bankName || !bankForm.accountNo) {
+                        ElMessage.warning('请填写完整的账户信息'); return;
+                    }
+                    const dup = bankAccounts.some(a => a.accountNo === bankForm.accountNo && a.id !== editId.value);
+                    if (dup) { ElMessage.warning('该账号已存在'); return; }
+                    if (bankForm.isDefault && !bankForm.visible) { ElMessage.warning('不可见的账户不能设为默认打款账户'); return; }
+                    if (bankForm.isDefault) {
+                        const other = bankAccounts.find(a => a.entityName === bankForm.entityName && a.currency === bankForm.currency && a.isDefault && a.id !== editId.value);
+                        if (other) { ElMessage.warning('该主体下该币种已有默认打款账户，请先取消原默认'); return; }
+                    }
+                    if (isEdit.value) {
+                        const row = bankAccounts.find(a => a.id === editId.value);
+                        row.entityName = bankForm.entityName; row.currency = bankForm.currency;
+                        row.accountName = bankForm.accountName; row.bankName = bankForm.bankName;
+                        row.swiftCode = bankForm.swiftCode; row.balance = bankForm.balance || 0;
+                        row.visible = bankForm.visible; row.isDefault = bankForm.isDefault;
+                        ElMessage.success('账户已保存');
+                    } else {
+                        bankAccounts.push({
+                            id: bankAccounts.length + 1,
+                            entityName: bankForm.entityName, currency: bankForm.currency,
+                            accountName: bankForm.accountName, bankName: bankForm.bankName,
+                            accountNo: bankForm.accountNo, swiftCode: bankForm.swiftCode,
+                            balance: bankForm.balance || 0, visible: bankForm.visible,
+                            isDefault: bankForm.isDefault, status: '启用'
+                        });
+                        ElMessage.success('银行账户已新增');
+                    }
+                    bankDialogVisible.value = false;
+                };
+
+                // ==================== Tab 2：客户资金账户（钱包） ====================
+                const wallets = reactive([
+                    { id: 1, customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', accountName: '1000001 CNY', balance: 3719.50, pendingWriteoff: 1280.50, pendingConfirm: 800.00, openSource: '系统自动' },
+                    { id: 2, customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', accountName: '1000002 USD', balance: 1200.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' },
+                    { id: 3, customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', accountName: '1000003 CNY', balance: 3200.00, pendingWriteoff: 3500.00, pendingConfirm: 200.00, openSource: '系统自动' },
+                    { id: 4, customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', accountName: '1000004 CNY', balance: 5800.00, pendingWriteoff: 2219.50, pendingConfirm: 0.00, openSource: '系统自动' },
+                    { id: 5, customerName: '广州迅达贸易有限公司', entityName: '香港富力顿', currency: 'HKD', accountName: '1000005 HKD', balance: 25000.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' },
+                    { id: 6, customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', accountName: '1000006 CNY', balance: 12000.00, pendingWriteoff: 8000.00, pendingConfirm: 3000.00, openSource: '系统自动' },
+                    { id: 7, customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', accountName: '1000007 USD', balance: 0.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' }
+                ]);
+
+                // 客户签约过的主体（含已过期/已解约）：手工开通钱包的主体边界
+                const customerContracts = {
+                    '深圳市华美科技有限公司': [
+                        { entityName: '广州飞点', status: '已签署' },
+                        { entityName: '深圳飞点', status: '已解约' }
+                    ],
+                    '广州迅达贸易有限公司': [
+                        { entityName: '广州飞点', status: '已解约' },
+                        { entityName: '香港富力顿', status: '已签署' }
+                    ],
+                    '东莞新锐电子有限公司': [
+                        { entityName: '广东飞点', status: '已签署' }
+                    ]
+                };
+
+                const walletSearch = reactive({ customerName: '', entityName: '', currency: '' });
+
+                const filteredWallets = computed(() => {
+                    let data = wallets;
+                    if (walletSearch.customerName) data = data.filter(w => w.customerName.includes(walletSearch.customerName));
+                    if (walletSearch.entityName) data = data.filter(w => w.entityName === walletSearch.entityName);
+                    if (walletSearch.currency) data = data.filter(w => w.currency === walletSearch.currency);
+                    return data;
+                });
+
+                const resetWalletSearch = () => {
+                    walletSearch.customerName = ''; walletSearch.entityName = ''; walletSearch.currency = '';
+                };
+
+                const actualAmount = (row) => Number((row.balance - row.pendingWriteoff).toFixed(2));
+
+                // 新增钱包（主体边界 = 该客户签约过的主体；币种边界 = 该主体下未开通的币种）
+                const addWalletVisible = ref(false);
+                const addWalletFormRef = ref(null);
+                const addWalletForm = reactive({ customerName: '', entityName: '', currency: '' });
+                const addWalletRules = {
+                    customerName: [{ required: true, message: '请选择客户', trigger: 'change' }],
+                    entityName: [{ required: true, message: '请选择账户主体', trigger: 'change' }],
+                    currency: [{ required: true, message: '请选择币种', trigger: 'change' }]
+                };
+
+                const walletEntityOptions = computed(() => {
+                    if (!addWalletForm.customerName) return [];
+                    return customerContracts[addWalletForm.customerName] || [];
+                });
+
+                const walletCurrencyOptions = computed(() => {
+                    if (!addWalletForm.customerName || !addWalletForm.entityName) return [];
+                    return currencyOptions.filter(c => !wallets.some(w =>
+                        w.customerName === addWalletForm.customerName &&
+                        w.entityName === addWalletForm.entityName &&
+                        w.currency === c
+                    ));
+                });
+
+                const walletContractHint = computed(() => {
+                    if (!addWalletForm.entityName) return '';
+                    const c = (customerContracts[addWalletForm.customerName] || []).find(x => x.entityName === addWalletForm.entityName);
+                    if (!c) return '';
+                    if (c.status === '已签署' || c.status === '签署中') return '';
+                    return `该主体的合同状态为「${c.status}」，本次开通的币种钱包将用于存量账单结算与赔付入账；系统不会自动停用该主体下已有钱包。`;
+                });
+
+                const openAddWallet = () => {
+                    addWalletForm.customerName = ''; addWalletForm.entityName = ''; addWalletForm.currency = '';
+                    addWalletVisible.value = true;
+                };
+
+                const onWalletCustomerChange = () => {
+                    addWalletForm.entityName = ''; addWalletForm.currency = '';
+                };
+
+                const onWalletEntityChange = () => {
+                    addWalletForm.currency = '';
+                };
+
+                const submitAddWallet = () => {
+                    if (!addWalletForm.customerName || !addWalletForm.entityName || !addWalletForm.currency) {
+                        ElMessage.warning('请填写完整信息'); return;
+                    }
+                    const signed = (customerContracts[addWalletForm.customerName] || []).some(c => c.entityName === addWalletForm.entityName);
+                    if (!signed) {
+                        ElMessage.warning('该客户未与该主体签约，请先在客商中心完成合同签约'); return;
+                    }
+                    const exists = wallets.some(w => w.customerName === addWalletForm.customerName && w.entityName === addWalletForm.entityName && w.currency === addWalletForm.currency);
+                    if (exists) {
+                        ElMessage.warning('该客户在该主体下已有该币种钱包'); return;
+                    }
+                    wallets.push({
+                        id: wallets.length + 1,
+                        customerName: addWalletForm.customerName,
+                        entityName: addWalletForm.entityName,
+                        currency: addWalletForm.currency,
+                        accountName: (1000000 + wallets.length + 1) + ' ' + addWalletForm.currency,
+                        balance: 0,
+                        pendingWriteoff: 0,
+                        pendingConfirm: 0,
+                        openSource: '财务手工'
+                    });
+                    addWalletVisible.value = false;
+                    ElMessage.success('钱包已开通');
+                };
+
+                // 币种互转
+                const realtimeRates = {
+                    'CNY': { 'USD': 7.20, 'HKD': 0.92, 'EUR': 7.80, 'PHP': 0.128, 'JPY': 0.0488 },
+                    'USD': { 'CNY': 0.139, 'HKD': 7.80, 'EUR': 0.92, 'PHP': 0.0178, 'JPY': 0.00678 },
+                    'HKD': { 'CNY': 1.087, 'USD': 0.128, 'EUR': 8.48, 'PHP': 0.139, 'JPY': 0.053 },
+                    'EUR': { 'CNY': 0.128, 'USD': 1.087, 'HKD': 0.118, 'PHP': 0.0164, 'JPY': 0.00625 },
+                    'PHP': { 'CNY': 7.80, 'USD': 56.20, 'HKD': 7.20, 'EUR': 61.00, 'JPY': 0.38 },
+                    'JPY': { 'CNY': 20.50, 'USD': 147.50, 'HKD': 18.90, 'EUR': 160.00, 'PHP': 2.63 }
+                };
+                const transferVisible = ref(false);
+                const transferFormRef = ref(null);
+                const transferForm = reactive({
+                    fromWalletId: null, customerName: '', entityName: '', fromCurrency: '',
+                    fromBalance: 0, fromAmount: null, toCurrency: '', realtimeRate: 0, rate: null
+                });
+                const transferRules = {
+                    fromAmount: [{ required: true, message: '请输入转出金额', trigger: 'blur' }],
+                    toCurrency: [{ required: true, message: '请选择转入币种', trigger: 'change' }],
+                    rate: [{ required: true, message: '请输入汇率', trigger: 'blur' }]
+                };
+                const toCurrencyOptions = computed(() => {
+                    if (!transferForm.customerName || !transferForm.entityName || !transferForm.fromCurrency) return [];
+                    return wallets
+                        .filter(w => w.customerName === transferForm.customerName && w.entityName === transferForm.entityName && w.currency !== transferForm.fromCurrency)
+                        .map(w => w.currency);
+                });
+                const computedToAmount = computed(() => {
+                    if (!transferForm.fromAmount || !transferForm.rate) return 0;
+                    return transferForm.fromAmount / transferForm.rate;
+                });
+                const onToCurrencyChange = (val) => {
+                    transferForm.realtimeRate = (realtimeRates[transferForm.fromCurrency] && realtimeRates[transferForm.fromCurrency][val]) || 0;
+                    transferForm.rate = transferForm.realtimeRate;
+                };
+                const openTransfer = (row) => {
+                    transferForm.fromWalletId = row.id;
+                    transferForm.customerName = row.customerName;
+                    transferForm.entityName = row.entityName;
+                    transferForm.fromCurrency = row.currency;
+                    transferForm.fromBalance = row.balance;
+                    transferForm.fromAmount = null;
+                    transferForm.toCurrency = '';
+                    transferForm.realtimeRate = 0;
+                    transferForm.rate = null;
+                    transferVisible.value = true;
+                };
+                const submitTransfer = () => {
+                    if (!transferForm.fromAmount || !transferForm.toCurrency || !transferForm.rate) {
+                        ElMessage.warning('请填写完整的互转信息'); return;
+                    }
+                    if (transferForm.fromAmount > transferForm.fromBalance) {
+                        ElMessage.warning('转出金额不能大于钱包余额'); return;
+                    }
+                    ElMessageBox.confirm(
+                        `确认从 ${transferForm.entityName} ${currencyName(transferForm.fromCurrency)} 钱包转出 ${currencySymbol(transferForm.fromCurrency)}${formatMoney(transferForm.fromAmount)}，转入 ${currencyName(transferForm.toCurrency)} 钱包 ${currencySymbol(transferForm.toCurrency)}${formatMoney(computedToAmount.value)}？`,
+                        '确认币种互转', { confirmButtonText: '确认互转', cancelButtonText: '取消', type: 'warning' }
+                    ).then(() => {
+                        const fromWallet = wallets.find(w => w.id === transferForm.fromWalletId);
+                        const toWallet = wallets.find(w => w.customerName === transferForm.customerName && w.entityName === transferForm.entityName && w.currency === transferForm.toCurrency);
+                        if (fromWallet) fromWallet.balance = Number((fromWallet.balance - transferForm.fromAmount).toFixed(2));
+                        if (toWallet) toWallet.balance = Number((toWallet.balance + computedToAmount.value).toFixed(2));
+                        transferVisible.value = false;
+                        ElMessage.success('币种互转成功');
+                    }).catch(() => {});
+                };
+
+                // 资金流水弹窗
+                const walletFlowsMap = {
+                    1: [
+                        { time: '2026-08-27 10:25', flowType: '充值', amount: 5000.00, balanceAfter: 5000.00, relatedNo: 'FD20260827001' },
+                        { time: '2026-08-26 09:30', flowType: '账单核销', amount: -1280.50, balanceAfter: 3719.50, relatedNo: 'WO20260826001' }
+                    ],
+                    2: [
+                        { time: '2026-08-20 14:10', flowType: '充值', amount: 1200.00, balanceAfter: 1200.00, relatedNo: 'FD20260820002' }
+                    ],
+                    3: [
+                        { time: '2026-08-25 14:15', flowType: '充值', amount: 3200.00, balanceAfter: 3200.00, relatedNo: 'FD20260825004' }
+                    ],
+                    4: [
+                        { time: '2026-08-24 09:00', flowType: '转汇', amount: -8640.00, balanceAfter: 5800.00, relatedNo: 'TR20260824001' },
+                        { time: '2026-08-18 11:20', flowType: '充值', amount: 14440.00, balanceAfter: 14440.00, relatedNo: 'FD20260818001' }
+                    ],
+                    5: [
+                        { time: '2026-08-22 17:00', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, relatedNo: 'FD20260822005' }
+                    ],
+                    6: [
+                        { time: '2026-08-26 15:45', flowType: '充值', amount: 8000.00, balanceAfter: 12000.00, relatedNo: 'FL20260826001' },
+                        { time: '2026-08-21 10:05', flowType: '账单核销', amount: -4000.00, balanceAfter: 4000.00, relatedNo: 'WO20260821002' }
+                    ],
+                    7: [
+                        { time: '2026-08-19 16:30', flowType: '充值', amount: 0.00, balanceAfter: 0.00, relatedNo: 'FD20260819003' }
+                    ]
+                };
+                const flowDialogVisible = ref(false);
+                const currentWallet = reactive({ customerName: '', entityName: '', currency: '', accountName: '', balance: 0, pendingWriteoff: 0, pendingConfirm: 0 });
+                const currentWalletFlows = ref([]);
+                const flowTypeTag = (t) => {
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '账单核销': 'danger', '账单核销撤销': 'success', '转汇': 'primary' };
+                    return map[t] || 'info';
+                };
+                const openWalletFlows = (row) => {
+                    currentWallet.customerName = row.customerName;
+                    currentWallet.entityName = row.entityName;
+                    currentWallet.currency = row.currency;
+                    currentWallet.accountName = row.accountName;
+                    currentWallet.balance = row.balance;
+                    currentWallet.pendingWriteoff = row.pendingWriteoff;
+                    currentWallet.pendingConfirm = row.pendingConfirm;
+                    currentWalletFlows.value = walletFlowsMap[row.id] || [];
+                    flowDialogVisible.value = true;
+                };
+
+                const searchExpanded = ref(false);
+                const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const handleReset = () => {
+                    if (activeTab.value === 'bank') resetBankSearch();
+                    else resetWalletSearch();
+                };
+                const handleAdd = () => {
+                    if (activeTab.value === 'bank') openAddBank();
+                    else openAddWallet();
+                };
+
+                return {
+                    currencyOptions, entities, customers, currencySymbol, currencyName, formatMoney,
+                    activeTab,
+                    bankAccounts, bankSearch, filteredBankAccounts, bankRowClass, resetBankSearch,
+                    toggleVisible, toggleBankStatus,
+                    bankDialogVisible, bankFormRef, bankForm, bankRules, isEdit,
+                    openAddBank, openEditBank, onVisibleChange, submitBank,
+                    wallets, walletSearch, filteredWallets, resetWalletSearch, actualAmount,
+                    addWalletVisible, addWalletFormRef, addWalletForm, addWalletRules, openAddWallet, submitAddWallet,
+                    walletEntityOptions, walletCurrencyOptions, walletContractHint, onWalletCustomerChange, onWalletEntityChange,
+                    transferVisible, transferFormRef, transferForm, transferRules,
+                    toCurrencyOptions, computedToAmount, onToCurrencyChange, openTransfer, submitTransfer,
+                    flowDialogVisible, currentWallet, currentWalletFlows, flowTypeTag, openWalletFlows,
+                    handleExport, handleSearch, searchExpanded, handleReset, handleAdd
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
+
