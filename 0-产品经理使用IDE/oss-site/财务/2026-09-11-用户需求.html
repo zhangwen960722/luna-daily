@@ -19,7 +19,10 @@
 <div class="layout">
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#1-核心洞察-Insight">1. 核心洞察 (Insight)</a></li><li class="toc-lv2"><a href="#2-业务全景图">2. 业务全景图</a></li><li class="toc-lv3"><a href="#2-1-角色与工作节奏">2.1 角色与工作节奏</a></li><li class="toc-lv3"><a href="#2-2-端到端业务链路">2.2 端到端业务链路</a></li><li class="toc-lv3"><a href="#2-3-实体依赖关系">2.3 实体依赖关系</a></li><li class="toc-lv3"><a href="#2-4-核心业务流程图-泳道图">2.4 核心业务流程图（泳道图）</a></li><li class="toc-lv3"><a href="#2-5-核心数据流图">2.5 核心数据流图</a></li><li class="toc-lv2"><a href="#3-流程一-应收业务流水与审计-日频">3. 流程一：应收业务流水与审计（日频）</a></li><li class="toc-lv2"><a href="#4-流程二-账单生成与客户确认-账期周期">4. 流程二：账单生成与客户确认（账期周期）</a></li><li class="toc-lv2"><a href="#5-流程三-收款核销与账龄台账-日频">5. 流程三：收款核销与账龄台账（日频）</a></li><li class="toc-lv2"><a href="#6-流程四-资金账户与钱包-日频">6. 流程四：资金账户与钱包（日频）</a></li><li class="toc-lv2"><a href="#7-验收标准总览-AC">7. 验收标准总览 (AC)</a></li><li class="toc-lv2"><a href="#8-NFR-非功能性需求">8. NFR（非功能性需求）</a></li><li class="toc-lv2"><a href="#9-计算示例">9. 计算示例</a></li><li class="toc-lv2"><a href="#10-功能清单">10. 功能清单</a></li><li class="toc-lv2"><a href="#11-MVP-方案与建议">11. MVP 方案与建议</a></li><li class="toc-lv3"><a href="#下一步">下一步</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="需求定义卡片-RDD-财务模块">需求定义卡片 (RDD) — 财务模块</h1></p><p><blockquote><strong>原始需求</strong>：财务是飞点 TMS 的消费方，实现多主体独立核算 + 钱进钱出闭环，消费订单/运单数据完成应收管理、资金账户与账龄管理。
-<strong>文档版本</strong>: v0.5 | <strong>日期</strong>: 2026-08-29 | <strong>作者</strong>: 飞点产品</blockquote></p><p><h2 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h2></p><p><strong>真实痛点</strong>：</p><p>当前飞点 5 家公司（广州飞点、深圳飞点、广东飞点、香港富利顿、墨链）税务上独立法人、实际一个家族，但财务核算完全依赖线下 Excel。客户打款与应收账单之间靠财务手工核对，钱进来不知道冲哪张账单；账期到了不知道哪些客户逾期、逾期多久；多主体、多币种的资金往来靠手工分账，极易混账。</p><p>计费依赖运价模块的当周公布价和附加费规则，但运单收货完成后，应收金额、账单、核销、账龄这一整条链路没有系统承载，财务只能线下追着业务要数据、手工算账。</p><p><strong>JTBD</strong>：</p><p><blockquote><code>财务专员</code> 雇佣"财务模块"不是为了"记流水账"，而是为了：<strong>当运单收货完成后，能在系统内完成业务流水审计→生成账单→收款核销→账龄跟踪的闭环，且每一笔钱都挂到具体主体和币种，不混账、可追溯。</strong></blockquote></p><p><blockquote><code>客户（货主端）</code> 雇佣"财务模块"不是为了"看数字"，而是为了：<strong>当收到账单后，能在线上确认账单并充值，不用线下反复跟财务对账沟通。</strong></blockquote></p><p><blockquote><code>业务专员</code> 雇佣"财务模块"不是为了"录数据"，而是为了：<strong>当运单收货后，能在运单管理侧对业务流水做业务审计（核对/修改/新增），财务侧可反审计，权责清晰。</strong></blockquote></p><p><strong>业务价值</strong>：</p><p><div class="table-wrapper"><table><tr><td>维度</td><td>当前</td><td>目标</td></tr>
+<strong>文档版本</strong>: v1.0（Phase 1 定稿：应收管理 + 资金账户） | <strong>日期</strong>: 2026-09-11 | <strong>作者</strong>: 飞点产品
+<strong>本期范围</strong>：流程一~三「应收管理」+ 流程四「资金账户（含入账记录）」，共 2 个模块、16 项功能、18 条 AC。
+<strong>分期口径</strong>：Phase 1 = 应收管理 + 资金账户（本期定稿）；Phase 2 = 应付管理、对账中心、毛利分析、开票；Phase 3 = 实际成本核算。
+<strong>汇率口径</strong>：汇率统一调用阿里汇率接口实时获取（人民币=1 基准），币种互转页以接口值预填、允许财务手工覆盖并留痕（接口汇率 + 实际采用汇率 + 汇率来源三者同存）；一期不记汇损，不自建汇率表。</blockquote></p><p><h2 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h2></p><p><strong>真实痛点</strong>：</p><p>当前飞点 5 家公司（广州飞点、深圳飞点、广东飞点、香港富力顿、墨链）税务上独立法人、实际一个家族，但财务核算完全依赖线下 Excel。客户打款与应收账单之间靠财务手工核对，钱进来不知道冲哪张账单；账期到了不知道哪些客户逾期、逾期多久；多主体、多币种的资金往来靠手工分账，极易混账。</p><p>计费依赖运价模块的当周公布价和附加费规则，但运单收货完成后，应收金额、账单、核销、账龄这一整条链路没有系统承载，财务只能线下追着业务要数据、手工算账。</p><p><strong>JTBD</strong>：</p><p><blockquote><code>财务专员</code> 雇佣"财务模块"不是为了"记流水账"，而是为了：<strong>当运单收货完成后，能在系统内完成业务流水审计→生成账单→收款核销→账龄跟踪的闭环，且每一笔钱都挂到具体主体和币种，不混账、可追溯。</strong></blockquote></p><p><blockquote><code>客户（货主端）</code> 雇佣"财务模块"不是为了"看数字"，而是为了：<strong>当收到账单后，能在线上确认账单并充值，不用线下反复跟财务对账沟通。</strong></blockquote></p><p><blockquote><code>业务专员</code> 雇佣"财务模块"不是为了"录数据"，而是为了：<strong>当运单收货后，能在运单管理侧对业务流水做业务审计（核对/修改/新增），财务侧可反审计，权责清晰。</strong></blockquote></p><p><strong>业务价值</strong>：</p><p><div class="table-wrapper"><table><tr><td>维度</td><td>当前</td><td>目标</td></tr>
 <tr><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>应收核算</td><td>线下 Excel 手工算账</td><td>运单收货自动生成业务流水，业务审计 + 财务反审计</td></tr>
 <tr><td>账单管理</td><td>财务手工发账单，客户线下对账</td><td>系统生成账单→发送→客户线上确认</td></tr>
@@ -41,8 +44,14 @@
 【业务审计】
   业务在「运单管理」做业务侧审计（核对/修改/新增 → 整单审计通过）→ 财务在「运单审计」可反审计
       ↓
+【赔付入账】
+  运营在运单上新增「赔付类型」业务流水（费用类型 is_credit=true）→ 系统自动挂「入账记录」（待入账）
+      ↓
 【账单生成】
   财务在「账单管理」按 客户+主体+账期+币种 聚合已锁定流水 → 生成账单 → 发送客户
+      ↓
+【入账抵扣】
+  账单生成时把「待入账」记录按负数抵扣应收，归入最新一期账单（归入后不可改期，任何轧差放下一期）
       ↓
 【客户确认】
   客户在货主端「账单管理」确认账单（异议走线下/工单，财务重新生成账单再发）
@@ -62,11 +71,18 @@
   ├── N:1 应收账单 (ArBill)
   ├── N:1 运单 (Waybill) ← 外部引用（运单模块）
   ├── N:1 客户 (Customer) ← 外部引用（客商中心）
-  └── N:1 主体 (Entity) ← 外部引用（基础资料）
+  ├── N:1 主体 (Entity) ← 外部引用（基础资料）
+  └── 1:1 入账记录 (CreditRecord) ← 赔付类型流水自动挂入账记录
 
 应收账单 (ArBill)
   ├── 1:N 应收业务流水 (ArFlow)
-  └── 1:N 收款核销流水 (ArWriteoff)
+  ├── 1:N 收款核销流水 (ArWriteoff)
+  └── 1:N 入账记录 (CreditRecord) ← 赔付入账按负数抵扣
+
+入账记录 (CreditRecord) — 我司退款/赔偿，待入账 → 已入账
+  ├── 1:1 应收业务流水 (ArFlow) ← is_credit=true 的赔付流水
+  ├── N:1 应收账单 (ArBill) ← 归最新一期账单（bill_id 回填），归入后不可改期
+  └── N:1 客户 / 主体 ← 外部引用（客商中心 / 基础资料）
 
 客户钱包 (CustomerWallet) — 资金侧聚合根
   ├── N:1 客户 (Customer) ← 外部引用
@@ -136,18 +152,27 @@
 <tr><td>运单号</td><td>引用</td><td>✅</td><td>引用运单模块，粒度=运单</td></tr>
 <tr><td>客户</td><td>引用</td><td>✅</td><td>引用客商中心</td></tr>
 <tr><td>主体</td><td>引用</td><td>✅</td><td>5 账套之一，强制挂主体</td></tr>
-<tr><td>业务流水大类</td><td>枚举</td><td>✅</td><td>应收 / 应付 / 销售提成（财务模块管应收大类）</td></tr>
+<tr><td>业务流水大类</td><td>枚举</td><td>✅</td><td>应收 / 应付 / 销售提成；<strong>Phase 1 仅实现应收（10）</strong>，应付/销售提成为预留枚举，Phase 2 随应付管理开放</td></tr>
 <tr><td>费用类型</td><td>引用</td><td>✅</td><td>引用头程管理费用类型字典（运费/周六派送费/超重费/地址附加费/商品附加费/报关费/库内贴标费…），同方向唯一</td></tr>
 <tr><td>币种</td><td>枚举</td><td>✅</td><td>运费币种来自报价，附加费币种来自附加费规则，可跨币种</td></tr>
-<tr><td>金额</td><td>Decimal</td><td>✅</td><td>正数=费用，负数=优惠</td></tr>
-<tr><td>汇率</td><td>Decimal</td><td>✅</td><td>流水生成/手工创建时自动取实时汇率，人民币=1，不参与金额计算</td></tr>
+<tr><td>金额</td><td>Decimal</td><td>✅</td><td>本行金额（费用项金额）；正数=费用，负数=优惠</td></tr>
+<tr><td>公布价</td><td>Decimal</td><td>✅</td><td>当周公布价取价快照，用于追溯与后续毛利分析</td></tr>
+<tr><td>优惠金额</td><td>Decimal</td><td>✅</td><td>运费优惠 / 附加费优惠金额，无优惠=0</td></tr>
+<tr><td>应收净额</td><td>Decimal</td><td>✅</td><td>公布价 − 优惠金额（应收侧记账口径）</td></tr>
+<tr><td>汇率</td><td>Decimal</td><td>✅</td><td>调阿里汇率接口实时获取，人民币=1，不参与金额计算</td></tr>
 <tr><td>数量</td><td>Decimal</td><td>否</td><td>计费数量（重量/体积/张数）；关联附加费规则按数量计费时，选费用类型+填数量自动算金额</td></tr>
 <tr><td>备注</td><td>文本</td><td>否</td><td>手工备注</td></tr>
 <tr><td>业务时间</td><td>DateTime</td><td>✅</td><td>业务流水生成时间</td></tr>
 <tr><td>数据来源</td><td>文本</td><td>✅</td><td>报价 / 操作人姓名（只记第一次来源，后续变更不变）</td></tr>
 <tr><td>账单日</td><td>Date</td><td>✅</td><td>从合同账期推导，生成时快照锁死</td></tr>
 <tr><td>账期天数</td><td>Integer</td><td>✅</td><td>合同账期天数快照</td></tr>
-<tr><td>审计状态</td><td>枚举</td><td>✅</td><td>待业务审计 / 已审计</td></tr>
+<tr><td>签约账期类型</td><td>枚举</td><td>✅</td><td>引用客商中心 <code>customer_contract.payment_term</code> 同值枚举（101月结/102双月结/103三月结/201周结/202到港前结/203签收月结/204到海外仓结/205签收结），生成时合同快照</td></tr>
+<tr><td>审计状态</td><td>枚举</td><td>✅</td><td>待业务审计 / 已审计 / 已红冲</td></tr>
+<tr><td>业务审计人/时间</td><td>文本/DateTime</td><td>否</td><td>业务侧「运单管理」整单审计留痕</td></tr>
+<tr><td>财务审计人/时间</td><td>文本/DateTime</td><td>否</td><td>财务侧「运单审计」反审计留痕</td></tr>
+<tr><td>关联账单ID</td><td>引用</td><td>否</td><td>生成账单后回填（流水级关联，可跨期跨年）</td></tr>
+<tr><td>是否红冲流水</td><td>布尔</td><td>✅</td><td>默认否；已关联账单纠错时红冲生成</td></tr>
+<tr><td>冲抵原流水ID</td><td>引用</td><td>否</td><td>红冲流水指向被冲抵的原流水</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 ① 计费触发点 = 运单收货完成，系统主动生成业务流水
@@ -180,15 +205,21 @@
 <tr><td>主体</td><td>引用</td><td>✅</td><td>5 账套之一</td></tr>
 <tr><td>币种</td><td>枚举</td><td>✅</td><td>同币种聚合</td></tr>
 <tr><td>账单日</td><td>Date</td><td>✅</td><td>账期起始</td></tr>
+<tr><td>账期天数</td><td>Integer</td><td>✅</td><td>账单级账期天数快照（账龄台账按 账单日+账期天数 起算）；<strong>合同账期为空时由财务在生成账单时补录</strong></td></tr>
+<tr><td>账期来源</td><td>枚举</td><td>✅</td><td>合同账期 / 手工补录（合同账期未完善时财务补录，留痕）</td></tr>
 <tr><td>账单总额</td><td>Decimal</td><td>✅</td><td>Σ 聚合流水应收净额</td></tr>
 <tr><td>已核销金额</td><td>Decimal</td><td>✅</td><td>核销累加，默认 0</td></tr>
 <tr><td>未收金额</td><td>Decimal</td><td>✅</td><td>账单总额 − 已核销</td></tr>
 <tr><td>状态</td><td>枚举</td><td>✅</td><td>已生成/已发送/已确认/部分核销/已核销/已反核销</td></tr>
+<tr><td>生成人/时间</td><td>文本/DateTime</td><td>否</td><td>财务操作留痕</td></tr>
+<tr><td>发送时间</td><td>DateTime</td><td>否</td><td>发送客户时间</td></tr>
+<tr><td>客户确认时间</td><td>DateTime</td><td>否</td><td>货主端确认回填</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 ① 账单粒度：账单号挂在每条业务流水上（流水级），一个运单多条流水按 币种+账期 拆到多个账单，可跨期跨年
-② 账期：消费客商中心 <code>customer_contract</code> 表（合同级），财务不重复维护
-③ 客户确认账单：一期不做线上异议，异议走线下/工单，财务重新生成账单再发送</p><p><strong>相关 AC</strong>：<code>AC5-生成</code> <code>AC6-发送</code> <code>AC7-确认</code></p><p><h2 id="5-流程三-收款核销与账龄台账-日频">5. 流程三：收款核销与账龄台账（日频）</h2></p><p><blockquote><strong>触发</strong>：客户打款入池、财务核销 <strong>频率</strong>：日频 <strong>前置依赖</strong>：流程二已确认账单、流程四钱包余额</blockquote></p><p><strong>5.1 收款核销流水 (ArWriteoff)</strong> — 财务核销/反核销记录，留痕可审计</p><p><blockquote><strong>As a</strong> 财务专员 <strong>I want to</strong> 从钱包扣款冲抵账单 <strong>So that</strong> 账单未收减少、钱账对应</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+② 账期：消费客商中心 <code>customer_contract</code> 表（合同级），财务不重复维护；账期主数据在客商中心「客户管理 → 合同/账期」由财务/销售维护（合同签约完成后处理）
+③ <strong>账期补录</strong>：合同账期未完善时（如香港线下签约，账单周期/账期/结算类型等字段留空待补填），财务在「生成账单」时<strong>手工补录账期天数</strong>，写入账单账期快照并标记「账期手工补录」；该补录仅影响本账单的账龄计算，不回写客商中心合同主数据
+④ 客户确认账单：一期不做线上异议，异议走线下/工单，财务重新生成账单再发送</p><p><strong>相关 AC</strong>：<code>AC5-生成</code> <code>AC6-发送</code> <code>AC7-确认</code></p><p><h2 id="5-流程三-收款核销与账龄台账-日频">5. 流程三：收款核销与账龄台账（日频）</h2></p><p><blockquote><strong>触发</strong>：客户打款入池、财务核销 <strong>频率</strong>：日频 <strong>前置依赖</strong>：流程二已确认账单、流程四钱包余额</blockquote></p><p><strong>5.1 收款核销流水 (ArWriteoff)</strong> — 财务核销/反核销记录，留痕可审计</p><p><blockquote><strong>As a</strong> 财务专员 <strong>I want to</strong> 从钱包扣款冲抵账单 <strong>So that</strong> 账单未收减少、钱账对应</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>账单号</td><td>引用</td><td>✅</td><td>被核销账单</td></tr>
 <tr><td>钱包</td><td>引用</td><td>✅</td><td>扣款钱包（客户×主体×币种）</td></tr>
@@ -198,6 +229,8 @@
 <tr><td>核销前/后账单未收</td><td>Decimal</td><td>✅</td><td>留痕</td></tr>
 <tr><td>核销前/后钱包余额</td><td>Decimal</td><td>✅</td><td>留痕</td></tr>
 <tr><td>操作人/时间</td><td>文本/DateTime</td><td>✅</td><td>财务</td></tr>
+<tr><td>关联资金流水ID</td><td>引用</td><td>否</td><td>核销→资金流水联动</td></tr>
+<tr><td>被反核销的核销ID</td><td>引用</td><td>否</td><td>反核销指向原核销记录</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 ① <strong>核销永远同币种</strong>：账单币种与钱包币种必须一致，跨币种先走钱包互转（流程四）
@@ -225,42 +258,67 @@
     G --&gt; H
     H --&gt;|是| I[回滚未收 + 钱包余额]
     H --&gt;|否| J[结束]
-</div></p><p><h2 id="6-流程四-资金账户与钱包-日频">6. 流程四：资金账户与钱包（日频）</h2></p><p><blockquote><strong>触发</strong>：客户入驻、充值、跨币种结算、提现 <strong>频率</strong>：日频/按需 <strong>前置依赖</strong>：客商中心入驻、财务配置（币种/汇率/银行账户）</blockquote></p><p><strong>6.1 客户钱包 (CustomerWallet)</strong> — 钱包 = 客户 × 主体 × 币种，钱进池子即混同，只认币种余额</p><p><blockquote><strong>As a</strong> 财务专员 <strong>I want to</strong> 管理客户钱包并做币种互转 <strong>So that</strong> 多主体多币种的资金隔离且可跨币种结算</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+</div></p><p><h2 id="6-流程四-资金账户与钱包-日频">6. 流程四：资金账户与钱包（日频）</h2></p><p><blockquote><strong>触发</strong>：客户入驻、充值、跨币种结算、提现 <strong>频率</strong>：日频/按需 <strong>前置依赖</strong>：客商中心入驻、阿里汇率接口（实时汇率）、我方银行账户</blockquote></p><p><strong>6.1 客户钱包 (CustomerWallet)</strong> — 钱包 = 客户 × 主体 × 币种，钱进池子即混同，只认币种余额</p><p><blockquote><strong>As a</strong> 财务专员 <strong>I want to</strong> 管理客户钱包并做币种互转 <strong>So that</strong> 多主体多币种的资金隔离且可跨币种结算</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>客户</td><td>引用</td><td>✅</td><td>引用客商中心</td></tr>
 <tr><td>主体</td><td>引用</td><td>✅</td><td>5 账套之一</td></tr>
 <tr><td>币种</td><td>枚举</td><td>✅</td><td>联合唯一 (客户,主体,币种)</td></tr>
 <tr><td>账户名称</td><td>文本</td><td>✅</td><td>全局唯一；格式=账号编号+空格+币种代码</td></tr>
 <tr><td>余额</td><td>Decimal</td><td>✅</td><td>不可透支，乐观锁控制</td></tr>
-<tr><td>是否默认钱包</td><td>布尔</td><td>✅</td><td>入驻自动开人民币默认</td></tr>
+<tr><td>开通方式</td><td>枚举</td><td>✅</td><td>系统自动（合同签约完成）/ 财务手工；员工端列表展示</td></tr>
+<tr><td>开通时间</td><td>DateTime</td><td>✅</td><td>钱包创建时间</td></tr>
+<tr><td>是否默认钱包</td><td>布尔</td><td>✅</td><td>系统字段；<strong>员工端与货主端均不展示</strong>（后台保留），二期在线付款的「默认支付钱包」预留</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 ① 钱包池化：钱进池子即混同，只认币种余额，不追来源进账
-② 钱包生成节点 = 客户完成「开户 + 签约」后生成对应主体钱包：正常入驻（先签约后开户）在开户完成时生成；特殊入驻（先开户后签约）在签约完成时生成；签约新合同（新主体）在合同签约完成时生成新主体钱包。默认钱包为人民币（余额 0），其他币种钱包由财务在钱包菜单手工开通
-③ 客户资金账户 = 预存款钱包，与支付渠道解耦（未来在线付款只加渠道，钱包不动）
-④ 账户名称 = 账号编号 + 空格 + 币种代码（如「1000001 CNY」）；账号编号 7 位全局递增（1000001 起），跨客户/主体/币种全局唯一</p><p><strong>6.2 我方银行账户 (BankAccount)</strong> — 每主体各自开户，一主体可多账户</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+② <strong>钱包生成节点（唯一自动触发点）= 客商中心合同签约完成</strong>（<code>sign_status</code> 20 签署中 → 30 已签署）：按 <code>contract_company</code> 生成「客户 × 主体 × 人民币」钱包（余额 0，开通方式=系统自动）。正常入驻（先签约后开户）与特殊入驻（先开户后签约）<strong>统一卡在签约完成</strong>，开户完成不再触发；续签/重复事件幂等（靠 (客户,主体,币种) 唯一索引兜底）；每日定时补偿「已签署合同但无对应钱包」的数据
+③ <strong>手工开通边界</strong>（「资金账户管理 → 客户资金账户 → 新增钱包」）：
+   - 默认人民币钱包由系统自动开通，手工仅用于<strong>补开其他币种</strong>
+   - 主体<strong>仅可选择该客户签约过的主体</strong>（<code>sign_status ∈ {签署中, 已签署, 已过期, 已解约}</code>）；<strong>从未签约的主体一律阻断</strong>并提示先完成合同签约，不设特批口子
+   - 币种仅可选择该主体下<strong>尚未开通</strong>的币种
+   - 选中主体合同非有效（已过期/已解约）时<strong>允许提交</strong>，但需提示「本次开通的币种钱包用于存量账单结算与赔付入账」
+   - 场景依据：客户先签广州飞点 → 合同到期 → 转签深圳飞点；广州飞点存量运单产生赔付且客户要求美元结算 → 需在广州飞点补开 USD 钱包
+④ <strong>钱包生命周期与合同解耦</strong>：合同过期/解约<strong>不影响</strong>钱包的新增与使用（查看 / 充值 / 核销 / 反核销 / 提现 / 币种互转 / 新增币种钱包 / 入账抵扣全部照常）；系统不自动停用钱包（存在未结算账单与存量赔付）
+⑤ 默认币种统一为<strong>人民币</strong>（各主体一致，香港富力顿不做特殊）
+⑥ 客户资金账户 = 预存款钱包，与支付渠道解耦（未来在线付款只加渠道，钱包不动）
+⑦ 账户名称 = 账号编号 + 空格 + 币种代码（如「1000001 CNY」）；账号编号 7 位全局递增（1000001 起），跨客户/主体/币种全局唯一</p><p><strong>6.2 我方银行账户 (BankAccount)</strong> — 每主体各自开户，一主体可多账户</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>主体</td><td>引用</td><td>✅</td><td>每主体可多账户</td></tr>
-<tr><td>账户名称/账号/开户行</td><td>文本</td><td>✅</td><td>账号唯一</td></tr>
+<tr><td>账户名称</td><td>文本</td><td>✅</td><td>开户名</td></tr>
+<tr><td>账号</td><td>文本</td><td>✅</td><td>全局唯一，创建后不可修改</td></tr>
+<tr><td>开户行</td><td>文本</td><td>✅</td><td>—</td></tr>
+<tr><td>SWIFT/BIC</td><td>文本</td><td>否</td><td>境外打款用，非人民币账户建议填写</td></tr>
 <tr><td>币种</td><td>枚举</td><td>✅</td><td>单币种账户</td></tr>
-<tr><td>是否默认</td><td>布尔</td><td>✅</td><td>客户打款默认账户</td></tr>
+<tr><td>账面余额</td><td>Decimal</td><td>✅</td><td>财务手工维护的账面余额，非银行实时余额，默认 0</td></tr>
+<tr><td>用户是否可见</td><td>布尔</td><td>✅</td><td>是 → 客户在货主端充值的打款账户下拉可见该账户</td></tr>
+<tr><td>是否默认</td><td>布尔</td><td>✅</td><td>客户打款默认账户；同一主体+币种仅一个，且必须可见</td></tr>
+<tr><td>状态</td><td>枚举</td><td>✅</td><td>启用 / 停用</td></tr>
 </table></div>
-<strong>6.3 资金流水 (WalletFlow)</strong> — 钱包资金进出痕迹，事实记录不可改（出错靠反向流水）</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
+<strong>业务规则</strong>：
+① 客户打款可选账户 = 该主体 + 该币种下「用户是否可见=是」且「状态=启用」的账户；设为不可见或停用后立即从客户下拉消失，历史充值单与资金流水不受影响
+② 默认打款账户用于客户充值弹窗预选，同一主体+币种下仅一个；默认账户必须可见，设为不可见时自动取消其默认标记
+③ 账号全局唯一、创建后不可修改；账户不做物理删除，仅停用（软删除）
+④ 账面余额由财务手工维护（期末对账后更新），非银行实时余额</p><p><strong>6.3 资金流水 (WalletFlow)</strong> — 钱包资金进出痕迹，事实记录不可改（出错靠反向流水）</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>钱包</td><td>引用</td><td>✅</td><td>关联钱包</td></tr>
 <tr><td>流水类型</td><td>枚举</td><td>✅</td><td>充值/充值退回/提现/核销/核销撤销/转汇</td></tr>
+<tr><td>币种</td><td>枚举</td><td>✅</td><td>同钱包币种</td></tr>
 <tr><td>变动金额</td><td>Decimal</td><td>✅</td><td>正=入、负=出</td></tr>
 <tr><td>变动前/后余额</td><td>Decimal</td><td>✅</td><td>留痕</td></tr>
+<tr><td>关联充值/核销/转汇</td><td>引用</td><td>否</td><td>按流水类型挂载：充值/充值退回↔充值申请，核销/核销撤销↔收款核销（1:1），转汇↔币种互转（1:2 出/入两条）</td></tr>
 <tr><td>操作人/时间</td><td>文本/DateTime</td><td>✅</td><td>—</td></tr>
 </table></div>
 <strong>6.4 币种互转 (CurrencyTransfer)</strong> — 独立表，记录转出/转入两币 + 汇率</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>转汇单号</td><td>文本</td><td>✅</td><td>唯一，规则 TR+yyyyMMdd+序号</td></tr>
 <tr><td>转出钱包/币种/金额</td><td>引用/枚举/Decimal</td><td>✅</td><td>转出侧</td></tr>
 <tr><td>转入钱包/币种/金额</td><td>引用/枚举/Decimal</td><td>✅</td><td>转入侧</td></tr>
-<tr><td>汇率</td><td>Decimal</td><td>✅</td><td>实时基准 + 手工覆盖</td></tr>
+<tr><td>接口汇率</td><td>Decimal</td><td>✅</td><td>阿里汇率接口实时返回值，留痕不可改</td></tr>
+<tr><td>汇率</td><td>Decimal</td><td>✅</td><td>实际采用汇率，默认=接口汇率，可财务手工覆盖</td></tr>
+<tr><td>汇率来源</td><td>枚举</td><td>✅</td><td>接口实时 / 手工覆盖</td></tr>
 </table></div>
 <strong>业务规则</strong>：
-① 币种互转汇率走财务配置"实时基准 + 手工覆盖"，财务手工操作（钱包菜单），一期汇损暂不记直接转
+① 币种互转汇率统一调用<strong>阿里汇率接口</strong>实时获取（人民币=1 基准）：页面以接口返回值预填「汇率」，财务可手工覆盖；覆盖时「汇率来源」记「手工覆盖」，接口汇率与实际采用汇率同时留痕。财务手工操作（「资金账户管理 → 客户资金账户」行内币种互转），一期汇损暂不记、直接转，不自建汇率表
 ② 跨币种核销前必须币种互转（转成与账单同币种）</p><p><strong>6.5 充值申请 (RechargeApply)</strong> — 客户货主端发起，财务审核入池</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>客户/主体/币种</td><td>引用/枚举</td><td>✅</td><td>充到哪个钱包</td></tr>
@@ -268,13 +326,16 @@
 <tr><td>打款账户</td><td>引用</td><td>✅</td><td>引用我方银行账户</td></tr>
 <tr><td>打款凭证</td><td>文件</td><td>✅</td><td>银行回单截图/PDF</td></tr>
 <tr><td>状态</td><td>枚举</td><td>✅</td><td>待审核/已通过/已驳回</td></tr>
+<tr><td>审核人/时间</td><td>文本/DateTime</td><td>否</td><td>财务线下核对银行流水后审核留痕</td></tr>
+<tr><td>关联资金流水</td><td>引用</td><td>否</td><td>审核通过后生成充值流水</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 ① 充值：客户货主端发起（金额+币种+打款账户+凭证）→ 财务线下查银行流水核对 → 审核通过入池；二期接银行流水自动识别
-② 提现：客户线下找财务，财务在财务流水操作台直接操作，无需独立申请表</p><p><strong>6.6 货主端资金账户页（主体×币种表格）</strong></p><p><blockquote>客户在货主端「资金账户」查看资金账户总览，维度 = 主体 × 币种。页面分页签：账户余额 / 资金流水 / 充值记录 / 入账记录；默认钱包（入驻/签约自动开人民币）余额 0 也展示。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>说明</td></tr>
+② 提现：客户线下找财务，财务在财务流水操作台直接操作，无需独立申请表
+③ <strong>代客户充值</strong>：客户线下打款到账后，财务在「财务流水 → 客户充值」操作台手工为客户入池（选客户+主体+币种+金额，二次确认后直接生成充值资金流水并增加余额）；代充<strong>不产生充值申请单</strong>（<code>recharge_apply</code>），资金流水的关联充值字段为空</p><p><strong>6.6 货主端资金账户页（主体×币种表格）</strong></p><p><blockquote>客户在货主端「资金账户」查看资金账户总览，维度 = 主体 × 币种。页面分页签：账户余额 / 资金流水 / 充值记录 / 入账记录；合同签约完成时系统自动开通的人民币钱包（余额 0）也展示。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td></tr>
 <tr><td>账户主体</td><td>生成钱包时的合同签约主体</td></tr>
-<tr><td>币种</td><td>生成钱包时的币种（除香港富利顿外默认人民币）</td></tr>
+<tr><td>币种</td><td>钱包币种；默认人民币（各主体统一，含香港富力顿），其他币种由财务手工开通</td></tr>
 <tr><td>账户名称</td><td>账号编号 + 币种代码，全局唯一</td></tr>
 <tr><td>余额</td><td>充值金额 − 核销扣减后的剩余金额</td></tr>
 <tr><td>待核销欠款</td><td>客户已确认账单但财务未核销的账单总金额</td></tr>
@@ -289,7 +350,9 @@
 ⑤ 币种纠错（待入账状态）：财务反审计运单及流水 → 业务删除错误赔付流水 → 重新添加正确币种流水 → 重新整单审计；已关联账单则只能红冲</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>说明</td></tr>
 <tr><td>------</td><td>------</td></tr>
 <tr><td>记录编号</td><td>CR+年月日+序号，全局唯一</td></tr>
+<tr><td>关联业务流水</td><td>1:1 关联赔付类型业务流水（is_credit=true），系统自动捕捉</td></tr>
 <tr><td>关联运单号</td><td>引用运单模块</td></tr>
+<tr><td>客户</td><td>引用客商中心</td></tr>
 <tr><td>主体</td><td>5 账套之一</td></tr>
 <tr><td>币种</td><td>赔付币种</td></tr>
 <tr><td>赔付金额</td><td>正数（入账时按负数抵扣）</td></tr>
@@ -299,14 +362,14 @@
 <tr><td>入账时间</td><td>已入账回填</td></tr>
 <tr><td>关联账单号</td><td>已入账回填（账单号规则与账单管理一致：AR+主体代码+年月+序号）</td></tr>
 </table></div>
-<strong>相关 AC</strong>：<code>AC12-钱包开通</code> <code>AC13-充值</code> <code>AC14-币种互转</code> <code>AC15-提现</code></p><p><hr></p><p><h2 id="7-验收标准总览-AC">7. 验收标准总览 (AC)</h2></p><p><strong>流程一：应收业务流水与审计</strong>
+<strong>相关 AC</strong>：<code>AC12-钱包开通</code> <code>AC13-充值</code> <code>AC14-币种互转</code> <code>AC15-提现</code> <code>AC16-银行账户</code> <code>AC17-资金流水</code> <code>AC18-入账记录</code></p><p><hr></p><p><h2 id="7-验收标准总览-AC">7. 验收标准总览 (AC)</h2></p><p><strong>流程一：应收业务流水与审计</strong>
 <ul><li>[ ] <strong>AC1-生成</strong>：运单收货完成后，系统自动生成应收业务流水，取当周公布价+附加费，金额=公布价−优惠</li>
 <li>[ ] <strong>AC2-审计</strong>：业务侧逐条核对/修改/新增/删除后整单审计通过，流水锁定</li>
 <li>[ ] <strong>AC3-反审计</strong>：仅财务可反审计；业务需通过工单或线下申请</li>
 <li>[ ] <strong>AC4-红冲</strong>：已关联账单的流水，红冲生成负数冲抵+正数重开，原流水留痕，红冲归下一期账单</li>
 </ul>
 <strong>流程二：账单生成与客户确认</strong>
-<ul><li>[ ] <strong>AC5-生成</strong>：财务按 客户+主体+账期+币种 聚合已锁定流水生成账单，账单号唯一</li>
+<ul><li>[ ] <strong>AC5-生成</strong>：财务按 客户+主体+账期+币种 聚合已锁定流水生成账单，账单号唯一；合同账期为空时需补录账期天数，账单标记账期来源</li>
 <li>[ ] <strong>AC6-发送</strong>：账单可发送给客户</li>
 <li>[ ] <strong>AC7-确认</strong>：客户在货主端确认账单，异议走线下/工单</li>
 </ul>
@@ -316,17 +379,21 @@
 <li>[ ] <strong>AC10-反核销</strong>：未做账账单可反核销，留核销/反核销日志</li>
 <li>[ ] <strong>AC11-账龄</strong>：按账单日+账期天数起算，未到期单列+逾期四段，客户×主体×币种三维度，分币种不折算</li>
 </ul>
-<strong>流程四：资金账户与钱包</strong>
-<ul><li>[ ] <strong>AC12-钱包开通</strong>：入驻自动开人民币默认钱包；财务可手工开通其他币种钱包（同客户+主体+币种不重复）；账户名称全局唯一（账号编号+币种代码）</li>
-<li>[ ] <strong>AC13-充值</strong>：客户货主端发起充值（金额+币种+打款账户+凭证），财务核对银行流水审核入池</li>
-<li>[ ] <strong>AC14-币种互转</strong>：财务手工互转，实时基准汇率可手工覆盖，汇损暂不记</li>
+<strong>流程四：资金账户与钱包（含入账记录）</strong>
+<ul><li>[ ] <strong>AC12-钱包开通</strong>：合同<strong>签约完成</strong>时系统自动开通「客户×主体×人民币」钱包（余额 0，开通方式=系统自动），开户完成不触发；财务可手工补开其他币种钱包（同客户+主体+币种不重复），手工开通时<strong>主体仅限该客户签约过的主体</strong>（含已过期/已解约）、币种仅限未开通的，未签约主体一律阻断；合同过期/解约不影响钱包任何操作；账户名称全局唯一（账号编号+币种代码）</li>
+<li>[ ] <strong>AC13-充值</strong>：客户货主端发起充值（金额+币种+打款账户+凭证），财务核对银行流水审核入池；财务亦可在「客户充值」操作台代客户手工入池（线下打款到账后），代充不产生充值申请单</li>
+<li>[ ] <strong>AC14-币种互转</strong>：财务手工互转；汇率调阿里汇率接口实时获取并以接口值预填，可手工覆盖（接口汇率/实际采用汇率/汇率来源三者留痕）；一期汇损暂不记</li>
 <li>[ ] <strong>AC15-提现</strong>：财务在操作台直接为客户提现，钱包余额扣减，不可透支</li>
+<li>[ ] <strong>AC16-银行账户</strong>：我方银行账户按主体维护，账号唯一且创建后不可修改、单币种、可设默认打款账户；「用户是否可见」= 是 才出现在客户充值的打款账户下拉中；默认账户唯一且必须可见；停用账户自动置为不可见并取消默认</li>
+<li>[ ] <strong>AC17-资金流水</strong>：资金流水按钱包记录 6 类进出（充值/充值退回/提现/核销/核销撤销/转汇），含变动前后余额与关联单据；事实记录不可改不可删，出错靠反向流水</li>
+<li>[ ] <strong>AC18-入账记录</strong>：赔付类型业务流水（is_credit=true）自动挂入账记录（编号 CR+年月日+序号），账单生成时归最新一期按负数抵扣应收、归入后不可改期；客户放弃索赔时加反向负数记录冲抵，两条留痕、净额归 0</li>
 </ul>
 <h2 id="8-NFR-非功能性需求">8. NFR（非功能性需求）</h2></p><p><ul><li><strong>性能</strong>：账龄台账实时计算，账单量万级内查询响应 < 1s</li>
 <li><strong>并发</strong>：钱包余额扣减（核销/提现/互转）必须乐观锁，防超扣</li>
 <li><strong>数据保留</strong>：业务流水、账单、核销、资金流水永久留存（软删除，不物理删除）</li>
 <li><strong>精度</strong>：所有金额 Decimal(20,6)，禁止 Float/Double；币种不折算混总</li>
 <li><strong>安全</strong>：反审计、反核销仅财务角色可操作；跨租户数据隔离（tenant_id）</li>
+<li><strong>外部依赖</strong>：汇率调阿里汇率接口实时获取；接口超时/异常时降级为「手工填写 + 来源=手工覆盖」，不阻断币种互转</li>
 </ul>
 <h2 id="9-计算示例">9. 计算示例</h2></p><p><strong>示例一：核销金额 min 公式</strong></p><p><pre><code>输入: {账单未收 = ¥1280.50, 钱包余额 = ¥3719.50}
 
@@ -351,10 +418,10 @@ Step 2 — 逾期天数:
 Step 1 [流程四] — 财务开通比索钱包（新增钱包）
 Step 2 [流程四] — 客户充值比索 → 财务审核入池
 Step 3 [流程四] — 币种互转: 比索 → 人民币
-          汇率 = 1元 = 7.8比索（实时基准，可手工覆盖）
+          汇率 = 1元 = 7.8比索（调阿里汇率接口实时获取，页面预填，可手工覆盖）
           转出 ₱10000 → 转入 ¥1282.05
 Step 4 [流程三] — 人民币钱包核销人民币账单 ¥1280.50（同币种闭合）
-</code></pre></p><p><h2 id="10-功能清单">10. 功能清单</h2></p><p><blockquote>基于 4 条业务流程，共 <strong>2 个模块、13 项功能</strong>。P0 = MVP，P1 = 二期，P2 = 三期。</blockquote></p><p><strong>模块 A：应收管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
+</code></pre></p><p><h2 id="10-功能清单">10. 功能清单</h2></p><p><blockquote>基于 4 条业务流程，共 <strong>2 个模块、16 项功能、18 条 AC</strong>。P0 = MVP，P1 = 二期，P2 = 三期。</blockquote></p><p><strong>模块 A：应收管理</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
 <tr><td>------</td><td>------</td><td>--------</td><td>-----</td></tr>
 <tr><td>A1</td><td>业务流水生成（运单收货自动）</td><td>P0</td><td>AC1</td></tr>
 <tr><td>A2</td><td>业务审计 + 财务反审计</td><td>P0</td><td>AC2/AC3</td></tr>
@@ -367,17 +434,18 @@ Step 4 [流程三] — 人民币钱包核销人民币账单 ¥1280.50（同币�
 <strong>模块 B：资金账户</strong></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>功能</td><td>优先级</td><td>AC</td></tr>
 <tr><td>------</td><td>------</td><td>--------</td><td>-----</td></tr>
 <tr><td>B1</td><td>钱包开通（入驻自动+财务手工）</td><td>P0</td><td>AC12</td></tr>
-<tr><td>B2</td><td>充值审核</td><td>P0</td><td>AC13</td></tr>
+<tr><td>B2</td><td>充值审核 + 代客户充值</td><td>P0</td><td>AC13</td></tr>
 <tr><td>B3</td><td>币种互转</td><td>P0</td><td>AC14</td></tr>
 <tr><td>B4</td><td>客户提现</td><td>P0</td><td>AC15</td></tr>
-<tr><td>B5</td><td>我方银行账户管理</td><td>P0</td><td>—</td></tr>
-<tr><td>B6</td><td>资金流水查询</td><td>P0</td><td>—</td></tr>
+<tr><td>B5</td><td>我方银行账户管理</td><td>P0</td><td>AC16</td></tr>
+<tr><td>B6</td><td>资金流水查询</td><td>P0</td><td>AC17</td></tr>
+<tr><td>B7</td><td>入账记录（赔付待入账 → 账单抵扣）</td><td>P0</td><td>AC18</td></tr>
 </table></div>
 <strong>分期汇总</strong></p><p><div class="table-wrapper"><table><tr><td>分期</td><td>模块范围</td><td>功能数</td></tr>
 <tr><td>------</td><td>----------</td><td>--------</td></tr>
-<tr><td><strong>Phase 1 (MVP)</strong></td><td>应收管理 + 资金账户</td><td><strong>13</strong></td></tr>
-<tr><td><strong>Phase 2</strong></td><td>应付管理、对账中心、毛利分析、开票</td><td>+N</td></tr>
-<tr><td><strong>Phase 3</strong></td><td>实际成本核算</td><td>+N</td></tr>
+<tr><td><strong>Phase 1 (MVP)</strong></td><td>应收管理（A1-A7）+ 资金账户（B1-B7）</td><td><strong>16</strong></td></tr>
+<tr><td><strong>Phase 2</strong></td><td>应付管理、对账中心、毛利分析、开票、<strong>导出能力（范围待细化）</strong></td><td>+N</td></tr>
+<tr><td><strong>Phase 3</strong></td><td>实际成本核算（实际成本 vs 成本预估对账）</td><td>+N</td></tr>
 </table></div>
 <h2 id="11-MVP-方案与建议">11. MVP 方案与建议</h2></p><p><strong>MVP 方案（Phase 1 — 应收 + 资金账户闭环）</strong></p><p><pre><code>财务模块
 ├── 应收管理（账期周期）
@@ -386,12 +454,14 @@ Step 4 [流程三] — 人民币钱包核销人民币账单 ¥1280.50（同币�
 │   ├── 账单生成 + 发送 + 客户确认
 │   ├── 收款核销（同币种 + 反核销）
 │   └── 账龄台账（未到期 + 逾期四段）
-├── 资金账户（日频）
-│   ├── 钱包（客户×主体×币种，入驻自动 + 财务手工开通）
-│   ├── 充值审核
-│   ├── 币种互转（实时+手工覆盖）
+├── 资金账户管理（日频）— 单页双 Tab
+│   ├── 我司账户（按主体维护，含 用户是否可见 / 默认打款账户 / 启用停用）
+│   ├── 客户资金账户（客户×主体×币种钱包，入驻自动 + 财务手工开通）
+│   ├── 币种互转（阿里汇率接口实时 + 手工覆盖留痕）
+│   ├── 充值审核 + 代客户充值
 │   ├── 客户提现
-│   └── 资金流水查询
+│   ├── 资金流水查询
+│   └── 入账记录（赔付待入账 → 归最新一期账单负数抵扣）
 └── 审计 &amp; 留痕
     ├── 核销/反核销日志
     └── 反审计/红冲留痕
@@ -401,6 +471,9 @@ Step 4 [流程三] — 人民币钱包核销人民币账单 ¥1280.50（同币�
 <li>银行流水自动识别入账（二期）</li>
 <li>自动核销（二期）</li>
 <li>线上账单异议（异议走线下/工单）</li>
+<li>汇率配置维护与汇率历史表（汇率调阿里汇率接口实时获取，不做本地维护）</li>
+<li>汇损记账（跨币种互转一期直接转，不记汇损）</li>
+<li>导出能力（一期仅保留原型入口占位，具体导出页面与字段范围后续单独讨论，二期随对账中心统一实现）</li>
 </ul>
 <strong>理想方案（Phase 2-3）</strong>
 <ul><li><strong>Phase 2</strong>：应付管理、对账中心（账实+账账）、毛利分析（基于成本预估）、开票、在线付款 + 核销关系表、自动核销、银行流水自动识别</li>
@@ -410,7 +483,11 @@ Step 4 [流程三] — 人民币钱包核销人民币账单 ¥1280.50（同币�
 ① 钱包层隔离主体（客户×主体×币种），从源头拦住跨主体混打，比事后对账纠错成本低
 ② 核销永远同币种，跨币种先互转，避免汇率折算导致的账实不符；一期互转不记汇损，降低复杂度
 ③ 账龄台账用实时视图而非快照表，一期账单量不大，实时算足够且无延迟
-④ 资金流水为事实记录不可改，出错靠反向流水（充值退回/核销撤销），不做红冲，保证审计链路完整</p><p><h3 id="下一步">下一步</h3></p><p>财务模块应收管理 + 资金账户已完成需求对齐（RDD v0.4 模板化）、数据设计（9 表 + ER 图 + 状态机）、原型（货主端 2 页 + 员工端 7 页）。下一步：应付/对账中心/毛利分析细节待展开对齐，或进入 PRD 定稿。
+④ 资金流水为事实记录不可改，出错靠反向流水（充值退回/核销撤销），不做红冲，保证审计链路完整
+⑤ 汇率统一走阿里汇率接口实时获取：互转页以接口值预填、允许财务手工覆盖，接口汇率 + 实际采用汇率 + 汇率来源三者同存。既满足审计留痕，也省掉自建汇率表与人工维护成本，避免口径分歧；接口异常时降级为「手工填写 + 来源=手工覆盖」，不阻断业务</p><p><h3 id="下一步">下一步</h3></p><p><strong>Phase 1（应收管理 + 资金账户）RDD v1.0 定稿</strong>：需求对齐完成（2 模块 16 项功能 / 18 条 AC）、数据设计（10 表 + ER 图 + 4 个状态机）、原型（货主端 2 页 + 员工端 7 页）。汇率取数口径已定（阿里汇率接口实时获取）。</p><p>下一步：
+① <strong>Phase 1 进入 PRD 撰写</strong>（财务暂无 PRD，PRD 为开发唯一真相源）
+② <strong>Phase 2 细节展开对齐</strong>：应付管理、对账中心、毛利分析、开票
+③ <strong>Phase 3</strong>：实际成本核算（实际成本 vs 成本预估对账）
 </p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>

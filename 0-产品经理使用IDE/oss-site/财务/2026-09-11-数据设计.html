@@ -18,9 +18,9 @@
 </div>
 <div class="layout">
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv2"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#表-1-应收业务流水-ar_flow">表 1：应收业务流水 `ar_flow`</a></li><li class="toc-lv3"><a href="#表-2-应收账单-ar_bill">表 2：应收账单 `ar_bill`</a></li><li class="toc-lv3"><a href="#表-3-收款核销流水-ar_writeoff">表 3：收款核销流水 `ar_writeoff`</a></li><li class="toc-lv3"><a href="#视图-账龄台账-不建表">视图：账龄台账（不建表）</a></li><li class="toc-lv3"><a href="#视图-货主端资金账户-不建表">视图：货主端资金账户（不建表）</a></li><li class="toc-lv3"><a href="#表-5-我方银行账户-bank_account">表 5：我方银行账户 `bank_account`</a></li><li class="toc-lv3"><a href="#表-6-客户预存款钱包-customer_wallet">表 6：客户预存款钱包 `customer_wallet`</a></li><li class="toc-lv3"><a href="#表-7-资金流水-wallet_flow">表 7：资金流水 `wallet_flow`</a></li><li class="toc-lv3"><a href="#表-8-币种互转-currency_transfer">表 8：币种互转 `currency_transfer`</a></li><li class="toc-lv3"><a href="#表-9-充值申请-recharge_apply">表 9：充值申请 `recharge_apply`</a></li><li class="toc-lv3"><a href="#表-10-入账记录-credit_record">表 10：入账记录 `credit_record`</a></li><li class="toc-lv2"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv2"><a href="#四-关键设计说明">四、关键设计说明</a></li><li class="toc-lv3"><a href="#4-1-金额精度">4.1 金额精度</a></li><li class="toc-lv3"><a href="#4-2-乐观锁-并发控制">4.2 乐观锁（并发控制）</a></li><li class="toc-lv3"><a href="#4-3-软删除策略">4.3 软删除策略</a></li><li class="toc-lv3"><a href="#4-4-视图说明">4.4 视图说明</a></li><li class="toc-lv3"><a href="#4-5-状态机">4.5 状态机</a></li><li class="toc-lv3"><a href="#4-6-外部引用-纯逻辑实体">4.6 外部引用（纯逻辑实体）</a></li></ul></nav>
-<div class="content"><div class="doc-content"><p><h1 id="数据设计-财务模块-应收-资金账户">数据设计 — 财务模块（应收 + 资金账户）</h1></p><p><blockquote><strong>版本</strong>：v0.2 | <strong>日期</strong>：2026-08-29 | <strong>作者</strong>：飞点产品
-<strong>覆盖范围</strong>：应收管理 R1-R5 + 资金账户 W1-W6（应付/对账/毛利/开票/成本核算待后续对齐后补充）
-<strong>上游</strong>：[2026-08-29-用户需求.md](2026-08-29-用户需求.md)（RDD v0.4）</blockquote></p><p><hr></p><p><h2 id="一-实体清单-表映射">一、实体清单 × 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>实体</td><td>对应表</td><td>映射方式</td><td>说明</td></tr>
+<div class="content"><div class="doc-content"><p><h1 id="数据设计-财务模块-应收-资金账户">数据设计 — 财务模块（应收 + 资金账户）</h1></p><p><blockquote><strong>版本</strong>：v0.3 | <strong>日期</strong>：2026-09-11 | <strong>作者</strong>：飞点产品
+<strong>覆盖范围</strong>：应收管理 R1-R5 + 资金账户 W1-W6（含入账记录）；应付/对账/毛利/开票/成本核算待后续对齐后补充
+<strong>上游</strong>：[2026-09-11-用户需求.md](2026-09-11-用户需求.md)（RDD v1.0 定稿）</blockquote></p><p><hr></p><p><h2 id="一-实体清单-表映射">一、实体清单 × 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>实体</td><td>对应表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td>1</td><td>应收业务流水</td><td><code>ar_flow</code></td><td>独立表</td><td>运单收货自动生成，粒度=运单（R1）</td></tr>
 <tr><td>2</td><td>应收账单</td><td><code>ar_bill</code></td><td>独立表</td><td>财务聚合，账期级（R2）</td></tr>
@@ -35,7 +35,8 @@
 <tr><td>—</td><td>运单</td><td>—</td><td>逻辑实体</td><td>引用运单模块，财务不建表</td></tr>
 <tr><td>—</td><td>客户</td><td>—</td><td>逻辑实体</td><td>引用客商中心，财务不建表</td></tr>
 <tr><td>—</td><td>主体（账套）</td><td>—</td><td>逻辑实体</td><td>引用基础资料，5 主体</td></tr>
-<tr><td>—</td><td>币种/汇率</td><td>—</td><td>逻辑实体</td><td>引用财务配置，财务不重复建</td></tr>
+<tr><td>—</td><td>币种</td><td>—</td><td>逻辑实体</td><td>枚举字典（CNY/USD/HKD…），财务不建表</td></tr>
+<tr><td>—</td><td>汇率</td><td>—</td><td>外部接口</td><td>调<strong>阿里汇率接口</strong>实时获取，不落库、不自建汇率表；币种互转时接口汇率与实际采用汇率随单留痕</td></tr>
 <tr><td>—</td><td>费用类型</td><td>—</td><td>逻辑实体</td><td>引用头程管理 <code>fee_type</code> 字典（同方向唯一），财务不建表</td></tr>
 <tr><td>—</td><td>账期（合同）</td><td>—</td><td>逻辑实体</td><td>引用客商中心 <code>customer_contract</code></td></tr>
 </table></div>
@@ -58,7 +59,7 @@
 <tr><td>receivable_amount</td><td>应收净额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>publish_price − discount</td></tr>
 <tr><td>billing_date</td><td>账单日</td><td>Date</td><td>Yes</td><td>Index</td><td>从合同推导，生成时快照</td></tr>
 <tr><td>payment_terms_days</td><td>账期天数</td><td>Int</td><td>Yes</td><td>—</td><td>如 15 天</td></tr>
-<tr><td>payment_terms_type</td><td>签约账期类型</td><td>TinyInt</td><td>Yes</td><td>—</td><td>月结/双月结/三月结/周结…</td></tr>
+<tr><td>payment_terms_type</td><td>签约账期类型</td><td>TinyInt</td><td>Yes</td><td>—</td><td>与客商中心 <code>customer_contract.payment_term</code> 同值：101:月结, 102:双月结, 103:三月结, 201:周结, 202:到港前结, 203:签收月结, 204:到海外仓结, 205:签收结</td></tr>
 <tr><td>bill_id</td><td>关联账单ID</td><td>BigInt</td><td>No</td><td>Index</td><td>生成账单后回填</td></tr>
 <tr><td>audit_status</td><td>审计状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:待业务审计, 20:已审计, 30:已红冲</td></tr>
 <tr><td>biz_audit_by / biz_audit_at</td><td>业务审计人/时间</td><td>—</td><td>No</td><td>—</td><td>业务侧「运单管理」操作</td></tr>
@@ -73,6 +74,8 @@
 <tr><td>entity_id</td><td>主体ID</td><td>BigInt</td><td>Yes</td><td>Index</td><td>—</td></tr>
 <tr><td>currency</td><td>币种</td><td>String(8)</td><td>Yes</td><td>—</td><td>—</td></tr>
 <tr><td>billing_date</td><td>账单日</td><td>Date</td><td>Yes</td><td>Index</td><td>—</td></tr>
+<tr><td>payment_terms_days</td><td>账期天数</td><td>Int</td><td>Yes</td><td>—</td><td>账单级账期快照，账龄台账按 billing_date + 本字段推逾期；<strong>合同账期为空时由财务在生成账单时补录</strong></td></tr>
+<tr><td>term_source</td><td>账期来源</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:合同账期, 20:手工补录（合同账期未完善时财务补录并留痕，不回写客商中心合同）</td></tr>
 <tr><td>bill_amount</td><td>账单总额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>聚合流水应收净额</td></tr>
 <tr><td>received_amount</td><td>已核销金额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>核销累加，默认 0</td></tr>
 <tr><td>unreceived_amount</td><td>未收金额</td><td>Decimal(20,6)</td><td>Yes</td><td>Index</td><td>bill_amount − received_amount</td></tr>
@@ -97,7 +100,7 @@
 <h3 id="视图-账龄台账-不建表">视图：账龄台账（不建表）</h3></p><p>基于 <code>ar_bill</code> 实时计算：<code>unreceived_amount > 0</code> 的账单，按 <code>billing_date + payment_terms_days</code> 推逾期天数 → 未到期单列 + 逾期 0-30 / 31-60 / 61-90 / 90+；维度 = 客户 × 主体 × 币种；分币种不折算。</p><p><h3 id="视图-货主端资金账户-不建表">视图：货主端资金账户（不建表）</h3></p><p>基于 <code>customer_wallet</code> + <code>ar_bill</code> 实时计算，按 主体 × 币种 聚合，货主端「资金账户」页展示：</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>说明</td></tr>
 <tr><td>:---</td><td>:---</td></tr>
 <tr><td>账户主体</td><td><code>customer_wallet.entity_id</code> → 主体名称（合同签约主体）</td></tr>
-<tr><td>币种</td><td><code>customer_wallet.currency</code>（除香港富利顿外默认人民币，其他币种财务手工开通）</td></tr>
+<tr><td>币种</td><td><code>customer_wallet.currency</code>（默认人民币，各主体统一；其他币种财务手工开通）</td></tr>
 <tr><td>账户名称</td><td><code>customer_wallet.account_name</code></td></tr>
 <tr><td>余额</td><td><code>customer_wallet.balance</code>（充值入池 − 核销扣减后的剩余）</td></tr>
 <tr><td>待核销欠款</td><td>Σ <code>ar_bill.unreceived_amount</code>，where <code>status ∈ {已确认(30), 部分核销(40)}</code>，按 主体×币种</td></tr>
@@ -107,21 +110,26 @@
 <h3 id="表-5-我方银行账户-bank_account">表 5：我方银行账户 <code>bank_account</code></h3></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td>entity_id</td><td>主体ID</td><td>BigInt</td><td>Yes</td><td>Index</td><td>每主体可多账户</td></tr>
-<tr><td>account_name</td><td>账户名称</td><td>String(64)</td><td>Yes</td><td>—</td><td>—</td></tr>
-<tr><td>account_no</td><td>账号</td><td>String(32)</td><td>Yes</td><td><strong>Unique</strong></td><td>—</td></tr>
+<tr><td>account_name</td><td>账户名称</td><td>String(64)</td><td>Yes</td><td>—</td><td>开户名</td></tr>
+<tr><td>account_no</td><td>账号</td><td>String(32)</td><td>Yes</td><td><strong>Unique</strong></td><td>全局唯一，创建后不可修改</td></tr>
 <tr><td>bank_name</td><td>开户行</td><td>String(64)</td><td>Yes</td><td>—</td><td>—</td></tr>
+<tr><td>swift_code</td><td>SWIFT/BIC</td><td>String(16)</td><td>No</td><td>—</td><td>境外打款用，非人民币账户建议填写</td></tr>
 <tr><td>currency</td><td>账户币种</td><td>String(8)</td><td>Yes</td><td>—</td><td>单币种账户</td></tr>
-<tr><td>is_default</td><td>是否默认</td><td>Boolean</td><td>Yes</td><td>—</td><td>客户打款默认账户</td></tr>
-<tr><td>status</td><td>状态</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:启用, 20:停用</td></tr>
+<tr><td>balance</td><td>账面余额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>财务手工维护的账面余额，非银行实时余额；默认 0</td></tr>
+<tr><td>is_visible_to_customer</td><td>用户是否可见</td><td>Boolean</td><td>Yes</td><td>Index</td><td>默认 true；为 true 时客户货主端充值的打款账户下拉可见该账户</td></tr>
+<tr><td>is_default</td><td>是否默认</td><td>Boolean</td><td>Yes</td><td>—</td><td>客户打款默认账户；同一主体+币种仅一个，且必须 <code>is_visible_to_customer=true</code></td></tr>
+<tr><td>status</td><td>状态</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:启用, 20:停用；停用同时置 <code>is_visible_to_customer=false</code>、<code>is_default=false</code></td></tr>
 </table></div>
-<h3 id="表-6-客户预存款钱包-customer_wallet">表 6：客户预存款钱包 <code>customer_wallet</code></h3></p><p><blockquote>钱包 = 客户 × 主体 × 币种；余额扣减需乐观锁，不可透支。生成节点 = 客户完成「开户 + 签约」后（正常入驻开户完成时 / 特殊入驻签约完成时 / 新合同签约完成时）生成对应主体钱包。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<h3 id="表-6-客户预存款钱包-customer_wallet">表 6：客户预存款钱包 <code>customer_wallet</code></h3></p><p><blockquote>钱包 = 客户 × 主体 × 币种；余额扣减需乐观锁，不可透支。<strong>生成节点（唯一自动触发点）= 客商中心合同签约完成</strong>（<code>sign_status</code> 20 → 30），按 <code>contract_company</code> 生成「客户 × 主体 × 人民币」钱包；正常入驻（先签约后开户）与特殊入驻（先开户后签约）统一卡在签约完成，开户完成不触发；续签幂等（唯一索引兜底），每日补偿「已签署合同无对应钱包」。<strong>钱包生命周期与合同解耦</strong>：合同过期/解约不影响钱包任何操作（充值/核销/提现/互转/新增币种钱包照常），系统不自动停用。默认币种统一人民币（各主体一致）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td>customer_id</td><td>客户ID</td><td>BigInt</td><td>Yes</td><td><strong>Unique(联合)</strong></td><td>—</td></tr>
 <tr><td>entity_id</td><td>主体ID</td><td>BigInt</td><td>Yes</td><td><strong>Unique(联合)</strong></td><td>—</td></tr>
 <tr><td>currency</td><td>币种</td><td>String(8)</td><td>Yes</td><td><strong>Unique(联合)</strong></td><td>(customer, entity, currency) 唯一</td></tr>
 <tr><td>account_name</td><td>账户名称</td><td>String(16)</td><td>Yes</td><td><strong>Unique</strong></td><td>格式=账号编号+空格+币种代码；账号编号 7 位全局递增(1000001 起)，跨客户/主体/币种不重复</td></tr>
 <tr><td>balance</td><td>余额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>不可透支，默认 0</td></tr>
-<tr><td>is_default</td><td>是否默认钱包</td><td>Boolean</td><td>Yes</td><td>—</td><td>入驻自动开人民币默认</td></tr>
+<tr><td>open_source</td><td>开通方式</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:系统自动(合同签约完成), 20:财务手工</td></tr>
+<tr><td>opened_at</td><td>开通时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>钱包创建时间</td></tr>
+<tr><td>is_default</td><td>是否默认钱包</td><td>Boolean</td><td>Yes</td><td>—</td><td>系统字段，员工端/货主端均不展示；二期「默认支付钱包」预留</td></tr>
 </table></div>
 <h3 id="表-7-资金流水-wallet_flow">表 7：资金流水 <code>wallet_flow</code></h3></p><p><blockquote>钱包资金进出痕迹，事实记录不可改（出错靠反向流水：充值退回/核销撤销）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
@@ -130,7 +138,7 @@
 <tr><td>currency</td><td>币种</td><td>String(8)</td><td>Yes</td><td>—</td><td>—</td></tr>
 <tr><td>amount</td><td>变动金额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>正=入, 负=出</td></tr>
 <tr><td>balance_before / balance_after</td><td>变动前/后余额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>留痕</td></tr>
-<tr><td>recharge_id</td><td>关联充值</td><td>BigInt</td><td>No</td><td>—</td><td>充值/充值退回</td></tr>
+<tr><td>recharge_id</td><td>关联充值</td><td>BigInt</td><td>No</td><td>—</td><td>充值/充值退回；<strong>财务代充无充值申请单，本字段为空</strong></td></tr>
 <tr><td>writeoff_id</td><td>关联核销</td><td>BigInt</td><td>No</td><td>—</td><td>核销/核销撤销</td></tr>
 <tr><td>transfer_id</td><td>关联转汇</td><td>BigInt</td><td>No</td><td>—</td><td>转汇</td></tr>
 <tr><td>operator_by / operator_at</td><td>操作人/时间</td><td>—</td><td>Yes</td><td>—</td><td>—</td></tr>
@@ -146,7 +154,9 @@
 <tr><td>to_wallet_id</td><td>转入钱包ID</td><td>BigInt</td><td>Yes</td><td>Index</td><td>—</td></tr>
 <tr><td>to_currency</td><td>转入币种</td><td>String(8)</td><td>Yes</td><td>—</td><td>—</td></tr>
 <tr><td>to_amount</td><td>转入金额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>按汇率换算</td></tr>
-<tr><td>rate</td><td>汇率</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>实时基准+手工覆盖</td></tr>
+<tr><td>api_rate</td><td>接口汇率</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>阿里汇率接口实时返回值，留痕不可改</td></tr>
+<tr><td>rate</td><td>汇率</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>实际采用汇率，默认=api_rate，可手工覆盖</td></tr>
+<tr><td>rate_source</td><td>汇率来源</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:接口实时, 20:手工覆盖</td></tr>
 <tr><td>operator_by / operator_at</td><td>操作人/时间</td><td>—</td><td>Yes</td><td>—</td><td>财务手工</td></tr>
 </table></div>
 <h3 id="表-9-充值申请-recharge_apply">表 9：充值申请 <code>recharge_apply</code></h3></p><p><blockquote>客户货主端发起，财务审核后入池。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
@@ -221,7 +231,7 @@
 <li>客户：引用客商中心（<code>customer_id</code>）</li>
 <li>主体：引用基础资料（<code>entity_id</code>）</li>
 <li>账期：引用客商中心 <code>customer_contract</code>（合同级），财务生成流水时快照账期字段，不重复维护</li>
-<li>币种/汇率：引用财务配置（<code>currency</code>、汇率三层）</li>
+<li>币种：枚举字典；汇率：调<strong>阿里汇率接口</strong>实时获取（不落库、不自建汇率表），币种互转时以接口值预填、允许财务手工覆盖，<code>api_rate</code> + <code>rate</code> + <code>rate_source</code> 三者随单留痕；接口异常时降级为手工填写（rate_source=20）</li>
 </ul></p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>

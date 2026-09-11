@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD - 财务 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}.nav-bar a:hover{color:#7c3aed}.nav-bar .sep{color:#cbd5e1;font-size:14px}.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#7c3aed15;color:#7c3aed;font-size:13px;font-weight:500}.layout{display:flex;max-width:1300px;margin:0 auto;padding:32px 24px 80px;gap:40px}.toc{width:220px;flex-shrink:0;position:sticky;top:72px;align-self:flex-start;max-height:calc(100vh - 100px);overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px}.toc-title{font-size:13px;font-weight:600;color:#1e293b;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}.toc ul{list-style:none}.toc li{margin:0}.toc a{display:block;padding:4px 0;color:#64748b;text-decoration:none;font-size:13px;line-height:1.5;transition:color 0.15s}.toc a:hover{color:#7c3aed}.toc .toc-lv2 a{font-weight:500;color:#334155}.toc .toc-lv3 a{padding-left:16px;font-size:12px;color:#64748b}.content{flex:1;min-width:0}.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b;scroll-margin-top:72px}.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155;scroll-margin-top:72px}.doc-content p{margin:12px 0}.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}.doc-content li{margin:4px 0}.doc-content blockquote{border-left:4px solid #7c3aed;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}.doc-content table{width:100%;border-collapse:collapse;font-size:14px}.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}.doc-content tr:last-child td{border-bottom:none}@media(max-width:900px){.layout{flex-direction:column}.toc{width:100%;position:static;max-height:none;margin-bottom:24px}}.doc-content .mermaid{overflow-x:auto;margin:16px 0;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="nav-bar">
+<a href="../index.html">Luna 文档</a>
+<span class="sep">/</span>
+<span class="module-tag">财务</span>
+<span class="sep">/</span>
+<span>PRD</span>
+</div>
+<div class="layout">
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#1-需求定义">1. 需求定义</a></li><li class="toc-lv3"><a href="#1-1-背景与现状">1.1 背景与现状</a></li><li class="toc-lv3"><a href="#1-2-目标与成功口径">1.2 目标与成功口径</a></li><li class="toc-lv3"><a href="#1-3-范围与边界">1.3 范围与边界</a></li><li class="toc-lv3"><a href="#1-4-影响范围">1.4 影响范围</a></li><li class="toc-lv2"><a href="#2-枚举字典-研发必读">2. 枚举字典 ★ 研发必读</a></li><li class="toc-lv3"><a href="#2-1-财务自有枚举">2.1 财务自有枚举</a></li><li class="toc-lv3"><a href="#2-2-引用其他模块的枚举-财务不重复定义">2.2 引用其他模块的枚举（财务不重复定义）</a></li><li class="toc-lv2"><a href="#3-状态机-研发必读">3. 状态机 ★ 研发必读</a></li><li class="toc-lv3"><a href="#3-1-业务流水-ar_flow-audit_status-单审计-反审计">3.1 业务流水 `ar_flow.audit_status`（单审计 + 反审计）</a></li><li class="toc-lv3"><a href="#3-2-应收账单-ar_bill-status">3.2 应收账单 `ar_bill.status`</a></li><li class="toc-lv3"><a href="#3-3-充值申请-recharge_apply-status">3.3 充值申请 `recharge_apply.status`</a></li><li class="toc-lv3"><a href="#3-4-入账记录-credit_record-status">3.4 入账记录 `credit_record.status`</a></li><li class="toc-lv3"><a href="#3-5-我方银行账户-bank_account-status">3.5 我方银行账户 `bank_account.status`</a></li><li class="toc-lv2"><a href="#4-功能清单与页面映射">4. 功能清单与页面映射</a></li><li class="toc-lv3"><a href="#4-1-页面导航关系图">4.1 页面导航关系图 ★</a></li><li class="toc-lv2"><a href="#5-页面规格-研发必读">5. 页面规格 ★ 研发必读</a></li><li class="toc-lv3"><a href="#5-1-运单审计-员工端-财务侧">5.1 运单审计（员工端 · 财务侧）</a></li><li class="toc-lv3"><a href="#5-2-账单管理-员工端-财务侧">5.2 账单管理（员工端 · 财务侧）</a></li><li class="toc-lv3"><a href="#5-3-收款核销-员工端-财务侧">5.3 收款核销（员工端 · 财务侧）</a></li><li class="toc-lv3"><a href="#5-4-账龄台账-员工端-财务侧">5.4 账龄台账（员工端 · 财务侧）</a></li><li class="toc-lv3"><a href="#5-5-资金账户管理-员工端-资金账户-双-Tab">5.5 资金账户管理（员工端 · 资金账户）★ 双 Tab</a></li><li class="toc-lv3"><a href="#5-6-资金流水-员工端-资金账户">5.6 资金流水（员工端 · 资金账户）</a></li><li class="toc-lv3"><a href="#5-7-财务流水-员工端-资金账户操作台">5.7 财务流水（员工端 · 资金账户操作台）</a></li><li class="toc-lv3"><a href="#5-8-资金账户-货主端-财务中心">5.8 资金账户（货主端 · 财务中心）</a></li><li class="toc-lv3"><a href="#5-9-账单管理-货主端-财务中心">5.9 账单管理（货主端 · 财务中心）</a></li><li class="toc-lv2"><a href="#6-业务规则-研发必读">6. 业务规则 ★ 研发必读</a></li><li class="toc-lv3"><a href="#6-1-应收管理">6.1 应收管理</a></li><li class="toc-lv3"><a href="#6-2-账单">6.2 账单</a></li><li class="toc-lv3"><a href="#6-3-收款核销与账龄">6.3 收款核销与账龄</a></li><li class="toc-lv3"><a href="#6-4-资金账户">6.4 资金账户</a></li><li class="toc-lv2"><a href="#7-计算公式-研发必读">7. 计算公式 ★ 研发必读</a></li><li class="toc-lv3"><a href="#7-1-应收净额-单条流水">7.1 应收净额（单条流水）</a></li><li class="toc-lv3"><a href="#7-2-账单总额">7.2 账单总额</a></li><li class="toc-lv3"><a href="#7-3-未收金额-核销后实时">7.3 未收金额（核销后实时）</a></li><li class="toc-lv3"><a href="#7-4-核销金额">7.4 核销金额</a></li><li class="toc-lv3"><a href="#7-5-账龄计算">7.5 账龄计算</a></li><li class="toc-lv3"><a href="#7-6-币种互转">7.6 币种互转</a></li><li class="toc-lv3"><a href="#7-7-货主端资金账户汇总">7.7 货主端资金账户汇总</a></li><li class="toc-lv3"><a href="#7-8-钱包余额变动-统一口径">7.8 钱包余额变动（统一口径）</a></li><li class="toc-lv2"><a href="#8-权限矩阵">8. 权限矩阵</a></li><li class="toc-lv2"><a href="#9-接口清单">9. 接口清单</a></li><li class="toc-lv2"><a href="#10-错误提示文案汇总">10. 错误提示文案汇总</a></li><li class="toc-lv2"><a href="#11-验收标准">11. 验收标准</a></li><li class="toc-lv2"><a href="#12-附录">12. 附录</a></li><li class="toc-lv3"><a href="#12-1-术语表">12.1 术语表</a></li><li class="toc-lv3"><a href="#12-2-关联链接">12.2 关联链接</a></li><li class="toc-lv3"><a href="#12-3-Demo-与-PRD-差异-研发注意">12.3 Demo 与 PRD 差异（研发注意）</a></li><li class="toc-lv3"><a href="#12-4-决策记录-原待确认项-2026-09-11-已全部确认">12.4 决策记录（原待确认项，2026-09-11 已全部确认）</a></li></ul></nav>
+<div class="content"><div class="doc-content"><p><h1 id="PRD-财务模块-Phase-1-应收管理-资金账户">PRD — 财务模块（Phase 1：应收管理 + 资金账户）</h1></p><p><blockquote><strong>文档版本</strong>：v1.0 ｜ <strong>状态</strong>：草稿（待评审） ｜ <strong>作者</strong>：飞点产品 ｜ <strong>日期</strong>：2026-09-11
+<strong>上游</strong>：RDD v1.0（应收 + 资金账户定稿）、数据设计 v0.3
+<strong>范围</strong>：Phase 1 = 应收管理（流程一~三）+ 资金账户（流程四，含入账记录），共 2 模块 16 项功能 / 18 条 AC。应付管理、对账中心、毛利分析、开票归 Phase 2；实际成本核算归 Phase 3。</blockquote></p><p><hr></p><p><h2 id="0-文档基础信息">0. 文档基础信息</h2></p><p><div class="table-wrapper"><table><tr><td>项</td><td>内容</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>文档标题</td><td>财务模块产品需求文档（Phase 1：应收管理 + 资金账户）</td></tr>
+<tr><td>版本号</td><td>v1.0</td></tr>
+<tr><td>状态</td><td>草稿（待评审）</td></tr>
+<tr><td>作者</td><td>飞点产品</td></tr>
+<tr><td>评审人</td><td>产品 / 研发 / 测试 / 财务业务代表</td></tr>
+<tr><td>计划里程碑</td><td>评审日期、提测日期、上线日期待评审后确定</td></tr>
+</table></div>
+<h3 id="0-1-关联链接">0.1 关联链接</h3></p><p><div class="table-wrapper"><table><tr><td>文档</td><td>路径</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>用户需求 (RDD)</td><td><code><a href="2026-09-11-用户需求.html">用户需求</a></code>（v1.0 定稿）</td></tr>
+<tr><td>数据设计</td><td><code><a href="2026-09-11-数据设计.html">数据设计</a></code>（v0.3）</td></tr>
+<tr><td>需求背景</td><td><code>analysis/2026-06-16-财务与系统调研结论.md</code></td></tr>
+<tr><td>原型 · 员工端</td><td><code>demo/员工端-demo/</code> → <code>财务_运单审计.html</code>、<code>财务_账单管理.html</code>、<code>财务_收款核销.html</code>、<code>财务_账龄台账.html</code>、<code>财务_资金账户管理.html</code>、<code>财务_资金流水.html</code>、<code>财务_财务流水.html</code>（7 页）</td></tr>
+<tr><td>原型 · 货主端</td><td><code>demo/货主端-demo/</code> → <code>资金账户.html</code>、<code>账单管理.html</code>（2 页）</td></tr>
+<tr><td>关联模块</td><td>头程管理（<code>Waybill.html</code> 业务侧审计、<code>fee_type</code> 费用类型）、客商中心（合同账期）、超级运价（当周公布价）、基础资料（主体/币种）</td></tr>
+</table></div>
+<hr></p><p><h2 id="1-需求定义">1. 需求定义</h2></p><p><h3 id="1-1-背景与现状">1.1 背景与现状</h3></p><p>飞点 5 家公司（广州飞点、深圳飞点、广东飞点、香港富力顿、墨链）税务上独立法人、实际一个家族，当前财务核算<strong>完全依赖线下 Excel</strong>：客户打款与应收账单靠财务手工核对，钱进来不知道冲哪张账单；账期到了不知道哪些客户逾期、逾期多久；多主体、多币种的资金往来靠手工分账，极易混账。</p><p>计费侧依赖超级运价的当周公布价与附加费规则，但运单收货完成后，<strong>应收金额 → 业务流水审计 → 账单 → 收款核销 → 账龄</strong>这一整条链路没有系统承载，财务只能线下追着业务要数据、手工算账；客户端也缺少线上确认账单与充值的入口。</p><p><h3 id="1-2-目标与成功口径">1.2 目标与成功口径</h3></p><p><ul><li><strong>目标</strong>：运单收货后，在系统内完成「业务流水审计 → 生成账单 → 客户确认 → 收款核销 → 账龄跟踪」闭环，且每一笔钱强制挂到具体主体与币种，不混账、可追溯。</li>
+<li><strong>成功口径</strong>：</li>
+</ul>
+<div class="table-wrapper"><table><tr><td>指标</td><td>数据来源</td><td>评估窗口</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>应收流水系统生成率（收货运单中自动生成流水的占比）≥ 95%</td><td><code>ar_flow</code> 按运单去重 / 运单模块已收货运单数</td><td>上线后 1 个月</td></tr>
+<tr><td>账单线上确认率（已发送账单中被客户线上确认的占比）≥ 70%</td><td><code>ar_bill</code> status=已确认(30) / status≥已发送(20)</td><td>上线后 2 个月</td></tr>
+<tr><td>核销覆盖率（已确认账单中被核销的金额占比）≥ 90%</td><td><code>ar_writeoff</code> 累计金额 / <code>ar_bill</code> 已确认总额</td><td>上线后 2 个月</td></tr>
+<tr><td>逾期未收占比（逾期 90+ 未收金额占比）≤ 5%</td><td>账龄台账</td><td>上线后 3 个月</td></tr>
+<tr><td>财务手工对账工时下降 ≥ 50%</td><td>财务线下工时统计（人工记录）</td><td>上线后 2 个月</td></tr>
+</table></div>
+<h3 id="1-3-范围与边界">1.3 范围与边界</h3></p><p><strong>In Scope（本期 P0，16 项）</strong></p><p><ul><li>应收管理：A1 业务流水生成、A2 业务审计 + 财务反审计、A3 反审计/红冲纠错、A4 账单生成、A5 账单发送 + 客户确认、A6 收款核销（同币种/部分/反核销）、A7 账龄台账</li>
+<li>资金账户：B1 钱包开通、B2 充值审核（含财务代充）、B3 币种互转、B4 客户提现、B5 我方银行账户管理、B6 资金流水查询、B7 入账记录（赔付待入账 → 账单抵扣）</li>
+</ul>
+<strong>Out of Scope（本期不做 + 原因）</strong></p><p><div class="table-wrapper"><table><tr><td>排除项</td><td>原因 / 归属</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>应付管理、对账中心、毛利分析、开票</td><td>Phase 2（<code>财务_财务流水.html</code> 已预留「支付供应商」入口空态）</td></tr>
+<tr><td>实际成本核算（实际成本 vs 成本预估）</td><td>Phase 3</td></tr>
+<tr><td>在线付款（支付渠道）</td><td>钱包与支付渠道解耦，未来只加渠道、钱包不动</td></tr>
+<tr><td>进账↔账单核销关系表、自动核销</td><td>池化模型一期够用，待在线付款上线后做</td></tr>
+<tr><td>银行流水自动识别入账</td><td>Phase 2（一期财务线下核对银行流水后人工审核）</td></tr>
+<tr><td>线上账单异议</td><td>异议走线下/工单，财务重新生成账单再发</td></tr>
+<tr><td>汇率配置维护与汇率历史表</td><td>汇率调阿里汇率接口实时获取，不自建汇率表</td></tr>
+<tr><td>汇损记账</td><td>跨币种互转一期直接转，不记汇损</td></tr>
+<tr><td>导出能力</td><td>需求已登记、原型入口先出（员工端 7 个财务列表页「导出」按钮，点击提示开发中）；导出页面与字段范围待单独讨论，Phase 2 随对账中心统一实现</td></tr>
+</table></div>
+<h3 id="1-4-影响范围">1.4 影响范围</h3></p><p><ul><li><strong>影响角色</strong>：财务专员（主）、业务专员（运单侧审计）、运营（赔付流水）、客户/货主端用户（账单确认、充值）、系统自动任务</li>
+<li><strong>依赖系统/模块</strong>：</li>
+</ul>
+<div class="table-wrapper"><table><tr><td>依赖</td><td>依赖内容</td><td>缺失时的影响</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>头程管理（运单模块）</td><td>收货完成事件、运单号、业务侧审计（<code>Waybill.html</code> 费用 tab）</td><td>无法触发生成流水</td></tr>
+<tr><td>超级运价</td><td>当周公布价、附加费规则、服务组合成本</td><td>取价失败 → 走手工新增（数据来源=操作人）</td></tr>
+<tr><td>客商中心</td><td>客户、合同账期（<code>customer_contract.payment_term</code> / 账单周期）、签约主体</td><td>无法推导账单日与账期天数</td></tr>
+<tr><td>头程管理 <code>fee_type</code></td><td>费用类型字典（含 <code>is_credit</code> 赔付标记、<code>credit_type</code>）</td><td>无法生成分类流水与入账记录</td></tr>
+<tr><td>基础资料</td><td>主体（5 账套）、币种</td><td>无法隔离主体</td></tr>
+<tr><td>阿里汇率接口</td><td>实时汇率（币种互转）</td><td>降级为手工填写（来源=手工覆盖），不阻断业务</td></tr>
+</table></div>
+<hr></p><p><h2 id="2-枚举字典-研发必读">2. 枚举字典 ★ 研发必读</h2></p><p><blockquote>与数据设计 v0.3 Schema 的 TinyInt 值保持一致；跨模块枚举以来源模块为准，财务不重复定义。</blockquote></p><p><h3 id="2-1-财务自有枚举">2.1 财务自有枚举</h3></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
+<tr><td>:---</td><td>:---:</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>FlowCategory</td><td>10</td><td>AR</td><td>应收</td><td><code>ar_flow.flow_category</code></td></tr>
+<tr><td>FlowCategory</td><td>20</td><td>AP</td><td>应付</td><td>同上（<strong>Phase 1 仅实现应收，应付为预留枚举</strong>）</td></tr>
+<tr><td>FlowCategory</td><td>30</td><td>SALES_COMMISSION</td><td>销售提成</td><td>同上（Phase 1 预留）</td></tr>
+<tr><td>AuditStatus</td><td>10</td><td>PENDING_BIZ_AUDIT</td><td>待业务审计</td><td><code>ar_flow.audit_status</code></td></tr>
+<tr><td>AuditStatus</td><td>20</td><td>AUDITED</td><td>已审计</td><td>同上</td></tr>
+<tr><td>AuditStatus</td><td>30</td><td>REVERSED</td><td>已红冲</td><td>同上</td></tr>
+<tr><td>BillStatus</td><td>10</td><td>GENERATED</td><td>已生成</td><td><code>ar_bill.status</code></td></tr>
+<tr><td>BillStatus</td><td>20</td><td>SENT</td><td>已发送</td><td>同上</td></tr>
+<tr><td>BillStatus</td><td>30</td><td>CONFIRMED</td><td>已确认</td><td>同上</td></tr>
+<tr><td>BillStatus</td><td>40</td><td>PARTIAL_WRITEOFF</td><td>部分核销</td><td>同上</td></tr>
+<tr><td>BillStatus</td><td>50</td><td>WRITTEN_OFF</td><td>已核销</td><td>同上</td></tr>
+<tr><td>BillStatus</td><td>60</td><td>WRITEOFF_REVERSED</td><td>已反核销</td><td>同上</td></tr>
+<tr><td>WriteoffType</td><td>10</td><td>WRITEOFF</td><td>核销</td><td><code>ar_writeoff.writeoff_type</code></td></tr>
+<tr><td>WriteoffType</td><td>20</td><td>REVERSE_WRITEOFF</td><td>反核销</td><td>同上</td></tr>
+<tr><td>WalletFlowType</td><td>10</td><td>RECHARGE</td><td>充值</td><td><code>wallet_flow.flow_type</code></td></tr>
+<tr><td>WalletFlowType</td><td>20</td><td>RECHARGE_REFUND</td><td>充值退回</td><td>同上</td></tr>
+<tr><td>WalletFlowType</td><td>30</td><td>WITHDRAW</td><td>提现</td><td>同上</td></tr>
+<tr><td>WalletFlowType</td><td>40</td><td>WRITEOFF</td><td>核销</td><td>同上</td></tr>
+<tr><td>WalletFlowType</td><td>50</td><td>WRITEOFF_CANCEL</td><td>核销撤销</td><td>同上</td></tr>
+<tr><td>WalletFlowType</td><td>60</td><td>CURRENCY_TRANSFER</td><td>转汇</td><td>同上</td></tr>
+<tr><td>RechargeStatus</td><td>10</td><td>PENDING</td><td>待审核</td><td><code>recharge_apply.status</code></td></tr>
+<tr><td>RechargeStatus</td><td>20</td><td>APPROVED</td><td>已通过</td><td>同上</td></tr>
+<tr><td>RechargeStatus</td><td>30</td><td>REJECTED</td><td>已驳回</td><td>同上</td></tr>
+<tr><td>CreditRecordStatus</td><td>10</td><td>PENDING_BOOK</td><td>待入账</td><td><code>credit_record.status</code></td></tr>
+<tr><td>CreditRecordStatus</td><td>20</td><td>BOOKED</td><td>已入账</td><td>同上</td></tr>
+<tr><td>RateSource</td><td>10</td><td>API</td><td>接口实时</td><td><code>currency_transfer.rate_source</code></td></tr>
+<tr><td>RateSource</td><td>20</td><td>MANUAL</td><td>手工覆盖</td><td>同上</td></tr>
+<tr><td>BankAccountStatus</td><td>10</td><td>ENABLED</td><td>启用</td><td><code>bank_account.status</code></td></tr>
+<tr><td>BankAccountStatus</td><td>20</td><td>DISABLED</td><td>停用</td><td>同上</td></tr>
+<tr><td>WalletDefault</td><td>true / false</td><td>—</td><td>默认钱包 / 非默认</td><td><code>customer_wallet.is_default</code>（系统字段，员工端与货主端均不展示，二期「默认支付钱包」预留）</td></tr>
+<tr><td>WalletOpenSource</td><td>10</td><td>SYSTEM</td><td>系统自动</td><td><code>customer_wallet.open_source</code>（合同签约完成自动开通）</td></tr>
+<tr><td>WalletOpenSource</td><td>20</td><td>MANUAL</td><td>财务手工</td><td>同上（财务补开币种钱包）</td></tr>
+</table></div>
+<strong>账单号主体代码</strong>（用于 <code>ar_bill.bill_no</code> 拼接，与主体一一对应）：</p><p><div class="table-wrapper"><table><tr><td>主体</td><td>主体代码</td><td>账单号示例</td></tr>
+<tr><td>:---</td><td>:---:</td><td>:---</td></tr>
+<tr><td>广州飞点</td><td>GZ</td><td><code>AR-GZ-202608-001</code></td></tr>
+<tr><td>深圳飞点</td><td>SZ</td><td><code>AR-SZ-202608-001</code></td></tr>
+<tr><td>广东飞点</td><td>GD</td><td><code>AR-GD-202608-001</code></td></tr>
+<tr><td>香港富力顿</td><td>HK</td><td><code>AR-HK-202608-001</code></td></tr>
+<tr><td>墨链</td><td>ML</td><td><code>AR-ML-202608-001</code></td></tr>
+</table></div>
+<h3 id="2-2-引用其他模块的枚举-财务不重复定义">2.2 引用其他模块的枚举（财务不重复定义）</h3></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>来源</td><td>值 / 取值</td><td>适用实体</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>主体（账套）</td><td>基础资料 / 客商中心 <code>contract_company</code></td><td>10 广州飞点 / 20 深圳飞点 / 30 广东飞点 / 40 香港富力顿 / 50 墨链</td><td><code>ar_flow.entity_id</code>、<code>ar_bill.entity_id</code>、<code>customer_wallet.entity_id</code>、<code>bank_account.entity_id</code>、<code>credit_record.entity_id</code></td></tr>
+<tr><td>签约账期类型</td><td>客商中心 <code>customer_contract.payment_term</code></td><td>101 月结 / 102 双月结 / 103 三月结 / 201 周结 / 202 到港前结 / 203 签收月结 / 204 到海外仓结 / 205 签收结</td><td><code>ar_flow.payment_terms_type</code></td></tr>
+<tr><td>费用类型</td><td>头程管理 <code>fee_type</code>（同方向名称唯一）</td><td>运费 / 周六派送费 / 超重费 / 地址附加费 / 商品附加费 / 报关费 / 库内贴标费…</td><td><code>ar_flow.fee_type_id</code></td></tr>
+<tr><td>赔付类型</td><td>头程管理 <code>fee_type.credit_type</code>（引用系统枚举配置，可自定义）</td><td>超时赔付 / 丢件赔付 / 货损赔偿</td><td><code>credit_record.credit_type</code></td></tr>
+<tr><td>客户</td><td>客商中心</td><td>按客户档案</td><td><code>ar_flow.customer_id</code> 等</td></tr>
+<tr><td>币种</td><td>基础资料币种字典</td><td>CNY 人民币 / USD 美元 / HKD 港币 / EUR 欧元 / PHP 比索 / JPY 日元</td><td>全部金额实体</td></tr>
+<tr><td>汇率</td><td>阿里汇率接口（实时获取）</td><td>接口返回值，人民币=1 基准</td><td><code>ar_flow.rate</code>、<code>currency_transfer.api_rate</code></td></tr>
+</table></div>
+<hr></p><p><h2 id="3-状态机-研发必读">3. 状态机 ★ 研发必读</h2></p><p><h3 id="3-1-业务流水-ar_flow-audit_status-单审计-反审计">3.1 业务流水 <code>ar_flow.audit_status</code>（单审计 + 反审计）</h3></p><p><pre><code>待业务审计(10) ──业务整单审计通过──→ 已审计(20)
+已审计(20) ──财务反审计（未关联账单）──→ 待业务审计(10)
+已审计(20) ──财务反审计（已关联账单）──→ 已红冲(30)
+已红冲(30) ──新增红冲流水（负数冲抵）+ 正数重开──→ 待业务审计(10)
+</code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>待业务审计(10)</td><td>整单审计通过</td><td>已审计(20)</td><td>业务专员（<code>Waybill.html</code> 费用 tab）</td><td>运单下全部流水已逐条核对/修改完成</td></tr>
+<tr><td>已审计(20)</td><td>反审计（运单级 / 大类级）</td><td>待业务审计(10)</td><td>财务专员（<code>财务_运单审计.html</code>）</td><td>该流水或该大类<strong>未关联账单</strong>（<code>bill_id</code> 为空）</td></tr>
+<tr><td>已审计(20)</td><td>反审计（运单级，强制）</td><td>已红冲(30)</td><td>财务专员</td><td>已关联账单；该大类不可单独反审计，只能反审计整个运单</td></tr>
+<tr><td>已红冲(30)</td><td>新增红冲流水</td><td>待业务审计(10)</td><td>业务专员</td><td>原流水留痕，负数冲抵 + 正数重开，红冲流水归下一期账单</td></tr>
+</table></div>
+<h3 id="3-2-应收账单-ar_bill-status">3.2 应收账单 <code>ar_bill.status</code></h3></p><p><pre><code>已生成(10) ──发送客户──→ 已发送(20) ──客户确认──→ 已确认(30)
+已确认(30) ──核销（部分）──→ 部分核销(40) ──核销（补足）──→ 已核销(50)
+部分核销(40) ──反核销──→ 已反核销(60) ──重新核销──→ 部分核销(40) / 已核销(50)
+已核销(50) ──反核销──→ 已反核销(60)
+</code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>已生成(10)</td><td>发送客户</td><td>已发送(20)</td><td>财务专员</td><td>账单下全部流水已审计（<code>audit_status=20</code>）</td></tr>
+<tr><td>已发送(20)</td><td>确认账单</td><td>已确认(30)</td><td>客户（货主端）</td><td>账单为当前客户的账单；确认后回写 <code>confirmed_at</code></td></tr>
+<tr><td>已确认(30)</td><td>核销（金额 < 未收）</td><td>部分核销(40)</td><td>财务专员</td><td>钱包与账单币种一致、钱包余额 > 0</td></tr>
+<tr><td>已确认(30) / 部分核销(40)</td><td>核销（金额 = 未收）</td><td>已核销(50)</td><td>财务专员</td><td>同上，且核销后 <code>unreceived_amount = 0</code></td></tr>
+<tr><td>部分核销(40) / 已核销(50)</td><td>反核销</td><td>已反核销(60)</td><td>财务专员</td><td>未做账账单均可反核销，不加审批，留日志</td></tr>
+<tr><td>已反核销(60)</td><td>重新核销</td><td>部分核销(40) / 已核销(50)</td><td>财务专员</td><td>同上核销校验</td></tr>
+</table></div>
+<h3 id="3-3-充值申请-recharge_apply-status">3.3 充值申请 <code>recharge_apply.status</code></h3></p><p><pre><code>待审核(10) ──财务审核通过（核对银行流水到账）──→ 已通过(20)
+待审核(10) ──财务驳回──→ 已驳回(30)
+</code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>待审核(10)</td><td>通过并入池</td><td>已通过(20)</td><td>财务专员（<code>财务_财务流水.html</code> 充值审核 tab）</td><td>已线下核对银行流水到账；通过后生成充值资金流水并增加钱包余额</td></tr>
+<tr><td>待审核(10)</td><td>驳回</td><td>已驳回(30)</td><td>财务专员</td><td>未到账 / 信息不符；驳回不产生资金流水</td></tr>
+<tr><td>已通过(20)</td><td>充值退回</td><td>已通过(20)（新增 <code>wallet_flow</code> 反向流水）</td><td>财务专员</td><td>事实记录不可改，靠反向流水纠正</td></tr>
+</table></div>
+<h3 id="3-4-入账记录-credit_record-status">3.4 入账记录 <code>credit_record.status</code></h3></p><p><pre><code>待入账(10) ──账单生成时归最新一期账单、按负数抵扣──→ 已入账(20)
+</code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>待入账(10)</td><td>归入最新一期账单抵扣</td><td>已入账(20)</td><td>系统自动（账单生成时）</td><td>赔付流水已审计；归入后回写 <code>bill_id</code> / <code>booked_at</code>，<strong>归入后不可改期</strong></td></tr>
+<tr><td>待入账(10)</td><td>币种纠错</td><td>待入账(10)（记录被删除重建）</td><td>财务 + 业务</td><td>财务反审计运单 → 业务删除错误赔付流水 → 重新添加正确币种流水 → 重新整单审计</td></tr>
+<tr><td>待入账(10)</td><td>客户放弃索赔</td><td>待入账(10)（新增反向负数记录）</td><td>运营</td><td>加一条反向负数赔付记录冲抵，两条留痕、净额归 0</td></tr>
+</table></div>
+<h3 id="3-5-我方银行账户-bank_account-status">3.5 我方银行账户 <code>bank_account.status</code></h3></p><p><pre><code>启用(10) ──停用──→ 停用(20) ──启用──→ 启用(10)
+</code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>启用(10)</td><td>停用</td><td>停用(20)</td><td>财务专员</td><td>停用后不再作为充值可选的打款账户；历史引用不受影响</td></tr>
+<tr><td>停用(20)</td><td>启用</td><td>启用(10)</td><td>财务专员</td><td>—</td></tr>
+</table></div>
+<hr></p><p><h2 id="4-功能清单与页面映射">4. 功能清单与页面映射</h2></p><p><div class="table-wrapper"><table><tr><td>模块</td><td>功能点</td><td>优先级</td><td>对应页面</td><td>页面类型</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>A 应收管理</td><td>A1 业务流水生成（运单收货自动）</td><td>P0</td><td>无页面（系统自动）；结果展示于 <code>Waybill.html</code> 费用 tab</td><td>后台任务</td></tr>
+<tr><td>A 应收管理</td><td>A2 业务审计 + 财务反审计</td><td>P0</td><td><code>财务_运单审计.html</code>（财务侧）+ <code>Waybill.html</code> 费用 tab（业务侧）</td><td>列表页 + 审计台</td></tr>
+<tr><td>A 应收管理</td><td>A3 反审计 / 红冲纠错</td><td>P0</td><td><code>财务_运单审计.html</code></td><td>列表页</td></tr>
+<tr><td>A 应收管理</td><td>A4 账单生成（聚合已审计流水）</td><td>P0</td><td><code>财务_账单管理.html</code></td><td>列表页 + 生成弹窗</td></tr>
+<tr><td>A 应收管理</td><td>A5 账单发送 + 客户确认</td><td>P0</td><td><code>财务_账单管理.html</code> + 货主端 <code>账单管理.html</code></td><td>列表页</td></tr>
+<tr><td>A 应收管理</td><td>A6 收款核销（同币种 / 部分 / 反核销）</td><td>P0</td><td><code>财务_收款核销.html</code></td><td>列表页 + 核销弹窗</td></tr>
+<tr><td>A 应收管理</td><td>A7 账龄台账</td><td>P0</td><td><code>财务_账龄台账.html</code></td><td>查询页（实时视图）</td></tr>
+<tr><td>B 资金账户</td><td>B1 钱包开通（合同签约自动 + 财务手工补开币种）</td><td>P0</td><td><code>财务_资金账户管理.html</code>（客户资金账户 Tab · 新增钱包弹窗）</td><td>列表页 + 新增弹窗</td></tr>
+<tr><td>B 资金账户</td><td>B2 充值审核（客户申请审核 + 财务代充）</td><td>P0</td><td><code>财务_财务流水.html</code>（充值审核 / 客户充值 tab）+ 货主端 <code>资金账户.html</code>（充值）</td><td>工作台</td></tr>
+<tr><td>B 资金账户</td><td>B3 币种互转</td><td>P0</td><td><code>财务_资金账户管理.html</code>（客户资金账户 Tab · 币种互转弹窗）</td><td>弹窗</td></tr>
+<tr><td>B 资金账户</td><td>B4 客户提现</td><td>P0</td><td><code>财务_财务流水.html</code>（客户提现 tab）</td><td>工作台</td></tr>
+<tr><td>B 资金账户</td><td>B5 我司银行账户管理（可见开关 / 默认 / 停用）</td><td>P0</td><td><code>财务_资金账户管理.html</code>（我司账户 Tab）</td><td>列表页 + 弹窗</td></tr>
+<tr><td>B 资金账户</td><td>B6 资金流水查询</td><td>P0</td><td><code>财务_资金流水.html</code> + 货主端 <code>资金账户.html</code>（资金流水 tab）</td><td>查询页</td></tr>
+<tr><td>B 资金账户</td><td>B7 入账记录（赔付待入账 → 账单抵扣）</td><td>P0</td><td>无页面（系统自动）；结果展示于货主端 <code>资金账户.html</code> 入账记录 tab</td><td>后台任务</td></tr>
+</table></div>
+<blockquote><strong>页面构成说明</strong>：B1/B3/B5 由同一页 <code>财务_资金账户管理.html</code> 承载（双 Tab：我司账户 / 客户资金账户），员工端「财务 → 资金账户管理」菜单与权限点已注册；原「钱包」菜单已并入本页并下线。</blockquote></p><p><h3 id="4-1-页面导航关系图">4.1 页面导航关系图 ★</h3></p><p><div class="mermaid">flowchart TD
+    subgraph 业务侧-头程管理
+        W1[Waybill.html&lt;br/&gt;运单管理·费用tab&lt;br/&gt;业务审计/新增流水]
+    end
+    subgraph 财务-应收
+        F1[财务_运单审计.html&lt;br/&gt;财务反审计/红冲]
+        F2[财务_账单管理.html&lt;br/&gt;生成/发送/详情]
+        F3[财务_收款核销.html&lt;br/&gt;核销/反核销]
+        F4[财务_账龄台账.html&lt;br/&gt;未收+逾期四段]
+    end
+    subgraph 财务-资金
+        F5[财务_资金账户管理.html&lt;br/&gt;我司账户 / 客户资金账户&lt;br/&gt;新增钱包 · 币种互转]
+        F6[财务_资金流水.html&lt;br/&gt;只读查询]
+        F7[财务_财务流水.html&lt;br/&gt;充值审核/代充/提现/支付供应商-预留]
+    end
+    subgraph 货主端
+        C1[账单管理.html&lt;br/&gt;待确认/已确认/已核销]
+        C2[资金账户.html&lt;br/&gt;余额/流水/充值/入账]
+    end
+    W1 --&gt;|审计通过| F1
+    F1 --&gt;|反审计退回| W1
+    F1 --&gt;|已审计流水| F2
+    F2 --&gt;|发送账单| C1
+    C1 --&gt;|确认账单| F3
+    C2 --&gt;|提交充值申请| F7
+    F7 --&gt;|审核入池| F5
+    F5 --&gt;|币种互转| F5
+    F3 --&gt;|钱包扣款核销| F5
+    F3 --&gt;|未收余额| F4
+    F5 --&gt; F6
+    F5 --&gt;|打款账户| C2
+    F5 --&gt;|打款账户| F7
+    F2 --&gt;|赔付入账负数抵扣| C2
+</div></p><p><hr></p><p><h2 id="5-页面规格-研发必读">5. 页面规格 ★ 研发必读</h2></p><p><blockquote>页面顺序 = 业务流顺序。原型均为 Vue3 + Element Plus 单文件页，主题色 <code>#2DA44E</code>，金额统一「千分位 + 强制两位小数」+ 币种符号前缀，币种列显示中文名，无值显示 <code>—</code>。
+<strong>导出入口（Phase 1 占位）</strong>：员工端 7 个财务列表页的查询区在「重置」后统一有「导出」按钮，点击提示「导出功能开发中，导出范围待确认」——需求已登记，具体导出页面与字段范围后续单独讨论（见 §1.3 / §12.4 D02）。
+<strong>多 Tab 页面查询区规范</strong>（全模块统一，已写入前端规范 <code>style-guide.md</code>）：查询区统一位于 <strong>Tab 上方</strong>（上层独立卡片），条件按当前 Tab 切换、不同 Tab 用各自的筛选状态对象（互不清空）；当前 Tab 无查询条件时整个查询区不渲染。<strong>查询条件 >3 个时默认只显示前 3 个</strong>，其余收进「更多」（展开/收起切换）。按钮顺序统一为：查询 → 重置 → 更多（有则）→ 导出（有则）→ 右侧主操作按钮（新增账户/新增钱包/生成账单等）。</blockquote></p><p><h3 id="5-1-运单审计-员工端-财务侧">5.1 运单审计（员工端 · 财务侧）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 运单审计</li>
+<li>类型：列表页（单表 + 分页，无 Tab）</li>
+<li>访问角色：财务专员（反审计仅财务可操作）</li>
+<li>顶部区域：仅查询筛选条，无统计卡/概览条/提示条</li>
+</ul>
+<strong>查询条件</strong></p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>默认值</td><td>选项 / 规则</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>waybillNo</td><td>运单号</td><td>Input（clearable，宽 180）</td><td>空</td><td>模糊匹配</td></tr>
+<tr><td>customerName</td><td>客户名称</td><td>Input（clearable，宽 200）</td><td>空</td><td>模糊匹配</td></tr>
+<tr><td>linked</td><td>是否关联账单</td><td>Select（clearable，宽 150）</td><td>空</td><td><code>已关联账单</code>(linked) / <code>未关联账单</code>(unlinked)，精确</td></tr>
+</table></div>
+<strong>列表列</strong></p><p><div class="table-wrapper"><table><tr><td>序</td><td>列标题</td><td>字段</td><td>对齐</td><td>格式化 / 规则</td><td>宽度</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>运单号</td><td>waybillNo</td><td>左</td><td>—</td><td>min 150</td></tr>
+<tr><td>2</td><td>客户</td><td>customerName</td><td>左</td><td>溢出 tooltip</td><td>min 190</td></tr>
+<tr><td>3</td><td>主体</td><td>entityName</td><td>左</td><td>—</td><td>min 110</td></tr>
+<tr><td>4</td><td>审计人/时间</td><td>auditBy · auditAt</td><td>左</td><td>格式 <code>审计人 · 时间</code></td><td>min 160</td></tr>
+<tr><td>5</td><td>关联账单</td><td>linked</td><td>中</td><td><code>el-tag</code>：已关联账单=danger-warning（<code>warning</code>）、未关联账单=<code>success</code></td><td>min 110</td></tr>
+<tr><td>6</td><td>操作</td><td>—</td><td>中</td><td>固定右侧</td><td>170</td></tr>
+</table></div>
+<strong>交互行为</strong></p><p><ul><li>[详情]：打开「运单详情」弹窗（只读）</li>
+<li>[反审计]：打开「反审计」弹窗（默认范围=反审计整个运单）</li>
+<li>[查询 / 重置]：Toast「执行查询」；重置清空三项，无 Toast</li>
+</ul>
+<strong>弹窗 1：反审计</strong>（宽 640）</p><p><ul><li>只读区「运单信息」（两列）：运单号 / 客户 / 主体 / 审计人（<code>审计人 · 时间</code>）</li>
+<li>表单区「选择反审计范围」（<code>el-radio-group</code>）：</li>
+</ul>
+<div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>默认值</td><td>规则</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>reverseScope</td><td>反审计整个运单</td><td>Radio</td><td><strong>选中</strong></td><td>value=<code>whole</code></td></tr>
+<tr><td>reverseScope</td><td>反审计指定大类</td><td>Radio</td><td>未选</td><td>value=<code>category</code>；选中后必须勾选具体大类</td></tr>
+</table></div>
+<ul><li>明细表（业务流水大类）：业务流水大类 / 金额（右对齐，无币种符号）/ 关联账单（<code>el-tag</code>：已关联账单=warning、未关联账单=success）/ 选择（<strong>仅 <code>category</code> 模式显示</strong>）</li>
+</ul>  - 选择列联动：未关联账单 → 可选 <code>el-radio</code>；已关联账单 → 锁图标（<code>#C0C4CC</code>）+ tooltip <code>已关联账单，不可单独反审计</code>
+<ul><li>提示条（运单存在已关联账单流水时显示，橙底 <code>#fdf6ec</code> / 字色 <code>#E6A23C</code>）：<code>该运单存在已关联账单的业务流水，已关联账单的流水不可反审计，只能反审计整个运单后新增流水（红冲）。</code></li>
+<li>提交校验：<code>category</code> 模式未勾选大类 → 警告「请选择要反审计的大类」</li>
+<li>二次确认（<code>ElMessageBox.confirm</code>，type warning）：标题 <code>反审计</code>，正文 <code>确认反审计 {运单号} 的{整个运单 /「{大类}」大类}？反审计后退回业务侧重新审计。</code>，确认按钮 <code>确认反审计</code></li>
+<li>成功 Toast：<code>反审计成功，已退回业务侧重新审计</code></li>
+<li>底部按钮：取消 / 确认反审计（danger）</li>
+</ul>
+<strong>弹窗 2：运单详情</strong>（宽 720）</p><p><ul><li>只读区「运单信息」：运单号 / 客户 / 主体 / 审计人</li>
+<li>明细表「业务流水大类」：大类 / 金额（右对齐）/ 关联账单（tag）</li>
+<li>底部按钮：关 闭</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>查询：<code>GET /api/finance/waybill-audits</code>（params: waybillNo, customerName, linked, page, pageSize）</li>
+<li>详情：<code>GET /api/finance/waybill-audits/{waybillId}</code>（返回各大类金额与关联账单标记）</li>
+<li>反审计：<code>POST /api/finance/waybill-audits/{waybillId}/reverse</code>（body: scope=whole|category, category）</li>
+</ul>
+<h3 id="5-2-账单管理-员工端-财务侧">5.2 账单管理（员工端 · 财务侧）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 账单管理</li>
+<li>类型：三 Tab 列表页 + 生成入口</li>
+<li>访问角色：财务专员</li>
+<li>顶部区域：<code>生成账单</code> 按钮 + 灰色说明 <code>财务按 客户×主体×账期×币种 聚合已锁定的业务流水生成账单</code></li>
+</ul>
+<strong>Tab 结构</strong></p><p><div class="table-wrapper"><table><tr><td>Tab 名称</td><td>归属规则</td><td>查询区</td><td>行操作</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>待发送 (N)</td><td><code>status = 已生成</code></td><td>账单号（模糊，宽 180）</td><td>详情 / 发送客户</td></tr>
+<tr><td>已发送 (N)</td><td><code>status ∈ {已发送, 已确认, 部分核销}</code></td><td>无</td><td>详情</td></tr>
+<tr><td>已核销 (N)</td><td><code>status = 已核销</code></td><td>无</td><td>详情</td></tr>
+</table></div>
+<strong>列表列</strong></p><p><div class="table-wrapper"><table><tr><td>Tab</td><td>列</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>待发送</td><td>账单号(170) / 客户(190, tooltip) / 主体(110) / 币种(中,80,中文名) / 账单日(100) / 账单金额(右,120) / 操作(170, fixed)</td></tr>
+<tr><td>已发送</td><td>账单号 / 客户 / 主体 / 币种 / 账单日 / 账单金额 / 已核销(右) / 状态(中, tag) / 操作(100, fixed)</td></tr>
+<tr><td>已核销</td><td>账单号 / 客户 / 主体 / 币种 / 账单日 / 账单金额 / 状态(中, tag 固定 success) / 操作(100, fixed)</td></tr>
+</table></div>
+状态 tag（已发送 Tab，<code>statusTag()</code> 映射）：已发送=primary、已确认=primary、部分核销=warning，兜底 info。</p><p><strong>弹窗 1：生成账单</strong>（宽 680，<code>label-position: top</code>，两列布局）</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验文案</td><td>联动</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>customerId</td><td>客户</td><td>Select（filterable）</td><td>✅</td><td>请填写完整的账单信息</td><td>与主体/币种共同过滤可聚合流水</td></tr>
+<tr><td>entityId</td><td>主体</td><td>Select</td><td>✅</td><td>同上</td><td>决定账单号主体代码</td></tr>
+<tr><td>currency</td><td>币种</td><td>Select</td><td>✅</td><td>同上</td><td>决定金额符号，聚合同币种流水</td></tr>
+<tr><td>billingDate</td><td>账单日</td><td>Date（<code>YYYY-MM-DD</code>）</td><td>✅</td><td>同上</td><td>取 <code>YYYYMM</code> 生成账单号账期段</td></tr>
+<tr><td>paymentTermsDays</td><td>账期天数</td><td>只读（合同账期存在时）/ InputNumber（合同账期为空时，必填）</td><td>条件</td><td>合同账期未完善，请补录账期天数</td><td>来源 = 客商中心合同账期；为空时由财务补录，账单标记「账期手工补录」</td></tr>
+</table></div>
+<ul><li>只读区「可聚合业务流水」（表格 <code>max-height: 240</code>）：运单号 / 费用类型 / 应收净额（右对齐）</li>
+<li>汇总文案：<code>聚合流水 {N} 条，账单总额：{币种符号}{金额}</code></li>
+<li>提交校验：① 四项任一为空 → 警告「请填写完整的账单信息」；② 合同账期为空且未补录账期天数 → 警告「该主体合同账期未完善，请补录账期天数」；③ 无可聚合流水 → 警告「该条件下没有可聚合的已锁定业务流水」</li>
+<li>账期字段联动：合同账期存在 → 「账期天数」只读展示「{N} 天（来自合同账期）」；合同账期为空（如香港线下签约）→ 可编辑必填 + 黄底提示「该客户在该主体下的合同账期未完善（账期主数据在客商中心「客户管理 → 合同/账期」维护）。此处补录的账期天数仅用于本账单的账龄计算，账单将标记为「账期手工补录」。」</li>
+<li>提交结果：账单号 = <code>AR-{主体代码}-{YYYYMM}-{3位序号}</code>；账单总额 = Σ 应收净额；已核销=0；状态=已生成；写入 <code>payment_terms_days</code> 与 <code>term_source</code>（合同账期 / 手工补录）；Toast「账单已生成」或「账单已生成（账期手工补录）」</li>
+<li>提交结果：账单号 = <code>AR-{主体代码}-{YYYYMM}-{3位序号}</code>；账单总额 = Σ 应收净额；已核销=0；状态=已生成；Toast「账单已生成」</li>
+<li>底部按钮：取消 / 确认生成账单</li>
+</ul>
+<strong>弹窗 2：账单详情</strong>（宽 720）</p><p><ul><li>只读区「账单信息」（两列×4 行）：账单号 / 客户 / 主体 / 币种 / 账单日 / 账单金额 / <strong>账期天数</strong>（格式 <code>{N} 天</code>）/ <strong>账期来源</strong>（合同账期 / 手工补录，为手工补录时前置橙 tag「账期手工补录」）</li>
+<li>明细表「费用明细」：运单号 / 费用类型 / 公布价（右）/ 优惠（右，<strong>前置负号</strong>，如 <code>-¥219.50</code>）/ 应收净额（右）</li>
+<li>底部按钮：关 闭</li>
+</ul>
+<strong>交互行为</strong></p><p><ul><li>[发送客户]：仅「待发送」Tab；二次确认（type warning）：标题 <code>发送账单</code>，正文 <code>确认将账单 {账单号} 发送给客户「{客户}」？</code>，确认按钮 <code>发送</code> → 账单 <code>status=已发送</code>，Toast「账单已发送给客户」</li>
+<li>[查询 / 重置]：Toast「执行查询」；重置清空账单号</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>列表：<code>GET /api/finance/bills</code>（params: status, billNo, page, pageSize）</li>
+<li>可聚合流水：<code>GET /api/finance/ar-flows/generatable</code>（params: customerId, entityId, currency）→ 返回已审计且未关联账单的流水</li>
+<li>生成账单：<code>POST /api/finance/bills</code>（body: customerId, entityId, currency, billingDate）</li>
+<li>发送：<code>POST /api/finance/bills/{billNo}/send</code></li>
+<li>详情：<code>GET /api/finance/bills/{billNo}/details</code></li>
+</ul>
+<h3 id="5-3-收款核销-员工端-财务侧">5.3 收款核销（员工端 · 财务侧）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 收款核销</li>
+<li>类型：双 Tab 列表页 + 核销弹窗</li>
+<li>访问角色：财务专员</li>
+<li>顶部区域：无操作区/统计卡/提示条，页面直接以 Tab 开始</li>
+</ul>
+<strong>Tab 结构</strong></p><p><div class="table-wrapper"><table><tr><td>Tab 名称</td><td>归属规则</td><td>查询区</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>待核销 (N)</td><td><code>unreceived_amount > 0</code></td><td>账单号（模糊，180）、客户名称（模糊，200）</td></tr>
+<tr><td>核销记录 (N)</td><td>全部核销/反核销记录</td><td>无</td></tr>
+</table></div>
+<strong>待核销列表列</strong>：账单号(170) / 客户(190, tooltip) / 主体(110) / 币种(中,80,中文名) / 账单金额(右,120) / 已核销(右,110) / 未收金额(右,120, 红色 <code>#F56C6C</code> 加粗) / 钱包余额(右,120) / 操作(100, fixed)</p><p><strong>核销记录列表列</strong>：核销单号(150) / 账单号(170) / 客户(190, tooltip) / 币种(中,80) / 核销金额(右,120) / 类型(中,90, tag：核销=success、其他=warning) / 操作人(100) / 操作时间(150) / 操作(100, fixed)</p><p><strong>交互行为</strong></p><p><ul><li>[核销]：打开「收款核销」弹窗；默认金额 = <code>min(账单未收, 钱包余额)</code></li>
+<li>[反核销]：<strong>仅 <code>type = 核销</code> 的记录显示</strong>；二次确认（type warning）：标题 <code>反核销</code>，正文 <code>确认反核销 {账单号} 的 {币种符号}{金额}？反核销后账单未收与钱包余额将回滚。</code>，确认按钮 <code>确认反核销</code> → 回滚账单已核销/未收、回补钱包余额、账单 <code>已核销 → 部分核销</code>、该核销记录类型置 <code>已反核销</code>，Toast「反核销成功」</li>
+<li>[查询 / 重置]：Toast「执行查询」；重置清空账单号与客户名称</li>
+</ul>
+<strong>弹窗：收款核销</strong>（宽 620）</p><p><ul><li>只读区「账单信息」（两列×3 行）：账单号 / 客户 / 主体 / 币种 / 未收金额（红色加粗）/ 钱包余额</li>
+<li>表单区「核销金额」：</li>
+</ul>
+<div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>默认值</td><td>校验</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>amount</td><td>本次核销金额</td><td>InputNumber（min 0.01，max = min(未收, 钱包余额)，precision 2，step 100）</td><td>✅</td><td><code>min(未收, 钱包余额)</code></td><td>空或 ≤0 → 「请输入核销金额」；超上限 → 「核销金额不能超过 min(账单未收, 钱包余额)」</td></tr>
+</table></div>
+<ul><li>说明文案：<code>核销金额 = min(账单未收, 钱包余额)，钱包不可透支。可部分核销；本次最多可核销 {币种符号}{金额}。</code></li>
+<li>二次确认（type warning）：标题 <code>确认核销</code>，正文 <code>确认核销账单 {账单号} 金额 {币种符号}{金额}？</code>，确认按钮 <code>确认核销</code></li>
+<li>提交结果：账单 <code>已核销金额 += 本次</code>、<code>未收金额 -= 本次</code>（保留 2 位）；未收归零 → 账单 <code>已核销</code>；钱包余额扣减；新增核销记录（核销单号 <code>WO + YYYYMMDD + 序号</code>，类型=核销，操作人=当前财务）；Toast「核销成功」</li>
+<li>底部按钮：取消 / 确认核销</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>待核销列表：<code>GET /api/finance/bills</code>（params: unreceivedOnly=true, billNo, customerId）</li>
+<li>核销记录：<code>GET /api/finance/writeoffs</code>（params: billNo, page, pageSize）</li>
+<li>钱包余额：<code>GET /api/finance/wallets/balance</code>（params: customerId, entityId, currency）</li>
+<li>核销：<code>POST /api/finance/writeoffs</code>（body: billId, walletId, amount）</li>
+<li>反核销：<code>POST /api/finance/writeoffs/{id}/reverse</code></li>
+</ul>
+<h3 id="5-4-账龄台账-员工端-财务侧">5.4 账龄台账（员工端 · 财务侧）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 账龄台账</li>
+<li>类型：查询/汇总页（客户×主体×币种汇总 + 明细弹窗，无 Tab）</li>
+<li>访问角色：财务专员</li>
+<li>顶部区域：查询筛选条，右端内嵌灰色口径说明 <code>账龄口径：账单日 + 账期天数（含首日），分币种不折算</code></li>
+</ul>
+<strong>查询条件</strong></p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>默认值</td><td>规则</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>customerName</td><td>客户名称</td><td>Input（clearable，200）</td><td>空</td><td>模糊匹配</td></tr>
+<tr><td>entityId</td><td>主体</td><td>Select（clearable，140）</td><td>空</td><td>5 主体，精确</td></tr>
+<tr><td>currency</td><td>币种</td><td>Select（clearable，130）</td><td>空</td><td>CNY/USD/HKD/EUR，精确</td></tr>
+</table></div>
+<strong>列表列</strong>（一行 = 客户 × 主体 × 币种）</p><p><div class="table-wrapper"><table><tr><td>序</td><td>列标题</td><td>字段</td><td>对齐</td><td>格式化</td><td>宽度</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>客户</td><td>customerName</td><td>左</td><td>溢出 tooltip</td><td>190</td></tr>
+<tr><td>2</td><td>主体</td><td>entityName</td><td>左</td><td>—</td><td>110</td></tr>
+<tr><td>3</td><td>币种</td><td>currency</td><td>中</td><td>中文名</td><td>80</td></tr>
+<tr><td>4</td><td>未收总额</td><td>total</td><td>右</td><td>加粗 <code>#303133</code></td><td>130</td></tr>
+<tr><td>5</td><td>未到期</td><td>notDue</td><td>右</td><td>—</td><td>110</td></tr>
+<tr><td>6</td><td>逾期 0-30天</td><td>due030</td><td>右</td><td>红色 <code>#F56C6C</code></td><td>120</td></tr>
+<tr><td>7</td><td>逾期 31-60天</td><td>due3160</td><td>右</td><td>红色</td><td>120</td></tr>
+<tr><td>8</td><td>逾期 61-90天</td><td>due6190</td><td>右</td><td>红色</td><td>120</td></tr>
+<tr><td>9</td><td>逾期 90天以上</td><td>due90</td><td>右</td><td>红色</td><td>120</td></tr>
+<tr><td>10</td><td>操作</td><td>—</td><td>中</td><td>「明细」，fixed</td><td>100</td></tr>
+</table></div>
+<strong>交互行为</strong></p><p><ul><li>[明细]：打开「账龄明细」弹窗</li>
+<li>[查询 / 重置]：Toast「执行查询」；重置清空三项</li>
+</ul>
+<strong>弹窗：账龄明细</strong>（宽 860）</p><p><ul><li>区标题（动态拼接）：<code>{客户} · {主体} · {币种中文名}</code></li>
+<li>明细表：账单号(170) / 账单日(100) / 账期(120，格式 <code>{N} 天</code>) / 未收金额(右,120) / 账龄段(中,110, tag：未到期=<code>success</code>、各逾期段=<code>danger</code>)</li>
+<li>底部按钮：关 闭</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>汇总：<code>GET /api/finance/aging</code>（params: customerName, entityId, currency）→ 按 客户×主体×币种 返回未收总额与五段金额</li>
+<li>明细：<code>GET /api/finance/aging/details</code>（params: customerId, entityId, currency）→ 返回逐账单账期天数、未收金额与账龄段</li>
+</ul>
+<h3 id="5-5-资金账户管理-员工端-资金账户-双-Tab">5.5 资金账户管理（员工端 · 资金账户）★ 双 Tab</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 资金账户管理</li>
+<li>类型：列表页（双 Tab：我司账户 / 客户资金账户）</li>
+<li>访问角色：财务专员</li>
+<li>原型：<code>demo/员工端-demo/财务_资金账户管理.html</code></li>
+<li>设计意图：一个菜单看全「钱从哪进、记在谁名下」—— 「我司账户」= 客户的打款目标账户；「客户资金账户」= 钱到账后记在哪个客户钱包、欠多少、实际可用多少</li>
+<li>菜单收敛：原「钱包」菜单已并入本页并下线（钱包的新增与币种互转仍在本页 Tab 2 完成），避免同一能力双入口</li>
+</ul>
+<h4 id="Tab-1-我司账户-N">Tab 1「我司账户 (N)」</h4></p><p><strong>查询条件</strong>：账户主体（Select）、币种（Select）、账户名称 / 账号（Input 模糊）、用户是否可见（Select：可见 / 不可见）</p><p><strong>列表列</strong></p><p><div class="table-wrapper"><table><tr><td>序</td><td>列标题</td><td>字段</td><td>对齐</td><td>格式化 / 规则</td><td>宽度</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>账户主体</td><td>entity_id</td><td>左</td><td>我司主体名称</td><td>min 110</td></tr>
+<tr><td>2</td><td>币种</td><td>currency</td><td>中</td><td>中文名</td><td>80</td></tr>
+<tr><td>3</td><td>账户名称</td><td>account_name</td><td>左</td><td>开户名，溢出 tooltip</td><td>min 150</td></tr>
+<tr><td>4</td><td>开户行</td><td>bank_name</td><td>左</td><td>溢出 tooltip</td><td>min 170</td></tr>
+<tr><td>5</td><td>账号</td><td>account_no</td><td>左</td><td>—</td><td>min 160</td></tr>
+<tr><td>6</td><td>余额</td><td>balance</td><td>右</td><td><code>币种符号 + 千分位两位小数</code>，字重 500</td><td>140</td></tr>
+<tr><td>7</td><td>用户是否可见</td><td>is_visible_to_customer</td><td>中</td><td><code>el-switch</code> 行内切换（停用行显示灰色 tag「已停用」）</td><td>120</td></tr>
+<tr><td>8</td><td>默认账户</td><td>is_default</td><td>中</td><td>是 → <code>el-tag success</code>「默认」；否 → 灰色 <code>—</code></td><td>100</td></tr>
+<tr><td>9</td><td>操作</td><td>—</td><td>中</td><td>编辑 / 停用（停用行显示「启用」），fixed right</td><td>140</td></tr>
+</table></div>
+<strong>顶部提示条</strong>：<code>我司账户按主体维护，一主体可多账户（单币种）。「用户是否可见」= 是 时，客户在货主端充值时可将该账户作为打款账户；默认打款账户必须可见。「余额」为财务手工维护的账面余额，非银行实时余额。</code></p><p><strong>交互行为</strong></p><p><ul><li>[新增账户]：打开「新增银行账户」弹窗</li>
+<li>[编辑]：打开「编辑银行账户」弹窗（<strong>账号置灰不可改</strong>，账号为账户唯一标识）</li>
+<li>[用户是否可见]：行内 <code>el-switch</code> + 二次确认（设为不可见且该账户为默认 → <strong>自动取消默认标记</strong>并提示）</li>
+<li>[停用/启用]：二次确认（type warning）；停用时同时置 <code>可见=否</code>、<code>默认=否</code>，历史充值单与资金流水不受影响</li>
+<li>[查询 / 重置]：Toast「执行查询」；重置清空四项</li>
+</ul>
+<h4 id="Tab-2-客户资金账户-N">Tab 2「客户资金账户 (N)」</h4></p><p><strong>查询条件</strong></p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>默认值</td><td>选项 / 规则</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>customerName</td><td>客户名称</td><td>Input（clearable，宽 220）</td><td>空</td><td>模糊匹配（<code>includes</code>）</td></tr>
+<tr><td>entityId</td><td>账户主体</td><td>Select（clearable，宽 150）</td><td>空</td><td>广州飞点 / 深圳飞点 / 广东飞点 / 香港富力顿 / 墨链，精确匹配</td></tr>
+<tr><td>currency</td><td>币种</td><td>Select（clearable，宽 140）</td><td>空</td><td>人民币 / 美元 / 港币 / 欧元 / 比索 / 日元（CNY/USD/HKD/EUR/PHP/JPY），精确匹配</td></tr>
+</table></div>
+<strong>列表列</strong>（一行 = 客户 × 主体 × 币种）</p><p><div class="table-wrapper"><table><tr><td>序</td><td>列标题</td><td>字段</td><td>对齐</td><td>格式化 / 规则</td><td>宽度</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>客户</td><td>customerName</td><td>左</td><td>溢出 tooltip</td><td>min 190</td></tr>
+<tr><td>2</td><td>账户主体</td><td>entityName</td><td>左</td><td>我司主体名称</td><td>min 110</td></tr>
+<tr><td>3</td><td>币种</td><td>currency</td><td>中</td><td>显示中文名（如「人民币」）</td><td>min 80</td></tr>
+<tr><td>4</td><td>账户名称</td><td>accountName</td><td>左</td><td><code>账号编号 + 空格 + 币种代码</code></td><td>min 140</td></tr>
+<tr><td>5</td><td>余额</td><td>balance</td><td>右</td><td><code>币种符号 + 千分位两位小数</code>，字重 500</td><td>min 130</td></tr>
+<tr><td>6</td><td>待核销欠款</td><td>Σ 未收金额</td><td>右</td><td>同币种汇总（已确认未核销）</td><td>min 130</td></tr>
+<tr><td>7</td><td>待确认账单</td><td>Σ 账单总额（已发送）</td><td>右</td><td>同币种汇总（已发客户未确认）</td><td>min 130</td></tr>
+<tr><td>8</td><td>实际金额</td><td>balance − 待核销欠款</td><td>右</td><td>负数红色带负号</td><td>min 130</td></tr>
+<tr><td>9</td><td>开通方式</td><td>openSource</td><td>中</td><td>系统自动 → <code>success</code>；财务手工 → <code>warning</code>（财务一眼看出人工补开的钱包）</td><td>min 110</td></tr>
+<tr><td>10</td><td>操作</td><td>—</td><td>中</td><td>币种互转 / 查看流水，fixed right</td><td>160</td></tr>
+</table></div>
+<strong>顶部提示条</strong>：<code>客户资金账户 = 客户 × 主体 × 币种，一行一个钱包。「实际金额 = 余额 − 待核销欠款」；客户敞口 = 待核销欠款 + 待确认账单。钱包余额不可透支；跨币种结算请先在行内做「币种互转」。</code></p><p><strong>交互行为</strong></p><p><ul><li>[查询 / 重置]：Toast「执行查询」；重置清空 客户名称 / 账户主体 / 币种</li>
+<li>[新增钱包]：点击「新增钱包」→ 打开「新增钱包」弹窗（仅用于补开币种，人民币钱包由合同签约完成时系统自动开通）</li>
+<li>[币种互转]：行操作「币种互转」→ 打开「币种互转」弹窗（回填客户/账户主体/转出币种/余额，清空转出金额、转入币种、汇率）</li>
+<li>[查看流水]：行操作「查看流水」→ 打开「资金流水（客户资金账户）」只读弹窗</li>
+<li>[分页]：<code>el-pagination</code>（total/prev/pager/next）</li>
+</ul>
+<strong>弹窗 1：新增钱包</strong>（宽 560，<code>label-position: top</code>）</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验文案</td><td>联动 / 数据源</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>customerId</td><td>客户</td><td>Select（filterable）</td><td>✅</td><td>请选择客户</td><td>选项 = 客户档案；变更时清空主体与币种</td></tr>
+<tr><td>entityId</td><td>账户主体</td><td>Select</td><td>✅</td><td>请选择账户主体</td><td>选项 = <strong>该客户签约过的主体</strong>（<code>contract_company</code> 去重，<code>sign_status ∈ {签署中, 已签署, 已过期, 已解约}</code>）；未选客户时禁用；变更时清空币种</td></tr>
+<tr><td>currency</td><td>币种</td><td>Select</td><td>✅</td><td>请选择币种</td><td>选项 = 该主体下<strong>尚未开通</strong>的币种（已开通的排除）；未选主体时禁用</td></tr>
+</table></div>
+<ul><li>提示文案（固定灰底）：<code>系统已在合同签约完成时自动开通该主体的人民币钱包，此处用于补开其他币种（如美元、港币）。主体仅可选择该客户签约过的主体（含已过期/已解约，用于存量账单结算与赔付入账）；未签约主体请先前往客商中心完成合同签约。</code></li>
+<li>条件提示（黄底，选中主体合同状态为已过期/已解约时显示）：<code>该主体的合同状态为「{已过期/已解约}」，本次开通的币种钱包将用于存量账单结算与赔付入账；系统不会自动停用该主体下已有钱包。</code></li>
+<li>提交校验：① 三项任一为空 → 警告「请填写完整信息」；② 主体不在该客户签约过的主体集合内 → 警告「<strong>该客户未与该主体签约，请先在客商中心完成合同签约</strong>」（<strong>不设特批口子</strong>）；③ 已存在同「客户 + 主体 + 币种」钱包 → 警告「该客户在该主体下已有该币种钱包」；④ 通过 → 新增钱包（余额 0、<strong>开通方式=财务手工</strong>）→ Toast「钱包已开通」</li>
+<li>底部按钮：取消 / 确认开通</li>
+</ul>
+<strong>弹窗 2：币种互转</strong>（宽 620，<code>label-position: top</code>）</p><p>只读区（分区标题「转出信息」）：客户 / 账户主体 / 转出币种（含余额展示，格式 <code>币种中文名（余额 符号+金额）</code>）</p><p>表单区（分区标题「汇率与转入金额」）：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验文案</td><td>备注</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>fromAmount</td><td>转出金额</td><td>InputNumber（min 0.01，precision 2，step 100）</td><td>✅</td><td>请输入转出金额</td><td>—</td></tr>
+<tr><td>toCurrency</td><td>转入币种</td><td>Select</td><td>✅</td><td>请选择转入币种</td><td>选项 = 同客户同主体下、币种 ≠ 转出币种的其他钱包；选择后自动以接口汇率预填「手工覆盖汇率」</td></tr>
+<tr><td>rate</td><td>手工覆盖汇率</td><td>InputNumber（min 0.000001，precision 6）</td><td>✅</td><td>请输入汇率</td><td>默认 = 接口汇率</td></tr>
+<tr><td>—</td><td>接口汇率（阿里实时获取）</td><td>只读文本</td><td>—</td><td>—</td><td>无值时显示 <code>—</code></td></tr>
+<tr><td>—</td><td>转入金额（自动计算）</td><td>只读文本</td><td>—</td><td>—</td><td><code>转出金额 ÷ 汇率</code>，字重 500</td></tr>
+</table></div>
+<ul><li>说明文案：<code>汇率说明：汇率由阿里汇率接口实时获取并以「接口汇率」预填，可手工覆盖（接口超时/异常时手工填写，来源记为手工覆盖）；1 {转入币种} = {汇率} {转出币种}；转入金额 = 转出金额 ÷ 汇率。一期暂不记汇损。</code></li>
+<li>提交校验：① 三项任一为空 → 警告「请填写完整的互转信息」；② 转出金额 > 钱包余额 → 警告「转出金额不能大于钱包余额」；③ 二次确认（<code>ElMessageBox.confirm</code>，type warning）：<code>确认从 {主体} {转出币种} 钱包转出 {金额}，转入 {转入币种} 钱包 {转入金额}？</code>；④ 确认后转出钱包扣减、转入钱包增加，Toast「币种互转成功」</li>
+<li>底部按钮：取消 / 确认互转</li>
+</ul>
+<strong>弹窗 3：资金流水（客户资金账户）</strong>（宽 720，只读）</p><p><ul><li>分区「账户信息」：客户 / 账户主体 / 账户名称 / 币种 / 余额 / 待核销欠款 / 实际金额（负数红色带负号）</li>
+<li>分区「资金流水」表：时间 / 流水类型（tag：充值=success、充值退回=info、提现=warning、账单核销=danger、账单核销撤销=success、转汇=primary）/ 变动金额（正数绿色前置 <code>+</code>，负数红色）/ 变动后余额 / 关联单号</li>
+<li>底部按钮：关 闭</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>客户资金账户列表：<code>GET /api/finance/wallets</code>（params: customerId, entityId, currency, page, pageSize）</li>
+<li>新增钱包：<code>POST /api/finance/wallets</code>（body: customerId, entityId, currency；主体须为该客户签约过的主体）</li>
+<li>客户签约主体：<code>GET /api/customer/contracts</code>（params: customerId）→ 主体下拉数据源</li>
+<li>币种互转：<code>POST /api/finance/wallets/transfer</code>（body: fromWalletId, fromAmount, toWalletId, rate）</li>
+<li>接口汇率：<code>GET /api/finance/exchange-rate</code>（params: fromCurrency, toCurrency）→ 阿里汇率接口代理</li>
+<li>我司账户列表：<code>GET /api/finance/bank-accounts</code>（params: entityId, currency, keyword, visible, status）</li>
+<li>我司账户新增 / 编辑：<code>POST</code> / <code>PUT /api/finance/bank-accounts</code></li>
+<li>可见性切换：<code>POST /api/finance/bank-accounts/{id}/visibility</code>（body: isVisibleToCustomer；置否时后端同时清空 <code>is_default</code>）</li>
+<li>停用 / 启用：<code>POST /api/finance/bank-accounts/{id}/status</code></li>
+<li>钱包流水：<code>GET /api/finance/wallet-flows</code>（params: customerId, entityId, currency）</li>
+</ul>
+<h3 id="5-6-资金流水-员工端-资金账户">5.6 资金流水（员工端 · 资金账户）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 资金流水</li>
+<li>类型：纯查询页（只读，无 Tab、无操作列、无弹窗）</li>
+<li>访问角色：财务专员</li>
+<li>顶部区域：无统计卡/概览条，仅一行搜索区</li>
+</ul>
+<strong>查询条件</strong></p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>默认值</td><td>选项 / 规则</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>customerName</td><td>客户名称</td><td>Input（clearable，宽 200）</td><td>空</td><td>模糊匹配</td></tr>
+<tr><td>entityId</td><td>主体</td><td>Select（clearable，宽 140）</td><td>空</td><td>5 主体，精确</td></tr>
+<tr><td>currency</td><td>币种</td><td>Select（clearable，宽 130）</td><td>空</td><td>CNY/USD/HKD/EUR，精确</td></tr>
+<tr><td>flowType</td><td>流水类型</td><td>Select（clearable，宽 140）</td><td>空</td><td>充值 / 充值退回 / 提现 / 账单核销 / 账单核销撤销 / 转汇，精确</td></tr>
+<tr><td>dateRange</td><td>流水时间</td><td>DatePicker（daterange，<code>YYYY-MM-DD</code>，<code>至</code>，宽 260）</td><td>空</td><td>按流水时间日期部分闭区间比较</td></tr>
+</table></div>
+<strong>列表列</strong></p><p><div class="table-wrapper"><table><tr><td>序</td><td>列标题</td><td>字段</td><td>对齐</td><td>格式化 / 规则</td><td>宽度</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>流水时间</td><td>time</td><td>左</td><td><code>YYYY-MM-DD HH:mm</code></td><td>min 150</td></tr>
+<tr><td>2</td><td>客户</td><td>customerName</td><td>左</td><td>溢出 tooltip</td><td>min 190</td></tr>
+<tr><td>3</td><td>主体</td><td>entityName</td><td>左</td><td>—</td><td>min 110</td></tr>
+<tr><td>4</td><td>币种</td><td>currency</td><td>中</td><td>中文名</td><td>min 80</td></tr>
+<tr><td>5</td><td>流水类型</td><td>flowType</td><td>中</td><td><code>el-tag</code>：充值=success、充值退回=info、提现=warning、账单核销=danger、账单核销撤销=success、转汇=primary，兜底 info</td><td>min 110</td></tr>
+<tr><td>6</td><td>变动金额</td><td>amount</td><td>右</td><td>正数前置 <code>+</code> 且绿色（<code>#67C23A</code>），负数红色（<code>#F56C6C</code>）</td><td>min 120</td></tr>
+<tr><td>7</td><td>变动后余额</td><td>balanceAfter</td><td>右</td><td><code>币种符号 + 千分位两位小数</code></td><td>min 120</td></tr>
+<tr><td>8</td><td>操作人</td><td>operator</td><td>左</td><td>—</td><td>min 110</td></tr>
+<tr><td>9</td><td>关联单号</td><td>relatedNo</td><td>左</td><td>充值 <code>FD…</code> / 核销 <code>WO…</code> / 转汇 <code>TR…</code> / 提现 <code>WD…</code></td><td>min 150</td></tr>
+</table></div>
+<strong>交互行为</strong></p><p><ul><li>[查询]：Toast「执行查询」，前端即时过滤（真实实现为服务端查询）</li>
+<li>[重置]：清空 客户名称 / 主体 / 币种 / 流水类型 / 时间范围</li>
+<li>无行操作、无批量操作、无导出（本期明确不做导出）</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>查询：<code>GET /api/finance/wallet-flows</code>（params: customerId, entityId, currency, flowType, startDate, endDate, page, pageSize）</li>
+</ul>
+<h3 id="5-7-财务流水-员工端-资金账户操作台">5.7 财务流水（员工端 · 资金账户操作台）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 财务流水</li>
+<li>类型：Tab 工作台（4 个 Tab）</li>
+<li>访问角色：财务专员</li>
+<li>顶部区域：无统计卡/概览条</li>
+</ul>
+<strong>Tab 结构</strong></p><p><div class="table-wrapper"><table><tr><td>Tab 名称</td><td>角标</td><td>内容</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>充值审核 (N)</td><td>N = 待审核条数</td><td>查询区（客户名称 / 状态）+ 充值申请列表（详情 / 通过 / 驳回）+ 分页</td></tr>
+<tr><td>客户充值</td><td>无</td><td>说明文字 + 「代客户充值」按钮 + 代充记录列表（无查询、无分页）</td></tr>
+<tr><td>客户提现</td><td>无</td><td>说明文字 + 「客户提现」按钮 + 提现记录列表（无查询、无分页）</td></tr>
+<tr><td>支付供应商</td><td>无</td><td><strong>Phase 2 预留</strong>：空态文案 <code>应付管理细节待展开，支付供应商功能后续上线</code></td></tr>
+</table></div>
+<strong>Tab 1「充值审核」查询条件</strong>：客户名称（Input，模糊）、状态（Select：待审核 / 已通过 / 已驳回，精确）</p><p><strong>Tab 1 列表列</strong></p><p><div class="table-wrapper"><table><tr><td>序</td><td>列标题</td><td>字段</td><td>对齐</td><td>格式化 / 规则</td><td>宽度</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>充值单号</td><td>applyNo</td><td>左</td><td><code>FD + YYYYMMDD + 3位序号</code></td><td>min 140</td></tr>
+<tr><td>2</td><td>客户</td><td>customerName</td><td>左</td><td>溢出 tooltip</td><td>min 190</td></tr>
+<tr><td>3</td><td>主体</td><td>entityName</td><td>左</td><td>—</td><td>min 110</td></tr>
+<tr><td>4</td><td>币种</td><td>currency</td><td>中</td><td>中文名</td><td>min 80</td></tr>
+<tr><td>5</td><td>金额</td><td>amount</td><td>右</td><td><code>币种符号 + 金额</code></td><td>min 120</td></tr>
+<tr><td>6</td><td>申请时间</td><td>time</td><td>左</td><td>—</td><td>min 150</td></tr>
+<tr><td>7</td><td>状态</td><td>status</td><td>中</td><td><code>el-tag</code>：已通过=success、待审核=warning、已驳回=danger</td><td>min 90</td></tr>
+<tr><td>8</td><td>操作</td><td>—</td><td>中</td><td>固定右侧：详情 / 通过 / 驳回</td><td>170</td></tr>
+</table></div>
+<strong>Tab 2「客户充值」列</strong>：流水号 / 客户 / 主体 / 币种 / 金额 / 操作人 / 操作时间
+<strong>Tab 3「客户提现」列</strong>：同 Tab 2</p><p><strong>交互行为</strong></p><p><ul><li>[详情]：打开「充值申请详情」弹窗（只读）</li>
+<li>[通过]：仅 <code>status=待审核</code> 显示；二次确认「充值审核通过 / 确认通过」：<code>确认已核对银行到账，将 {金额} 入池到「{客户}-{主体}-{币种}」钱包？</code> → Toast「已通过并入池」（生成充值资金流水 + 钱包加余额）</li>
+<li>[驳回]：仅 <code>status=待审核</code> 显示；二次确认「驳回充值 / 确认驳回」：<code>确认驳回该充值申请？</code> → Toast「已驳回」（不产生资金流水）</li>
+<li>[代客户充值]：打开「代客户充值」弹窗；说明文字 <code>客户线下打款到账后，财务在此手动为客户入池</code></li>
+<li>[客户提现]：打开「客户提现」弹窗；说明文字 <code>客户线下申请提现，财务核对后在此扣减钱包余额</code></li>
+</ul>
+<strong>弹窗 1：充值申请详情</strong>（宽 620，只读）</p><p><ul><li>分区「申请信息」：充值单号 / 客户 / 主体 / 币种 / 金额 / 打款账户 / 申请时间 / 状态</li>
+<li>分区「打款凭证」：凭证文件名 + 小字提示 <code>财务线下核对银行流水，确认到账后点击「通过」</code></li>
+<li>底部按钮：关闭 / 驳回（仅待审核）/ 通过并入池（仅待审核）</li>
+</ul>
+<strong>弹窗 2：代客户充值</strong>（宽 560）</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验文案</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---:</td><td>:---</td></tr>
+<tr><td>customerId</td><td>客户</td><td>Select（filterable）</td><td>✅</td><td>请选择客户</td></tr>
+<tr><td>entityId</td><td>主体</td><td>Select</td><td>✅</td><td>请选择主体</td></tr>
+<tr><td>currency</td><td>币种</td><td>Select</td><td>✅</td><td>请选择币种</td></tr>
+<tr><td>amount</td><td>金额</td><td>InputNumber（min 0.01，precision 2，step 100）</td><td>✅</td><td>请输入金额</td></tr>
+</table></div>
+<ul><li>二次确认：<code>确认将 {金额} 入池到「{客户}-{主体}-{币种}」钱包？</code>（标题「确认代充」，确认按钮「确认入池」）→ Toast「已入池」</li>
+<li>底部按钮：取消 / 确认入池</li>
+</ul>
+<strong>弹窗 3：客户提现</strong>（宽 560）</p><p><ul><li>字段同「代客户充值」（客户 / 主体 / 币种 / 金额）</li>
+<li>只读提示（客户+主体+币种均已选时显示）：<code>当前钱包余额：{币种符号}{金额}</code></li>
+<li>校验：① 四项任一为空 → 警告「请填写完整信息」；② 提现金额 > 当前钱包余额 → 警告「提现金额不能大于钱包余额」</li>
+<li>二次确认：<code>确认从「{客户}-{主体}-{币种}」钱包提现 {金额}？</code>（标题「确认提现」）→ Toast「提现成功」（钱包扣减 + 生成提现资金流水）</li>
+<li>底部按钮：取消 / 确认提现</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>充值申请列表：<code>GET /api/finance/recharge-applies</code>（params: customerId, status, page, pageSize）</li>
+<li>审核通过：<code>POST /api/finance/recharge-applies/{id}/approve</code></li>
+<li>驳回：<code>POST /api/finance/recharge-applies/{id}/reject</code></li>
+<li>代充：<code>POST /api/finance/wallets/recharge</code>（body: customerId, entityId, currency, amount）</li>
+<li>提现：<code>POST /api/finance/wallets/withdraw</code>（body: customerId, entityId, currency, amount）</li>
+<li>余额查询：<code>GET /api/finance/wallets/balance</code>（params: customerId, entityId, currency）</li>
+<li>记录查询：<code>GET /api/finance/recharge-records</code>、<code>GET /api/finance/withdraw-records</code></li>
+</ul>
+<h3 id="5-8-资金账户-货主端-财务中心">5.8 资金账户（货主端 · 财务中心）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 资金账户</li>
+<li>类型：工作台 + 列表页（4 个 Tab）</li>
+<li>访问角色：货主端客户用户</li>
+</ul>
+<strong>Tab 结构</strong></p><p><div class="table-wrapper"><table><tr><td>Tab 名称</td><td>角标</td><td>内容</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>账户余额</td><td>无</td><td>概览条（标题「账户余额」+「充值」按钮）+ 钱包表格（客户×主体×币种），无查询、无分页、无行操作</td></tr>
+<tr><td>资金流水</td><td>无</td><td>查询区（主体 / 流水类型 / 币种）+ 流水表格 + 分页</td></tr>
+<tr><td>充值记录 (N)</td><td>N = 条数</td><td>充值申请列表（无查询、无分页）</td></tr>
+<tr><td>入账记录 (N)</td><td>N = 条数</td><td>我司退款/赔偿入账列表（只读，无查询、无分页）</td></tr>
+</table></div>
+<strong>Tab「账户余额」列</strong>：账户主体 / 币种（中文名）/ 账户名称（<code>账号编号 币种代码</code>）/ 余额 / 待核销欠款 / 待确认账单 / 实际金额（<code>余额 − 待核销欠款</code>，负数红色带负号）</p><p><strong>Tab「资金流水」查询条件</strong>：主体（5 主体）、流水类型（充值/充值退回/提现/账单核销/账单核销撤销/转汇）、币种（CNY/USD/HKD/EUR）
+<strong>Tab「资金流水」列</strong>：时间 / 流水类型（tag）/ 主体 / 币种 / 变动金额（正数绿色前置 <code>+</code>，负数红色）/ 变动后余额</p><p><strong>Tab「充值记录」列</strong>：充值单号 / 申请时间 / 主体 / 币种 / 充值金额 / 打款账户（溢出 tooltip）/ 状态（已通过=success、待审核=warning、其他=danger）</p><p><strong>Tab「入账记录」列</strong>：记录编号 / 赔付类型 / 关联运单号 / 主体 / 币种 / 赔付金额 / 状态（已入账=success，否则 warning）/ 产生时间 / 入账时间（空显示 <code>—</code>）/ 关联账单号（空显示 <code>—</code>）</p><p><strong>交互行为</strong></p><p><ul><li>[充值]：点击「充值」→ 打开「充值」弹窗（宽 620）</li>
+<li>[查询 / 重置]：仅「资金流水」Tab；Toast「执行查询」，重置清空三项</li>
+</ul>
+<strong>弹窗：充值</strong>（宽 620，<code>label-position: top</code>）</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验文案</td><td>联动</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>entityId</td><td>充值主体</td><td>Select</td><td>✅</td><td>请选择充值主体</td><td>选项 = <strong>本人已开通资金账户（钱包）的主体</strong>（去重），<strong>与合同状态无关</strong>（合同过期/解约后仍可充值结算）；无钱包时禁用；变更时清空币种与「打款账户」</td></tr>
+<tr><td>currency</td><td>充值币种</td><td>Select</td><td>✅</td><td>请选择充值币种</td><td>选项 = 选中主体下<strong>已开通的币种</strong>；未选主体时禁用；变更时清空「打款账户」</td></tr>
+<tr><td>amount</td><td>充值金额</td><td>InputNumber（min 0.01，precision 2，step 100）</td><td>✅</td><td>请输入充值金额</td><td>—</td></tr>
+<tr><td>bankAccountId</td><td>打款账户</td><td>Select</td><td>✅</td><td>请选择打款账户</td><td>未选主体或币种时禁用；选项 = 主体与币种<strong>同时匹配</strong>的我方银行账户</td></tr>
+<tr><td>voucher</td><td>打款凭证</td><td>Upload（limit 1，accept <code>image/*,.pdf</code>）</td><td>✅</td><td>请上传打款凭证</td><td>上传按钮「上传打款凭证」，tip：<code>请上传银行转账回单截图或 PDF，单个文件不超过 5MB</code></td></tr>
+</table></div>
+<ul><li>提示文案：<code>温馨提示：提交后财务将线下核对银行流水，审核通过后资金入账到对应钱包。审核通过前不会增加钱包余额。充值主体与币种仅显示您已开通的资金账户；如需开通其他主体或币种，请联系财务。</code></li>
+<li>提交：① 全字段非空兜底校验，任一为空 → 警告「请填写完整的充值信息并上传凭证」；② 生成充值单（<code>FD + YYYYMMDD + 3位序号</code>，状态=待审核）并置顶列表；③ Toast「充值申请已提交，等待财务审核」；④ 关闭弹窗并自动切到「充值记录」Tab；⑤ <strong>不增加钱包余额</strong></li>
+<li>底部按钮：取消 / 提交充值申请</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>账户总览：<code>GET /api/finance/wallets/overview</code>（主体×币种聚合，含待核销欠款、待确认账单、实际金额）</li>
+<li>资金流水：<code>GET /api/finance/wallet-flows</code></li>
+<li>充值记录：<code>GET /api/finance/recharge-applies</code></li>
+<li>入账记录：<code>GET /api/finance/credit-records</code></li>
+<li>我方银行账户（下拉）：<code>GET /api/finance/bank-accounts</code>（params: entityId, currency）</li>
+<li>提交充值：<code>POST /api/finance/recharge-applies</code>（body: entityId, currency, amount, bankAccountId, voucherUrl）</li>
+</ul>
+<h3 id="5-9-账单管理-货主端-财务中心">5.9 账单管理（货主端 · 财务中心）</h3></p><p><strong>页面信息</strong></p><p><ul><li>路径：财务中心 / 账单管理</li>
+<li>类型：列表页 + 详情弹窗</li>
+<li>访问角色：货主端客户用户</li>
+</ul>
+<strong>Tab 结构</strong></p><p><div class="table-wrapper"><table><tr><td>Tab 名称</td><td>角标</td><td>查询区</td><td>行操作</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>待确认 (N)</td><td>条数</td><td>账单号（模糊）+ 币种</td><td>查看详情 / 确认账单</td></tr>
+<tr><td>已确认 (N)</td><td>条数</td><td>账单号（模糊）</td><td>查看详情</td></tr>
+<tr><td>已核销 (N)</td><td>条数</td><td>无</td><td>查看详情</td></tr>
+</table></div>
+<blockquote>Tab 归类规则：<code>待确认</code> = status 待确认；<code>已确认</code> = status 已确认 <strong>或</strong> 部分核销（同一 Tab）；<code>已核销</code> = status 已核销。</blockquote></p><p><strong>列表列</strong></p><p><div class="table-wrapper"><table><tr><td>Tab</td><td>列</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>待确认</td><td>账单号 / 账单日 / 主体 / 币种（中文名）/ 账单金额 / 未收金额（红色）/ 操作</td></tr>
+<tr><td>已确认</td><td>账单号 / 账单日 / 主体 / 币种 / 账单金额 / 已核销 / 未收金额（红色）/ 状态（tag）/ 操作</td></tr>
+<tr><td>已核销</td><td>账单号 / 账单日 / 主体 / 币种 / 账单金额 / 已核销 / 状态（tag）/ 操作（无「未收金额」列）</td></tr>
+</table></div>
+状态 tag：待确认=warning、已确认=primary、部分核销=primary、已核销=success，兜底 info。</p><p><strong>弹窗：账单详情 / 确认账单</strong>（宽 720，双模式，同一弹窗）</p><p><ul><li>标题：<code>确认账单</code>（确认模式）/ <code>账单详情</code>（只读模式）</li>
+<li>分区「账单信息」（两列只读）：账单号 / 主体 / 账单日 / 币种 / 账单金额 / 未收金额（红色）</li>
+<li>分区「费用明细」表：运单号 / 费用类型 / 公布价 / 优惠（固定前置 <code>-</code>，为 0 时显示 <code>-¥0.00</code>）/ 应收净额</li>
+<li>确认模式提示条：<code>确认后视为认可本账单金额，账单将进入财务核销流程。如对账单有异议，请线下联系业务或提交工单，由财务重新生成账单。</code></li>
+<li>底部按钮：关 闭 / 确认账单（仅确认模式）</li>
+</ul>
+<strong>交互行为</strong></p><p><ul><li>[查看详情]：只读打开弹窗</li>
+<li>[确认账单]：二次确认 <code>确认账单</code> / 正文 <code>确认后视为认可本账单金额，账单将进入财务核销流程。</code> → 确认后账单 <code>status=已确认</code>、写入确认时间、Toast「账单已确认」；取消 → 静默，弹窗保持打开</li>
+<li>[查询 / 重置]：Toast「执行查询」，前端即时过滤</li>
+</ul>
+<strong>关联接口</strong></p><p><ul><li>账单列表：<code>GET /api/finance/bills</code>（params: status, billNo, currency, page, pageSize）</li>
+<li>账单明细：<code>GET /api/finance/bills/{billNo}/details</code></li>
+<li>确认账单：<code>POST /api/finance/bills/{billNo}/confirm</code></li>
+</ul>
+<hr></p><p><h2 id="6-业务规则-研发必读">6. 业务规则 ★ 研发必读</h2></p><p><h3 id="6-1-应收管理">6.1 应收管理</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>R01</td><td>运单收货完成</td><td>运单状态进入「已收货」</td><td>系统自动生成应收业务流水（粒度=运单，按「费用类型 × 币种」可拆多行），审计状态=待业务审计(10)</td><td>生成失败写后台任务失败记录，支持重试；不阻断运单流程</td></tr>
+<tr><td>R02</td><td>流水生成取价</td><td>运单绑定服务组合 → 按 收货地 + 重量段 + 仓库代码 匹配当周报价表</td><td>命中：写入公布价，数据来源=报价</td><td>未命中（私仓未做报价）：不自动生成金额，由业务在 <code>Waybill.html</code> 手工新增，数据来源=操作人姓名</td></tr>
+<tr><td>R03</td><td>流水构成</td><td>总运费（1 条）+ 各附加费（每种 1 条，命中附加费规则才生成）+ 优惠</td><td>逐条写入 <code>ar_flow</code>，优惠金额写入 <code>discount</code> 并参与净额计算（详见 §12 待确认项 U01）</td><td>附加费规则缺失 → 不生成该费用行，不阻断</td></tr>
+<tr><td>R04</td><td>应收净额计算</td><td><code>receivable_amount = publish_price − discount</code></td><td>写入流水应收净额</td><td>优惠 > 公布价 → 净额为负，照实写入并标红提示（不阻断）</td></tr>
+<tr><td>R05</td><td>数量计费</td><td>费用类型关联附加费规则（单价，如库内贴标费 0.5 元/张）且业务填写数量</td><td><code>金额 = 单价 × 数量</code> 自动算并写入</td><td>未填数量 → 阻止保存并提示「请输入数量」</td></tr>
+<tr><td>R06</td><td>数据来源</td><td>流水首次生成/首次手工创建时</td><td>记录第一次来源（报价 / 操作人姓名）</td><td>后续业务修改金额、币种、数量均<strong>不改变</strong>来源</td></tr>
+<tr><td>R07</td><td>业务侧审计</td><td>业务在 <code>Waybill.html</code> 费用 tab 逐条核对/修改/新增/删除后整单提交</td><td>整单全部流水置为已审计(20)</td><td>任一流水未核对完成 → 阻断整单审计并定位到该行</td></tr>
+<tr><td>R08</td><td>财务反审计（未关联账单）</td><td>财务在 <code>财务_运单审计.html</code> 选择「反审计整个运单」或「反审计指定大类」</td><td>对应流水回到待业务审计(10)，退回业务侧重改</td><td>大类级反审计时若该大类的<strong>任一行</strong>已关联账单 → 该大类选择项置灰（锁图标 + tooltip），阻断提交</td></tr>
+<tr><td>R09</td><td>财务反审计（已关联账单）</td><td>运单下存在已关联账单的流水</td><td>仅允许「反审计整个运单」，且只能通过<strong>红冲</strong>纠错：新增负数流水冲抵 + 正数流水重开，原流水留痕，审计状态置已红冲(30)，红冲流水归下一期账单</td><td>已关联账单的大类不允许单独反审计，阻断并提示「已关联账单，不可单独反审计」</td></tr>
+<tr><td>R10</td><td>反审计权限</td><td>反审计操作</td><td>仅财务角色可执行</td><td>非财务角色调用 → 403，前端不渲染「反审计」按钮</td></tr>
+</table></div>
+<h3 id="6-2-账单">6.2 账单</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>R11</td><td>聚合口径</td><td>财务选择 客户 + 主体 + 币种 + 账单日，点击「确认生成账单」</td><td>仅聚合 <code>audit_status=已审计(20)</code> 且 <code>bill_id</code> 为空 的流水，按 客户×主体×账期×币种 成账</td><td>该条件下无可用流水 → 阻断并提示「该条件下没有可聚合的已锁定业务流水」</td></tr>
+<tr><td>R12</td><td>账单号规则</td><td>生成账单时</td><td><code>AR + '-' + 主体代码 + '-' + YYYYMM + '-' + 3 位序号</code>（主体代码：广州飞点 GZ / 深圳飞点 SZ / 广东飞点 GD / 香港富力顿 HK / 墨链 ML）；全局唯一</td><td>序号冲突 → 服务端重取序号；主体代码缺失 → 阻断并提示主体配置异常</td></tr>
+<tr><td>R13</td><td>账单金额</td><td>生成时</td><td><code>bill_amount = Σ 聚合流水 receivable_amount</code>；<code>received_amount = 0</code>；<code>unreceived_amount = bill_amount</code></td><td>聚合流水含负数（红冲）→ 允许账单总额减少，不阻断</td></tr>
+<tr><td>R14</td><td>账期快照与补录</td><td>生成流水与账单时</td><td>从客商中心 <code>customer_contract</code> 快照 <code>payment_terms_type</code>（101~205）与 <code>payment_terms_days</code>，写入账单 <code>term_source=合同账期(10)</code></td><td>合同账期未完善（如香港线下签约，账期字段留空待补填）→ 账单生成弹窗要求<strong>财务补录账期天数</strong>，写入 <code>payment_terms_days</code> 且 <code>term_source=手工补录(20)</code>；<strong>仅影响本账单账龄计算，不回写客商中心合同主数据</strong>（账期主数据仍在客商中心「客户管理 → 合同/账期」维护）</td></tr>
+<tr><td>R15</td><td>发送账单</td><td>财务在「待发送」Tab 点击「发送客户」并二次确认</td><td>账单状态 已生成(10) → 已发送(20)，写入发送时间</td><td>账单下仍有未审计流水 → 阻断发送并提示先完成审计</td></tr>
+<tr><td>R16</td><td>客户确认</td><td>客户在货主端「待确认」Tab 点击「确认账单」并二次确认</td><td>账单状态 已发送(20) → 已确认(30)，写入客户确认时间</td><td>取消确认 → 静默返回，状态不变；异议走线下/工单，财务重新生成账单再发</td></tr>
+<tr><td>R17</td><td>已发送 Tab 归类</td><td>列表查询</td><td><code>已发送(20)</code> / <code>已确认(30)</code> / <code>部分核销(40)</code> 三状态同处「已发送」Tab</td><td>—</td></tr>
+</table></div>
+<h3 id="6-3-收款核销与账龄">6.3 收款核销与账龄</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>R18</td><td>核销币种约束</td><td>点击「核销」</td><td>账单币种与钱包币种必须一致</td><td>不一致 → 阻断并提示先做币种互转（跳转「钱包 → 币种互转」）</td></tr>
+<tr><td>R19</td><td>核销金额上限</td><td>核销弹窗与提交时</td><td><code>核销金额 = min(账单未收, 钱包余额)</code>，默认值即该上限，钱包不可透支</td><td>输入 > 上限 → 阻断并提示「核销金额不能超过 min(账单未收, 钱包余额)」；≤0 → 提示「请输入核销金额」</td></tr>
+<tr><td>R20</td><td>核销结果</td><td>二次确认后</td><td>账单 <code>received_amount += 本次</code>、<code>unreceived_amount -= 本次</code>（保留 2 位）；钱包余额扣减</td><td>并发核销同一账单/钱包 → 服务端 <code>version</code> 乐观锁，冲突返回「数据已变更，请刷新重试」</td></tr>
+<tr><td>R21</td><td>账单状态流转</td><td>核销后</td><td>未收 > 0 → 部分核销(40)；未收 = 0 → 已核销(50)</td><td>—</td></tr>
+<tr><td>R22</td><td>核销资金流水</td><td>核销成功</td><td>生成 <code>wallet_flow</code>（flow_type=核销(40)，变动金额为负数，记录变动前后余额，关联核销单）</td><td>资金流水写入失败 → 整体事务回滚，核销不生效</td></tr>
+<tr><td>R23</td><td>反核销</td><td>财务在「核销记录」Tab 点击「反核销」（仅类型=核销的行可反核销）并二次确认</td><td>回滚账单已核销/未收、回补钱包余额；账单 已核销(50) → 部分核销(40)；该记录类型置已反核销；生成核销撤销资金流水</td><td>一期不接做账系统，未做账账单均可反核销，不加审批，留日志；已反核销记录不再显示「反核销」</td></tr>
+<tr><td>R24</td><td>账龄起算</td><td>实时计算</td><td>逾期第 1 天 = 账单日 + 账期天数；账期内 = <code>账单日 ~ 账单日+账期天数−1</code></td><td>账期天数为空 → 归「未到期」</td></tr>
+<tr><td>R25</td><td>账龄分段</td><td>实时计算</td><td>未到期（单列）+ 逾期 0-30 / 31-60 / 61-90 / 90+ 四段</td><td>分币种不折算，不做汇率混总</td></tr>
+<tr><td>R26</td><td>账龄维度</td><td>实时计算</td><td>客户 × 主体 × 币种；仅统计 <code>unreceived_amount > 0</code> 的账单</td><td><code>payment_terms_days</code> 取账单级快照，不取合同实时值</td></tr>
+</table></div>
+<h3 id="6-4-资金账户">6.4 资金账户</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>R27</td><td>钱包唯一性</td><td>新增钱包 / 自动生成</td><td><code>(客户, 主体, 币种)</code> 联合唯一</td><td>已存在 → 阻断并提示「该客户在该主体下已有该币种钱包」</td></tr>
+<tr><td>R28</td><td>钱包账户名称</td><td>生成钱包时</td><td><code>账户名称 = 账号编号 + 空格 + 币种代码</code>（如 <code>1000001 CNY</code>）；账号编号 7 位全局递增（1000001 起），跨客户/主体/币种唯一</td><td>并发开通 → 账号编号由服务端序列生成</td></tr>
+<tr><td>R29</td><td>钱包自动开通（唯一触发点）</td><td>客商中心合同 <strong>签约完成</strong>（<code>sign_status</code> 20 签署中 → 30 已签署）</td><td>按 <code>contract_company</code> 生成「客户 × 主体 × 人民币」钱包（余额 0，开通方式=系统自动，写入开通时间）</td><td>正常入驻（先签约后开户）与特殊入驻（先开户后签约）<strong>统一卡在签约完成，开户完成不再触发</strong>；续签/重复事件幂等（唯一索引兜底）；每日定时补偿「已签署合同但无对应钱包」的数据</td></tr>
+<tr><td>R30</td><td>钱包池化</td><td>充值入池后</td><td>钱进池子即混同，仅认币种余额，不追来源进账，不做进账↔账单映射</td><td>一期不做核销关系表（在线付款上线后再做）</td></tr>
+<tr><td>R31</td><td>充值申请</td><td>客户在货主端提交（主体+币种+金额+打款账户+凭证）</td><td>生成 <code>recharge_apply</code>（状态=待审核），<strong>不增加钱包余额</strong></td><td>必填缺失 → 阻断并提示「请填写完整的充值信息并上传凭证」；<strong>充值主体下拉 = 本人已开通钱包的主体（与合同状态无关），币种下拉 = 该主体下已开通的币种</strong>；无任何钱包 → 下拉禁用并提示联系财务；打款账户下拉仅在选定主体+币种后可用，且只列该主体+币种下「可见且启用」的账户</td></tr>
+<tr><td>R32</td><td>充值审核通过</td><td>财务在「充值审核」Tab 核对银行流水后点击「通过并入池」并二次确认</td><td>状态 → 已通过(20)；生成充值资金流水（flow_type=充值(10)，正数）；钱包余额增加；写入审核人/时间</td><td>提交并发 → 乐观锁；失败回滚</td></tr>
+<tr><td>R33</td><td>充值驳回</td><td>财务点击「驳回」并二次确认</td><td>状态 → 已驳回(30)；<strong>不产生资金流水、不改余额</strong></td><td>—</td></tr>
+<tr><td>R34</td><td>代客户充值</td><td>客户线下打款到账后，财务在「客户充值」Tab 手工入池</td><td>生成充值资金流水 + 钱包余额增加；记录操作人</td><td>金额 ≤ 0 → 阻断「请填写完整信息」</td></tr>
+<tr><td>R35</td><td>客户提现</td><td>财务在「客户提现」Tab 操作（客户线下申请，核对后扣减）</td><td>钱包余额扣减 + 生成提现资金流水（flow_type=提现(30)，负数）</td><td>提现金额 > 当前钱包余额 → 阻断并提示「提现金额不能大于钱包余额」</td></tr>
+<tr><td>R36</td><td>币种互转</td><td>财务在「钱包」点击「币种互转」</td><td>同客户同主体内互转；汇率调阿里汇率接口实时获取，页面以接口值预填「手工覆盖汇率」；<code>转入金额 = 转出金额 ÷ 汇率</code>；转出钱包扣减、转入钱包增加；生成出/入两条转汇资金流水（flow_type=转汇(60)）</td><td>接口超时/异常 → 降级为手工填写，<code>rate_source=手工覆盖(20)</code>，不阻断；转出金额 > 余额 → 阻断「转出金额不能大于钱包余额」；一期不记汇损</td></tr>
+<tr><td>R37</td><td>汇率留痕</td><td>币种互转提交</td><td>同时保存 <code>api_rate</code>（接口返回值，不可改）、<code>rate</code>（实际采用）、<code>rate_source</code>（接口实时/手工覆盖）</td><td>接口汇率缺失且未手工填写 → 阻断「请输入汇率」</td></tr>
+<tr><td>R38</td><td>资金流水不可变</td><td>任何资金变动完成后</td><td><code>wallet_flow</code> 为事实记录，不可修改、不可软删除；出错靠反向流水（充值退回/核销撤销）</td><td>直改流水 → 服务端拒绝；纠错走反向流水</td></tr>
+<tr><td>R39</td><td>银行账户唯一与停用</td><td>新增/停用我方银行账户</td><td>账号全局唯一；停用后不再出现在充值可选打款账户下拉，历史引用与已生成充值单不受影响</td><td>账号重复 → 阻断「账号已存在」；删除改为软删除</td></tr>
+<tr><td>R40</td><td>入账记录生成</td><td>运营在运单上新增「赔付类型」业务流水（<code>fee_type.is_credit=true</code>）</td><td>系统自动挂入账记录（编号 <code>CR + YYYYMMDD + 序号</code>），状态=待入账(10)，币种=赔付流水币种</td><td>赔付类型 <code>credit_type</code> 未填 → 阻断该流水保存（头程管理侧校验）</td></tr>
+<tr><td>R41</td><td>入账抵扣</td><td>账单生成时</td><td>该客户+主体+币种的「待入账」记录自动归入最新一期账单，按<strong>负数</strong>抵扣应收；回写 <code>bill_id</code> 与入账时间，状态 → 已入账(20)</td><td>归入后不可改期，任何轧差放下期；无待入账记录则跳过</td></tr>
+<tr><td>R42</td><td>客户放弃索赔</td><td>运营新增一条反向（负数）赔付记录</td><td>与原记录两条留痕，净额归 0</td><td>原记录已入账 → 走红冲路径，不可直改</td></tr>
+<tr><td>R43</td><td>入账记录币种纠错（待入账）</td><td>财务反审计运单 + 流水 → 业务删除错误赔付流水 → 重新添加正确币种流水 → 重新整单审计</td><td>入账记录随流水重建，币种更正</td><td>已关联账单 → 只能红冲</td></tr>
+<tr><td>R44</td><td>货主端账户总览</td><td>实时计算</td><td>维度=主体×币种；入驻自动开通的人民币钱包（余额 0）也展示；实际金额 = 余额 − 待核销欠款（负数红色带负号）</td><td>客户无任何钱包 → 空态（默认「暂无数据」）</td></tr>
+<tr><td>R45</td><td>入账记录只读</td><td>货主端「入账记录」Tab</td><td>客户只读，不可发起/修改</td><td>—</td></tr>
+<tr><td>R46</td><td>手工开通的主体边界</td><td>财务在「客户资金账户」新增钱包</td><td>主体下拉 = 该客户<strong>签约过</strong>的主体（<code>contract_company</code> 去重，<code>sign_status ∈ {签署中, 已签署, 已过期, 已解约}</code>）</td><td>从未签约的主体（无合同记录或 <code>sign_status=10未签署</code>）→ 阻断并提示「该客户未与该主体签约，请先在客商中心完成合同签约」，<strong>不设特批口子</strong></td></tr>
+<tr><td>R47</td><td>手工开通的币种边界</td><td>同上</td><td>币种下拉仅列该主体下<strong>尚未开通</strong>的币种；新增钱包开通方式=财务手工</td><td>已开通币种 → 阻断「该客户在该主体下已有该币种钱包」；人民币默认钱包由系统自动开通，手工一般用于补开外币</td></tr>
+<tr><td>R48</td><td>钱包生命周期与合同解耦</td><td>合同过期/解约（<code>sign_status</code> 40/50）</td><td>钱包所有操作照常：查看 / <strong>充值</strong> / 核销 / 反核销 / 提现 / 币种互转 / <strong>新增币种钱包</strong> / 入账抵扣；系统不自动停用钱包</td><td>依据：合同过期后仍有未结算账单与存量赔付需结算；若强行停用会导致钱无处入池、欠款无法核销</td></tr>
+<tr><td>R49</td><td>默认币种统一</td><td>自动开通时</td><td>所有主体（含香港富力顿）默认开通 <strong>人民币</strong> 钱包</td><td>其他币种均由财务手工开通</td></tr>
+<tr><td>R50</td><td>解约主体的知情提示</td><td>手工开通时选中主体合同为已过期/已解约</td><td>不阻断提交，弹窗给黄底提示说明用途（存量账单结算与赔付入账）</td><td>—</td></tr>
+</table></div>
+<blockquote><strong>权限类规则</strong>：反审计(R10)、反核销(R23)、账单生成/发送、资金操作（充值审核/代充/提现/币种互转/银行账户维护）仅财务角色可执行，详见 §8。</blockquote></p><p><hr></p><p><h2 id="7-计算公式-研发必读">7. 计算公式 ★ 研发必读</h2></p><p><h3 id="7-1-应收净额-单条流水">7.1 应收净额（单条流水）</h3></p><p><pre><code>变量定义:
+  publish_price = 本行公布价（来源：ar_flow.publish_price，取当周报价快照）
+  discount      = 本行优惠金额（来源：ar_flow.discount，运费优惠 + 附加费优惠）
+
+公式:
+  receivable_amount = publish_price − discount
+
+精度: Decimal(20,6)，展示保留 2 位（四舍五入）；不涉及汇率折算
+条件分支: discount 缺省 = 0；discount &gt; publish_price 时结果为负（照实写入）
+</code></pre></p><p><h3 id="7-2-账单总额">7.2 账单总额</h3></p><p><pre><code>变量定义:
+  flows = 满足「客户 × 主体 × 币种 × 账期」且 audit_status=已审计(20) 且 bill_id 为空 的流水集合
+
+公式:
+  bill_amount       = Σ flows.receivable_amount
+  received_amount   = 0（生成时）
+  unreceived_amount = bill_amount − received_amount
+
+精度: Decimal(20,6)，展示 2 位
+</code></pre></p><p><h3 id="7-3-未收金额-核销后实时">7.3 未收金额（核销后实时）</h3></p><p><pre><code>公式:
+  unreceived_amount = bill_amount − received_amount
+
+条件分支:
+  unreceived_amount &gt; 0 → 账单状态 部分核销(40)
+  unreceived_amount = 0 → 账单状态 已核销(50)
+</code></pre></p><p><h3 id="7-4-核销金额">7.4 核销金额</h3></p><p><pre><code>变量定义:
+  bill_unreceived = 账单未收金额（ar_bill.unreceived_amount）
+  wallet_balance  = 钱包余额（customer_wallet.balance）
+
+公式:
+  核销金额 = min(bill_unreceived, wallet_balance)     ← 弹窗默认值 = 上限
+  提交约束: 0 &lt; 核销金额 ≤ min(bill_unreceived, wallet_balance)
+
+输出:
+  ar_bill.received_amount   += 核销金额
+  ar_bill.unreceived_amount -= 核销金额
+  customer_wallet.balance   -= 核销金额
+  wallet_flow(flow_type=40) → amount = −核销金额
+
+精度: 2 位（Number(x.toFixed(2))）；钱包余额不可为负
+</code></pre></p><p><h3 id="7-5-账龄计算">7.5 账龄计算</h3></p><p><pre><code>变量定义:
+  billing_date        = 账单日（ar_bill.billing_date）
+  payment_terms_days  = 账期天数（ar_bill.payment_terms_days，账单级快照）
+  today               = 系统当前日期
+
+公式:
+  逾期起始日 = billing_date + payment_terms_days          ← 逾期第 1 天
+  逾期天数   = today − 逾期起始日
+
+条件分支（分段）:
+  today &lt;  逾期起始日        → 未到期
+  0  ≤ 逾期天数 ≤ 30        → 逾期 0-30天
+  31 ≤ 逾期天数 ≤ 60        → 逾期 31-60天
+  61 ≤ 逾期天数 ≤ 90        → 逾期 61-90天
+  逾期天数 &gt; 90             → 逾期 90天以上
+
+示例: 账单日 2026-08-01 + 账期 15 天 → 账期内 08-01~08-15，最后支付日 08-15，逾期第 1 天 08-16
+      今天 2026-08-27 → 逾期天数 11 天 → 归属「逾期 0-30天」
+</code></pre></p><p><h3 id="7-6-币种互转">7.6 币种互转</h3></p><p><pre><code>变量定义:
+  from_amount = 转出金额
+  rate        = 实际采用汇率（默认 = 阿里汇率接口返回值 api_rate，可手工覆盖）
+
+公式:
+  to_amount = from_amount ÷ rate
+
+输出:
+  转出钱包.balance -= from_amount
+  转入钱包.balance += to_amount
+  wallet_flow(flow_type=60) × 2（转出为负、转入为正）
+
+精度: 金额 2 位；汇率 6 位；一期不记汇损
+条件分支: rate ≤ 0 或为空 → 阻断提交；接口异常 → 手工填写并记 rate_source=20
+</code></pre></p><p><h3 id="7-7-货主端资金账户汇总">7.7 货主端资金账户汇总</h3></p><p><pre><code>变量定义:
+  balance          = customer_wallet.balance
+  pending_writeoff = Σ ar_bill.unreceived_amount  where status ∈ {已确认(30), 部分核销(40)}  按 主体×币种
+  pending_confirm  = Σ ar_bill.bill_amount        where status = 已发送(20)                  按 主体×币种
+
+公式:
+  实际金额 = balance − pending_writeoff
+
+精度: 2 位
+条件分支: 实际金额 &lt; 0 → 红色显示并前置负号；分币种独立计算，不折算混总
+</code></pre></p><p><h3 id="7-8-钱包余额变动-统一口径">7.8 钱包余额变动（统一口径）</h3></p><p><pre><code>变动前余额 → 变动后余额（每次变动均写入 wallet_flow.balance_before / balance_after）
+
+充值 / 代充 / 充值退回  : balance_after = balance_before + |amount|
+提现 / 核销            : balance_after = balance_before − |amount|
+币种互转（转出侧）      : balance_after = balance_before − from_amount
+币种互转（转入侧）      : balance_after = balance_before + to_amount
+
+约束: balance_after ≥ 0（不可透支）；写库带 version 乐观锁
+</code></pre></p><p><hr></p><p><h2 id="8-权限矩阵">8. 权限矩阵</h2></p><p><blockquote>员工端权限走角色管理（系统设置）；货主端仅能访问本人（本企业）数据。</blockquote></p><p><div class="table-wrapper"><table><tr><td>操作</td><td>财务专员</td><td>业务专员</td><td>运营</td><td>客户（货主端）</td><td>系统</td></tr>
+<tr><td>:---</td><td>:---:</td><td>:---:</td><td>:---:</td><td>:---:</td><td>:---:</td></tr>
+<tr><td>运单审计 · 查看列表/详情</td><td>✅</td><td>✅（仅本模块运单）</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>运单审计 · 反审计（运单级/大类级）</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>业务流水 · 生成</td><td>❌</td><td>❌</td><td>❌</td><td>❌</td><td>✅ 自动</td></tr>
+<tr><td>业务流水 · 业务侧审计（<code>Waybill.html</code> 费用 tab）</td><td>❌</td><td>✅</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>业务流水 · 新增赔付流水（含赔付类型）</td><td>❌</td><td>✅</td><td>✅</td><td>❌</td><td>—</td></tr>
+<tr><td>账单 · 生成</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>账单 · 发送客户</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>账单 · 查看</td><td>✅</td><td>✅</td><td>❌</td><td>✅（仅本人）</td><td>—</td></tr>
+<tr><td>账单 · 确认</td><td>❌</td><td>❌</td><td>❌</td><td>✅</td><td>—</td></tr>
+<tr><td>收款核销 · 核销</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>收款核销 · 反核销</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>账龄台账 · 查看</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>钱包 · 查看</td><td>✅</td><td>❌</td><td>❌</td><td>✅（仅本人）</td><td>—</td></tr>
+<tr><td>钱包 · 新增（开通币种钱包）</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>✅ 入驻/签约自动</td></tr>
+<tr><td>钱包 · 币种互转</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>资金流水 · 查看</td><td>✅</td><td>❌</td><td>❌</td><td>✅（仅本人）</td><td>—</td></tr>
+<tr><td>财务流水 · 充值审核（通过/驳回）</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>财务流水 · 代客户充值</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>财务流水 · 客户提现</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>财务流水 · 支付供应商</td><td>— Phase 2 预留 —</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td>银行账户 · 维护（新增/编辑/停用）</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td>—</td></tr>
+<tr><td>银行账户 · 引用（充值打款账户）</td><td>✅</td><td>❌</td><td>❌</td><td>✅（仅可用账户）</td><td>—</td></tr>
+<tr><td>入账记录 · 查看</td><td>✅</td><td>✅</td><td>✅</td><td>✅（仅本人，只读）</td><td>✅ 自动生成/抵扣</td></tr>
+<tr><td>充值与提现 · 发起</td><td>❌</td><td>❌</td><td>❌</td><td>✅（仅充值）</td><td>—</td></tr>
+</table></div>
+<hr></p><p><h2 id="9-接口清单">9. 接口清单</h2></p><p><div class="table-wrapper"><table><tr><td>接口</td><td>方法</td><td>路径</td><td>触发页面</td><td>请求参数</td><td>返回字段</td><td>失败处理</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>业务流水查询</td><td>GET</td><td><code>/api/finance/ar-flows</code></td><td><code>Waybill.html</code> 费用 tab</td><td>waybillId, auditStatus</td><td>流水列表（费用类型/币种/金额/公布价/优惠/应收净额/审计状态/来源）</td><td>提示「查询失败，请重试」</td></tr>
+<tr><td>业务流水新增</td><td>POST</td><td><code>/api/finance/ar-flows</code></td><td><code>Waybill.html</code> 费用 tab</td><td>waybillId, feeTypeId, currency, amount, quantity, remark</td><td>新流水 id</td><td>校验失败返回具体字段错误</td></tr>
+<tr><td>业务流水修改/删除</td><td>PUT/DELETE</td><td><code>/api/finance/ar-flows/{id}</code></td><td><code>Waybill.html</code> 费用 tab</td><td>amount, currency, quantity, remark</td><td>成功标记</td><td>已审计流水不可改 → 409</td></tr>
+<tr><td>业务整单审计</td><td>POST</td><td><code>/api/finance/ar-flows/audit</code></td><td><code>Waybill.html</code> 费用 tab</td><td>waybillId</td><td>成功标记</td><td>存在未核对流水 → 400</td></tr>
+<tr><td>运单审计列表</td><td>GET</td><td><code>/api/finance/waybill-audits</code></td><td><code>财务_运单审计.html</code></td><td>waybillNo, customerName, linked, page, pageSize</td><td>运单号/客户/主体/审计人时间/关联账单标记</td><td>—</td></tr>
+<tr><td>运单审计详情</td><td>GET</td><td><code>/api/finance/waybill-audits/{waybillId}</code></td><td>运单审计 · 详情弹窗</td><td>—</td><td>大类列表（名称/金额/是否关联账单）</td><td>—</td></tr>
+<tr><td>反审计</td><td>POST</td><td><code>/api/finance/waybill-audits/{waybillId}/reverse</code></td><td>运单审计 · 反审计弹窗</td><td>scope=whole\</td><td>category, category</td><td>成功标记</td><td>大类已关联账单 → 400；无权限 → 403</td></tr>
+<tr><td>账单列表</td><td>GET</td><td><code>/api/finance/bills</code></td><td>财务/货主端账单管理</td><td>status, billNo, customerId, currency, page, pageSize</td><td>账单号/客户/主体/币种/账单日/金额/已核销/未收/状态</td><td>—</td></tr>
+<tr><td>可聚合流水</td><td>GET</td><td><code>/api/finance/ar-flows/generatable</code></td><td>财务账单管理 · 生成账单</td><td>customerId, entityId, currency</td><td>流水列表 + 合计</td><td>无数据返回空数组</td></tr>
+<tr><td>生成账单</td><td>POST</td><td><code>/api/finance/bills</code></td><td>财务账单管理 · 生成账单</td><td>customerId, entityId, currency, billingDate, paymentTermsDays（合同账期为空时必填）</td><td>账单号/账单总额/账期天数/账期来源</td><td>无可聚合流水 → 400「该条件下没有可聚合的已锁定业务流水」；账期为空且未补录 → 400「该主体合同账期未完善，请补录账期天数」</td></tr>
+<tr><td>发送账单</td><td>POST</td><td><code>/api/finance/bills/{billNo}/send</code></td><td>财务账单管理 · 发送客户</td><td>—</td><td>状态/发送时间</td><td>存在未审计流水 → 400</td></tr>
+<tr><td>账单详情</td><td>GET</td><td><code>/api/finance/bills/{billNo}/details</code></td><td>财务/货主端账单详情弹窗</td><td>—</td><td>账单信息 + 费用明细（运单号/费用类型/公布价/优惠/应收净额）</td><td>—</td></tr>
+<tr><td>确认账单</td><td>POST</td><td><code>/api/finance/bills/{billNo}/confirm</code></td><td>货主端账单管理</td><td>—</td><td>状态/确认时间</td><td>非待确认状态 → 400；非本人账单 → 403</td></tr>
+<tr><td>待核销账单</td><td>GET</td><td><code>/api/finance/bills</code></td><td><code>财务_收款核销.html</code></td><td>unreceivedOnly=true, billNo, customerId</td><td>账单 + 钱包余额</td><td>—</td></tr>
+<tr><td>核销记录</td><td>GET</td><td><code>/api/finance/writeoffs</code></td><td>收款核销 · 核销记录 Tab</td><td>billNo, page, pageSize</td><td>核销单号/账单号/客户/币种/金额/类型/操作人/时间</td><td>—</td></tr>
+<tr><td>核销</td><td>POST</td><td><code>/api/finance/writeoffs</code></td><td>收款核销 · 核销弹窗</td><td>billId, walletId, amount</td><td>核销单号/账单未收/钱包余额</td><td>超上限 → 400；乐观锁冲突 → 409「数据已变更，请刷新重试」</td></tr>
+<tr><td>反核销</td><td>POST</td><td><code>/api/finance/writeoffs/{id}/reverse</code></td><td>收款核销 · 反核销</td><td>—</td><td>回滚后账单与钱包余额</td><td>已反核销 → 400</td></tr>
+<tr><td>账龄汇总</td><td>GET</td><td><code>/api/finance/aging</code></td><td><code>财务_账龄台账.html</code></td><td>customerName, entityId, currency</td><td>客户/主体/币种/未收总额/五段金额</td><td>—</td></tr>
+<tr><td>账龄明细</td><td>GET</td><td><code>/api/finance/aging/details</code></td><td>账龄台账 · 明细弹窗</td><td>customerId, entityId, currency</td><td>账单号/账单日/账期天数/未收金额/账龄段</td><td>—</td></tr>
+<tr><td>客户资金账户列表</td><td>GET</td><td><code>/api/finance/wallets</code></td><td><code>财务_资金账户管理.html</code> · 客户资金账户 Tab</td><td>customerId, entityId, currency, page, pageSize</td><td>客户/账户主体/币种/账户名称/余额/待核销欠款/待确认账单/实际金额/<strong>开通方式</strong>/开通时间</td><td>—</td></tr>
+<tr><td>新增钱包</td><td>POST</td><td><code>/api/finance/wallets</code></td><td><code>财务_资金账户管理.html</code> · 新增钱包弹窗</td><td>customerId, entityId, currency</td><td>账户名称/开通方式=财务手工/开通时间</td><td>主体未签约 → 400「该客户未与该主体签约，请先在客商中心完成合同签约」；重复 → 400「该客户在该主体下已有该币种钱包」</td></tr>
+<tr><td>客户签约主体查询</td><td>GET</td><td><code>/api/customer/contracts</code></td><td><code>财务_资金账户管理.html</code> · 新增钱包弹窗（主体下拉）</td><td>customerId</td><td>主体列表（<code>contract_company</code> 去重 + <code>sign_status</code>，含已过期/已解约）</td><td>客商中心提供；无记录返回空数组（前端阻断提交）</td></tr>
+<tr><td>钱包自动开通（事件）</td><td>POST</td><td><code>/api/finance/wallets/auto-open</code></td><td>客商中心合同签约完成事件</td><td>customerId, contractCompany</td><td>钱包（主体×人民币，开通方式=系统自动）</td><td>幂等：已存在则不重复创建；失败进补偿任务重试</td></tr>
+<tr><td>接口汇率</td><td>GET</td><td><code>/api/finance/exchange-rate</code></td><td>钱包 · 币种互转弹窗</td><td>fromCurrency, toCurrency</td><td>接口汇率（阿里汇率接口代理）</td><td>超时/异常 → 返回空，前端降级手工填写</td></tr>
+<tr><td>币种互转</td><td>POST</td><td><code>/api/finance/wallets/transfer</code></td><td>钱包 · 币种互转弹窗</td><td>fromWalletId, toWalletId, fromAmount, rate</td><td>转汇单号/转入金额/两侧余额</td><td>余额不足 → 400；乐观锁冲突 → 409</td></tr>
+<tr><td>资金流水查询</td><td>GET</td><td><code>/api/finance/wallet-flows</code></td><td><code>财务_资金流水.html</code>、货主端资金账户</td><td>customerId, entityId, currency, flowType, startDate, endDate, page, pageSize</td><td>流水时间/客户/主体/币种/类型/变动金额/变动后余额/操作人/关联单号</td><td>—</td></tr>
+<tr><td>充值申请列表</td><td>GET</td><td><code>/api/finance/recharge-applies</code></td><td>财务流水 · 充值审核、货主端资金账户</td><td>customerId, status, page, pageSize</td><td>充值单号/客户/主体/币种/金额/打款账户/凭证/时间/状态</td><td>—</td></tr>
+<tr><td>提交充值申请</td><td>POST</td><td><code>/api/finance/recharge-applies</code></td><td>货主端资金账户 · 充值弹窗</td><td>entityId, currency, amount, bankAccountId, voucherUrl</td><td>充值单号/状态</td><td>必填缺失 → 400</td></tr>
+<tr><td>审核通过</td><td>POST</td><td><code>/api/finance/recharge-applies/{id}/approve</code></td><td>财务流水 · 充值审核</td><td>—</td><td>状态/资金流水号/钱包余额</td><td>非待审核 → 400</td></tr>
+<tr><td>审核驳回</td><td>POST</td><td><code>/api/finance/recharge-applies/{id}/reject</code></td><td>财务流水 · 充值审核</td><td>reason（可选）</td><td>状态</td><td>非待审核 → 400</td></tr>
+<tr><td>代客户充值</td><td>POST</td><td><code>/api/finance/wallets/recharge</code></td><td>财务流水 · 代客户充值弹窗</td><td>customerId, entityId, currency, amount</td><td>流水号/钱包余额</td><td>金额 ≤ 0 → 400</td></tr>
+<tr><td>客户提现</td><td>POST</td><td><code>/api/finance/wallets/withdraw</code></td><td>财务流水 · 客户提现弹窗</td><td>customerId, entityId, currency, amount</td><td>流水号/钱包余额</td><td>超余额 → 400「提现金额不能大于钱包余额」</td></tr>
+<tr><td>钱包余额查询</td><td>GET</td><td><code>/api/finance/wallets/balance</code></td><td>提现弹窗、核销弹窗</td><td>customerId, entityId, currency</td><td>余额</td><td>无钱包返回 0</td></tr>
+<tr><td>银行账户列表</td><td>GET</td><td><code>/api/finance/bank-accounts</code></td><td>货主端充值弹窗、<code>财务_资金账户管理.html</code> · 我司账户 Tab</td><td>entityId, currency, keyword, visible, status</td><td>账户名称/账号/开户行/币种/SWIFT/余额/用户是否可见/是否默认/状态</td><td>—</td></tr>
+<tr><td>银行账户新增/编辑</td><td>POST/PUT</td><td><code>/api/finance/bank-accounts</code></td><td><code>财务_资金账户管理.html</code> · 我司账户 Tab</td><td>entityId, accountName, accountNo, bankName, currency, swiftCode, balance, isVisibleToCustomer, isDefault</td><td>id</td><td>账号重复 → 400「该账号已存在」；不可见却设默认 → 400</td></tr>
+<tr><td>银行账户可见性切换</td><td>POST</td><td><code>/api/finance/bank-accounts/{id}/visibility</code></td><td><code>财务_资金账户管理.html</code> · 可见开关</td><td>isVisibleToCustomer</td><td>新可见性 + 是否连带取消默认</td><td>置否时后端同时清空 <code>is_default</code>；失败回归原状态</td></tr>
+<tr><td>银行账户停用/启用</td><td>POST</td><td><code>/api/finance/bank-accounts/{id}/status</code></td><td><code>财务_资金账户管理.html</code> · 停用/启用</td><td>status</td><td>状态</td><td>停用时同时置 <code>可见=否</code>、<code>默认=否</code>；历史充值单与资金流水不受影响</td></tr>
+<tr><td>入账记录查询</td><td>GET</td><td><code>/api/finance/credit-records</code></td><td>货主端资金账户 · 入账记录 Tab</td><td>customerId, status, page, pageSize</td><td>记录编号/赔付类型/运单号/主体/币种/金额/状态/产生时间/入账时间/账单号</td><td>—</td></tr>
+</table></div>
+<hr></p><p><h2 id="10-错误提示文案汇总">10. 错误提示文案汇总</h2></p><p><blockquote>原型文案逐字沿用，研发按此实现（<code>ElMessage.warning</code> 为前置拦截，<code>ElMessageBox.confirm</code> 为二次确认，<code>ElMessage.success</code> 为结果提示）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发条件</td><td>文案</td><td>类型</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>E01</td><td>反审计选择大类但未勾选</td><td>请选择要反审计的大类</td><td>阻断（warning）</td></tr>
+<tr><td>E02</td><td>反审计确认</td><td>确认反审计 {运单号} 的{整个运单 /「{大类}」大类}？反审计后退回业务侧重新审计。</td><td>二次确认（warning）</td></tr>
+<tr><td>E03</td><td>反审计成功</td><td>反审计成功，已退回业务侧重新审计</td><td>提示（success）</td></tr>
+<tr><td>E04</td><td>生成账单必填缺失</td><td>请填写完整的账单信息</td><td>阻断（warning）</td></tr>
+<tr><td>E05</td><td>无可聚合流水</td><td>该条件下没有可聚合的已锁定业务流水</td><td>阻断（warning）</td></tr>
+<tr><td>E06</td><td>生成账单成功</td><td>账单已生成</td><td>提示（success）</td></tr>
+<tr><td>E07</td><td>发送账单确认</td><td>确认将账单 {账单号} 发送给客户「{客户}」？</td><td>二次确认（warning）</td></tr>
+<tr><td>E08</td><td>发送账单成功</td><td>账单已发送给客户</td><td>提示（success）</td></tr>
+<tr><td>E09</td><td>核销金额为空或 ≤0</td><td>请输入核销金额</td><td>阻断（warning）</td></tr>
+<tr><td>E10</td><td>核销金额超上限</td><td>核销金额不能超过 min(账单未收, 钱包余额)</td><td>阻断（warning）</td></tr>
+<tr><td>E11</td><td>核销确认</td><td>确认核销账单 {账单号} 金额 {币种符号}{金额}？</td><td>二次确认（warning）</td></tr>
+<tr><td>E12</td><td>核销成功</td><td>核销成功</td><td>提示（success）</td></tr>
+<tr><td>E13</td><td>反核销确认</td><td>确认反核销 {账单号} 的 {币种符号}{金额}？反核销后账单未收与钱包余额将回滚。</td><td>二次确认（warning）</td></tr>
+<tr><td>E14</td><td>反核销成功</td><td>反核销成功</td><td>提示（success）</td></tr>
+<tr><td>E15</td><td>账单确认免责提示</td><td>确认后视为认可本账单金额，账单将进入财务核销流程。</td><td>二次确认（warning）</td></tr>
+<tr><td>E16</td><td>账单确认弹窗内提示</td><td>确认后视为认可本账单金额，账单将进入财务核销流程。如对账单有异议，请线下联系业务或提交工单，由财务重新生成账单。</td><td>提示条（橙）</td></tr>
+<tr><td>E17</td><td>账单确认成功</td><td>账单已确认</td><td>提示（success）</td></tr>
+<tr><td>E18</td><td>钱包新增必填缺失</td><td>请填写完整信息</td><td>阻断（warning）</td></tr>
+<tr><td>E19</td><td>钱包已存在</td><td>该客户在该主体下已有该币种钱包</td><td>阻断（warning）</td></tr>
+<tr><td>E20</td><td>钱包开通成功</td><td>钱包已开通</td><td>提示（success）</td></tr>
+<tr><td>E21</td><td>币种互转必填缺失</td><td>请填写完整的互转信息</td><td>阻断（warning）</td></tr>
+<tr><td>E22</td><td>转出金额超余额</td><td>转出金额不能大于钱包余额</td><td>阻断（warning）</td></tr>
+<tr><td>E23</td><td>币种互转确认</td><td>确认从 {主体} {转出币种} 钱包转出 {金额}，转入 {转入币种} 钱包 {转入金额}？</td><td>二次确认（warning）</td></tr>
+<tr><td>E24</td><td>币种互转成功</td><td>币种互转成功</td><td>提示（success）</td></tr>
+<tr><td>E25</td><td>充值申请必填缺失</td><td>请填写完整的充值信息并上传凭证</td><td>阻断（warning）</td></tr>
+<tr><td>E26</td><td>充值申请提交成功</td><td>充值申请已提交，等待财务审核</td><td>提示（success）</td></tr>
+<tr><td>E27</td><td>充值审核通过确认</td><td>确认已核对银行到账，将 {金额} 入池到「{客户}-{主体}-{币种}」钱包？</td><td>二次确认（warning）</td></tr>
+<tr><td>E28</td><td>充值审核通过成功</td><td>已通过并入池</td><td>提示（success）</td></tr>
+<tr><td>E29</td><td>充值驳回确认</td><td>确认驳回该充值申请？</td><td>二次确认（warning）</td></tr>
+<tr><td>E30</td><td>充值驳回成功</td><td>已驳回</td><td>提示（success）</td></tr>
+<tr><td>E31</td><td>代充确认</td><td>确认将 {金额} 入池到「{客户}-{主体}-{币种}」钱包？</td><td>二次确认（warning）</td></tr>
+<tr><td>E32</td><td>代充成功</td><td>已入池</td><td>提示（success）</td></tr>
+<tr><td>E33</td><td>代充/提现必填缺失</td><td>请填写完整信息</td><td>阻断（warning）</td></tr>
+<tr><td>E34</td><td>提现金额超余额</td><td>提现金额不能大于钱包余额</td><td>阻断（warning）</td></tr>
+<tr><td>E35</td><td>提现确认</td><td>确认从「{客户}-{主体}-{币种}」钱包提现 {金额}？</td><td>二次确认（warning）</td></tr>
+<tr><td>E36</td><td>提现成功</td><td>提现成功</td><td>提示（success）</td></tr>
+<tr><td>E37</td><td>银行账户账号重复</td><td>账号已存在</td><td>阻断（warning）</td></tr>
+<tr><td>E38</td><td>银行账户停用确认</td><td>确认停用该银行账户？停用后客户充值将无法选择该账户。</td><td>二次确认（warning）</td></tr>
+<tr><td>E39</td><td>并发冲突（核销/提现/互转）</td><td>数据已变更，请刷新重试</td><td>阻断（error）</td></tr>
+<tr><td>E40</td><td>核销币种不一致</td><td>账单币种与钱包币种不一致，请先做币种互转</td><td>阻断（warning）</td></tr>
+<tr><td>E41</td><td>汇率接口异常</td><td>汇率接口暂不可用，请手工填写汇率</td><td>警告（warning）</td></tr>
+<tr><td>E42</td><td>查询动作（全模块统一）</td><td>执行查询</td><td>提示（success）</td></tr>
+<tr><td>E43</td><td>支付供应商（预留）</td><td>应付管理细节待展开，支付供应商功能后续上线</td><td>空态</td></tr>
+<tr><td>E44</td><td>无权限操作反审计/反核销</td><td>无操作权限，请联系财务负责人</td><td>阻断（error，403）</td></tr>
+</table></div>
+<hr></p><p><h2 id="11-验收标准">11. 验收标准</h2></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>验收项</td><td>验收方式</td><td>通过标准</td><td>关联 AC</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>A01</td><td>业务流水自动生成</td><td>手动 + 数据核对</td><td>运单收货后自动生成流水（粒度=运单），费用类型×币种可拆多行；命中报价时数据来源=报价、取当周公布价+附加费</td><td>AC1</td></tr>
+<tr><td>A02</td><td>取价未命中走手工</td><td>手动</td><td>未命中报价的运单不自动生成金额，业务可手工新增且数据来源=操作人姓名，后续改金额不变来源</td><td>AC1</td></tr>
+<tr><td>A03</td><td>数量计费</td><td>手动</td><td>费用类型关联附加费规则时，金额=单价×数量</td><td>AC1</td></tr>
+<tr><td>A04</td><td>业务侧整单审计</td><td>手动</td><td>逐条核对/修改/新增/删除后整单审计通过，流水锁定为已审计</td><td>AC2</td></tr>
+<tr><td>A05</td><td>财务反审计（未关联账单）</td><td>手动</td><td>运单级与大类级反审计均可执行，流水回到待业务审计并退回业务侧</td><td>AC3</td></tr>
+<tr><td>A06</td><td>反审计权限</td><td>手动</td><td>仅财务角色可见/可执行反审计，其他角色 403</td><td>AC3</td></tr>
+<tr><td>A07</td><td>已关联账单红冲</td><td>手动 + 数据核对</td><td>只能反审计整个运单，红冲生成负数冲抵 + 正数重开，原流水留痕，红冲流水归下一期账单</td><td>AC4</td></tr>
+<tr><td>A08</td><td>账单生成</td><td>手动 + 数据核对</td><td>按 客户+主体+账期+币种 聚合已审计且未关联账单的流水；账单号唯一（AR+主体代码+YYYYMM+序号）；总额=Σ应收净额；<strong>合同账期为空时须补录账期天数并标记账期来源</strong></td><td>AC5</td></tr>
+<tr><td>A09</td><td>账单发送</td><td>手动</td><td>已生成账单可发送，状态转已发送并记录发送时间；未审计流水时阻断</td><td>AC6</td></tr>
+<tr><td>A10</td><td>客户确认账单</td><td>手动</td><td>货主端可确认本人账单，状态转已确认并记录确认时间；异议走线下</td><td>AC7</td></tr>
+<tr><td>A11</td><td>核销同币种</td><td>手动</td><td>币种不一致时阻断并提示先做币种互转</td><td>AC8</td></tr>
+<tr><td>A12</td><td>核销金额约束</td><td>手动 + 边界</td><td>核销金额默认=min(未收, 余额)，超出即阻断；钱包余额不可为负</td><td>AC8</td></tr>
+<tr><td>A13</td><td>部分核销 / 一对多</td><td>手动</td><td>支持部分核销与一对多、多对一；多打留余额、少打留未收进账龄</td><td>AC9</td></tr>
+<tr><td>A14</td><td>反核销</td><td>手动 + 数据核对</td><td>未做账账单可反核销，账单未收与钱包余额回滚，核销/反核销均留日志</td><td>AC10</td></tr>
+<tr><td>A15</td><td>账龄口径与分段</td><td>手动 + 边界</td><td>按 账单日+账期天数（含首日）推逾期；未到期单列 + 逾期四段；维度=客户×主体×币种；分币种不折算</td><td>AC11</td></tr>
+<tr><td>A16</td><td>钱包自动开通</td><td>手动 + 数据核对</td><td>合同<strong>签约完成</strong>时自动开通「客户×主体×人民币」钱包（余额 0、开通方式=系统自动）；正常/特殊入驻流程统一；开户完成不触发；续签幂等</td><td>AC12</td></tr>
+<tr><td>A16b</td><td>手工开通边界</td><td>手动 + 边界</td><td>主体仅可选该客户签约过的主体（含已过期/已解约），未签约主体一律阻断；币种仅可选未开通的；合同非有效时给黄底提示但不阻断</td><td>AC12</td></tr>
+<tr><td>A16c</td><td>钱包与合同解耦</td><td>手动</td><td>合同过期/解约后，充值、核销、提现、币种互转、新增币种钱包全部照常，系统不自动停用钱包</td><td>AC12</td></tr>
+<tr><td>A17</td><td>充值审核</td><td>手动 + 数据核对</td><td>客户线上发起（金额+币种+打款账户+凭证）→ 财务核对银行流水后通过/驳回；通过生成充值流水并加余额，驳回不产生流水</td><td>AC13</td></tr>
+<tr><td>A18</td><td>币种互转</td><td>手动 + 数据核对</td><td>汇率调阿里汇率接口实时获取并可手工覆盖；接口汇率/实际汇率/来源三者留痕；转入金额=转出÷汇率；一期不记汇损</td><td>AC14</td></tr>
+<tr><td>A19</td><td>客户提现</td><td>手动 + 边界</td><td>财务操作台直接提现，余额扣减、不可透支、超余额阻断</td><td>AC15</td></tr>
+<tr><td>A20</td><td>银行账户管理</td><td>手动</td><td>按主体维护、账号唯一且创建后不可改、单币种；「用户是否可见」= 是 才出现在客户充值打款账户中；默认账户唯一且必须可见；停用账户自动不可见并取消默认</td><td>AC16</td></tr>
+<tr><td>A20b</td><td>客户资金账户总览</td><td>手动</td><td>客户×主体×币种维度；余额/待核销欠款/待确认账单/实际金额（负数红色带负号）；只读且可下钻流水</td><td>AC12/AC18</td></tr>
+<tr><td>A21</td><td>资金流水</td><td>手动 + 数据核对</td><td>6 类流水均有记录，含变动前后余额与关联单据；不可改不可删，纠错靠反向流水</td><td>AC17</td></tr>
+<tr><td>A22</td><td>入账记录</td><td>手动 + 数据核对</td><td>赔付流水自动挂入账记录；账单生成时归最新一期按负数抵扣、归入后不可改期；放弃索赔加反向记录、净额归 0</td><td>AC18</td></tr>
+<tr><td>A23</td><td>货主端资金账户总览</td><td>手动</td><td>主体×币种维度；系统自动开通的人民币钱包（余额 0）也展示；实际金额=余额−待核销欠款，负数红色带负号；<strong>充值主体仅列本人已开通钱包的主体、币种仅列该主体已开通币种</strong></td><td>AC12/AC18</td></tr>
+<tr><td>A24</td><td>幂等与并发</td><td>自动化</td><td>核销/提现/互转并发下不超扣；重复提交同一核销不产生双倍扣减</td><td>AC8/AC15</td></tr>
+<tr><td>A25</td><td>数据保留与精度</td><td>数据核对</td><td>流水/账单/核销/资金流水软删除不物理删；金额 Decimal(20,6)；币种不折算混总</td><td>NFR</td></tr>
+<tr><td>A26</td><td>导出入口占位</td><td>手动</td><td>员工端 7 个财务列表页查询区「导出」按钮存在，点击提示「导出功能开发中，导出范围待确认」；一期不实现真实导出</td><td>—（Phase 1 仅入口）</td></tr>
+</table></div>
+<hr></p><p><h2 id="12-附录">12. 附录</h2></p><p><h3 id="12-1-术语表">12.1 术语表</h3></p><p><div class="table-wrapper"><table><tr><td>术语</td><td>解释</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>业务流水</td><td>运单收货后自动生成的逐票应收记录（<code>ar_flow</code>），粒度=运单，可拆多行</td></tr>
+<tr><td>公布价</td><td>超级运价当周报价，未经任何优惠的销售价</td></tr>
+<tr><td>应收净额</td><td>公布价 − 优惠金额，应收记账口径</td></tr>
+<tr><td>账期 / 账单日</td><td>账期来自客商中心合同（<code>payment_term</code> 101~205 + 账期天数）；账单日为账期起始日</td></tr>
+<tr><td>钱包（预存款账户）</td><td>客户 × 主体 × 币种 的资金池，池化模型只认币种余额</td></tr>
+<tr><td>池化</td><td>钱进池子即混同，不追来源进账，不做进账↔账单映射</td></tr>
+<tr><td>核销 / 反核销</td><td>从钱包扣款冲抵账单 / 回滚该次核销</td></tr>
+<tr><td>账龄</td><td>账单未收按 账单日 + 账期天数 划分的逾期区间（未到期 + 四段）</td></tr>
+<tr><td>入账记录</td><td>我司退款/赔偿（赔付类型流水）的待入账记录，入账时按负数抵扣最新一期账单</td></tr>
+<tr><td>赔付类型</td><td>头程管理费用类型上的 <code>is_credit</code> 标记 + <code>credit_type</code>（超时赔付/丢件赔付/货损赔偿等，可自定义）</td></tr>
+<tr><td>主体（账套）</td><td>5 家法人：广州飞点 / 深圳飞点 / 广东飞点 / 香港富力顿 / 墨链，财务按主体独立核算</td></tr>
+<tr><td>转汇</td><td>同客户同主体内的币种互转，汇率走阿里汇率接口</td></tr>
+<tr><td>反审计</td><td>财务撤销业务侧已完成的审计，退回业务侧重改（未关联账单）或走红冲（已关联账单）</td></tr>
+</table></div>
+<h3 id="12-2-关联链接">12.2 关联链接</h3></p><p><ul><li>用户需求 (RDD)：<code><a href="2026-09-11-用户需求.html">用户需求</a></code>（v1.0）</li>
+<li>数据设计：<code><a href="2026-09-11-数据设计.html">数据设计</a></code>（v0.3）</li>
+<li>变更记录：<code>drafts/财务/变更记录.md</code></li>
+<li>需求背景：<code>analysis/2026-06-16-财务与系统调研结论.md</code></li>
+<li>原型：员工端 <code>demo/员工端-demo/财务_*.html</code>；货主端 <code>demo/货主端-demo/资金账户.html</code>、<code>账单管理.html</code></li>
+</ul>
+<h3 id="12-3-Demo-与-PRD-差异-研发注意">12.3 Demo 与 PRD 差异（研发注意）</h3></p><p><div class="table-wrapper"><table><tr><td>#</td><td>原型现状</td><td>PRD 要求</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>1</td><td>所有列表查询仅前端 <code>computed</code> 过滤，点「查询」只弹 Toast 无请求</td><td>一律改为服务端分页查询（参数见 §9）</td></tr>
+<tr><td>2</td><td>货主端「确认账单」只改状态，不联动未收金额/资金账户</td><td>服务端处理状态流转与账龄实时计算口径</td></tr>
+<tr><td>3</td><td>员工端账单管理「已生成」状态无 tag 映射（落 info 兜底）</td><td>建议映射为 <code>primary</code></td></tr>
+<tr><td>4</td><td>账龄台账以常量 <code>TODAY='2026-08-27'</code> 为基准日</td><td>取系统当前日期（服务端计算）</td></tr>
+<tr><td>5</td><td>财务流水代充/提现流水号用 <code>FL+年月日+秒</code></td><td>改为统一序号规则 <code>FL+YYYYMMDD+3位序号</code></td></tr>
+<tr><td>6</td><td>币种互转汇率取前端写死的矩阵</td><td>改为调用阿里汇率接口（<code>/api/finance/exchange-rate</code>）</td></tr>
+<tr><td>7</td><td>运单审计页无「红冲」独立入口</td><td>红冲通过「反审计整个运单 + 新增流水」实现（不新增按钮），运营心智一致</td></tr>
+<tr><td>8</td><td>银行账户原仅作为充值下拉数据存在（货主端已按「可见 + 启用」过滤）</td><td>并入「资金账户管理」页的「我司账户」Tab（见 §5.5）</td></tr>
+</table></div>
+<h3 id="12-4-决策记录-原待确认项-2026-09-11-已全部确认">12.4 决策记录（原待确认项，2026-09-11 已全部确认）</h3></p><p><blockquote><strong>已确认决策（2026-09-11）</strong>：① 菜单收敛 —— 原「钱包」与「银行账户管理」合并为单页 <strong>「资金账户管理」</strong>（双 Tab：我司账户 / 客户资金账户），「钱包」菜单下线；钱包的新增与币种互转保留在本页 Tab 2（原 U09 关闭）。② 钱包开通统一卡在<strong>合同签约完成</strong>，手工开通主体边界 = 该客户<strong>签约过</strong>的主体（含已过期/已解约），未签约主体不给特批口子；钱包与合同生命周期<strong>解耦</strong>（过期/解约不影响充值、核销、互转、新增币种钱包）。③ 默认币种统一人民币（香港富力顿不特殊）。④ 「默认钱包」字段保留在库、两端不展示，员工端该列改为<strong>「开通方式」</strong>（系统自动 / 财务手工）（原 U10 关闭）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>#</td><td>事项</td><td>结论</td></tr>
+<tr><td>:---:</td><td>:---</td><td>:---</td></tr>
+<tr><td>U01</td><td>优惠承载口径</td><td>✅ <strong>同行三列</strong>（公布价 / 优惠 / 应收净额）——与数据设计、账单费用明细一致；删除「负数优惠流水」表述</td></tr>
+<tr><td>U02</td><td>银行账户管理原型页缺失</td><td>✅ 已建并合并进单页「资金账户管理」（双 Tab）</td></tr>
+<tr><td>U03</td><td>导出能力</td><td>✅ <strong>一期不实现</strong>，但需求与原型入口先出：员工端 7 个财务列表页查询区加「导出」按钮（点击提示「导出功能开发中，导出范围待确认」）；<strong>导出页面与字段范围后续单独讨论</strong>，Phase 2 随对账中心统一实现</td></tr>
+<tr><td>U04</td><td>报表/统计卡</td><td>✅ 不做（各页面保持无顶部统计卡）</td></tr>
+<tr><td>U05</td><td>汇率精度</td><td>✅ 跟阿里汇率接口返回，页面展示 <strong>6 位小数</strong></td></tr>
+<tr><td>U06</td><td>香港主体账期为空</td><td>✅ 采用<strong>方案 C</strong>：账单生成时若合同账期为空 → 财务<strong>补录账期天数</strong>（写入账单快照 + 标记「账期手工补录」）。账期主数据仍在客商中心「客户管理 → 合同/账期」维护，财务侧补录<strong>不回写</strong>合同</td></tr>
+<tr><td>U07</td><td>应付预留入口</td><td>✅ 保留 <code>财务_财务流水.html</code> 的「支付供应商」空态占位至 Phase 2</td></tr>
+<tr><td>U08</td><td>我司账户「余额」数据来源</td><td>✅ 一期<strong>财务手工维护</strong>（页面已标注「非银行实时余额」），二期接银行流水自动同步</td></tr>
+<tr><td>U09</td><td>菜单命名与钱包页分工</td><td>✅ 收敛为单页 <strong>「资金账户管理」</strong>（双 Tab），原「钱包」菜单下线</td></tr>
+<tr><td>U10</td><td>货主端默认钱包列</td><td>✅ 两端<strong>均不展示</strong>该字段（后台保留，二期「默认支付钱包」预留）；员工端该列改为<strong>「开通方式」</strong>（系统自动 / 财务手工）</td></tr>
+</table></div>
+<blockquote><strong>钱包开通与生命周期（2026-09-11 追加确认）</strong>：① 自动开通<strong>唯一触发点 = 合同签约完成</strong>（开户完成不再触发，统一覆盖正常/特殊入驻）；② 财务手工新增钱包的<strong>主体边界 = 该客户签约过的主体</strong>（含已过期/已解约，用于存量账单与赔付结算），未签约主体一律阻断、<strong>不设特批口子</strong>；③ 钱包与合同生命周期<strong>解耦</strong>（合同过期/解约不影响充值、核销、提现、互转、新增币种钱包）；④ 默认币种<strong>统一人民币</strong>（香港富力顿不特殊）。</blockquote></p><p><hr></p><p><blockquote><strong>质量自检</strong>：文档基础信息完整 ✅ ｜ 业务规则已编号 R01-R50 ✅ ｜ 验收标准可测试 A01-A26 ✅ ｜ 待确认项已全部关闭并转决策记录（§12.4，10 条）✅ ｜ 权限矩阵覆盖 5 类角色 ✅ ｜ 异常处理覆盖（E01-E44 + R 系列异常列）✅ ｜ RDD 一致性校验：16 项功能 / 18 条 AC 全量映射 ✅ ｜ 页面清单：员工端 7 页（§5.1-§5.7）+ 货主端 2 页（§5.8-§5.9）✅</blockquote>
+</p></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:"default",securityLevel:"loose"});</script>
+</body>
+</html>
