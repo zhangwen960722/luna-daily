@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -73,7 +73,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     </el-table>
   </div>
 
-  <el-dialog v-model="showDialog" :title="editMode?(isReadonly?'查看附加费规则':'编辑附加费规则'):'新增附加费规则'" width="1200px" :close-on-click-modal="false">
+  <el-dialog v-model="showDialog" :title="editMode?(isReadonly?'查看附加费规则':'编辑附加费规则'):'新增附加费规则'" width="1200px" top="5vh" :close-on-click-modal="false" destroy-on-close>
     <div :class="{'is-readonly': isReadonly}">
     <el-form :model="f" label-width="110px">
 
@@ -99,10 +99,12 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
             <div style="width:100%; overflow-x:auto;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:12px;color:var(--text-secondary)">以下条件为「且」关系，全部满足时触发</span><el-button size="small" type="primary" plain @click="addCondition">+ 添加条件</el-button></div>
               <el-table :data="f.conditions" border size="small" style="width:100%;min-width:600px;table-layout:fixed;">
-                <el-table-column label="维度" min-width="190">
-                  <template #default="s2"><el-select v-model="s2.row.dim" size="small" style="width:100%" @change="onCondDimChange(s2.row)"><el-option label="尾程派送方式" value="lastMile"></el-option><el-option label="地址类型（第三方查询）" value="address"></el-option><el-option label="SKU属性（取自商品管理）" value="sku"></el-option><el-option label="是否FBA运单" value="isFba"></el-option><el-option label="报关方式" value="customsMode"></el-option><el-option label="自送标识" value="selfDelivery"></el-option><el-option label="邮编（第三方查询）" value="zip"></el-option><el-option label="本地仓" value="warehouse"></el-option><el-option label="用户" value="user"></el-option><el-option label="用户等级" value="userLevel"></el-option></el-select></template>
+                <el-table-column min-width="190">
+                  <template #header><span style="color:#E6A23C">* </span>维度</template>
+                  <template #default="s2"><el-select v-model="s2.row.dim" size="small" style="width:100%" @change="onCondDimChange(s2.row)"><el-option label="尾程派送方式" value="lastMile"></el-option><el-option label="地址类型（第三方查询）" value="address"></el-option><el-option label="SKU属性（取自商品管理）" value="sku"></el-option><el-option label="是否FBA运单" value="isFba"></el-option><el-option label="报关方式" value="customsMode"></el-option><el-option label="自送标识" value="selfDelivery"></el-option><el-option label="邮编（第三方查询）" value="zip"></el-option><el-option label="交货站点（取自仓库列表-本地仓）" value="warehouse"></el-option><el-option label="服务组合" value="combination"></el-option><el-option label="用户" value="user"></el-option></el-select></template>
                 </el-table-column>
-                <el-table-column label="取值" min-width="200">
+                <el-table-column min-width="200">
+                  <template #header><span style="color:#E6A23C">* </span>取值</template>
                   <template #default="s2">
                     <el-select v-if="s2.row.dim==='lastMile'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="快递派" value="express"></el-option><el-option label="卡派" value="truck"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='address'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="商业地址" value="commercial"></el-option><el-option label="私人地址" value="residential"></el-option></el-select>
@@ -111,6 +113,9 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
                     <el-select v-else-if="s2.row.dim==='customsMode'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="普通报关" value="general"></el-option><el-option label="9710" value="9710"></el-option><el-option label="9810" value="9810"></el-option><el-option label="1010" value="1010"></el-option><el-option label="1039" value="1039"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='selfDelivery'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="是" value="yes"></el-option><el-option label="否" value="no"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='zip'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="是（第三方接口判定）" value="remote"></el-option></el-select>
+                    <el-select v-else-if="s2.row.dim==='warehouse'" v-model="s2.row.val" multiple collapse-tags collapse-tags-tooltip filterable size="small" style="width:100%" placeholder="请选择交货站点（多选）"><el-option v-for="w in localWarehouses" :key="w" :label="w" :value="w"></el-option></el-select>
+                    <el-select v-else-if="s2.row.dim==='combination'" v-model="s2.row.val" multiple collapse-tags collapse-tags-tooltip filterable size="small" style="width:100%" placeholder="请选择服务组合（多选）"><el-option v-for="c in combinationList" :key="c" :label="c" :value="c"></el-option></el-select>
+                    <el-select v-else-if="s2.row.dim==='user'" v-model="s2.row.val" multiple collapse-tags collapse-tags-tooltip filterable size="small" style="width:100%" placeholder="请选择用户（多选）"><el-option v-for="c in customerList" :key="c.id" :label="c.name" :value="c.id"></el-option></el-select>
                     <el-input v-else v-model="s2.row.val" size="small" placeholder="输入匹配值"></el-input>
                   </template>
                 </el-table-column>
@@ -120,9 +125,9 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
           </el-form-item>
         </template>
         <template v-if="f.type==='formula'">
-          <el-form-item label="公式 1"><el-input v-model="f.f1" placeholder="如 (长+宽)×2+高 > 300"></el-input></el-form-item>
+          <el-form-item label="公式 1"><el-input v-model="f.f1" placeholder="如 (长+宽)*2+高 > 300"></el-input></el-form-item>
           <el-form-item label="公式 2"><el-input v-model="f.f2" placeholder="如 SKU数量 > 5"></el-input></el-form-item>
-          <div style="margin-left:110px;font-size:11px;color:var(--text-secondary)">两个公式为 OR 关系（任一满足即触发）。可用变量：长(cm)、宽(cm)、高(cm)、单箱重量(kg)、SKU数量。支持比较运算符：> < >= <= =</div>
+          <div style="margin-left:110px;font-size:11px;color:var(--text-secondary)">两个公式为 OR 关系（任一满足即触发）。可用变量：长(cm)、宽(cm)、高(cm)、单箱重量(kg)、SKU数量。<br>支持算术运算符：<strong>+ - * / ( )</strong>；支持比较运算符：<strong>&gt; &lt; &gt;= &lt;= =</strong>。<br>示例：<code>(长+宽)*2+高 &gt; 300</code>、<code>长*宽*高/6000 &gt; 20</code>、<code>(长+宽+高)*2 &gt;= 265</code></div>
         </template>
         <template v-if="f.type==='manual'">
           <div style="margin-left:110px;padding:8px 12px;background:#FAFAFA;border-radius:4px;font-size:12px;color:var(--text-secondary);margin-bottom:8px">由操作员在运单界面手动触发此规则，系统按下方计价明细自动计算费用并添加到运单应收/应付中。如"贴标费"——操作员勾选后输入张数，系统按 单价×张数 自动计算。</div>
@@ -242,18 +247,24 @@ var typeLabel={field:'字段匹配',formula:'公式阈值',manual:'人工添加'
     actionLabel={charge:'加收',flag:'标识提醒',block:'阻止下单'},
         dirLabel={r:'应收',p:'应付'},
     puLabel={ticket:'按票',box:'按箱',kg:'按KG',cbm:'按m³',unit:'按数量'},
-    dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送方式',warehouse:'本地仓',user:'用户',userLevel:'用户等级',isFba:'是否FBA运单',customsMode:'报关方式',selfDelivery:'自送标识'};
+    dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送方式',warehouse:'交货站点',user:'用户',combination:'服务组合',isFba:'是否FBA运单',customsMode:'报关方式',selfDelivery:'自送标识'};
 var enabledChannels=['美森360','美森432','EX456','洛杉矶600'];
 var surchargeTags=[{id:1,label:'超重费',color:'#FFC0CB'},{id:2,label:'粉末品名加收',color:'#FFA500'},{id:3,label:'易碎品',color:'#98FB98'}];
 var feeTypesAll=[{label:'海运费',dir:'r'},{label:'港杂费',dir:'r'},{label:'出口费用',dir:'r'},{label:'报关费',dir:'r'},{label:'派送费用',dir:'r'},{label:'增值服务',dir:'r'},{label:'国内存储费',dir:'r'},{label:'库内操作费',dir:'r'},{label:'干线运费',dir:'p'},{label:'尾程派送费',dir:'p'},{label:'清关服务费',dir:'p'},{label:'海外仓储费',dir:'p'}];
 var customerLevels=[{id:'SS',label:'SS'},{id:'S',label:'S'},{id:'A',label:'A'},{id:'B',label:'B'},{id:'C',label:'C'},{id:'D',label:'D'},{id:'E',label:'E'},{id:'F',label:'F'},{id:'G',label:'G'}];
 var customerList=[{id:'C001',name:'深圳市XX科技'},{id:'C002',name:'广州YY贸易'},{id:'C003',name:'杭州ZZ跨境'}];
+// 交货站点：取值来源 仓库列表-本地仓 的仓库名称
+var localWarehouses=['花都仓','白云仓','东莞仓','深圳仓','义乌仓','中山仓','汕头仓'];
+// 服务组合：取值来源 超级运价-服务组合
+var combinationList=['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-KG-不包税-散货','美森360-海运-卡派-m³-包税-散货','美森360-海运-快递派-KG-包税-散货','美森432-海运-卡派-KG-包税-散货'];
+// 多选取值的维度（其余维度为单选）
+var multiSelectDims=['warehouse','combination','user'];
 
 var app=Vue.createApp({
 data:function(){
   return {
     showDialog:false, editMode:false, editIndex:-1, discountLocked:false,
-    customerLevels:customerLevels,customerList:customerList,surchargeTags:surchargeTags,
+    customerLevels:customerLevels,customerList:customerList,surchargeTags:surchargeTags,localWarehouses:localWarehouses,combinationList:combinationList,
     q:{type:'',action:'',status:''},enabledChannels:enabledChannels,feeTypesAll:feeTypesAll,
     rules:[
       {name:'粉末品名加收',type:'字段匹配',action:'加收',node:'运单创建',cond:'SKU属性=粉末 AND 尾程派送方式=卡派',pricing:'按KG 1.5元 / 按m³ 200元',feeLabel:'出口费用',direction:'应收',status:'正常',
@@ -299,7 +310,12 @@ methods:{
   openEdit:function(row,idx){
     this.editMode=true;this.editIndex=idx;
     var raw=row._raw;
-    var conds=raw.conditions||[{dim:raw.dim||'sku',val:''}];
+    var conds=(raw.conditions||[{dim:raw.dim||'sku',val:''}]).map(function(c){
+      var multi=multiSelectDims.indexOf(c.dim)!==-1;var v=c.val;
+      if(multi&&!Array.isArray(v)) v=(v===''||v==null)?[]:[v];
+      if(!multi&&Array.isArray(v)) v=v[0]||'';
+      return {dim:c.dim,val:v};
+    });
     this.f={name:row.name,type:raw.type,action:raw.action,node:raw.node,dl:raw.dl,conditions:JSON.parse(JSON.stringify(conds)),f1:raw.f1||'',f2:raw.f2||'',ml:raw.ml||'',pricingRows:JSON.parse(JSON.stringify(raw.pricingRows||[])),status:raw.status||'active',discountRules:[]};
     var self=this;
     var ruleId=raw.id||'';
@@ -309,7 +325,8 @@ methods:{
   },
   addCondition:function(){this.f.conditions.push({dim:'sku',val:''})},
   removeCondition:function(i){if(this.f.conditions.length>1) this.f.conditions.splice(i,1)},
-  onCondDimChange:function(row){row.val=''},
+  isMultiDim:function(dim){return multiSelectDims.indexOf(dim)!==-1},
+  onCondDimChange:function(row){row.val=this.isMultiDim(row.dim)?[]:''},
   addPricingRow:function(){this.f.pricingRows.push({dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'})},
   removePricingRow:function(i){if(this.f.pricingRows.length>1)this.f.pricingRows.splice(i,1)},
   onTypeChange:function(){},
@@ -332,8 +349,16 @@ methods:{
       var dimValLabel={lastMile:{express:'快递派',truck:'卡派'},address:{commercial:'商业地址',residential:'私人地址'},sku:{powder:'粉末',liquid:'液体',battery:'带电'},isFba:{yes:'是',no:'否'},customsMode:{general:'普通报关','9710':'9710','9810':'9810','1010':'1010','1039':'1039'},selfDelivery:{yes:'是',no:'否'},zip:{remote:'是（第三方接口判定）'}};
       var parts=this.f.conditions.map(function(c){
         var dimName=dimLabel[c.dim]||c.dim;
-        var valName=(dimValLabel[c.dim]&&dimValLabel[c.dim][c.val])||c.val||'?';
-        return dimName+'='+valName;
+        var valName;
+        if(c.dim==='user'){
+          var uarr=Array.isArray(c.val)?c.val:[c.val];
+          valName=uarr.filter(function(v){return v!==''&&v!=null}).map(function(v){var m=customerList.find(function(x){return x.id===v});return m?m.name:v}).join('、');
+        }else if(Array.isArray(c.val)){
+          valName=c.val.join('、');
+        }else{
+          valName=(dimValLabel[c.dim]&&dimValLabel[c.dim][c.val])||c.val||'';
+        }
+        return dimName+'='+(valName||'?');
       });
       return parts.join(' AND ')||'待选条件';
     }
@@ -344,6 +369,15 @@ methods:{
   save:function(){
     var self=this;
     if(!this.f.name){ElementPlus.ElMessage.warning('请输入规则名称');return}
+    if(this.f.type==='field'){
+      if(!this.f.conditions||!this.f.conditions.length){ElementPlus.ElMessage.warning('请至少添加一条匹配条件');return}
+      for(var ci=0;ci<this.f.conditions.length;ci++){
+        var cd=this.f.conditions[ci];
+        if(!cd.dim){ElementPlus.ElMessage.warning('第'+(ci+1)+'行条件：请选择维度');return}
+        var hasVal=Array.isArray(cd.val)?cd.val.length>0:(cd.val!==''&&cd.val!==null&&cd.val!==undefined);
+        if(!hasVal){ElementPlus.ElMessage.warning('第'+(ci+1)+'行条件：请选择取值');return}
+      }
+    }
     if(this.f.action==='charge'&&(!this.f.pricingRows||this.f.pricingRows.length===0)){ElementPlus.ElMessage.warning('请至少添加一条计价行');return}
     for(var pi=0;pi<this.f.pricingRows.length;pi++){var pr=this.f.pricingRows[pi];if(!pr.feeLabel){ElementPlus.ElMessage.warning('第'+(pi+1)+'行计价：请选择费用类型');return}}
     for(var di=0;di<self.f.discountRules.length;di++){var rr=self.f.discountRules[di];if(!rr.targetType){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择对象类型');return}var tgts=rr.targetType==='level'?rr.targetLevels:rr.targetCustomers;if(!tgts||!tgts.length){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择至少一个目标');return}if(!rr.mode){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择优惠方式');return}if(rr.val===null||rr.val===''){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请输入优惠值');return}if(rr.mode==='rate'&&rr.val<=0){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：折扣率必须大于0');return}if(!rr.validity){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择有效期');return}if(rr.validity==='period'&&(!rr.validRange||!rr.validRange.length)){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：固定期限请选择有效期起止');return}if(rr.targetType==='customer'&&!rr.approvalNo){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：客户特批需填写审批编号');return}}var dup=self.validateDiscountUniqueness();
