@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>决策记录 - 超级运价 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}.nav-bar a:hover{color:#7c3aed}.nav-bar .sep{color:#cbd5e1;font-size:14px}.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#7c3aed15;color:#7c3aed;font-size:13px;font-weight:500}.layout{display:flex;max-width:1300px;margin:0 auto;padding:32px 24px 80px;gap:40px}.toc{width:220px;flex-shrink:0;position:sticky;top:72px;align-self:flex-start;max-height:calc(100vh - 100px);overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px}.toc-title{font-size:13px;font-weight:600;color:#1e293b;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}.toc ul{list-style:none}.toc li{margin:0}.toc a{display:block;padding:4px 0;color:#64748b;text-decoration:none;font-size:13px;line-height:1.5;transition:color 0.15s}.toc a:hover{color:#7c3aed}.toc .toc-lv2 a{font-weight:500;color:#334155}.toc .toc-lv3 a{padding-left:16px;font-size:12px;color:#64748b}.content{flex:1;min-width:0}.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b;scroll-margin-top:72px}.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155;scroll-margin-top:72px}.doc-content p{margin:12px 0}.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}.doc-content li{margin:4px 0}.doc-content blockquote{border-left:4px solid #7c3aed;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}.doc-content table{width:100%;border-collapse:collapse;font-size:14px}.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}.doc-content tr:last-child td{border-bottom:none}@media(max-width:900px){.layout{flex-direction:column}.toc{width:100%;position:static;max-height:none;margin-bottom:24px}}.doc-content .mermaid{overflow-x:auto;margin:16px 0;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="nav-bar">
+<a href="../index.html">Luna 文档</a>
+<span class="sep">/</span>
+<span class="module-tag">超级运价</span>
+<span class="sep">/</span>
+<span>决策记录</span>
+</div>
+<div class="layout">
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-菜单结构">一、菜单结构</a></li><li class="toc-lv2"><a href="#二-规则类型-三态-核心">二、规则类型（三态）★ 核心</a></li><li class="toc-lv2"><a href="#三-触发节点-后台预置-原型不展示-数据结构保留为-surcharge_rule-node">三、触发节点（后台预置，原型不展示、数据结构保留为 `surcharge_rule.node`）</a></li><li class="toc-lv2"><a href="#四-动作类型与标识">四、动作类型与标识</a></li><li class="toc-lv2"><a href="#五-计价与优惠量纲-核心">五、计价与优惠量纲 ★ 核心</a></li><li class="toc-lv2"><a href="#六-优惠对象与分期">六、优惠对象与分期</a></li><li class="toc-lv2"><a href="#七-优惠值正负号-2026-09-12-定-产品与开发共同确认">七、优惠值正负号（★ 2026-09-12 定，产品与开发共同确认）</a></li><li class="toc-lv2"><a href="#八-公式-字段-公式-型">八、公式（「字段&公式」型）</a></li><li class="toc-lv2"><a href="#附-跨模块已关闭待确认项台账-供查证">附：跨模块已关闭待确认项台账（供查证）</a></li></ul></nav>
+<div class="content"><div class="doc-content"><p><h1 id="决策记录-超级运价-附加费-优惠体系">决策记录 — 超级运价 附加费 & 优惠体系</h1></p><p><blockquote><strong>用途</strong>：本文件是超级运价「附加费规则 + 优惠体系」的<strong>最终决策一览</strong>，供随时查证。
+原型与 RDD / 数据设计 / PRD 均已按此定稿。</blockquote>
+>
+<blockquote><strong>与其他文件的分工</strong>：
+<ul><li>想知道<strong>「还没做的」/「还没定的」</strong> → 看 <code>TODO.md</code></li>
+<li>想知道<strong>「某天做了什么」</strong> → 看 <code>LOG.md</code></li>
+<li>想知道<strong>「变更经过与原因」</strong> → 看 <code>变更记录.md</code></li>
+<li>本文件只回答<strong>「最后定成什么」</strong></blockquote></li>
+</ul>
+<hr></p><p><h2 id="一-菜单结构">一、菜单结构</h2></p><p><div class="table-wrapper"><table><tr><td>决策</td><td>最终结论</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>菜单</td><td><strong>只有一个菜单「费用与标识规则」</strong>（2026-09-11 定名）。曾一度拆出「事件&规则」，但两页内容高度重叠（同一套维度 + 公式），<strong>该菜单已删除</strong>，公式类规则统一由「字段&公式」规则类型承载</td></tr>
+<tr><td>曾用名</td><td>「附加费规则」（已更名）；实体名 <code>surcharge_rule</code> 与引擎名「附加费规则引擎」<strong>保持不变</strong></td></tr>
+</table></div>
+<h2 id="二-规则类型-三态-核心">二、规则类型（三态）★ 核心</h2></p><p><div class="table-wrapper"><table><tr><td>值</td><td>名称</td><td>触发条件</td><td>计价单位</td></tr>
+<tr><td>:--:</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>10</td><td><strong>字段匹配</strong></td><td>维度条件（AND，<strong>≥1 条必填</strong>）</td><td>按票 / 按KG / 按m³（<strong>无按数量</strong>）</td></tr>
+<tr><td>40</td><td><strong>字段&公式</strong></td><td><strong>维度条件（仅「服务组合」多选，最多 1 条，可为空）＋ 公式条件（OR，≥1 条必填）</strong></td><td><strong>仅按箱</strong></td></tr>
+<tr><td>30</td><td><strong>人工添加</strong></td><td>无（操作员在运单界面手动触发）</td><td><strong>仅按数量</strong></td></tr>
+</table></div>
+<blockquote><strong>原 <code>20:公式阈值</code> 已废弃</strong>，能力并入 <code>40:字段&公式</code>。
+<strong>根因</strong>：「超重超长」的判定天然是「<strong>维度 且 公式</strong>」（如 <code>尾程=卡派 AND (长+宽)*2+高>300</code>），原「规则类型三选一」的模型强迫二选一 —— 要么丢维度、要么丢公式，<strong>模型本身错了</strong>。</blockquote></p><p><h2 id="三-触发节点-后台预置-原型不展示-数据结构保留为-surcharge_rule-node">三、触发节点（后台预置，原型不展示、数据结构保留为 <code>surcharge_rule.node</code>）</h2></p><p><div class="table-wrapper"><table><tr><td>规则类型</td><td>触发节点</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>字段匹配</td><td><strong>运单收货完成</strong></td></tr>
+<tr><td>字段&公式</td><td><strong>拣货</strong>（需要拣货实测尺寸/重量）</td></tr>
+<tr><td>人工添加</td><td><strong>人工触发</strong></td></tr>
+</table></div>
+<ul><li>通用：<strong>运单信息变更 → 重新扫描费用规则</strong></li>
+<li><strong>重扫冻结边界</strong>：收货完成前随意重扫 ／ 收货后~业务审计前可重扫并留痕 ／ <strong>业务审计后冻结</strong>（只能红冲或人工调整）／ <strong>进账单后彻底冻结</strong> ／ <strong>人工添加型费用永远豁免重扫</strong></li>
+<li><strong>超重超长只在「拣货」触发</strong>（下单不算）：下单尺寸是客户自填、算了也要被实测推翻</li>
+<li>★ <strong>查价阶段则「看录入方式」</strong>（2026-09-12 定，原「运价查询阶段不计算」表述作废）：</li>
+</ul>  - <strong>按单箱录入</strong>（有长/宽/高）→ <strong>能算</strong>，超重超长按公式判定、体积重 = <code>长×宽×高 ÷ 计泡系数</code> → <strong>作预估展示</strong>
+  - <strong>按总体重量与体积录入</strong>（无单箱尺寸）→ <strong>算不出、不展示该项</strong>
+  - 预估<strong>不落库、不进账单</strong>；正式计费以<strong>拣货实测</strong>为准，结果区提示条保留</p><p><h2 id="四-动作类型与标识">四、动作类型与标识</h2></p><p><div class="table-wrapper"><table><tr><td>决策</td><td>结论</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td><code>action_type</code></td><td><strong>三值 → 两值</strong>：10 加收费用 / 20 标识提醒。<strong><code>30:阻止下单</code> 已废弃</strong>（一期不提供任何硬拦截能力）</td></tr>
+<tr><td>附加费标识</td><td><strong>单选（<code>tag_id</code>）且必选</strong>（不分动作类型）——标识提醒这个动作本身就是打标，不打标等于没作用</td></tr>
+<tr><td>优惠可见性</td><td><strong>仅当动作类型 = 加收费用时显示附加费优惠</strong>（标识提醒时隐藏、不可配）</td></tr>
+</table></div>
+<h2 id="五-计价与优惠量纲-核心">五、计价与优惠量纲 ★ 核心</h2></p><p><div class="table-wrapper"><table><tr><td>决策</td><td>结论</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>计价单位位置</td><td><strong>留在计价明细行内</strong>（<code>pricing_rows[].pu</code>）——曾提为"规则级属性"，<strong>已回退</strong>：既然已定「只可选应收 + 固定 1 行」，单价本就唯一，提级是多余动作且造成层级错位</td></tr>
+<tr><td>计价明细</td><td><strong>费用方向固定「应收」</strong>（<code>fee_direction</code> 恒 10）、<strong>一期仅 1 行</strong>、<strong>同一费用方向最多 1 行</strong>；应付方向二期拓展</td></tr>
+<tr><td><strong>优惠量纲</strong></td><td><strong>单价级</strong>：优惠值作用于<strong>计价明细「应收」行的单价</strong>。校验 <strong><code>\</td><td>优惠值\</td><td>≤ 应收单价</code></strong>、折扣率 <code>0.01 ≤ 率 ≤ 1</code>（一期不加价）、无应收行则拒绝配置优惠</td></tr>
+<tr><td><strong>计算与显示</strong></td><td><strong><code>金额 + 优惠值</code></strong>（带符号）；负 → <code>-¥X</code>、正 → <code>+¥X</code>、0 → 「无优惠」（★ 见第七节）</td></tr>
+<tr><td><code>可优惠级别</code></td><td><strong>永久删除</strong>（字段 + 「可优惠性校验 BPR-4」能力一并取消）——它想表达的"最多能优多少"已由 <code>\</td><td>优惠值\</td><td>≤ 应收单价</code> 精确表达</td></tr>
+<tr><td>「不可优惠」政策落点</td><td>不靠字段约束，靠<strong>"不给它建优惠规则"</strong>；若业务需强控，二期在 <code>基础资料-费用类型</code> 加「是否可优惠」标记</td></tr>
+<tr><td>优惠不得跨费用项抵扣</td><td><strong>泡比优惠只作用于运费侧、不得抵扣附加费</strong>；同源推广为「运费优惠只作用运费、附加费优惠只作用附加费」。最终报价必须<strong>分段计算</strong></td></tr>
+<tr><td><strong>判据完备性</strong> ⚠️</td><td><strong>逐条 <code>\</td><td>优惠值\</td><td>≤ 应收单价</code> 只是配置期前置校验，不是「优惠后金额 ≥ 0」的充分条件</strong>（折扣率 + 多条叠加仍可负，反例：<code>10 × 0.5 + (−10) = −5</code>）→ 「任一费用项最终金额不得为负」<strong>必须独立实现</strong></td></tr>
+</table></div>
+<h2 id="六-优惠对象与分期">六、优惠对象与分期</h2></p><p><div class="table-wrapper"><table><tr><td>决策</td><td>结论</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td><strong>客户特批进一期（三表统一）</strong></td><td><strong>三张优惠表（运费 / 泡比 / 附加费）口径统一</strong>——<code>target_type</code> 一期同时开放 <code>10:客户特批</code> 与 <code>20:客户等级</code>。原「一期口径一致收缩为仅客户等级」作废</td></tr>
+<tr><td>客户特批·前置校验</td><td><code>target_type=10</code> → <code>target_customers</code>（多选客户，取客商中心-客户管理启用客户）<strong>必填</strong>；<code>=20</code> → <code>target_levels</code>（多选等级）<strong>必填</strong>。二者是<strong>两个独立命名空间</strong></td></tr>
+<tr><td>客户特批·优先级</td><td><strong>客户特批 > 客户等级，高覆盖低、不叠加</strong>，命中即覆盖等级规则 —— <strong>一期即生效</strong>。（⚠️ 「特批劣于等级」的例外见 <code>TODO.md</code> 待确认 <strong>T1</strong>）</td></tr>
+<tr><td><strong>审批编号进一期</strong></td><td><code>approval_no</code>（字符串30）：<strong>客户特批时必填</strong>、客户等级时留空。<strong>UI 有「审批编号」列</strong>（仅当存在客户特批行时出现）。★ 一期边界：<strong>人工录入编号，不对接飞书审批流</strong>（无审批单同步 / 无「审批中·已通过」状态机）；审批流自动对接留二期</td></tr>
+<tr><td><strong>泡比优惠进一期</strong></td><td>由 Phase 2（模块 M，4 项）<strong>整体改为 Phase 1</strong>。<strong>Phase 1 功能数 55 → 59</strong>，模块 M 优先级 <strong>P2 → P0</strong>。一期口径：密度阈值阶梯 + 固定减免 + 客户等级/客户特批 + 永久·固定期限 + 费用方向固定应收 + 审批编号（特批时）。匹配：泡比 = 实重(kg) ÷ 体积(m³)，≥ 阈值即命中；<strong>多条命中取阈值最大那一档（不叠加）</strong>；<strong>与运费优惠叠加</strong></td></tr>
+<tr><td><strong>优惠唯一性精确口径</strong></td><td><strong>同一父实体 × 同一对象类型 × 同一目标，最多一条「生效中」的规则</strong>。① <strong>只看生效中</strong>（已失效的历史规则不占名额）；② <strong>命名空间按对象类型分离</strong>（特批比客户ID、等级比等级ID）；③ <strong>泡比优惠另加「密度阈值」维度</strong>（同一目标在不同阈值档可各配一条 = 阶梯）。<strong>作用域 = 同一父实体（组合/附加费规则）内</strong>，不做全系统唯一</td></tr>
+<tr><td><strong>仍留 Phase 2</strong></td><td>① <code>单次有效</code>；② 运费/泡比一期<strong>仍只有固定减免</strong>（附加费一期两种都有）；③ 浮动优惠（券/满减/限时活动）；④ 营销模块独立立项；⑤ 叠加顺序可配；⑥ <strong>飞书审批流自动对接</strong></td></tr>
+</table></div>
+<h2 id="七-优惠值正负号-2026-09-12-定-产品与开发共同确认">七、优惠值正负号（★ 2026-09-12 定，产品与开发共同确认）</h2></p><p><div class="table-wrapper"><table><tr><td>约定</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td><strong>固定减免</strong></td><td><strong>负数 = 减钱（正向优惠）</strong> ｜ <strong>正数 = 加价（反向优惠）</strong></td></tr>
+<tr><td><strong>计算</strong></td><td><strong><code>金额 + 优惠值</code></strong></td></tr>
+<tr><td><strong>显示</strong></td><td>负 → <code>-¥X</code>；正 → <code>+¥X</code>；0 → 「无优惠」</td></tr>
+<tr><td><strong>上限校验</strong></td><td><strong><code>\</td><td>优惠值\</td><td>≤ 应收单价</code></strong>（绝对值）</td></tr>
+<tr><td><strong>折扣率</strong></td><td><strong>不变</strong>（乘数：<code><1</code> 折扣 / <code>=1</code> 原价 / <code>>1</code> 加价；一期 <code>0.01~1</code> 不支持加价）</td></tr>
+<tr><td><strong>报价公式</strong></td><td><code>最终报价 = (公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></td></tr>
+</table></div>
+<h2 id="八-公式-字段-公式-型">八、公式（「字段&公式」型）</h2></p><p><div class="table-wrapper"><table><tr><td>决策</td><td>结论</td></tr>
+<tr><td>:---</td><td>:---</td></tr>
+<tr><td>归属</td><td>只在「字段&公式」类型下；<strong>公式条件必填</strong>（≥1 条，逐条查空）</td></tr>
+<tr><td>可用变量</td><td><strong>长、宽、高、重量、材积重</strong></td></tr>
+<tr><td><strong><code>材积重</code> 取数</strong>（2026-09-12 定）</td><td>「材积重」是<strong>体积重的统称</strong>——<strong>货箱上的「材重」与「重量方数」都属于材积重</strong>，按计费方式取其一：按 <strong>KG</strong> → 货箱<strong>材重</strong>（<code>长×宽×高 ÷ 计泡系数</code>，原型系数 <strong>6000</strong>）；按 <strong>m³</strong> → 货箱<strong>重量方数</strong>（<code>实重 ÷ 计方系数</code>，原型系数 <strong>363</strong>）。公式中直接引用该值即可。<strong>原型上不解释取数来源</strong>（只保留变量名），口径写在产品文档里</td></tr>
+<tr><td>运算符</td><td>算术 <code>+ - * / ( )</code>；比较 <code>> < >= <= =</code></td></tr>
+<tr><td>维度限制</td><td>「字段&公式」的维度<strong>只能选「服务组合」</strong>（多选），且<strong>最多 1 行</strong></td></tr>
+</table></div>
+<hr></p><p><h2 id="附-跨模块已关闭待确认项台账-供查证">附：跨模块已关闭待确认项台账（供查证）</h2></p><p><blockquote>本表的项<strong>跨多个模块</strong>（超级运价相关占多数），因此放在本文件末尾。<strong>未关闭的待确认项在 <code>TODO.md</code>。</strong>
+结论均已落进各模块文档，此处仅作一行式索引。</blockquote></p><p><div class="table-wrapper"><table><tr><td>#</td><td>事项</td><td>结论</td></tr>
+<tr><td>:--:</td><td>:---</td><td>:---</td></tr>
+<tr><td>E1</td><td>「交货站点」数据来源</td><td>取 <code>仓库列表_主列表.html</code> 的「<strong>本地仓</strong>」Tab 仓库名称；不依赖「末端管理」</td></tr>
+<tr><td>E2</td><td>客商中心合同唯一性</td><td><strong>不允许并行合同</strong>；一个客户仅一份「审批中/已签约」，<strong>校验不带主体维度</strong>，需先解约</td></tr>
+<tr><td>E3</td><td>客户等级是否上货主端</td><td><strong>不上</strong></td></tr>
+<tr><td>E4</td><td>联系人邮箱必填口径</td><td><strong>客户联系人邮箱必填</strong>（ROOT 随之必填）；<strong>手动创建的子账号邮箱非必填</strong></td></tr>
+<tr><td>E5</td><td>流水生成时优惠从哪取</td><td>从<strong>三张优惠规则表</strong>在<strong>费用生成时点</strong>实时匹配；<strong>查价时点的优惠金额不具约束力</strong></td></tr>
+<tr><td>E6</td><td>优惠规则是否纳入周批次快照</td><td><strong>一期不纳入</strong>（维持实时读）；快照留二期</td></tr>
+<tr><td>E7</td><td>拦截能力缺口</td><td><strong>一期不做任何硬拦截</strong>（「阻止下单」已删除）</td></tr>
+<tr><td>E8</td><td>附件/资质过期阻断续约</td><td><strong>不做</strong>（附件全是图片、无法识别有效期）</td></tr>
+<tr><td>E9</td><td>查价阶段算不算超重超长</td><td><strong>看录入方式</strong>：单箱录入可算作预估展示、总体录入不算（详见第三节）</td></tr>
+<tr><td>E10</td><td>客户特批要不要「手动过期」入口</td><td><strong>不做该入口 —— 直接删除规则即可</strong>（三张表通用）；删除仅影响后续计算</td></tr>
+<tr><td>E11</td><td>「单次有效」状态机标注</td><td>已补 <code>★ 二期</code></td></tr>
+<tr><td>E12</td><td>§14 算例数值链</td><td>已重算为含泡比优惠的完整口径（美森360 <code>10.0 + (−0.5) + (−0.8) + 1.0 = 9.7</code> 等）</td></tr>
+<tr><td>D4</td><td>报价查询接口路径</td><td>统一 <strong><code>POST /api/freight-rate/query</code></strong>，各端以请求体 <code>caller</code> 区分（<code>operator</code>/<code>shipper</code>/<code>public</code>）</td></tr>
+<tr><td>D5</td><td>优惠展示/计算顺序</td><td>由 D6 定死为<strong>分段式</strong>；已统一全文</td></tr>
+<tr><td>D6</td><td>泡比优惠能否抵扣附加费</td><td><strong>不抵扣</strong>（硬约束）</td></tr>
+<tr><td>D7</td><td>4 个「菜单已挂、页面待建」</td><td><strong>暂缓</strong>（货主端：我的订单 / 草稿箱 / 异常订单 / 发票管理）</td></tr>
+<tr><td>D8</td><td>账单/资金账户/后台任务实体归属</td><td>按<strong>引用其他模块页面</strong>处理（归财务 / 后台任务模块）；货主端不定义实体</td></tr>
+<tr><td>D9</td><td>子账号「修改密码」与 ROOT 保护原型缺失</td><td>文档口径<strong>保留</strong>、原型就地标「<strong>待补</strong>」</td></tr>
+</table></div></p></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:"default",securityLevel:"loose"});</script>
+</body>
+</html>
