@@ -284,7 +284,7 @@
 <blockquote><strong>变更说明</strong>：合同签署状态/开始日期/结束日期/账期从客户列表列中移除（一个客户多份合同无法在单行展示），改为"合同数量"列可点击展开查看各合同详情。账期跟随合同，不再在客户列表展示。</blockquote></p><p><strong>操作按钮</strong>：</p><p><div class="table-wrapper"><table><tr><td>按钮</td><td>显示条件</td><td>行为</td></tr>
 <tr><td>------</td><td>---------</td><td>------</td></tr>
 <tr><td>编辑</td><td>始终显示</td><td>打开编辑弹窗（已冻结客户弹窗只读）</td></tr>
-<tr><td>签约</td><td>serviceStatus=正常</td><td>打开签约弹窗，可选择新增一份合同 ⚠️ <strong>口径冲突待确认</strong>：本行「不限于未签署状态，支持多份并行合同」与本文档 R32-1（§同章）及 <code>数据设计 §合同</code> 唯一性约束（「同一客户在飞点租户下有且仅能有一份处于已签约/签约中的合同」）<strong>互相矛盾</strong>。签署时是否允许多份并行，需业务拍板后统一三处口径（已登记 TODO「待确认清单」）</td></tr>
+<tr><td>签约</td><td>serviceStatus=正常</td><td>打开签约弹窗<strong>新增一份合同</strong>。<strong>★ 已拍板（2026-09-12）：不允许并行合同</strong>——签约确定时校验该客户是否已有<strong>审批中或已签约</strong>的合同，<strong>只要有（不论我司主体是哪一家），即拦截</strong>，提示需<strong>先解约</strong>后方可再发起。原型已实现该唯一性校验（见 AC2c）。原「不限于未签署状态，支持多份并行合同」<strong>作废</strong></td></tr>
 <tr><td>冻结</td><td>serviceStatus=正常</td><td>二次确认后执行，关联账户同步冻结</td></tr>
 <tr><td>启用</td><td>serviceStatus=已冻结</td><td>二次确认后执行，关联账户同步启用</td></tr>
 </table></div>
@@ -375,8 +375,8 @@
 <li>R30：保存并生成账户 → 生成账户 + 邮件通知。该客户的首份合同为未签署，后续可通过合同管理Tab新增合同</li>
 <li>R31：统一社会信用代码全局唯一校验，重复时阻止保存</li>
 <li>R32：客户等级默认G</li>
-<li>R32-1：一个客户在飞点租户下有且仅能有一份处于"已签约"或"签约中"状态的有效合同。旧合同过期/作废后方可签署新合同。每份合同独立管理账期和关联账户</li>
-<li>R32-2：<strong>主合同判定</strong>：系统自动判定，取首份已签署+在有效期内+未解约的合同作为主合同。不可手动修改。主合同是系统身份标记，不对签约唯一性产生约束</li>
+<li>R32-1：<strong>（★ 2026-09-12 拍板确认，本条为唯一口径）</strong>一个客户在飞点租户下<strong>有且仅能有一份</strong>处于「<strong>审批中</strong>」或「<strong>已签约</strong>」状态的合同。<strong>校验不带主体维度</strong>——即使新合同换一家我司主体，只要该客户已有审批中/已签约的合同，同样拦截；<strong>必须先解约（或原合同过期/作废）后方可发起新合同</strong>。签约弹窗确定时即校验并拦截。每份合同独立管理账期和关联账户</li>
+<li>R32-2：<strong>主合同判定</strong>：系统自动判定，取首份已签署+在有效期内+未解约的合同作为主合同。不可手动修改。<strong>★ 2026-09-12 说明</strong>：因 R32-1 已确定"同时只允许一份有效合同"，<strong>同一时点至多只有一份合同满足"已签署+在有效期内+未解约"</strong>，故主合同判定在正常情况下唯一、无歧义；该判定规则保留，用于<strong>存在历史已解约/已过期合同</strong>时仍能正确定位当前主合同。主合同是系统身份标记，不对签约唯一性产生约束</li>
 <li>R32-3：<strong>当前生效主合同判定</strong>（系统实时计算）：校验 sign_status=已签署(30) 且 contract_start_date ≤ today ≤ contract_end_date 且 (termination_date IS NULL 或 today < termination_date)。全部满足 → 该合同为当前生效主合同；任一不满足 → 无生效合同，是否允许登录系统由信控管理模块决定</li>
 <li>R32-4：<strong>解约时间管理</strong>：每份合同可填写解约时间（termination_date）。填写后不立即改变签状态——由每日定时任务扫描：termination_date ≤ today 且 sign_status=已签署 → 自动变更为已解约(50)。删除解约时间时，按 contract_end_date 恢复：end_date > today → 已签署(30)，end_date ≤ today → 已过期(40)</li>
 <li>R32-5：<strong>合同状态新增"已解约"</strong>：sign_status 枚举新增 50:已解约。已解约 ≠ 已过期——已解约是主动提前终止，已过期是自然到期。两者是不同的终态，供信控模块区分风控策略</li>
@@ -803,7 +803,7 @@
 </table></div>
 <h3 id="14-5-不一致处理标注">14.5 不一致处理标注</h3></p><p><div class="table-wrapper"><table><tr><td>#</td><td>不一致点</td><td>客商中心</td><td>货主端</td><td>处理</td></tr>
 <tr><td>---</td><td>---------</td><td>---------</td><td>--------</td><td>------</td></tr>
-<tr><td>D1</td><td>联系人邮箱必填</td><td>客户联系人.email 为必填（RDD中写"✅"）</td><td>子账号.email 为非必填（"邮箱非必填"）</td><td><strong>待确认</strong>：ROOT账户从3个联系人中选系统账号接收人，其邮箱必填；手动创建的子账号邮箱非必填</td></tr>
+<tr><td>D1</td><td>联系人邮箱必填</td><td>客户联系人.email 为必填（RDD中写"✅"）</td><td>子账号.email 为非必填（"邮箱非必填"）</td><td><strong>★ 已确认（2026-09-12，与产品原型一致）</strong>：<strong>客户联系人邮箱必填</strong>——ROOT 账户由 3 个联系人中 <code>is_account_receiver=true</code> 的系统账号接收人产生，其邮箱即来自该必填联系人邮箱，故 <strong>ROOT 邮箱必填</strong>；<strong>手动创建的子账号邮箱非必填</strong>（保持货主端现原型口径：新增子账号必填项为 账号/姓/名/性别/手机号）。<strong>两处并不矛盾</strong>：必填约束作用在"客户联系人"上，子账号是另一种对象</td></tr>
 <tr><td>D2</td><td>冻结时ROOT账户处理</td><td>R25说"关联账户同步冻结"</td><td>货主端说ROOT不可冻结</td><td><strong>已解决</strong>：ROOT不可<strong>单独</strong>冻结，但随客户冻结联动（属于系统级操作，非企业管理员操作）</td></tr>
 <tr><td>D3</td><td>客户等级枚举</td><td>SS/S/A/B/C/D/E/F/G（9级，含E）</td><td>不直接引用</td><td><strong>已对齐</strong>：货主端不做等级权限控制，仅展示</td></tr>
 </table></div>

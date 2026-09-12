@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据设计 - 货主端 - Luna 文档</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.8;color:#1e293b;background:#f8fafc}.nav-bar{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid #e2e8f0;padding:0 24px;height:56px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}.nav-bar a{color:#64748b;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px}.nav-bar a:hover{color:#7c3aed}.nav-bar .sep{color:#cbd5e1;font-size:14px}.nav-bar .module-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:12px;background:#7c3aed15;color:#7c3aed;font-size:13px;font-weight:500}.layout{display:flex;max-width:1300px;margin:0 auto;padding:32px 24px 80px;gap:40px}.toc{width:220px;flex-shrink:0;position:sticky;top:72px;align-self:flex-start;max-height:calc(100vh - 100px);overflow-y:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px}.toc-title{font-size:13px;font-weight:600;color:#1e293b;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}.toc ul{list-style:none}.toc li{margin:0}.toc a{display:block;padding:4px 0;color:#64748b;text-decoration:none;font-size:13px;line-height:1.5;transition:color 0.15s}.toc a:hover{color:#7c3aed}.toc .toc-lv2 a{font-weight:500;color:#334155}.toc .toc-lv3 a{padding-left:16px;font-size:12px;color:#64748b}.content{flex:1;min-width:0}.doc-content h1{font-size:22px;margin:32px 0 16px;color:#0f172a;border-bottom:1px solid #e2e8f0;padding-bottom:8px}.doc-content h2{font-size:18px;margin:28px 0 12px;color:#1e293b;scroll-margin-top:72px}.doc-content h3{font-size:16px;margin:24px 0 10px;color:#334155;scroll-margin-top:72px}.doc-content p{margin:12px 0}.doc-content ul,.doc-content ol{margin:8px 0 8px 24px}.doc-content li{margin:4px 0}.doc-content blockquote{border-left:4px solid #7c3aed;background:#f1f5f9;padding:12px 16px;margin:16px 0;border-radius:0 8px 8px 0;color:#475569}.doc-content code{background:#f1f5f9;padding:2px 6px;border-radius:4px;font-family:"JetBrains Mono","Fira Code",Consolas,monospace;font-size:0.88em;color:#dc2626}.doc-content pre{background:#0f172a;color:#e2e8f0;padding:16px 20px;border-radius:8px;overflow-x:auto;margin:16px 0;font-size:13px;line-height:1.6}.doc-content pre code{background:none;color:inherit;padding:0;font-size:inherit}.table-wrapper{overflow-x:auto;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px}.doc-content table{width:100%;border-collapse:collapse;font-size:14px}.doc-content th{background:#f1f5f9;font-weight:600;text-align:left;padding:10px 12px;border-bottom:2px solid #e2e8f0;white-space:nowrap}.doc-content td{padding:8px 12px;border-bottom:1px solid #f1f5f9}.doc-content tr:last-child td{border-bottom:none}@media(max-width:900px){.layout{flex-direction:column}.toc{width:100%;position:static;max-height:none;margin-bottom:24px}}.doc-content .mermaid{overflow-x:auto;margin:16px 0;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="nav-bar">
+<a href="../index.html">Luna 文档</a>
+<span class="sep">/</span>
+<span class="module-tag">货主端</span>
+<span class="sep">/</span>
+<span>数据设计</span>
+</div>
+<div class="layout">
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#1-实体-x-表映射">1. 实体 x 表映射</a></li><li class="toc-lv2"><a href="#2-逐表字段清单">2. 逐表字段清单</a></li><li class="toc-lv3"><a href="#2-1-子账号-sub_account">2.1 子账号 `sub_account`</a></li><li class="toc-lv3"><a href="#2-2-子账号-角色关联-sub_account_role">2.2 子账号-角色关联 `sub_account_role`</a></li><li class="toc-lv3"><a href="#2-3-询价记录-price_inquiry_log-二期">2.3 询价记录 `price_inquiry_log`（二期）</a></li><li class="toc-lv3"><a href="#2-4-询价结果行-price_inquiry_result-二期">2.4 询价结果行 `price_inquiry_result`（二期）</a></li><li class="toc-lv2"><a href="#3-ER-关系图">3. ER 关系图</a></li><li class="toc-lv2"><a href="#4-关键设计说明">4. 关键设计说明</a></li><li class="toc-lv3"><a href="#4-1-软删除策略">4.1 软删除策略</a></li><li class="toc-lv3"><a href="#4-2-乐观锁">4.2 乐观锁</a></li><li class="toc-lv3"><a href="#4-3-JSON-字段使用场景">4.3 JSON 字段使用场景</a></li><li class="toc-lv3"><a href="#4-4-纯逻辑实体说明">4.4 纯逻辑实体说明</a></li><li class="toc-lv3"><a href="#4-5-查价接口的运价数据来源">4.5 查价接口的运价数据来源</a></li><li class="toc-lv3"><a href="#4-6-与共享实体的引用关系">4.6 与共享实体的引用关系</a></li><li class="toc-lv3"><a href="#4-7-密码与认证设计">4.7 密码与认证设计</a></li><li class="toc-lv3"><a href="#4-8-ROOT-账号与-ROOT-角色">4.8 ROOT 账号与 ROOT 角色</a></li><li class="toc-lv3"><a href="#4-9-角色表补充说明-货主端视角">4.9 角色表补充说明（货主端视角）</a></li><li class="toc-lv3"><a href="#4-10-优惠三表匹配口径-货主端只读消费">4.10 优惠三表匹配口径（货主端只读消费）</a></li><li class="toc-lv2"><a href="#5-枚举值集中定义">5. 枚举值集中定义</a></li><li class="toc-lv2"><a href="#6-跨模块数据融合-货主端-客商中心">6. 跨模块数据融合：货主端 × 客商中心</a></li><li class="toc-lv3"><a href="#6-1-数据归属与引用关系">6.1 数据归属与引用关系</a></li><li class="toc-lv3"><a href="#6-2-跨模块同步数据流">6.2 跨模块同步数据流</a></li><li class="toc-lv3"><a href="#6-3-跨模块接口契约">6.3 跨模块接口契约</a></li><li class="toc-lv3"><a href="#6-4-登录校验链-完整">6.4 登录校验链（完整）</a></li><li class="toc-lv3"><a href="#6-5-失败降级策略">6.5 失败降级策略</a></li><li class="toc-lv3"><a href="#6-6-共享实体字段变更同步">6.6 共享实体字段变更同步</a></li><li class="toc-lv2"><a href="#7-变更摘要-2026-09-12">7. 变更摘要（2026-09-12）</a></li><li class="toc-lv2"><a href="#8-不一致处理标注">8. 不一致处理标注</a></li></ul></nav>
+<div class="content"><div class="doc-content"><p><h1 id="核心方案设计草稿-货主端模块">核心方案设计草稿 -- 货主端模块</h1></p><p><blockquote>Phase 2：方案架构 | 基于 RDD v1.3 | 2026-09-12（v1.3: 整体刷新——对齐现行原型（12 页）与「超级运价」2026-09-12 定稿的优惠三表口径：优惠对象类型一期同时开放客户等级/客户特批、泡比优惠进入 Phase 1、超重超长拣货触发）
+上一版：v1.2（2026-06-06，货主端×客商中心数据融合 — 跨模块接口契约+登录校验链+同步机制）</blockquote></p><p><hr></p><p><h2 id="1-实体-x-表映射">1. 实体 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>RDD 实体</td><td>表名</td><td>类型</td><td>说明</td></tr>
+<tr><td>---</td><td>---------</td><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>1</td><td>子账号</td><td><code>sub_account</code></td><td>主表</td><td>企业内子账号管理</td></tr>
+<tr><td>2</td><td>子账号-角色关联</td><td><code>sub_account_role</code></td><td>关联表</td><td>N:N，子账号与角色的关联</td></tr>
+<tr><td>3</td><td>询价记录</td><td><code>price_inquiry_log</code></td><td>主表</td><td>二期，记录每次货主询价</td></tr>
+<tr><td>4</td><td>询价结果行</td><td><code>price_inquiry_result</code></td><td>主表</td><td>二期，记录每次询价返回的报价行</td></tr>
+<tr><td>--</td><td>企业/客户</td><td><code>customer</code></td><td>引用</td><td>客商中心模块，不在本模块建表</td></tr>
+<tr><td>--</td><td>商品</td><td><code>product</code></td><td>引用</td><td>基础资料模块，不在本模块建表（货主端「商品管理」页）</td></tr>
+<tr><td>--</td><td>收货地址</td><td><code>shipping_address</code></td><td>引用</td><td>基础资料模块，不在本模块建表（货主端「地址管理」页）</td></tr>
+<tr><td>--</td><td>VAT 记录</td><td><code>vat_record</code></td><td>引用</td><td>头程管理模块，不在本模块建表（货主端「VAT管理 / VAT资料新增」页）</td></tr>
+<tr><td>--</td><td>角色</td><td><code>role</code></td><td>引用</td><td>系统设置模块，不在本模块建表</td></tr>
+<tr><td>--</td><td>服务渠道</td><td><code>service_channel</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
+<tr><td>--</td><td>服务组合</td><td><code>service_combination</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
+<tr><td>--</td><td>运价行</td><td><code>price_table_row</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
+<tr><td>--</td><td>附加费规则</td><td><code>surcharge_rule</code></td><td>引用</td><td>超级运价模块（菜单定名「费用与标识规则」），查价时关联</td></tr>
+<tr><td>--</td><td>运费优惠规则</td><td><code>freight_discount</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
+<tr><td>--</td><td><strong>泡比优惠规则</strong></td><td><code>density_discount</code></td><td>引用</td><td><strong>★ 变更（2026-09-12）</strong>：超级运价模块，<strong>一期启用</strong>（原「二期」作废），查价时关联</td></tr>
+<tr><td>--</td><td>附加费优惠规则</td><td><code>surcharge_discount</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
+<tr><td>--</td><td>周船期批次</td><td><code>weekly_schedule_batch</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
+<tr><td>--</td><td>船期</td><td><code>sailing_schedule</code></td><td>引用</td><td>超级运价模块，查价时关联（运输详情弹窗的船期×截单矩阵）</td></tr>
+</table></div>
+<blockquote><strong>★ 变更（2026-09-12）</strong>：新增 <code>density_discount</code>（泡比优惠）与 <code>sailing_schedule</code>（船期）两条引用关系。货主端<strong>全部为只读引用</strong>，不落库运价侧任何表。</blockquote></p><p><hr></p><p><h2 id="2-逐表字段清单">2. 逐表字段清单</h2></p><p><h3 id="2-1-子账号-sub_account">2.1 子账号 <code>sub_account</code></h3></p><p><blockquote><strong>设计说明</strong>：货主企业内部的员工登录账号。每个子账号属于一个企业（customer），可分配多个角色。登录认证通过 <code>sub_account</code> + 密码完成。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
+<tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
+<tr><td><code>customer_id</code></td><td>所属企业ID</td><td>BigInt</td><td>Yes</td><td><strong>Index, FK -> customer.id</strong></td><td>关联客商中心的企业客户</td></tr>
+<tr><td><code>account</code></td><td>账号</td><td>String(64)</td><td>Yes</td><td><strong>Unique (customer_id + account)</strong></td><td>登录用户名，同企业内唯一。支持账号或邮箱登录</td></tr>
+<tr><td><code>is_root</code></td><td>是否ROOT账号</td><td>Boolean</td><td>Yes</td><td>—</td><td>Default: false。客户入驻时自动生成的admin账号为true，列表不展示</td></tr>
+<tr><td><code>password_hash</code></td><td>密码哈希</td><td>String(128)</td><td>Yes</td><td>--</td><td>bcrypt 哈希，不存明文</td></tr>
+<tr><td><code>last_name</code></td><td>姓</td><td>String(32)</td><td>Yes</td><td>--</td><td>--</td></tr>
+<tr><td><code>first_name</code></td><td>名</td><td>String(32)</td><td>Yes</td><td>--</td><td>--</td></tr>
+<tr><td><code>full_name</code></td><td>姓名（全名）</td><td>String(64)</td><td>Yes</td><td>--</td><td>姓+名拼接，冗余存储便于搜索和展示</td></tr>
+<tr><td><code>gender</code></td><td>性别</td><td>TinyInt</td><td>Yes</td><td>--</td><td>10:男, 20:女</td></tr>
+<tr><td><code>phone</code></td><td>手机号</td><td>String(20)</td><td>Yes</td><td>--</td><td>--</td></tr>
+<tr><td><code>email</code></td><td>邮箱</td><td>String(128)</td><td><strong>No</strong></td><td>--</td><td><strong>非必填</strong>（与原型一致：新增子账号必填项仅 账号/姓/名/性别/手机号）。~~原「待确认 D1」~~ <strong>★ 已定（2026-09-12）</strong>：货主端手动创建的子账号邮箱非必填；客商中心侧「客户联系人邮箱」必填，二者不矛盾——ROOT 账号邮箱来自客户联系人（<code>is_account_receiver=true</code>，必填），手动创建的子账号邮箱非必填</td></tr>
+<tr><td><code>status</code></td><td>状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:正常, 20:已冻结</td></tr>
+<tr><td><code>last_login_at</code></td><td>最后登录时间</td><td>DateTime</td><td>No</td><td>--</td><td>记录最近一次登录</td></tr>
+<tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>--</td><td>自动生成</td></tr>
+<tr><td><code>created_by</code></td><td>创建人</td><td>String</td><td>Yes</td><td>--</td><td>当前用户（企业管理员）</td></tr>
+<tr><td><code>updated_at</code></td><td>更新时间</td><td>DateTime</td><td>Yes</td><td>--</td><td>自动维护</td></tr>
+<tr><td><code>updated_by</code></td><td>更新人</td><td>String</td><td>Yes</td><td>--</td><td>当前用户</td></tr>
+<tr><td><code>is_deleted</code></td><td>软删除标识</td><td>Boolean</td><td>Yes</td><td>--</td><td>Default: false</td></tr>
+<tr><td><code>version</code></td><td>乐观锁版本</td><td>Int</td><td>Yes</td><td>--</td><td>并发控制，每次更新 +1</td></tr>
+</table></div>
+<strong>关联关系</strong>:
+<ul><li><code>Many-to-One</code> with <code>customer</code> (通过 <code>customer_id</code> -> <code>customer.id</code>)</li>
+<li><code>One-to-Many</code> with <code>sub_account_role</code> (通过 <code>id</code> -> <code>sub_account_id</code>)</li>
+</ul>
+<blockquote><strong>⚠️ 原型与本文档的差异（如实记录，待产品确认）</strong>：现行原型 <code>子账号管理.html</code> 新增/编辑弹窗的必填标识为 <strong>账号 / 姓 / 名 / 性别 / 手机号</strong>（邮箱无必填星标），与上表一致；但原型列表中<strong>没有「修改密码」按钮</strong>、也<strong>没有 <code>is_root</code> 过滤与「分配资源」下拉中的 ROOT 角色选项</strong>（原型下拉为「财务角色/业务角色/客服角色」三个演示值）。上表 <code>is_root</code>、<code>password_hash</code> 为文档侧设计口径，原型待补齐。</blockquote></p><p><h3 id="2-2-子账号-角色关联-sub_account_role">2.2 子账号-角色关联 <code>sub_account_role</code></h3></p><p><blockquote><strong>设计说明</strong>：N:N 关联表，记录每个子账号被分配了哪些角色。子账号权限 = 所分配角色权限的并集。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
+<tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
+<tr><td><code>sub_account_id</code></td><td>子账号ID</td><td>BigInt</td><td>Yes</td><td><strong>Index, FK -> sub_account.id</strong></td><td>关联子账号</td></tr>
+<tr><td><code>role_id</code></td><td>角色ID</td><td>BigInt</td><td>Yes</td><td><strong>Index, FK -> role.id</strong></td><td>关联系统设置模块的角色</td></tr>
+<tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>--</td><td>自动生成</td></tr>
+<tr><td><code>created_by</code></td><td>创建人</td><td>String</td><td>Yes</td><td>--</td><td>当前用户</td></tr>
+</table></div>
+<strong>关联关系</strong>:
+<ul><li><code>Many-to-One</code> with <code>sub_account</code> (通过 <code>sub_account_id</code>)</li>
+<li><code>Many-to-One</code> with <code>role</code> (通过 <code>role_id</code>)</li>
+</ul>
+<h3 id="2-3-询价记录-price_inquiry_log-二期">2.3 询价记录 <code>price_inquiry_log</code>（二期）</h3></p><p><blockquote><strong>设计说明</strong>：记录货主每次询价的参数和匹配结果概要，用于趋势分析和热门渠道统计。本期 MVP 不建表。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
+<tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
+<tr><td><code>customer_id</code></td><td>货主企业ID</td><td>BigInt</td><td>Yes</td><td>Index</td><td>关联企业客户</td></tr>
+<tr><td><code>sub_account_id</code></td><td>操作人ID</td><td>BigInt</td><td>No</td><td>--</td><td>哪个子账号发起的询价</td></tr>
+<tr><td><code>inquiry_params</code></td><td>查询参数</td><td>JSON</td><td>Yes</td><td>--</td><td>快照所有输入参数（国家/仓库代码/邮编/交货地/包裹信息/渠道专线筛选/货物属性/包税方式）</td></tr>
+<tr><td><code>result_count</code></td><td>返回结果数</td><td>Int</td><td>Yes</td><td>--</td><td>匹配到的报价条数</td></tr>
+<tr><td><code>unmatched_channels</code></td><td>未匹配渠道</td><td>JSON</td><td>No</td><td>--</td><td>记录未匹配的渠道列表</td></tr>
+<tr><td><code>inquiry_at</code></td><td>询价时间</td><td>DateTime</td><td>Yes</td><td>Index</td><td>--</td></tr>
+<tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>--</td><td>自动生成</td></tr>
+</table></div>
+<h3 id="2-4-询价结果行-price_inquiry_result-二期">2.4 询价结果行 <code>price_inquiry_result</code>（二期）</h3></p><p><blockquote><strong>设计说明</strong>：记录每次询价返回的每条渠道报价明细，用于追溯"当时给货主报了什么价"。本期 MVP 不建表。</blockquote></p><p><blockquote><strong>★ 变更（2026-09-12）</strong>：结果行字段按超级运价 PRD §5.13「货主端在线询价结果表列」口径重排——新增 <code>service_combination_code</code> / <code>delivery_regions</code> / <code>freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code>，<code>final_price</code> 的计算口径同步为「公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠」。<strong>不再存在「优惠后」中间列</strong>。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
+<tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>--</td></tr>
+<tr><td><code>inquiry_id</code></td><td>询价记录ID</td><td>BigInt</td><td>Yes</td><td><strong>Index, FK -> price_inquiry_log.id</strong></td><td>--</td></tr>
+<tr><td><code>service_combination_code</code></td><td>服务组合</td><td>String(128)</td><td>Yes</td><td>--</td><td>完整组合名（渠道-运输-尾程-计费-包税-服务类型），如"美森360-海运-卡派-KG-包税-散货"</td></tr>
+<tr><td><code>channel_code</code></td><td>渠道编码</td><td>String(64)</td><td>Yes</td><td>--</td><td>关联 service_channel</td></tr>
+<tr><td><code>delivery_regions</code></td><td>交货地</td><td>String(256)</td><td>No</td><td>--</td><td>服务组合覆盖的交货地列表，逗号分隔</td></tr>
+<tr><td><code>billing_unit</code></td><td>计价</td><td>TinyInt</td><td>Yes</td><td>--</td><td>10:KG, 20:CBM(m³)</td></tr>
+<tr><td><code>base_price</code></td><td>公布价</td><td>Decimal(18,2)</td><td>Yes</td><td>--</td><td>基础运价单价（元/计价单位）</td></tr>
+<tr><td><code>freight_discount_detail</code></td><td>运费优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + 减免额；<strong>客户特批 > 客户等级，高覆盖低不叠加</strong></td></tr>
+<tr><td><code>density_discount_detail</code></td><td>泡比优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + 减免额；泡比≥阈值，<strong>多条命中取阈值最大档</strong>；<strong>一期正常展示，仅 KG 计价行</strong></td></tr>
+<tr><td><code>surcharge_detail</code></td><td>附加费</td><td>JSON</td><td>Yes</td><td>--</td><td>逐条快照附加费名称+原始单价+优惠后单价</td></tr>
+<tr><td><code>surcharge_discount_detail</code></td><td>附加费优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + 减免额；与运费优惠独立计算</td></tr>
+<tr><td><code>final_price</code></td><td>最终报价</td><td>Decimal(18,2)</td><td>Yes</td><td>--</td><td>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</td></tr>
+<tr><td><code>sailing_info</code></td><td>船期信息</td><td>JSON</td><td>No</td><td>--</td><td>快照当周船期×各交货地截单矩阵（运输详情弹窗数据）</td></tr>
+<tr><td><code>pickup_date</code></td><td>最快提取</td><td>String(64)</td><td>No</td><td>--</td><td>预计最快提取日期</td></tr>
+<tr><td><code>batch_no</code></td><td>运价批次号</td><td>String(64)</td><td>Yes</td><td>--</td><td>关联 weekly_schedule_batch</td></tr>
+<tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>--</td><td>自动生成</td></tr>
+</table></div>
+<hr></p><p><h2 id="3-ER-关系图">3. ER 关系图</h2></p><p><div class="mermaid">erDiagram
+    customer ||--o{ sub_account : "1:N (customer_id)"
+    sub_account ||--o{ sub_account_role : "1:N (sub_account_id)"
+    role ||--o{ sub_account_role : "1:N (role_id)"
+
+    customer ||--o{ price_inquiry_log : "1:N (customer_id)" 
+    sub_account ||--o{ price_inquiry_log : "1:N (sub_account_id)"
+    price_inquiry_log ||--o{ price_inquiry_result : "1:N (inquiry_id)"
+
+    sub_account }o--|| customer : "N:1 所属企业"
+    sub_account_role }o--|| sub_account : "N:1 关联子账号"
+    sub_account_role }o--|| role : "N:1 关联角色"
+    price_inquiry_log }o--|| customer : "N:1 发起企业"
+    price_inquiry_result }o--|| price_inquiry_log : "N:1 所属询价"
+
+    service_combination ||--o{ freight_discount : "1:N 内嵌运费优惠"
+    service_combination ||--o{ density_discount : "1:N 内嵌泡比优惠"
+    surcharge_rule ||--o{ surcharge_discount : "1:N 内嵌附加费优惠"
+    customer ||--o{ freight_discount : "匹配(客户特批/客户等级)"
+    customer ||--o{ density_discount : "匹配(客户特批/客户等级)"
+    customer ||--o{ surcharge_discount : "匹配(客户特批/客户等级)"
+</div></p><p><blockquote><strong>★ 变更（2026-09-12）</strong>：补充三张优惠表与父实体（服务组合 / 附加费规则）及客户主体的匹配关系；三张表均在<strong>超级运价模块</strong>，货主端只读匹配。</blockquote></p><p><hr></p><p><h2 id="4-关键设计说明">4. 关键设计说明</h2></p><p><h3 id="4-1-软删除策略">4.1 软删除策略</h3>
+<ul><li><code>sub_account</code> 采用软删除（<code>is_deleted</code>），冻结不等于删除，冻结是状态变更</li>
+<li><code>sub_account_role</code> 不需软删除，分配/取消分配直接物理删除行（关联表无业务依赖）</li>
+<li><code>price_inquiry_log</code> / <code>price_inquiry_result</code>（二期）不软删除，按保留期限定时清理</li>
+</ul>
+<h3 id="4-2-乐观锁">4.2 乐观锁</h3>
+<ul><li><code>sub_account</code> 需要 <code>version</code> 字段：企业管理员 A 编辑子账号的同时，管理员 B 也可能操作</li>
+<li><code>sub_account_role</code> 不需要乐观锁：角色分配是覆盖式操作，不存在并发冲突问题</li>
+</ul>
+<h3 id="4-3-JSON-字段使用场景">4.3 JSON 字段使用场景</h3>
+<ul><li><code>price_inquiry_log.inquiry_params</code>：查询参数为可变结构（渠道专线多选、货物属性多选、包税方式多选、简易录入/多件装箱二选一等），用 JSON 快照比建多个可空字段更灵活</li>
+<li><code>price_inquiry_log.unmatched_channels</code>：未匹配渠道列表，JSON 数组即可</li>
+<li><code>price_inquiry_result.surcharge_detail</code>：附加费明细包含名称+原始价格+优惠后价格，结构灵活，用 JSON 快照</li>
+<li><code>price_inquiry_result.freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code>：<strong>★ 变更（2026-09-12）</strong> 三张优惠表各自的命中规则名+减免额，用 JSON 快照，便于追溯"当时按哪条规则算的"</li>
+<li><code>price_inquiry_result.sailing_info</code>：船期×截单矩阵为动态列结构（列数=覆盖的交货地数量），JSON 比固定列更合适</li>
+</ul>
+<h3 id="4-4-纯逻辑实体说明">4.4 纯逻辑实体说明</h3>
+<ul><li>登录凭证（LoginCredential）：无独立表，基于 <code>sub_account</code> + 密码哈希 + 后端 token 机制</li>
+<li>货物查询参数（InquiryParams）：无独立表，前端表单 -> 后端接口参数，仅二期 <code>price_inquiry_log</code> 中做 JSON 快照</li>
+<li>报价结果行（PriceInquiryResult）：一期无独立表，后端实时计算返回，不持久化。二期 <code>price_inquiry_result</code> 表落地</li>
+</ul>
+<h3 id="4-5-查价接口的运价数据来源">4.5 查价接口的运价数据来源</h3>
+查价订舱接口需要跨模块查询超级运价的数据，依赖关系如下：
+<ul><li>渠道/组合匹配：查询 <code>service_channel</code> + <code>service_combination</code>（专线 = 运输方式 + 尾程派送，组合筛选在查询前完成）</li>
+<li>运价行匹配：查询 <code>price_table_row</code>（当前周批次 <code>weekly_schedule_batch.status = CURRENT</code>）；KG 路径按计费重量匹配 weight_tier，CBM 路径按计费体积匹配 weight_tier</li>
+<li>附加费匹配：查询 <code>surcharge_rule</code> + <code>surcharge_discount</code></li>
+<li>运费优惠：查询 <code>freight_discount</code></li>
+<li><strong>泡比优惠：查询 <code>density_discount</code></strong>（<strong>★ 变更（2026-09-12）</strong>：一期启用，原「二期」作废）</li>
+<li>船期/截单：查询 <code>sailing_schedule</code>（运输详情弹窗的当周船期×各交货地截单矩阵）</li>
+<li>以上均为<strong>只读查询</strong>，货主端不写入运价相关表</li>
+</ul>
+<blockquote><strong>★ 变更（2026-09-12）</strong> 三层询价数据安全（超级运价 PRD R27）：同一报价 API <code>GET /api/v1/quote/query</code>，<code>caller=shipper</code> 时<strong>只返回公布价+优惠，不返回成本底价/利润/盈亏标识</strong>；未登录 + <code>caller=shipper</code> → 401。</blockquote></p><p><h3 id="4-6-与共享实体的引用关系">4.6 与共享实体的引用关系</h3></p><p><div class="table-wrapper"><table><tr><td>货主端页面</td><td>引用实体</td><td>来源表</td><td>来源模块</td><td>引用方式</td></tr>
+<tr><td>-----------</td><td>---------</td><td>--------</td><td>---------</td><td>---------</td></tr>
+<tr><td>商品管理</td><td>商品</td><td><code>product</code></td><td>基础资料</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
+<tr><td>地址管理</td><td>收货地址</td><td><code>shipping_address</code></td><td>基础资料</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
+<tr><td>VAT管理 / VAT资料新增</td><td>VAT 记录</td><td><code>vat_record</code></td><td>头程管理</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
+<tr><td>角色管理</td><td>角色</td><td><code>role</code></td><td>系统设置</td><td>按 <code>customer_id</code> 过滤，定义角色权限</td></tr>
+<tr><td>子账号管理</td><td>子账号</td><td><code>sub_account</code></td><td>货主端（本期新建）</td><td>本模块主表</td></tr>
+<tr><td>子账号管理</td><td>角色</td><td><code>role</code></td><td>系统设置</td><td>分配角色时引用 <code>role.id</code></td></tr>
+<tr><td>账单管理 / 资金账户</td><td>账单、资金流水、充值记录</td><td>引用</td><td>财务/账单模块</td><td>只读展示 + 充值发起（原型已挂页，实体归属另行确认）</td></tr>
+<tr><td>后台任务</td><td>后台任务记录</td><td>引用</td><td>系统/任务中心</td><td>只读查询任务编号/模块/状态/结果</td></tr>
+</table></div>
+<blockquote><strong>★ 变更（2026-09-12）</strong>：页面名对齐现行原型——<code>收货地址管理</code> → <strong>地址管理</strong>；补充 VAT资料新增、账单管理、资金账户、后台任务四行。<strong>⚠️ 账单管理 / 资金账户 / 后台任务 的实体归属模块尚未在超级运价或客商中心文档中定义</strong>，上表按"引用"占位，待确认后回填来源表。</blockquote></p><p><h3 id="4-7-密码与认证设计">4.7 密码与认证设计</h3>
+<ul><li>密码存储：<code>sub_account.password_hash</code> 使用 bcrypt 哈希，不存明文</li>
+<li>Token 机制：登录成功后后端签发 JWT token，前端存 <code>localStorage.shipper_token</code></li>
+<li>Token 有效期：24 小时，过期后自动跳转登录页</li>
+<li>企业管理员（主账号）的登录凭证通过 <code>customer</code> 表关联的账号体系管理（客商中心模块），与子账号体系分离</li>
+<li>子账号支持账号或邮箱登录：登录接口同时匹配 <code>account</code> 和 <code>email</code> 字段</li>
+<li>企业管理员可为子账号修改密码：<code>PUT /api/shipper/sub-account/{id}/password</code></li>
+</ul>  - <strong>⚠️ 原型现状（2026-09-12 核对）</strong>：<code>子账号管理.html</code> 列表操作列<strong>当前只有 编辑 / 分配资源 / 冻结(启用)</strong>，<strong>没有「修改密码」按钮</strong>——本项为文档侧设计口径，原型待补齐</p><p><h3 id="4-8-ROOT-账号与-ROOT-角色">4.8 ROOT 账号与 ROOT 角色</h3>
+<ul><li><strong>ROOT 账号</strong>：客户入驻时自动生成，<code>account='admin'</code>，<code>is_root=true</code>，不可冻结/删除</li>
+<li><strong>ROOT 角色</strong>：客户入驻时自动生成，<code>role_code='ROOT'</code>，拥有货主端全部资源权限，不可冻结/删除</li>
+<li><strong>列表过滤</strong>：子账号列表查询时默认过滤 <code>is_root=true</code> 的记录，ROOT 账号不展示在管理列表</li>
+<li><strong>角色可选范围</strong>：分配角色时，可选角色 = ROOT角色 + 所有 <code>status=正常(10)</code> 的角色</li>
+<li><strong>资源范围上限</strong>：新建角色的资源范围不可超出 ROOT 角色拥有的资源（后端校验）</li>
+<li><strong>角色表复用</strong>：货主端角色与员工端角色共用 <code>role</code> 表，通过 <code>tenant_id</code> 隔离；货主端的角色 <code>customer_id</code> 指向所属企业</li>
+</ul>
+<blockquote><strong>⚠️ 原型现状（2026-09-12 核对）</strong>：<code>子账号管理.html</code> / <code>角色管理.html</code> 的演示数据中<strong>未体现 <code>is_root</code> 过滤、ROOT 角色保护、资源范围上限</strong>；分配资源下拉为「财务角色/业务角色/客服角色」三个演示值。本节为后端设计口径，原型待补齐。</blockquote></p><p><h3 id="4-9-角色表补充说明-货主端视角">4.9 角色表补充说明（货主端视角）</h3>
+<ul><li>货主端角色管理直接使用系统设置的 <code>role</code> 表</li>
+<li>角色资源权限树内容与员工端分配资源一致（菜单/页面/按钮三级）</li>
+<li>角色冻结不影响已分配该角色的子账号——冻结仅阻止新分配，已有权限保持不变</li>
+<li><strong>角色类型枚举（原型口径）</strong>：<code>系统默认</code> / <code>自定义</code>（<code>角色管理.html</code> 搜索条件的下拉取值）</li>
+</ul>
+<h3 id="4-10-优惠三表匹配口径-货主端只读消费">4.10 优惠三表匹配口径（货主端只读消费）</h3></p><p><blockquote><strong>★ 变更（2026-09-12）新增</strong>：本节对齐「超级运价」2026-09-12 定稿口径。货主端<strong>不配置、不落库</strong>任何优惠规则，只在查价时按当前登录客户匹配并展示。</blockquote></p><p><strong>三张优惠表：运费优惠 <code>freight_discount</code> / 泡比优惠 <code>density_discount</code> / 附加费优惠 <code>surcharge_discount</code></strong></p><p><div class="table-wrapper"><table><tr><td>维度</td><td>运费优惠</td><td>泡比优惠</td><td>附加费优惠</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>父实体</td><td>服务组合</td><td>服务组合</td><td>附加费规则</td></tr>
+<tr><td>优惠对象类型</td><td><strong>一期同时开放</strong>：10 客户特批 / 20 客户等级</td><td>同左</td><td>同左</td></tr>
+<tr><td>目标</td><td>特批→客户（多选）；等级→客户等级（多选）</td><td>同左</td><td>同左</td></tr>
+<tr><td>优先级</td><td><strong>客户特批 > 客户等级，高覆盖低、不叠加</strong></td><td>同左</td><td>同左</td></tr>
+<tr><td>优惠方式</td><td>一期仅 20 固定减免</td><td>一期仅 20 固定减免</td><td>折扣率/固定减免</td></tr>
+<tr><td>命中维度</td><td>组合 + 对象</td><td>组合 + 对象 + <strong>密度阈值</strong>（泡比 ≥ 阈值；多条命中取阈值最大档，不叠加）</td><td>附加费规则 + 对象</td></tr>
+<tr><td>叠加关系</td><td><strong>运费优惠 × 泡比优惠叠加</strong></td><td>与运费优惠叠加</td><td><strong>与运费优惠独立计算</strong></td></tr>
+<tr><td>有效期</td><td>一期：永久有效 / 固定期限</td><td>同左</td><td>同左</td></tr>
+<tr><td>飞书审批编号 <code>approval_no</code></td><td><strong>客户特批时必填</strong>；等级时为空。<strong>一期人工录入，不对接飞书审批流</strong>（不做审批单同步、不做「审批中/已通过」状态机），仅作追溯凭据</td><td>同左</td><td>同左</td></tr>
+<tr><td>费用方向</td><td>固定 10 应收</td><td>固定 10 应收</td><td>固定 10 应收</td></tr>
+</table></div>
+<strong>匹配伪代码（货主端侧消费口径）</strong>：</p><p><pre><code># 1. 运费优惠（特批 &gt; 等级，取一条）
+候选 = { d ∈ freight_discount | d.combination_id = 当前组合 且 d.status=生效 }
+特批命中 = 候选.where(target_type=10 客户特批 且 当前客户 ∈ d.target_customers)
+等级命中 = 候选.where(target_type=20 客户等级 且 当前客户等级 ∈ d.target_levels)
+运费优惠 = 特批命中.第一条() ?? 等级命中.第一条() ?? 无     # 只取一条，不累加
+
+# 2. 泡比优惠（特批 &gt; 等级，再按密度阈值取最大档；仅 KG 计价行）
+泡比 = 总实重(kg) ÷ 总体积(m³)
+候选 = { d ∈ density_discount | d.combination_id = 当前组合 且 泡比 ≥ d.density_threshold }
+泡比优惠 = 候选.按(对象优先级, density_threshold 降序).第一条() ?? 无   # 多条命中取阈值最大档，不叠加
+
+# 3. 附加费优惠（按附加费规则逐条匹配，与运费优惠独立）
+对每条命中的附加费规则 r：
+  候选 = { d ∈ surcharge_discount | d.rule_id = r.id 且 d.status=生效 }
+  特批命中 = 候选.where(target_type=10 且 当前客户 ∈ d.target_customers)
+  等级命中 = 候选.where(target_type=20 且 当前客户等级 ∈ d.target_levels)
+  附加费优惠 = 特批命中.第一条() ?? 等级命中.第一条() ?? 无
+
+# 4. 最终报价（超级运价 PRD §7.4）
+最终报价 = 公布价 − 运费优惠 + Σ(附加费原价 − 附加费优惠) − 泡比优惠
+约束：任一费用项最终金额不得为负（优惠上限截断 R31）
+</code></pre></p><p><blockquote><strong>⚠️ 未决项（见 §8 不一致处理标注）</strong>：
+<ul><li><strong>E9 — 超重超长是否在查价阶段参与计算</strong>：超级运价定稿口径为「超重超长只在<strong>拣货</strong>触发」（依据拣货实测尺寸/重量；RDD §1656 明确「运价查询阶段不计算」），但货主端原型 <code>查价订舱.html</code> <strong>当前仍在查价阶段依据客户自填尺寸/货物属性计算并展示</strong>「超重件加收 200/件」「超重超长 200/箱」。<strong>两种口径（A 查价阶段彻底不算 / B 保留为预估但不落库、不进账单）待产品确认，本文档不预设结论。</strong></li>
+<li><strong>附加费优惠与泡比优惠的叠加顺序</strong>：超级运价 PRD §7.4 的公式为 <code>最终报价 = 折扣后运费 + 优惠后附加费</code>，而原型费用明细弹窗展示为 <code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code>。两者计算结果一致（减法可交换），但<strong>展示顺序不一致</strong>，已在 §8 列出待确认。</blockquote></li>
+</ul>
+<hr></p><p><h2 id="5-枚举值集中定义">5. 枚举值集中定义</h2></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
+<tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>---------</td></tr>
+<tr><td>Gender</td><td>10</td><td>MALE</td><td>男</td><td>sub_account</td></tr>
+<tr><td>Gender</td><td>20</td><td>FEMALE</td><td>女</td><td>sub_account</td></tr>
+<tr><td>SubAccountStatus</td><td>10</td><td>NORMAL</td><td>正常</td><td>sub_account</td></tr>
+<tr><td>SubAccountStatus</td><td>20</td><td>FROZEN</td><td>已冻结</td><td>sub_account</td></tr>
+<tr><td>BillingUnit</td><td>10</td><td>KG</td><td>公斤</td><td>price_inquiry_result</td></tr>
+<tr><td>BillingUnit</td><td>20</td><td>CBM</td><td>立方米(m³)</td><td>price_inquiry_result</td></tr>
+<tr><td><strong>DiscountTargetType</strong></td><td>10</td><td>CUSTOMER_SPECIAL</td><td><strong>客户特批</strong></td><td>freight_discount / density_discount / surcharge_discount</td></tr>
+<tr><td><strong>DiscountTargetType</strong></td><td>20</td><td>CUSTOMER_LEVEL</td><td><strong>客户等级</strong></td><td>freight_discount / density_discount / surcharge_discount</td></tr>
+<tr><td><strong>DiscountMode</strong></td><td>10</td><td>RATE</td><td>折扣率（二期开放）</td><td>三张优惠表</td></tr>
+<tr><td><strong>DiscountMode</strong></td><td>20</td><td>FIXED</td><td>固定减免（一期）</td><td>三张优惠表</td></tr>
+<tr><td><strong>ValidityType</strong></td><td>10</td><td>PERMANENT</td><td>永久有效（一期）</td><td>三张优惠表</td></tr>
+<tr><td><strong>ValidityType</strong></td><td>20</td><td>FIXED_PERIOD</td><td>固定期限（一期）</td><td>三张优惠表</td></tr>
+<tr><td><strong>ValidityType</strong></td><td>30</td><td>SINGLE_USE</td><td>单次有效（二期，不作废但一期不开放）</td><td>三张优惠表</td></tr>
+<tr><td><strong>FeeDirection</strong></td><td>10</td><td>RECEIVABLE</td><td>应收（一期固定）</td><td>三张优惠表</td></tr>
+<tr><td><strong>FeeDirection</strong></td><td>20</td><td>PAYABLE</td><td>应付（二期开放）</td><td>三张优惠表</td></tr>
+<tr><td><strong>SurchargeTagType</strong></td><td>20</td><td>SURCHARGE_TAG</td><td>附加费标识</td><td><code>surcharge_rule.tag_id</code> → 基础资料-标识管理 <code>tag.id</code></td></tr>
+</table></div>
+<blockquote><strong>★ 变更（2026-09-12）</strong>：新增 <code>DiscountTargetType</code> / <code>DiscountMode</code> / <code>ValidityType</code> / <code>FeeDirection</code> 四组枚举。要点：① <code>DiscountTargetType</code> <strong>一期同时开放 10 与 20</strong>（原「一期仅 20 客户等级」作废）；② <code>DiscountMode</code> 一期仅 20；③ <code>ValidityType</code> 一期 10/20；④ <code>FeeDirection</code> 固定 10。</blockquote></p><p><hr></p><p><h2 id="6-跨模块数据融合-货主端-客商中心">6. 跨模块数据融合：货主端 × 客商中心</h2></p><p><blockquote><strong>设计原则</strong>：货主端是客户主数据的 Consumer，不冗余存储客户字段（仅通过 <code>customer_id</code> 外键关联）。所有客户生命周期事件由客商中心通过接口推送到货主端。货主端登录时实时校验客户状态作为双重保障。</blockquote></p><p><h3 id="6-1-数据归属与引用关系">6.1 数据归属与引用关系</h3></p><p><pre><code>客商中心（System of Record）
+  customer                          ← 客户主数据唯一源
+    ├── customer_name               → 货主端首页欢迎语
+    ├── service_status (10/20)      → 货主端登录准入校验
+    ├── sign_status (10/20/30/40)   → 货主端下单准入校验
+    └── customer_level (SS~G)       → ★ 变更（2026-09-12）：不再只是"展示"，而是
+                                       三张优惠表「客户等级」匹配的输入（客户特批 &gt; 客户等级）
+
+货主端（Consumer）
+  sub_account.customer_id ──FK──→ customer.id
+    ├── is_root = true            → 由客商中心入驻事件触发创建
+    ├── status (10=正常/20=已冻结) → 与 customer.service_status 联动
+    └── 不存储 customer_name      → 通过接口实时查询
+
+  角色 (role) — 引用系统设置模块
+    └── role_code = 'ROOT'        → 由客商中心入驻事件触发创建
+</code></pre></p><p><blockquote><strong>★ 变更（2026-09-12）</strong>：<code>customer_level</code> 的用途从「暂不控制权限」升级为<strong>三张优惠表「客户等级」维度的匹配输入</strong>（原 v1.2 的「未来如需按等级差异化定价，再补充」已落地）。</blockquote></p><p><h3 id="6-2-跨模块同步数据流">6.2 跨模块同步数据流</h3></p><p><strong>SF1 — ROOT账户创建（接收方）</strong>：</p><p><pre><code>客商中心调用: POST /api/shipper/sub-account/create-root
+  body: { customer_id, customer_name, contact_email, contact_phone }
+
+货主端处理:
+  1. 幂等检查: SELECT * FROM sub_account WHERE customer_id=X AND is_root=true
+     → 已存在 → 返回已有记录（不重复创建）
+  2. 创建 ROOT 子账号:
+     INSERT INTO sub_account (
+       customer_id, account='admin', is_root=true,
+       password_hash=bcrypt(random_password),
+       last_name='管理员', first_name='',
+       full_name='管理员', gender=10, phone=contact_phone,
+       email=contact_email, status=10
+     )
+     -- ★ 变更（2026-09-12）：contact_email 来自客商中心「客户联系人.邮箱」，
+     --   该字段在客商中心侧必填（is_account_receiver=true），因此 ROOT 账号邮箱必有值；
+     --   这与"货主端手动创建的子账号邮箱非必填"不矛盾（D1 已定，见 §2.1）
+  3. 创建 ROOT 角色（若不存在）:
+     INSERT INTO role (role_code='ROOT', role_name='主账号默认角色', ...)
+     ON CONFLICT (tenant_id, role_code) DO NOTHING
+  4. 关联 ROOT 角色:
+     INSERT INTO sub_account_role (sub_account_id, role_id)
+  5. 发送邮件: 账号+密码+登录地址
+  6. 返回: { sub_account_id, account, temp_password }
+</code></pre></p><p><strong>SF2 — 批量冻结（接收方）</strong>：</p><p><pre><code>客商中心调用: POST /api/shipper/sub-account/batch-freeze
+  body: { customer_id }
+
+货主端处理:
+  UPDATE sub_account SET status = 20, updated_at = NOW()
+  WHERE customer_id = X AND is_deleted = false AND status = 10
+  → 返回 { frozen_count: N }
+</code></pre></p><p><strong>SF3 — 批量启用（接收方）</strong>：</p><p><pre><code>同 SF2，status: 20→10
+</code></pre></p><p><strong>SF4 — 登录状态校验（调用方）</strong>：</p><p><pre><code>货主端登录时:
+  1. 校验 sub_account 是否存在且未冻结
+  2. 调用 GET /api/customer/{customer_id}/status
+     → 返回: { service_status, sign_status, customer_name }
+  3. service_status = 20 (已冻结) → 拒绝登录
+  4. 缓存 customer_name 到 Redis (TTL=1h)，减少重复调用
+</code></pre></p><p><h3 id="6-3-跨模块接口契约">6.3 跨模块接口契约</h3></p><p><div class="table-wrapper"><table><tr><td>接口</td><td>方法</td><td>路径</td><td>提供方</td><td>调用方</td><td>幂等性</td><td>超时</td></tr>
+<tr><td>------</td><td>------</td><td>------</td><td>--------</td><td>--------</td><td>--------</td><td>------</td></tr>
+<tr><td>创建ROOT子账号</td><td>POST</td><td>/api/shipper/sub-account/create-root</td><td>货主端</td><td>客商中心</td><td>✅ customer_id去重</td><td>5s</td></tr>
+<tr><td>批量冻结子账号</td><td>POST</td><td>/api/shipper/sub-account/batch-freeze</td><td>货主端</td><td>客商中心</td><td>✅ 已冻结跳过</td><td>3s</td></tr>
+<tr><td>批量启用子账号</td><td>POST</td><td>/api/shipper/sub-account/batch-enable</td><td>货主端</td><td>客商中心</td><td>✅ 已启用跳过</td><td>3s</td></tr>
+<tr><td>查询客户状态</td><td>GET</td><td>/api/customer/{id}/status</td><td>客商中心</td><td>货主端</td><td>—</td><td>2s</td></tr>
+<tr><td>查询客户信息</td><td>GET</td><td>/api/customer/{id}/profile</td><td>客商中心</td><td>货主端</td><td>—</td><td>2s</td></tr>
+<tr><td><strong>报价查询</strong></td><td><strong>POST</strong></td><td><strong>/api/freight-rate/query</strong> 或 <strong>GET /api/v1/quote/query?caller=shipper</strong></td><td><strong>超级运价</strong></td><td><strong>货主端</strong></td><td>—</td><td><strong>3s</strong></td></tr>
+</table></div>
+<blockquote><strong>★ 变更（2026-09-12）</strong>：新增「报价查询」接口行。超级运价 PRD 同时出现两个路径（§5.12 关联接口 <code>POST /api/freight-rate/query</code>、§R27 <code>GET /api/v1/quote/query</code>），<strong>两者口径不一致，待确认以哪个为准</strong>（已列入 §8）。</blockquote></p><p><h3 id="6-4-登录校验链-完整">6.4 登录校验链（完整）</h3></p><p><pre><code>货主端登录 POST /api/shipper/auth/login
+  ↓
+Step 1: 验证账号密码
+  → 匹配 sub_account.account 或 sub_account.email
+  → bcrypt.compare(password, password_hash)
+  → 失败 → 401 "账号或密码错误"
+  ↓
+Step 2: 校验子账号状态
+  → sub_account.status != 10 → 403 "账号已被冻结"
+  → sub_account.is_deleted = true → 401 "账号不存在"
+  ↓
+Step 3: 校验企业客户状态（跨模块调用）
+  → GET /api/customer/{customer_id}/status
+  → service_status != 10 → 403 "您的企业账户已被冻结，请联系客服"
+  → 超时(&gt;2s) → 降级: 允许登录但记录告警日志
+  ↓
+Step 4: 签发 JWT token
+  → payload: { sub_account_id, customer_id, is_root }
+  → expire: 24h
+  → 返回: { token, username, customer_name }
+</code></pre></p><p><h3 id="6-5-失败降级策略">6.5 失败降级策略</h3></p><p><ul><li><strong>create-root 调用失败</strong>（客商中心侧）：客商中心异步重试3次(10s/30s/60s)，仍失败进入 pending_sync 队列，定时任务补推</li>
+<li><strong>batch-freeze/enable 调用失败</strong>：不回滚客商中心操作，记录异常日志+运维告警</li>
+<li><strong>GET /api/customer/{id}/status 超时</strong>：允许登录（降级），但限制下单（必须同步校验通过才能下单），记录告警日志</li>
+<li><strong>报价查询接口超时/不可用</strong>（3s）：<strong>★ 变更（2026-09-12）</strong> 查价页提示"系统繁忙，请稍后重试"，<strong>不降级返回缓存价</strong>（价格时效性要求高，返回过期价会造成客诉）</li>
+</ul>
+<h3 id="6-6-共享实体字段变更同步">6.6 共享实体字段变更同步</h3></p><p><div class="table-wrapper"><table><tr><td>场景</td><td>客商中心变更</td><td>货主端影响</td><td>同步机制</td></tr>
+<tr><td>------</td><td>------------</td><td>-----------</td><td>---------</td></tr>
+<tr><td>客户名称变更</td><td>customer.customer_name 更新</td><td>首页欢迎语需反映最新名称</td><td>货主端每次登录/刷新时实时查询</td></tr>
+<tr><td>客户冻结</td><td>customer.service_status: 10→20</td><td>所有子账号冻结+禁止登录</td><td>batch-freeze 推送 + 登录时实时校验</td></tr>
+<tr><td>客户启用</td><td>customer.service_status: 20→10</td><td>所有子账号恢复登录</td><td>batch-enable 推送 + 登录时实时校验</td></tr>
+<tr><td>合同签约完成</td><td>customer.sign_status: 20→30</td><td>下单限制解除</td><td>下单时实时查询 sign_status</td></tr>
+<tr><td>合同过期</td><td>customer.sign_status: 30→40</td><td>下单时提示续约</td><td>下单时实时查询 sign_status</td></tr>
+<tr><td><strong>客户等级变更</strong></td><td><strong>customer_level 更新</strong></td><td><strong>★ 变更（2026-09-12）</strong>：<strong>直接影响查价结果</strong>——三张优惠表按「客户等级」匹配的规则可能命中/失效，报价随之变化</td><td><strong>查价时实时取当前等级</strong>（不缓存等级；<code>customer</code> 状态接口每次查价同步调用）</td></tr>
+</table></div>
+<hr></p><p><h2 id="7-变更摘要-2026-09-12">7. 变更摘要（2026-09-12）</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>变更点</td><td>旧口径</td><td>新口径</td></tr>
+<tr><td>---</td><td>--------</td><td>--------</td><td>--------</td></tr>
+<tr><td>1</td><td>泡比优惠分期</td><td>~~二期~~</td><td><strong>一期启用</strong>（阈值阶梯 + 固定减免，多条命中取阈值最大档，与运费优惠叠加）</td></tr>
+<tr><td>2</td><td>优惠对象类型</td><td>~~一期仅「客户等级」，「客户特批」二期~~</td><td><strong>一期同时开放「客户特批」+「客户等级」</strong>；<strong>特批 > 等级，高覆盖低不叠加</strong></td></tr>
+<tr><td>3</td><td>飞书审批编号</td><td>~~二期开放、一期恒为空~~</td><td><strong>一期必填（客户特批时）</strong>，<strong>人工录入，不对接飞书审批流</strong></td></tr>
+<tr><td>4</td><td>结果行字段</td><td><code>base_price</code>/<code>surcharge_detail</code>/<code>final_price</code> 三字段</td><td>新增 <code>service_combination_code</code> / <code>delivery_regions</code> / <code>freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code> / <code>sailing_info</code>(JSON)</td></tr>
+<tr><td>5</td><td><code>final_price</code> 公式</td><td>公布价 + 附加费 − 优惠</td><td><strong>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</strong></td></tr>
+<tr><td>6</td><td>引用表</td><td>无泡比优惠、无船期</td><td>新增 <code>density_discount</code>、<code>sailing_schedule</code></td></tr>
+<tr><td>7</td><td>邮箱必填（D1）</td><td>待确认</td><td><strong>已定</strong>：货主端手动创建子账号邮箱非必填；客商中心客户联系人邮箱必填</td></tr>
+<tr><td>8</td><td>页面名</td><td>收货地址管理</td><td><strong>地址管理</strong>（对齐原型）</td></tr>
+</table></div>
+<hr></p><p><h2 id="8-不一致处理标注">8. 不一致处理标注</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>不一致点</td><td>超级运价 / 客商中心口径</td><td>货主端原型现状</td><td>处理</td></tr>
+<tr><td>---</td><td>---------</td><td>----------------------</td><td>--------------</td><td>------</td></tr>
+<tr><td><strong>E9</strong></td><td><strong>超重超长是否在查价阶段计算</strong></td><td>超级运价已定：<strong>超重超长只在「拣货」触发</strong>（需拣货实测尺寸/重量）；RDD 明确「<strong>运价查询阶段不计算</strong>」</td><td><code>查价订舱.html</code> <strong>当前按客户自填尺寸/货物属性在查价阶段即计算并展示</strong>「超重件加收 200/件（按件）」「超重超长 200/箱（按箱）」；2026-09-12 已在报价结果区上方加提示条「超重超长费用将在拣货实测后计算……实际费用以实测结果为准」</td><td><strong>⚠️ 待产品确认，本文档不预设结论。</strong> 候选：<strong>(A)</strong> 查价阶段彻底不算超重超长；<strong>(B)</strong> 保留为"预估展示"但<strong>不落库、不进账单</strong>。确认后需同步修改本文件 §2.4 <code>surcharge_detail</code> 口径</td></tr>
+<tr><td>D1</td><td>联系人邮箱必填</td><td>客商中心：客户联系人.email 必填</td><td>货主端子账号.email 非必填（原型必填项仅 账号/姓/名/性别/手机号）</td><td><strong>✅ 已定（2026-09-12）</strong>：ROOT 账号邮箱来自客户联系人（<code>is_account_receiver=true</code>，必填）；<strong>手动创建的子账号邮箱非必填</strong>。二者不矛盾，非缺陷</td></tr>
+<tr><td>D2</td><td>ROOT冻结</td><td>客商中心 R25"关联账户同步冻结"</td><td>货主端"ROOT不可冻结"</td><td><strong>已解决</strong>：ROOT 不可被企业管理员<strong>单独</strong>冻结（前端隐藏按钮），但随客户冻结联动是系统级操作，不受此限制</td></tr>
+<tr><td>D3</td><td>角色表归属</td><td>客商中心不管理角色</td><td>货主端角色表引用系统设置模块</td><td><strong>已对齐</strong>：角色统一由系统设置模块管理，货主端只做引用和分配</td></tr>
+<tr><td><strong>D4</strong></td><td><strong>报价查询接口路径</strong></td><td>超级运价 PRD §5.12 写 <code>POST /api/freight-rate/query</code>；§R27 写 <code>GET /api/v1/quote/query?caller=shipper</code></td><td>货主端原 PRD 写 <code>POST /api/shipper/inquiry/price</code></td><td><strong>⚠️ 待确认</strong>：三个路径并存，需产品/研发确认货主端对接的唯一接口。本文档不自行选定</td></tr>
+<tr><td><strong>D5</strong></td><td><strong>优惠后金额的展示顺序</strong></td><td>超级运价 §7.4：<code>最终报价 = 折扣后运费 + 优惠后附加费</code>（先算折扣后运费，再加附加费净额）</td><td>原型费用明细弹窗：<code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code></td><td><strong>数值等价、展示顺序不同</strong>（减法可交换）。<strong>⚠️ 待确认</strong>：以哪个公式作为"研发唯一口径"表述</td></tr>
+<tr><td><strong>D6</strong></td><td><strong>附加入库/账单的叠加口径</strong></td><td>超级运价 §7.4 <code>折扣后运费 = 公布价 − Σ运费固定减免 − Σ泡比固定减免</code></td><td>原型 <code>finalUnit = afterFreight + scTotal − ddVal</code>（先减运费优惠得 <code>afterFreight</code>，加附加费净额，最后减泡比优惠）</td><td>同 D5，数值等价。<strong>⚠️ 待确认</strong>：泡比优惠在"是否可抵扣附加费"上两种写法都成立（因为都是纯减法），但若后续引入"附加费不可被泡比优惠抵扣"的业务约束则二者不等价</td></tr>
+<tr><td><strong>D7</strong></td><td><strong>原型缺页</strong></td><td>—</td><td>菜单已挂、<strong>页面文件不存在</strong>：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td><strong>如实标注为「菜单已挂、页面待建」</strong>，不计入已完成功能。<strong>⚠️ 待确认</strong>：是否本期建设</td></tr>
+</table></div>
+<hr>
+<blockquote>执行完成后，若修改了任何设计文件，自动执行 project-rule 文件联动规则，确保关联文件一致性。</blockquote>
+</p></div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:"default",securityLevel:"loose"});</script>
+</body>
+</html>

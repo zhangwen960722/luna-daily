@@ -563,7 +563,9 @@
 <li>报价的优惠部分对客户仍是黑盒，与货主端 RDD「报价透明度」的目标冲突；</li>
 <li>二期浮动优惠核销必须有落库载体。</li>
 </ul>
-<strong>处置（本期决策）</strong>：一期不预建 <code>discount_apply_log</code> 表，缺口记录在此；二期营销模块落地时一并建 <code>discount_apply_log</code>（M7），并把一期历史数据的明细判定为<strong>不回溯</strong>（一期 <code>ar_flow.discount</code> 汇总值保持不变，不做反向拆解）。</p><p><h4 id="3-20-5-已知缺口-报价不留痕-优惠被算两次-且中间会变">3.20.5 已知缺口：报价不留痕（优惠被算两次，且中间会变）</h4></p><p><blockquote><strong>这是 §3.20.4 之外的第二类缺口，性质不同：前者是"算完查不到"，这里是"算的时候和看的时候不一致"。</strong></blockquote></p><p><strong>现状链路</strong>（已核实）：</p><p><div class="table-wrapper"><table><tr><td>时点</td><td>动作</td><td>是否落库</td></tr>
+<strong>处置（本期决策）</strong>：一期不预建 <code>discount_apply_log</code> 表，缺口记录在此；二期营销模块落地时一并建 <code>discount_apply_log</code>（M7），并把一期历史数据的明细判定为<strong>不回溯</strong>（一期 <code>ar_flow.discount</code> 汇总值保持不变，不做反向拆解）。</p><p><h4 id="3-20-5-已知缺口-报价不留痕-优惠被算两次-且中间会变">3.20.5 已知缺口：报价不留痕（优惠被算两次，且中间会变）</h4></p><p><blockquote><strong>这是 §3.20.4 之外的第二类缺口，性质不同：前者是"算完查不到"，这里是"算的时候和看的时候不一致"。</strong></blockquote>
+>
+<blockquote><strong>★ 优惠取数口径（2026-09-12 产品确认）</strong>：费用流水生成时，优惠值<strong>从三张优惠规则表实时匹配得出</strong>——即 <code>freight_discount</code>（运费优惠）/ <code>density_discount</code>（泡比优惠）/ <code>surcharge_discount</code>（附加费优惠），按<strong>当周批次（公布价、汇率、折算基准）+ 运单承载的客户身份（客户ID / 客户等级）</strong>在<strong>费用生成时点</strong>重新匹配计算。<strong>因此"查价时点看到的优惠金额不具约束力"</strong>——查价是实时试算，不落库、不参与后续计费；流水与账单一律以<strong>费用生成时点的重算结果</strong>为准。没有"查价快照"载体，这是当前模型的唯一可行口径（二期由 <code>query_log</code> + <code>discount_apply_log</code> + 运单报价快照三件套闭环）。</blockquote></p><p><strong>现状链路</strong>（已核实）：</p><p><div class="table-wrapper"><table><tr><td>时点</td><td>动作</td><td>是否落库</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td>① 查价</td><td>货主端「查价订舱」/ 员工端「运价查询」实时匹配优惠 → 结果表展示 公布价/运费优惠/附加费/最终报价</td><td>❌ <strong>结果不落库</strong>（<code>query_log</code> 为二期）</td></tr>
 <tr><td>② 收货</td><td>财务按<strong>当周报价表</strong>生成业务流水，优惠<strong>重新匹配一次</strong></td><td>✅ 落 <code>ar_flow.discount</code></td></tr>
@@ -581,7 +583,7 @@
 <tr><td>商业地址接口</td><td>传入地址 → 返回商业/私人/偏远</td><td>附加费规则：地址类型匹配</td></tr>
 <tr><td>SRM 供应商管理</td><td>获取干线运输供应商列表（按港口类型过滤明细：海运/非海运）</td><td>航线.供应商下拉</td></tr>
 <tr><td>港口主数据</td><td>获取港口列表（名称+代码）</td><td>航线.出发港/目的港下拉</td></tr>
-<tr><td>仓库列表</td><td>获取交货地列表（代码+名称+邮编）</td><td>船期.截单时间按交货地、附加费「<strong>交货站点</strong>」维度、交货地下拉</td></tr>
+<tr><td>仓库列表</td><td>获取交货地列表（代码+名称+邮编）+ <strong>本地仓仓库名称列表</strong>（附加费「<strong>交货站点</strong>」维度取值）</td><td>船期.截单时间按交货地、附加费「<strong>交货站点</strong>」维度、交货地下拉。<strong>★ 来源页面：<code>仓库列表_主列表.html</code> 的「本地仓」Tab（2026-09-12 确认），不依赖「末端管理」</strong></td></tr>
 <tr><td>商品管理</td><td>获取 SKU 属性标签</td><td>附加费规则：SKU属性匹配</td></tr>
 <tr><td>客户管理</td><td>获取客户信息（编号+等级）+ <strong>启用客户列表</strong>（客户特批「目标客户」多选下拉）</td><td>运费优惠、<strong>泡比优惠</strong>、附加费优惠、运价查询</td></tr>
 <tr><td>等级管理</td><td>获取客户等级列表</td><td>运费优惠、<strong>泡比优惠</strong>、附加费优惠</td></tr>
@@ -604,14 +606,16 @@
     G --&gt;|是| H[取公布价]
     G --&gt;|否| I[标记暂未报价&lt;br&gt;展示渠道]
     H --&gt; J{选择了客户?}
-    J --&gt;|是| K[匹配运费优惠]
+    J --&gt;|是| K[匹配运费优惠&lt;br&gt;客户特批 &gt; 客户等级&lt;br&gt;只取命中优先级最高的一条]
     J --&gt;|否| L[跳过优惠]
-    K --&gt; L
+K --&gt; K2[匹配**泡比优惠**&lt;br&gt;泡比 = 实重 ÷ 体积 ≥ 阈值&lt;br&gt;多条命中取阈值最大那一档]
+K2 --&gt; L
     L --&gt; M[匹配附加费规则]
     M --&gt; N{选择了客户?}
     N --&gt;|是| O[匹配附加费优惠]
     N --&gt;|否| P[跳过]
     O --&gt; P
+M -.-&gt; M2[说明：「字段&amp;公式」型附加费（如超重超长）&lt;br&gt;在**拣货**节点触发、需实测尺寸与重量，&lt;br&gt;**运价查询阶段不计算**]
     P --&gt; Q[船期关联&lt;br&gt;取最快提取/送仓时间]
     Q --&gt; R[底线检查&lt;br&gt;绿灯/黄灯/红灯]
     R --&gt; S[展示多渠道比价结果]
@@ -673,7 +677,7 @@
 <tr><td><strong>数据一致性</strong></td><td>删除已被渠道引用的成本项模板</td><td>P0</td><td>删除前校验引用计数，有关联渠道时禁止删除，提示"已被 X 个渠道引用"</td></tr>
 <tr><td><strong>数据一致性</strong></td><td>周批次骨架重生时，旧批次引用的渠道/组合/成本项已失效</td><td>P1</td><td>骨架重生自动对齐当前架构——失效架构不纳入新批次骨架，新增架构自动铺底并标记「新增」</td></tr>
 <tr><td><strong>逆向异常</strong></td><td>运价已发布到 CURRENT 批次，发现错误需要撤回</td><td>P2</td><td>一期不做版本回滚（Phase 3），运价管理员手动覆盖正确的价格</td></tr>
-<tr><td><strong>逆向异常</strong></td><td>特批价生效后客户关系终止，优惠需要立即失效（<strong>★ 2026-09-12：客户特批进一期后，本风险一期即存在</strong>）</td><td>P1</td><td>提供"手动过期"按钮，运价管理员可提前终止优惠规则（<strong>原型已有「状态」列 + 删除行；一期是否需要「手动过期」入口待产品确认</strong>）</td></tr>
+<tr><td><strong>逆向异常</strong></td><td>特批价生效后客户关系终止，优惠需要立即失效（<strong>★ 2026-09-12：客户特批进一期后，本风险一期即存在</strong>）</td><td>P1</td><td><strong>不单独做「手动过期」入口——直接删除该条优惠规则即可</strong>（<strong>★ 2026-09-12 产品确认</strong>：优惠规则在编辑弹窗内<strong>支持直接删除行</strong>，"提前终止"用删除表达；该口径<strong>对三张优惠表全部适用</strong>，不区分特批/等级）。删除后<strong>仅影响后续计算</strong>——已生成并写入运单的费用流水不受影响（优惠已在生成时点进入流水金额）</td></tr>
 <tr><td><strong>权限安全</strong></td><td>销售查看运价时通过接口参数猜出成本底价</td><td>P0</td><td>货主端接口不返回 每公斤成本/每立方米成本；运营端接口校验角色权限</td></tr>
 <tr><td><strong>权限安全</strong></td><td>运价管理员 A 修改了运价管理员 B 配置的渠道</td><td>P1</td><td>暂不做操作级权限隔离（一期 5-10 人团队），依赖审计日志追溯</td></tr>
 <tr><td><strong>时间边界</strong></td><td>周批次自动流转时（周日 24:00），有人正在编辑本周运价</td><td>P2</td><td>流转前检查是否有未保存的编辑，弹窗提示"系统即将切换批次"</td></tr>

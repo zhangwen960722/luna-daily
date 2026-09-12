@@ -218,7 +218,7 @@
 </code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
 <tr><td>---------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr>
 <tr><td>正常</td><td>固定期限到期</td><td>已失效</td><td>系统定时任务</td><td>valid_to ≤ 当前日期</td></tr>
-<tr><td>正常</td><td>单次有效被运单引用</td><td>已失效</td><td>系统</td><td>有非取消的运单关联此优惠规则后自动失效</td></tr>
+<tr><td>正常</td><td>单次有效被运单引用</td><td>已失效</td><td>系统</td><td>有非取消的运单关联此优惠规则后自动失效（<strong>★ 二期</strong>——一期 <code>validity_type=30</code> 未开放，本路径一期不发生）</td></tr>
 </table></div>
 <blockquote>到期前 7 天系统推送提醒给运价管理员。已失效后运价查询不再展示，但历史运单仍可追溯原优惠。</blockquote></p><p><h3 id="3-4-附加费规则-附加费规则-status">3.4 附加费规则 <code>附加费规则.status</code></h3></p><p><pre><code>正常(正常=10) ──{冻结}──→ 已冻结(已冻结=20)
 已冻结(已冻结=20) ──{解冻}──→ 正常(正常=10)
@@ -512,7 +512,7 @@
 <tr><td>5</td><td>报关方式</td><td>普通报关 / 9710 / 9810 / 1010 / 1039</td><td>单选</td><td>枚举</td></tr>
 <tr><td>6</td><td>自送标识</td><td>是 / 否</td><td>单选</td><td>运单</td></tr>
 <tr><td>7</td><td>邮编</td><td>是（第三方接口判定）</td><td>单选</td><td>第三方接口</td></tr>
-<tr><td>8</td><td><strong>交货站点</strong></td><td>仓库名称（如 花都仓 / 白云仓）</td><td><strong>多选</strong></td><td><strong>仓库列表-本地仓 的仓库名称</strong>（与「交货地」同一主数据）</td></tr>
+<tr><td>8</td><td><strong>交货站点</strong></td><td>仓库名称（如 花都仓 / 白云仓）</td><td><strong>多选</strong></td><td><strong>仓库列表-本地仓 的仓库名称</strong>（与「交货地」同一主数据）；<strong>★ 取值页面已确认（2026-09-12）</strong>：来源 <code>demo/员工端-demo/仓库列表_主列表.html</code> 的「<strong>本地仓</strong>」Tab 的<strong>仓库名称</strong>（该页有多个 Tab，只取「本地仓」这一个 Tab）</td></tr>
 <tr><td>9</td><td><strong>服务组合</strong></td><td>服务组合名称</td><td><strong>多选</strong></td><td>超级运价-服务组合（启用中）</td></tr>
 <tr><td>10</td><td><strong>用户</strong></td><td>客户名称</td><td><strong>多选</strong></td><td>客商中心-客户管理（正常客户）</td></tr>
 </table></div>
@@ -532,7 +532,7 @@
 <tr><td>scope_ids</td><td>生效范围ID列表</td><td>数组</td><td>条件</td><td>scope_type=20时取正常的服务渠道名称；scope_type=30时取服务组合</td></tr>
 <tr><td>pricing_rows</td><td>计价明细</td><td>数组</td><td>条件</td><td>action_type=10 时必填。<strong>费用方向固定「应收」（<code>fee_direction</code> 恒 10）</strong>，一期<strong>仅 1 行</strong>（应付方向二期拓展）；约束：<strong>同一费用方向最多 1 行</strong>。每行含 fee_direction/fee_label/pricing_unit/price/currency（明细列：费用方向(只读) / 费用类型 / 计价单位 / 单价 / 币种），<strong>「计价单位」在明细行内</strong>（规则级不设该字段）</td></tr>
 <tr><td>status</td><td>状态</td><td>小整数</td><td>✅</td><td>10/20；大列表控制，弹窗不展示</td></tr>
-<tr><td>tag_id</td><td>附加费标识</td><td>小整数</td><td>✅</td><td><strong>单选，必选</strong>（不分动作类型）。引用基础资料-标识管理 <code>tag.id</code>；下拉仅展示 <code>tag_type</code>=20(附加费标识) 且 status=10(正常) 的标识</td></tr>
+<tr><td>tag_id</td><td>附加费标识</td><td><strong>长整数</strong></td><td>✅</td><td><strong>单选，必选</strong>（不分动作类型）。引用基础资料-标识管理 <code>tag.id</code>；下拉仅展示 <code>tag_type</code>=20(附加费标识) 且 status=10(正常) 的标识</td></tr>
 </table></div>
 <strong>附加费标识字段说明</strong>：
 <ul><li>位置：规则弹窗"执行动作"区块下方，独立分区（④ 附加费标识）</li>
@@ -986,7 +986,7 @@
 <tr><td>A09</td><td>批量更新</td><td>手动操作</td><td>改模板默认价→展示受影响清单→勾选→批量刷</td><td>AC6</td></tr>
 <tr><td>A10</td><td>附加费三类型CRUD（字段匹配/字段&公式/人工添加）</td><td>手动操作</td><td>三类型各创建→保存→列表筛选；字段&公式公式条件为空时阻止保存；动作类型仅两值可选</td><td>AC7~AC12</td></tr>
 <tr><td>A11</td><td>运费优惠叠加</td><td>构造数据</td><td><strong>一期</strong>：同一客户命中客户特批 + 客户等级两条规则 → 查价 → <strong>特批覆盖等级（不叠加）</strong>；<strong>★ 二期</strong>：折扣率乘法 + 固定减免加法（一期运费优惠仅固定减免）</td><td>AC13~AC14</td></tr>
-<tr><td>A12</td><td>优惠生命周期</td><td>操作+等待</td><td>固定期限到期→自动过期；单次有效引用→自动过期</td><td>AC15</td></tr>
+<tr><td>A12</td><td>优惠生命周期</td><td>操作+等待</td><td><strong>一期</strong>：固定期限到期→自动过期（一期只有这一条自动失效路径）。<strong>★ 二期</strong>：单次有效被运单引用→自动过期（<code>validity_type=30</code> 一期未开放）</td><td>AC15</td></tr>
 <tr><td>A13</td><td>价格底线三色</td><td>构造数据</td><td>构造绿/黄/红场景→查询展示对应标识</td><td>AC17</td></tr>
 <tr><td>A14</td><td>运价查询 < 3秒</td><td>压测</td><td>全量渠道正常条件下查询</td><td>AC22</td></tr>
 <tr><td>A15</td><td>无匹配不显示</td><td>构造数据</td><td>输入未配置仓点→不显示该组合</td><td>AC0o, AC22</td></tr>
