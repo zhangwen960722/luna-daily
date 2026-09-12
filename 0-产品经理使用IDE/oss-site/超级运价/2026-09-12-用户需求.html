@@ -894,6 +894,7 @@ Phase 2 —— 新建「营销模块」，所有优惠规则统一配置
 <tr><td>状态</td><td>枚举</td><td>自动</td><td><code>生效中</code> / <code>已失效</code>。系统自动维护：①固定期限到期自动变更为已失效；②单次有效：有非取消的运单关联此优惠规则后自动变更为已失效（<strong>二期</strong>，一期不产生该状态）。不可手动修改</td></tr>
 </table></div>
 <blockquote>~~<strong>★ 一期范围收缩（2026-09-11）</strong>：与 §9.1 同步——<strong>「客户特批」与「单次有效」一期不做</strong>。~~ <strong>★ 变更（2026-09-12）：本条作废——附加费优惠一期同时开放「客户等级」/「客户特批」，仅「单次有效」仍留 Phase 2。</strong> 三张优惠表共用同一套 <code>target_type</code> / <code>validity_type</code> 枚举，口径必须一致，否则同一枚举在不同表里含义不同，开发与运价管理员都会踩坑。</blockquote></p><p><blockquote><strong>★ 上限口径变更（2026-09-11）</strong>：附加费优惠<strong>不再依赖规则的 <code>可优惠级别</code></strong>（该字段与 BPR-4 级联校验一并取消，见 §8.2 / §9.3）——上限校验改为直接对比<strong>计价明细「应收」行的单价</strong>：固定减免 <code>优惠值 ≤ 应收单价</code>、折扣率 <code>0.01 ≤ 率 ≤ 1</code>；无应收行时拒绝配置优惠。「不可优惠」类政策改为<strong>不建优惠规则</strong>。</blockquote></p><p><blockquote><strong>设计决策</strong>：规则直接挂在附加费规则上，无适用范围字段（天然绑定所在规则）。一期目标为<strong>客户等级多选 + 客户特批多选</strong>——一条规则可覆盖多个等级或多个客户。~~二期开放客户特批后，优先级为~~ <strong>★ 变更（2026-09-12）：优先级 客户特批 > 客户等级（高覆盖低，不叠加）一期即生效。</strong> 与运费优惠独立计算，互不交叉。</blockquote></p><p><hr></p><p><h3 id="9-3-业务规则">9.3 业务规则</h3></p><p><strong>优惠优先级与覆盖规则</strong>：
+<strong>★ 优惠值正负号铁律（2026-09-12 明确）</strong>：<strong>固定减免</strong>填<strong>正数 = 减钱（正向优惠）</strong>、填<strong>负数 = 加价（反向优惠）</strong>——系统按 <code>金额 − 优惠值</code> 计算，故存正数才是减钱；<strong>折扣率</strong> <code><1</code> = 折扣、<code>=1</code> = 原价、<code>>1</code> = 加价（一期收紧为 <code>0.01~1</code>，<strong>不支持加价</strong>）。列表面板一律按此显示：正数显示 <code>-¥X</code>、负数显示 <code>+¥X</code>。
 <ul><li>二级优先级：客户特批 > 客户等级。同一组合/附加费规则上，特批规则命中后覆盖等级规则（不叠加、高覆盖低）。~~<strong>★ 二期——一期无客户特批，等级匹配即终判</strong>~~ <strong>★ 变更（2026-09-12）：一期即生效——</strong>同一客户同时被特批与等级命中时，只取「客户特批」那一条参与计算（取优先级最高的一条，不是两条累加）<strong>；特批命中即覆盖等级规则，无特批命中才回落到等级匹配。</strong></li>
 <li>唯一性约束：同一父实体 × 同一对象类型 × 同一目标（客户ID/等级ID），最多一条<strong>生效中</strong>的规则（已失效的历史规则不占用名额）。~~一期实际为<strong>同一父实体 × 同一等级最多一条</strong>~~ <strong>★ 变更（2026-09-12）：一期实际为同一父实体 × 同一对象类型 × 同一目标最多一条（等级目标是等级ID、特批目标是客户ID）。</strong>；<strong>★ 泡比优惠另加「同一密度阈值」维度</strong>——其唯一性键为 父实体 × <strong>密度阈值</strong> × 对象类型 × 目标，故同一目标在不同阈值档可各配一条（这正是「阶梯」的语义，不可一刀切为一条）。</li>
 <li>每条规则只绑定一种对象类型。同一种对象类型可创建多条规则（覆盖不同目标），但同一目标不可出现在多条同类型规则中</li>
@@ -967,7 +968,8 @@ ACTIVE
 <tr><td>仓库代码</td><td>否</td><td>下拉搜索，FBA 仓库代码（ONT8/LAX9/LGB8 等）；与邮编互斥，填仓库代码自动清空邮编</td></tr>
 <tr><td>交货地(收货仓)</td><td>否</td><td>下拉单选，拖车费按交货地计价（来源仓库列表-本地仓，如花都仓、白云仓），计入成本底价与公布价</td></tr>
 <tr><td>邮编(快递派)</td><td>否</td><td>输入框，仅快递派组合生效；快递派单价按邮编前缀计价；无邮编则快递派组合不返回，填邮编则卡派组合不返回；与仓库代码互斥</td></tr>
-<tr><td>当前客户</td><td>否</td><td>下拉单选，决定运费优惠/泡比优惠/附加费优惠匹配对象（客户特批优先级高于客户等级，★ 变更（2026-09-12）：一期即生效）</td></tr>
+<tr><td>当前客户</td><td>否</td><td>下拉单选，决定运费优惠/泡比优惠/附加费优惠匹配对象（客户特批优先级高于客户等级，★ 变更（2026-09-12）：一期即生效）；选中后自动带出该客户等级</td></tr>
+<tr><td><strong>客户等级</strong></td><td>否</td><td>下拉单选（SS/S/A~G 共 9 级），已选「当前客户」时置灰并由其带出</td><td><strong>★ 2026-09-12 新增</strong>：<strong>只选等级不选客户 → 只匹配等级优惠、不匹配客户特批</strong>；选客户 → 特批优先覆盖等级。解决"销售按等级报价不准"的问题</td></tr>
 <tr><td>包裹信息</td><td>✅</td><td>点击展开内联面板（简易录入 / 多件装箱，见下）</td></tr>
 <tr><td>查询报价</td><td>—</td><td>按钮，触发七步匹配引擎</td></tr>
 </table></div>
@@ -1072,7 +1074,7 @@ Step 7 — 底线检查
 <tr><td>附加费</td><td>✅</td><td>✅</td><td>✅</td></tr>
 <tr><td>船期</td><td>✅</td><td>✅</td><td>✅</td></tr>
 </table></div>
-<blockquote><strong>数据安全</strong>：成本底价和盈亏灯仅运营端可见。货主端和公开计算器不暴露成本信息。</blockquote></p><p><blockquote><strong>货主端客户识别</strong>：货主端在线询价无「当前客户」下拉框，后台默认取当前登录货主身份（caller=shipper 自动识别）匹配优惠，不可手动切换。</blockquote></p><p><h3 id="10-5-分享链接与公开运费计算器">10.5 分享链接与公开运费计算器</h3></p><p><strong>链接</strong>：<code>https://flytrans.com/calculator</code> —— 新媒体发公众号/社群/朋友圈、销售发客户群，统一用这一个链接。</p><p><strong>页面行为</strong>：</p><p><div class="table-wrapper"><table><tr><td>访问者</td><td>看到什么</td></tr>
+<blockquote><strong>数据安全</strong>：成本底价和盈亏灯仅运营端可见。货主端和公开计算器不暴露成本信息。</blockquote></p><p><blockquote><strong>货主端客户识别</strong>：货主端在线询价<strong>无「当前客户」与「客户等级」两个下拉框</strong>——后台默认取当前登录货主身份（<code>caller=shipper</code> 自动识别）及其等级匹配优惠，不可手动切换。<strong>这两个条件是员工端运价查询专有</strong>（供销售代客报价 / 按等级试算用）。公开计算器（<code>caller=public</code>）两者都没有。</blockquote></p><p><h3 id="10-5-分享链接与公开运费计算器">10.5 分享链接与公开运费计算器</h3></p><p><strong>链接</strong>：<code>https://flytrans.com/calculator</code> —— 新媒体发公众号/社群/朋友圈、销售发客户群，统一用这一个链接。</p><p><strong>页面行为</strong>：</p><p><div class="table-wrapper"><table><tr><td>访问者</td><td>看到什么</td></tr>
 <tr><td>:---</td><td>:---</td></tr>
 <tr><td>免登录</td><td>输入货物参数 → 基础公布价 + 附加费。底部提示"登录查看您的专属优惠价"</td></tr>
 <tr><td>登录（已注册客户）</td><td>输入货物参数 → 基础公布价 + 附加费 + 该客户的运费优惠 + 泡比优惠（★ 变更（2026-09-12）：泡比优惠一期已启用，原「<strong>★ 二期</strong>：+ 泡比优惠」作废）</td></tr>

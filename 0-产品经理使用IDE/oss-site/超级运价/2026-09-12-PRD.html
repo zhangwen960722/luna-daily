@@ -146,7 +146,7 @@
 <tr><td>对象类型</td><td>10</td><td>客户特批</td><td>客户特批</td><td><strong>一期开放</strong>（~~一期不开放（二期）~~ 作废）——原属"额外单次优惠"场景；一期以<strong>人工录入审批编号</strong>（<code>approval_no</code>）作追溯凭据，<strong>不对接飞书审批流</strong>。三张优惠表通用；<code>target_type=10</code> 时 <code>target_customers</code> 与 <code>approval_no</code> 均必填</td></tr>
 <tr><td>对象类型</td><td>20</td><td>客户等级</td><td>客户等级</td><td><strong>一期可用</strong>（~~一期唯一可用~~ 作废——10:客户特批同期开放）。<code>target_type=20</code> 时 <code>target_levels</code> 必填、<code>approval_no</code> 为空</td></tr>
 <tr><td>优惠方式</td><td>10</td><td>折扣率</td><td>折扣率</td><td><strong>一期仅「附加费优惠」可用</strong>（运费优惠/泡比优惠二期开放，一期两者均为纯固定减免）。语义为<strong>乘数</strong>：0.01\~9.99，<1=折扣（0.9=九折）、=1=原价、>1=加价（1.5=加价 50%）；<strong>一期仅附加费优惠使用，取值收紧为 0.01\~1.00（一期不支持加价）</strong>，>1 加价二期开放。落库字段 <code>discount_rate</code> 小数(6,4)</td></tr>
-<tr><td>优惠方式</td><td>20</td><td>固定减免</td><td>固定减免</td><td><strong>一期全部优惠均支持</strong>。单位=元/计价单位（KG→元/KG，m³→元/m³），与「默认加成额」同口径；支持负数（负数=加价）。落库字段 <code>discount_amount</code> 小数(10,2)</td></tr>
+<tr><td>优惠方式</td><td>20</td><td>固定减免</td><td>固定减免</td><td><strong>一期全部优惠均支持</strong>。单位=元/计价单位（KG→元/KG，m³→元/m³），与「默认加成额」同口径；<strong>正数=减钱、负数=加价</strong>（★ 见下方「正负号铁律」）。落库字段 <code>discount_amount</code> 小数(10,2)</td></tr>
 <tr><td>优惠性质</td><td>10</td><td>固定优惠</td><td>固定优惠</td><td><strong>一期唯一</strong>：命中即生效，无需领取，有到期/被引用两种失效路径</td></tr>
 <tr><td>优惠性质</td><td>20</td><td>浮动优惠</td><td>浮动优惠</td><td><strong>二期·营销模块</strong>：需领取，带配额/预算与核销状态机（优惠券、满减、限时活动）</td></tr>
 <tr><td>有效期类型</td><td>10</td><td>永久有效</td><td>永久有效</td><td><strong>一期可用</strong></td></tr>
@@ -629,7 +629,8 @@
 <tr><td>仓库代码</td><td>否</td><td>下拉搜索，placeholder="请选择仓库代码"，默认空，可清空</td><td>FBA 仓库代码；与邮编互斥，填仓库代码自动清空邮编</td></tr>
 <tr><td>交货地(收货仓)</td><td>否</td><td>下拉单选，默认空，可清空</td><td>拖车费按交货地计价（来源仓库列表-本地仓，如花都仓、白云仓），计入成本底价与公布价；选交货地则仅返回覆盖该交货地的组合，未选则有交货地影响因素(拖车费)的组合不返回</td></tr>
 <tr><td>邮编(快递派)</td><td>否</td><td>输入框，默认空</td><td>仅快递派组合生效；快递派单价按邮编前缀计价，计入成本底价；无邮编则快递派组合不返回，填邮编则卡派组合不返回；与仓库代码互斥（填邮编自动清空仓库代码）</td></tr>
-<tr><td>当前客户</td><td>否</td><td>下拉单选，placeholder="当前客户（影响优惠）"，默认空</td><td>决定运费优惠/泡比优惠/附加费优惠匹配对象（客户特批优先级高于客户等级，<strong>一期即生效</strong>）</td></tr>
+<tr><td>当前客户</td><td>否</td><td>下拉单选，placeholder="当前客户（影响优惠）"，默认空</td><td>决定运费优惠/泡比优惠/附加费优惠匹配对象（客户特批优先级高于客户等级，<strong>一期即生效</strong>）。选中后<strong>自动带出该客户的等级</strong>到下一行</td></tr>
+<tr><td><strong>客户等级</strong></td><td>否</td><td>下拉单选（SS/S/A~G 共 9 级），placeholder="客户等级（影响优惠）"，默认空；<strong>已选「当前客户」时置灰</strong>（等级由该客户带出）</td><td><strong>★ 2026-09-12 新增</strong>：优惠按「客户特批 <strong>></strong> 客户等级」匹配。<strong>只选等级、不选客户 → 只匹配等级优惠，不匹配任何客户特批</strong>（销售按等级报价用）；选客户 → 等级自动带出、且特批优先覆盖等级。此前只有「当前客户」一个条件，<strong>销售按等级报价拿不到干净结果</strong></td></tr>
 <tr><td>包裹信息</td><td>✅</td><td>点击展开内联面板</td><td>空时显示"请输入包裹信息"，有数据时摘要显示件数·总重·体积</td></tr>
 <tr><td>查询报价</td><td>—</td><td>按钮</td><td>触发七步匹配引擎</td></tr>
 </table></div>

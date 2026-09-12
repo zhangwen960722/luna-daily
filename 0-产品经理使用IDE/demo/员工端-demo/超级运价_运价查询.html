@@ -53,7 +53,8 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
     <el-select v-model="query.wh" filterable clearable placeholder="请选择仓库代码" style="width:140px"><el-option v-for="o in warehouseOptions" :key="o" :label="o" :value="o"></el-option></el-select>
     <el-select v-model="query.deliveryRegion" placeholder="收货仓(交货地·选填)" clearable style="width:150px"><el-option v-for="o in deliveryRegionOptions" :key="o" :label="o" :value="o"></el-option></el-select>
     <el-input v-model="query.zip" placeholder="邮编(快递派)" clearable style="width:130px"></el-input>
-    <el-select v-model="query.customer" placeholder="当前客户（影响优惠）" clearable style="width:190px"><el-option v-for="c in customerOptions" :key="c.id" :label="c.name + '（' + c.level + '级）'" :value="c.id"></el-option></el-select>
+    <el-select v-model="query.customer" placeholder="当前客户（影响优惠）" clearable style="width:185px" @change="onCustomerChange"><el-option v-for="c in customerOptions" :key="c.id" :label="c.name + '（' + c.level + '级）'" :value="c.id"></el-option></el-select>
+            <el-select v-model="query.customerLevel" placeholder="客户等级（影响优惠）" clearable :disabled="!!query.customer" style="width:175px" :title="query.customer ? '已选客户，等级由该客户带出' : '仅选等级时不匹配客户特批'"><el-option v-for="o in customerLevelOptions" :key="o" :label="o + '级'" :value="o"></el-option></el-select>
     <span class="pkg-trigger" @click="cargoPanelOpen=!cargoPanelOpen">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
       <span v-if="hasCargoData" style="font-weight:600;color:#303133">{{ totalWeight.toFixed(1) }}KG<span v-if="totalVolume>0">、{{ totalVolume.toFixed(3) }}m³</span><span v-if="cargoMode==='detail'">、{{ totalPieces }}件</span></span>
@@ -177,7 +178,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 var app = Vue.createApp({
   data: function(){
     return {
-      query: { dest:'', wh:'', customer:'', deliveryRegion:'', zip:'' },
+      query: { dest:'', wh:'', customer:'', customerLevel:'', deliveryRegion:'', zip:'' },
       cargoMode: 'simple',
       cargoSimple: { weight: undefined, volume: undefined },
       cargoItems: [{ qty:1, l:undefined, w:undefined, h:undefined, wt:undefined }],
@@ -203,7 +204,9 @@ var app = Vue.createApp({
     productTypeOptions: function(){ return ['粉末','液体','带电','超大','超重','易碎','普货']; },
     taxMethodOptions: function(){ return ['包税','不包税']; },
     destPortOptions: function(){ return ['长滩港','洛杉矶港','奥克兰港','洛杉矶机场']; },
-    customerOptions: function(){ return [
+    // 客户等级（客商中心等级管理：SS/S/A~G，共 9 级）——独立于「当前客户」，供按等级报价用
+  customerLevelOptions: function(){ return ['SS','S','A','B','C','D','E','F','G']; },
+  customerOptions: function(){ return [
       {id:'C001', name:'深圳市XX科技', level:'S'},
       {id:'C002', name:'广州YY贸易', level:'S'},
       {id:'C003', name:'杭州ZZ跨境', level:'A'},
@@ -301,6 +304,10 @@ var app = Vue.createApp({
       var m=pub/cost-1; return m>=0.05?'price-green':m>=0?'price-yellow':'price-red';
     },
     _cust: function(){ var id=this.query.customer; if(!id) return null; for(var i=0;i<this.customerOptions.length;i++){ if(this.customerOptions[i].id===id) return this.customerOptions[i]; } return null; },
+  // 生效的客户等级：选了具体客户 → 以该客户等级为准（客户是更具体的身份）；否则用手选的客户等级
+  _effLevel: function(){ var c=this._cust(); return c ? c.level : (this.query.customerLevel||''); },
+  // 选客户 → 自动带出其等级（等级下拉随之置灰，避免两处口径打架）
+  onCustomerChange: function(id){ var c=this._cust(); this.query.customerLevel = c ? c.level : ''; },
     _zipKey: function(zip){
       if(!zip) return '';
       var s=String(zip).trim(); if(!s) return '';
@@ -309,27 +316,26 @@ var app = Vue.createApp({
       if(c==='9') return '9xxxx';
       return '其他';
     },
-    _matchFreightDisc: function(comboCode, cust){
-      if(!cust) return null;
-      var self=this;
-      var c=null, l=null;
-      this.freightDiscounts.forEach(function(d){
-        if(d.scope.indexOf(comboCode)===-1) return;
-        if(d.targetType==='customer' && d.targetId===cust.id) c=d;
-        if(d.targetType==='level' && d.targetId===cust.level) l=d;
-      });
-      return c||l;
-    },
-    _matchSurchargeDisc: function(ruleId, cust){
-      if(!cust) return null;
-      var c=null, l=null;
-      this.surchargeDiscounts.forEach(function(d){
-        if(d.ruleId!==ruleId) return;
-        if(d.targetType==='customer' && d.targetId===cust.id) c=d;
-        if(d.targetType==='level' && d.targetId===cust.level) l=d;
-      });
-      return c||l;
-    },
+  _matchFreightDisc: function(comboCode, cust, level){
+    var c=null, l=null;
+    this.freightDiscounts.forEach(function(d){
+      if(d.scope.indexOf(comboCode)===-1) return;
+      // 客户特批：仅在「选了具体客户」时参与匹配
+      if(cust && d.targetType==='customer' && d.targetId===cust.id) c=d;
+      // 客户等级：选了客户则用其等级；未选客户则用手选的「客户等级」
+      if(level && d.targetType==='level' && d.targetId===level) l=d;
+    });
+    return c||l;
+  },
+  _matchSurchargeDisc: function(ruleId, cust, level){
+    var c=null, l=null;
+    this.surchargeDiscounts.forEach(function(d){
+      if(d.ruleId!==ruleId) return;
+      if(cust && d.targetType==='customer' && d.targetId===cust.id) c=d;
+      if(level && d.targetType==='level' && d.targetId===level) l=d;
+    });
+    return c||l;
+  },
     _discLabel: function(d, targetName){
       if(!d) return '';
       var tname = d.targetType==='customer' ? ('特批·'+targetName) : (d.targetId+'级');
@@ -353,7 +359,7 @@ var app = Vue.createApp({
       if(!this.hasCargoData){ this._warn('请填写包裹信息'); this.cargoPanelOpen=true; return; }
 
       var wh=q.wh, totalWt=this.totalWeight, totalCbm=this.totalVolume||0;
-      var hasDims=this.hasAnyDims, flt=this.filter, cust=this._cust();
+      var hasDims=this.hasAnyDims, flt=this.filter, cust=this._cust(), lvl=this._effLevel();
 
       var combos=this.allCombos;
       var candCombos=combos.filter(function(cb){
@@ -422,20 +428,20 @@ var app = Vue.createApp({
           if(pubAdj==null) return;
 
           // 运费优惠
-          var fd=self._matchFreightDisc(cb.code, cust);
+          var fd=self._matchFreightDisc(cb.code, cust, lvl);
           var fdVal=fd ? (fd.mode==='fixed'? fd.val : pubAdj*(1-fd.val)) : 0;
           var afterFreight=pubAdj!=null?(pubAdj-fdVal):null;
-          var discLabel=fd ? self._discLabel(fd, cust.name||cust.id) : '';
+          var discLabel=fd ? self._discLabel(fd, (cust && cust.name) || lvl || '') : '';
 
           // 附加费（含附加费优惠）
           var surcharges=[], scTotal=0;
           self.surchargeRules.forEach(function(rule){
             if(prods.indexOf(rule.trigger)===-1) return;
             var amount=cb.billing==='KG'?rule.kg:rule.cbm;
-            var sd=self._matchSurchargeDisc(rule.id, cust);
+            var sd=self._matchSurchargeDisc(rule.id, cust, lvl);
             var after=amount;
             if(sd) after=sd.mode==='fixed'?(amount-sd.val):(amount*sd.val);
-            surcharges.push({label:rule.label, amount:amount, after:after, unit:'/'+unit, sd:sd, discLabel:sd?self._discLabel(sd, cust.name||cust.id):''});
+            surcharges.push({label:rule.label, amount:amount, after:after, unit:'/'+unit, sd:sd, discLabel:sd?self._discLabel(sd, (cust && cust.name) || lvl || ''):''});
             scTotal+=after;
           });
           // 超重/超长（明细模式，按件/箱）
@@ -500,7 +506,7 @@ var app = Vue.createApp({
       // 运费优惠
       h+='<table class="cost-detail-table"><tr><th colspan="2">② 运费优惠</th></tr>';
       if(row._fd){ h+='<tr><td>'+row._fdLabel+'</td><td>-¥'+row._fdVal.toFixed(2)+'/'+unit+'</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>'; }
-      else{ h+='<tr><td colspan="2" style="color:#C0C4CC">当前客户无运费优惠</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>'; }
+      else{ h+='<tr><td colspan="2" style="color:#C0C4CC">'+(cust?('当前客户无运费优惠'):(lvl?('客户等级 '+lvl+' 无运费优惠'):'未指定客户/等级，不参与优惠匹配'))+'</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>'; }
       h+='</table>';
       // 附加费
       h+='<table class="cost-detail-table"><tr><th colspan="2">③ 附加费（含附加费优惠）</th></tr>';
@@ -531,7 +537,7 @@ var app = Vue.createApp({
       h+='<tr><td>利润额</td><td><b>¥'+profitAmt.toFixed(2)+'/'+unit+'</b></td></tr>';
       h+='<tr><td>利润率</td><td><span class="'+pCls+'">'+(profitRate>=0?'+':'')+(profitRate*100).toFixed(1)+'%</span>（'+pTag+'）</td></tr>';
       h+='</table>';
-      h+='<div style="margin-top:6px;font-size:11px;color:#909399">※ 盈亏按最终报价（含运费优惠/附加费优惠/泡比优惠）减成本底价判定，优惠支持负数（加钱）。估算运费为演示参考，实际结算以运单为准。</div></div>';
+      h+='<div style="margin-top:6px;font-size:11px;color:#909399">※ 盈亏按最终报价（含运费优惠/附加费优惠/泡比优惠）减成本底价判定；<b>优惠值填正数=减钱（正向优惠）、填负数=加价（反向优惠）</b>。优惠按「客户特批 &gt; 客户等级」匹配、命中即覆盖不叠加。估算运费为演示参考，实际结算以运单为准。</div></div>';
       ElementPlus.ElMessageBox.alert(h,'费用明细 — '+row.ch,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:520px'});
     },
     expandSail: function(row){
