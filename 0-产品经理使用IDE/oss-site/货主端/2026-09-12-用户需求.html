@@ -70,7 +70,7 @@
   ├── 1:N VAT 记录 (引用头程管理模块 -- vat_record)
   ├── 1:N 询价记录 (price_inquiry) -- 本期新建（二期落库）
   │     └── 1:N 报价结果行 (price_inquiry_result) -- 本期新建（二期落库）
-  └── 1:N 账单/资金流水 (引用财务模块 -- 归属待确认)
+  └── 1:N 账单/资金流水 (**引用财务模块** ✅ 2026-09-12 已定)
 </code></pre></p><p><h3 id="2-4-查价订舱核心流程图-泳道图">2.4 查价订舱核心流程图（泳道图）</h3></p><p><blockquote><strong>★ 变更（2026-09-12）</strong>：补入<strong>运费优惠（特批>等级）→ 泡比优惠（阈值最大档）→ 附加费优惠</strong>三条优惠支线，以及<strong>超重超长的拣货触发标注</strong>。</blockquote></p><p><div class="mermaid">flowchart TD
     subgraph 货主端
         A1[登录货主端] --&gt; A2[进入查价订舱页]
@@ -126,7 +126,7 @@
         O4[运费优惠 规则名+减免额]
         O5[泡比优惠 规则名+减免额]
         O6[附加费 / 附加费优惠]
-        O7[最终报价 = 公布价 - 运费优惠 + 附加费优惠后 - 泡比优惠]
+        O7["最终报价 = (公布价 − 运费优惠 − 泡比优惠) + 附加费净额&lt;br&gt;泡比优惠不抵扣附加费"]
         O8[操作: 查看运输详情 当周船期×交货地截单矩阵]
     end
     I1 --&gt; M1
@@ -234,7 +234,7 @@
 <li>R11：计费重量 = MAX(总实重, 总材重)。总材重 = Σ(长×宽×高 ÷ 6000 × 件数)；总体积 = Σ(长×宽×高 ÷ 1,000,000)</li>
 <li>R12：附加费匹配：货主选择的货物属性命中附加费规则（<strong>字段匹配型</strong>）后叠加对应加收，并应用附加费优惠</li>
 </ul>  - <strong>R12a（新增标注）</strong>：「超重件加收」「超重超长」属 <strong>"字段&公式"型</strong>附加费，超级运价定稿口径为<strong>仅在拣货节点触发</strong>；货主端原型当前在查价阶段即计算，<strong>口径冲突见 §13 未决项 E9</strong>
-<ul><li>R13：<strong>最终报价 = 公布价 − 运费优惠 + 附加费(应用附加费优惠后) − 泡比优惠</strong></li>
+<ul><li>R13：<strong>最终报价 = (公布价 − 运费优惠 − 泡比优惠) + 附加费净额</strong>，其中 附加费净额 = Σ(附加费 − 附加费优惠)。<strong>★ 硬约束（2026-09-12 产品确认）</strong>：<strong>泡比优惠只作用于运费侧，不得抵扣附加费</strong>——即必须先算完运费侧（公布价 − 运费优惠 − 泡比优惠），再单独加附加费净额；不得把泡比优惠放到最后去抵附加费。与「任一费用项最终金额不得为负」同源</li>
 </ul>  - ~~R13（旧）：最终报价 = 公布价单价 + SUM(附加费单价) − SUM(适用的运费优惠)~~
 <ul><li><strong>R13a（新增）</strong>：<strong>运费优惠</strong>匹配口径——<code>客户特批 > 客户等级</code>，<strong>高覆盖低、不叠加</strong>：同一客户同时命中特批与等级规则时<strong>只取特批那一条参与计算，不是两条累加</strong>；同一组合+同一对象类型+同一目标最多一条生效规则</li>
 <li><strong>R13b（新增）</strong>：<strong>泡比优惠</strong>匹配口径——货物泡比 = 总实重(kg) ÷ 总体积(m³)，<strong>泡比 ≥ 密度阈值命中</strong>；<strong>多条命中取阈值最大那一档（不叠加）</strong>；<strong>仅作用于 KG 计价结果行</strong>；<strong>与运费优惠叠加</strong>（~~原「泡比优惠属二期」作废~~）</li>
@@ -366,8 +366,8 @@
 <tr><td>角色 (role)</td><td>系统设置</td><td>角色管理</td><td>货主管理员定义子账号角色权限</td></tr>
 <tr><td>企业/客户 (customer)</td><td>客商中心</td><td>--</td><td>货主所属企业的基本信息；<strong>客户等级用于三张优惠表「客户等级」匹配</strong></td></tr>
 <tr><td>费用/标识/优惠规则</td><td>超级运价</td><td>查价订舱（只读消费）</td><td>服务组合/运价行/附加费规则/运费优惠/泡比优惠/附加费优惠</td></tr>
-<tr><td>账单、资金流水、充值</td><td><strong>归属待确认</strong></td><td>账单管理 / 资金账户</td><td>原型已挂页；实体归属模块尚未在超级运价或客商中心文档中定义</td></tr>
-<tr><td>后台任务记录</td><td><strong>归属待确认</strong></td><td>后台任务</td><td>原型已挂页；实体归属待确认</td></tr>
+<tr><td>账单、资金流水、充值</td><td>✅ <strong>归「财务」模块</strong></td><td>账单管理 / 资金账户</td><td>原型已挂页；<strong>2026-09-12 产品确认按「引用其他模块页面」处理</strong>——实体见 <code><a href="../财务/2026-09-12-数据设计.html">数据设计</a></code>，货主端只做展示与调用</td></tr>
+<tr><td>后台任务记录</td><td>✅ <strong>归「后台任务」模块</strong></td><td>后台任务</td><td>原型已挂页；<strong>2026-09-12 产品确认按「引用其他模块页面」处理</strong>——实体见 <code>drafts/后台任务/</code>，货主端只做展示与调用</td></tr>
 </table></div>
 <hr></p><p><h3 id="8-验收标准总览-AC">8. 验收标准总览 (AC)</h3></p><p><strong>流程一：登录认证</strong>
 <ul><li>[ ] <strong>AC-L1-登录成功</strong>：输入正确账号密码 -> 点击登录 -> 后端验证通过 -> 返回 token -> 前端存 localStorage -> 跳转 index.html -> 首页展示用户名</li>
@@ -595,8 +595,8 @@
 <tr><td>---</td><td>--------</td><td>------------</td><td>--------------</td><td>----------------</td></tr>
 <tr><td><strong>E9</strong></td><td><strong>超重超长是否在查价阶段计算</strong></td><td><strong>只在「拣货」触发</strong>（需实测尺寸/重量）；RDD 明确「<strong>运价查询阶段不计算</strong>」</td><td><code>查价订舱.html</code> 当前依客户自填尺寸/货物属性在查价阶段即计算并展示「超重件加收 200/件」「超重超长 200/箱」</td><td><strong>(A)</strong> 查价阶段彻底不算超重超长 / <strong>(B)</strong> 保留为"预估展示"但<strong>不落库、不进账单</strong>。<strong>本文档不预设结论</strong></td></tr>
 <tr><td><strong>D4</strong></td><td><strong>报价查询接口路径</strong></td><td>§5.12 写 <code>POST /api/freight-rate/query</code>；§R27 写 <code>GET /api/v1/quote/query?caller=shipper</code></td><td>原 PRD 写 <code>POST /api/shipper/inquiry/price</code></td><td>三个路径并存，需确认货主端对接的唯一接口</td></tr>
-<tr><td><strong>D5</strong></td><td><strong>优惠金额的展示顺序</strong></td><td>§7.4：<code>最终报价 = 折扣后运费 + 优惠后附加费</code>（先减运费优惠+泡比优惠，再加附加费净额）</td><td>原型：<code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code></td><td><strong>数值等价、顺序不同</strong>；需确认研发唯一口径</td></tr>
-<tr><td><strong>D6</strong></td><td><strong>泡比优惠能否抵扣附加费</strong></td><td>§7.4 中泡比优惠只作运费侧减项</td><td>原型中泡比优惠作为最后一步减项，逻辑上可抵扣附加费</td><td>若后续明确"泡比优惠不得抵扣附加费"，两种写法不再等价，需前置定论</td></tr>
+<tr><td>~~D5~~</td><td>~~优惠金额的展示顺序~~</td><td>—</td><td>—</td><td>✅ <strong>已关闭（2026-09-12）</strong>：由 D6 结论定死 —— 统一为分段式 <code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code></td></tr>
+<tr><td>~~D6~~</td><td>~~泡比优惠能否抵扣附加费~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12 产品确认）：不抵扣</strong> —— 泡比优惠只作用于运费侧、<strong>不得抵扣附加费</strong>，最终报价必须分段 <code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code>；已写成硬约束（见 R06 / §7.2）。同源推广：运费优惠只作用运费、附加费优惠只作用附加费</td><td>—</td><td>需前置定论</td></tr>
 <tr><td><strong>D7</strong></td><td><strong>4 个待建页面</strong></td><td>—</td><td>菜单已挂、页面文件不存在：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td>是否本期建设？本文档如实标注「菜单已挂、页面待建」，<strong>不计入已完成功能</strong></td></tr>
 </table></div>
 <hr>
