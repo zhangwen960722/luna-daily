@@ -371,7 +371,7 @@ methods:{
   validateDiscountUniqueness:function(){
     var rules=this.f.discountRules;
     var seen={};
-    for(var i=0;i<rules.length;i++){var r=rules[i];var rsp=(r.targetType==='special');var ts=(rsp?r.targetCustomers:r.targetLevels)||[];for(var t=0;t<ts.length;t++){var key=(rsp?'special:':'level:')+ts[t];if(!ts[t])continue;if(seen[key]!==undefined){return{conflict:true,row1:seen[key]+1,row2:i+1,detail:(rsp?'客户='+this.custNameById(ts[t]):'客户等级='+ts[t])}}seen[key]=i}}
+    for(var i=0;i<rules.length;i++){var r=rules[i];if(r._expired)continue;var rsp=(r.targetType==='special');var ts=(rsp?r.targetCustomers:r.targetLevels)||[];for(var t=0;t<ts.length;t++){var key=(rsp?'special:':'level:')+ts[t];if(!ts[t])continue;if(seen[key]!==undefined){return{conflict:true,row1:seen[key]+1,row2:i+1,detail:(rsp?'客户='+this.custNameById(ts[t]):'客户等级='+ts[t])}}seen[key]=i}}
     return{conflict:false};
   },
   buildCond:function(){
@@ -432,7 +432,7 @@ methods:{
     }
     var basePrice=self.receivablePrice;
     if(this.f.action==='charge'){for(var di=0;di<self.f.discountRules.length;di++){var rr=self.f.discountRules[di];if(!rr.targetType){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择对象类型');return}var isSp=(rr.targetType==='special');var tgts=isSp?rr.targetCustomers:rr.targetLevels;if(!tgts||!tgts.length){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择至少一个'+(isSp?'客户':'目标等级'));return}if(isSp&&(!rr.approvalNo||!String(rr.approvalNo).trim())){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：客户特批请填写飞书审批编号');return}if(!rr.mode){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择优惠方式');return}if(rr.val===null||rr.val===''){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请输入优惠值');return}if(rr.mode==='rate'&&(rr.val<=0||rr.val>1)){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：折扣率须在 0.01~1 之间（一期不支持加价）');return}if(rr.mode==='fixed'){if(basePrice===null){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：本规则未配置应收费用行，无法配置优惠');return}if(Number(rr.val)>basePrice){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：优惠值 '+Number(rr.val).toFixed(2)+' 超过应收单价 '+basePrice.toFixed(2)+'，优惠后单价将为负');return}}if(!rr.validity){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择有效期');return}if(rr.validity==='period'&&(!rr.validRange||!rr.validRange.length)){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：固定期限请选择有效期起止');return}}}var dup=self.validateDiscountUniqueness();
-    if(dup.conflict){ElementPlus.ElMessageBox.alert('第'+dup.row1+'行与第'+dup.row2+'行重复。\n\n同一附加费规则下，同一对象类型+同一目标只能配置一条优惠规则。\n\n重复项：'+dup.detail,'规则重复',{confirmButtonText:'知道了',type:'warning'});return}
+    if(dup.conflict){ElementPlus.ElMessageBox.alert('第'+dup.row1+'行与第'+dup.row2+'行重复。\n\n同一附加费规则下，同一对象类型+同一目标只能配置一条**生效中**的优惠规则（已失效的历史规则不占用名额）。\n\n重复项：'+dup.detail,'规则重复',{confirmButtonText:'知道了',type:'warning'});return}
     var firstRow=this.f.pricingRows[0];
     var validRows=this.f.pricingRows.filter(function(r){return r.feeLabel||r.price!=null});
     var pricingDisplay=this.f.action==='charge'?((puLabel[(validRows[0]||{}).pu]||'')+' '+validRows.map(function(r){return (validRows.length>1?(dirLabel[r.dir]+' '):'')+r.price+'元'}).join(' / ')):'-';

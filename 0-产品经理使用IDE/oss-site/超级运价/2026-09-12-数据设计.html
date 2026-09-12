@@ -559,7 +559,7 @@
 </table></div>
 <blockquote><strong>结论：一期三张表不需要新增任何"预留字段"。</strong> <code>rule_nature</code> / <code>rule_category</code> / <code>bind_type</code> 三个维度<strong>全部可由源表名机械推导</strong>，迁移是纯 UNION + 数组拆行，无信息损失，也不存在"补历史数据"的脏活。</blockquote>
 >
-<blockquote><strong>但有一条硬约束必须一期就遵守</strong>：三张表的父实体外键（<code>combination_id</code> / <code>surcharge_rule_id</code>）<strong>禁止设置 <code>ON DELETE CASCADE</code></strong>。父实体（服务组合/附加费规则）删除前应<strong>校验是否存在生效中的优惠规则并阻断</strong>，否则二期迁移与日常运维都会静默丢优惠历史。</blockquote></p><p><h4 id="3-20-4-已知缺口-一期无优惠落库明细">3.20.4 已知缺口：一期无优惠落库明细</h4></p><p>一期优惠金额只落成财务 <code>ar_flow.discount</code> 的<strong>一个汇总值</strong>（见 <code><a href="../财务/2026-09-11-数据设计.html">数据设计</a></code> 表 1）。由此产生的已知缺口：</p><p><ul><li>运单审计 / 客户价格争议时，<strong>无法回答</strong>"这单为什么减了 3 元、是哪条规则给的、减在哪个费用项上"；</li>
+<blockquote><strong>但有一条硬约束必须一期就遵守</strong>：三张表的父实体外键（<code>combination_id</code> / <code>surcharge_rule_id</code>）<strong>禁止设置 <code>ON DELETE CASCADE</code></strong>。父实体（服务组合/附加费规则）删除前应<strong>校验是否存在生效中的优惠规则并阻断</strong>，否则二期迁移与日常运维都会静默丢优惠历史。</blockquote></p><p><h4 id="3-20-4-已知缺口-一期无优惠落库明细">3.20.4 已知缺口：一期无优惠落库明细</h4></p><p>一期优惠金额只落成财务 <code>ar_flow.discount</code> 的<strong>一个汇总值</strong>（见 <code><a href="../财务/2026-09-12-数据设计.html">数据设计</a></code> 表 1）。由此产生的已知缺口：</p><p><ul><li>运单审计 / 客户价格争议时，<strong>无法回答</strong>"这单为什么减了 3 元、是哪条规则给的、减在哪个费用项上"；</li>
 <li>报价的优惠部分对客户仍是黑盒，与货主端 RDD「报价透明度」的目标冲突；</li>
 <li>二期浮动优惠核销必须有落库载体。</li>
 </ul>
