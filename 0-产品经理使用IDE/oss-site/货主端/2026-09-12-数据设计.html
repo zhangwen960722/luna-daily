@@ -92,7 +92,9 @@
 <tr><td><code>inquiry_at</code></td><td>询价时间</td><td>DateTime</td><td>Yes</td><td>Index</td><td>--</td></tr>
 <tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>--</td><td>自动生成</td></tr>
 </table></div>
-<h3 id="2-4-询价结果行-price_inquiry_result-二期">2.4 询价结果行 <code>price_inquiry_result</code>（二期）</h3></p><p><blockquote><strong>设计说明</strong>：记录每次询价返回的每条渠道报价明细，用于追溯"当时给货主报了什么价"。本期 MVP 不建表。</blockquote></p><p><blockquote><strong>★ 变更（2026-09-12）</strong>：结果行字段按超级运价 PRD §5.13「货主端在线询价结果表列」口径重排——新增 <code>service_combination_code</code> / <code>delivery_regions</code> / <code>freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code>，<code>final_price</code> 的计算口径同步为「公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠」。<strong>不再存在「优惠后」中间列</strong>。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<h3 id="2-4-询价结果行-price_inquiry_result-二期">2.4 询价结果行 <code>price_inquiry_result</code>（二期）</h3></p><p><blockquote><strong>设计说明</strong>：记录每次询价返回的每条渠道报价明细，用于追溯"当时给货主报了什么价"。本期 MVP 不建表。</blockquote></p><p><blockquote><strong>★ 变更（2026-09-12）</strong>：结果行字段按超级运价 PRD §5.13「货主端在线询价结果表列」口径重排——新增 <code>service_combination_code</code> / <code>delivery_regions</code> / <code>freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code>，<code>final_price</code> 的计算口径同步为 ~~「公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠」~~。<strong>不再存在「优惠后」中间列</strong>。</blockquote>
+>
+<blockquote><strong>★ 变更（2026-09-12）：优惠值正负号翻转（覆盖旧约定）</strong> —— 三条优惠明细中的金额字段一律为<strong>带符号优惠值</strong>：<strong>负数 = 减钱（正向优惠）</strong>、<strong>正数 = 加价（反向优惠）</strong>（~~原「正数=减价、负数=加价」~~ 作废）；<code>final_price</code> 口径改写为 <strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong>（~~上一版 <code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code>~~ 作废——优惠值本身为负数，负数值即等于原来的减项）；附加费优惠的固定减免上限由 ~~<code>优惠值 ≤ 应收单价</code>~~ 改为 <strong><code>|优惠值| ≤ 应收单价</code></strong>。<strong>折扣率口径不变</strong>（乘数，<code>金额 × 率</code>）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>--</td></tr>
@@ -102,11 +104,11 @@
 <tr><td><code>delivery_regions</code></td><td>交货地</td><td>String(256)</td><td>No</td><td>--</td><td>服务组合覆盖的交货地列表，逗号分隔</td></tr>
 <tr><td><code>billing_unit</code></td><td>计价</td><td>TinyInt</td><td>Yes</td><td>--</td><td>10:KG, 20:CBM(m³)</td></tr>
 <tr><td><code>base_price</code></td><td>公布价</td><td>Decimal(18,2)</td><td>Yes</td><td>--</td><td>基础运价单价（元/计价单位）</td></tr>
-<tr><td><code>freight_discount_detail</code></td><td>运费优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + 减免额；<strong>客户特批 > 客户等级，高覆盖低不叠加</strong></td></tr>
-<tr><td><code>density_discount_detail</code></td><td>泡比优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + 减免额；泡比≥阈值，<strong>多条命中取阈值最大档</strong>；<strong>一期正常展示，仅 KG 计价行</strong></td></tr>
-<tr><td><code>surcharge_detail</code></td><td>附加费</td><td>JSON</td><td>Yes</td><td>--</td><td>逐条快照附加费名称+原始单价+优惠后单价</td></tr>
-<tr><td><code>surcharge_discount_detail</code></td><td>附加费优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + 减免额；与运费优惠独立计算</td></tr>
-<tr><td><code>final_price</code></td><td>最终报价</td><td>Decimal(18,2)</td><td>Yes</td><td>--</td><td>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</td></tr>
+<tr><td><code>freight_discount_detail</code></td><td>运费优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + <strong>优惠值</strong>（带符号：负数=减钱、正数=加价、0=全免）；<strong>客户特批 > 客户等级，高覆盖低不叠加</strong></td></tr>
+<tr><td><code>density_discount_detail</code></td><td>泡比优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + <strong>优惠值</strong>（带符号：负数=减钱、正数=加价）；泡比≥阈值，<strong>多条命中取阈值最大档</strong>；<strong>一期正常展示，仅 KG 计价行</strong></td></tr>
+<tr><td><code>surcharge_detail</code></td><td>附加费</td><td>JSON</td><td>Yes</td><td>--</td><td>逐条快照附加费名称+原始单价+优惠后单价（<strong>优惠后单价 = 应收单价 + 附加费优惠值</strong>）</td></tr>
+<tr><td><code>surcharge_discount_detail</code></td><td>附加费优惠</td><td>JSON</td><td>No</td><td>--</td><td>命中规则名 + <strong>优惠值</strong>（带符号：负数=减钱、正数=加价）；与运费优惠独立计算</td></tr>
+<tr><td><code>final_price</code></td><td>最终报价</td><td>Decimal(18,2)</td><td>Yes</td><td>--</td><td>~~公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠~~ <strong>★ 变更（2026-09-12）</strong>：<code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></td></tr>
 <tr><td><code>sailing_info</code></td><td>船期信息</td><td>JSON</td><td>No</td><td>--</td><td>快照当周船期×各交货地截单矩阵（运输详情弹窗数据）</td></tr>
 <tr><td><code>pickup_date</code></td><td>最快提取</td><td>String(64)</td><td>No</td><td>--</td><td>预计最快提取日期</td></tr>
 <tr><td><code>batch_no</code></td><td>运价批次号</td><td>String(64)</td><td>Yes</td><td>--</td><td>关联 weekly_schedule_batch</td></tr>
@@ -146,7 +148,7 @@
 <ul><li><code>price_inquiry_log.inquiry_params</code>：查询参数为可变结构（渠道专线多选、货物属性多选、包税方式多选、简易录入/多件装箱二选一等），用 JSON 快照比建多个可空字段更灵活</li>
 <li><code>price_inquiry_log.unmatched_channels</code>：未匹配渠道列表，JSON 数组即可</li>
 <li><code>price_inquiry_result.surcharge_detail</code>：附加费明细包含名称+原始价格+优惠后价格，结构灵活，用 JSON 快照</li>
-<li><code>price_inquiry_result.freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code>：<strong>★ 变更（2026-09-12）</strong> 三张优惠表各自的命中规则名+减免额，用 JSON 快照，便于追溯"当时按哪条规则算的"</li>
+<li><code>price_inquiry_result.freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code>：<strong>★ 变更（2026-09-12）</strong> 三张优惠表各自的命中规则名 + <strong>优惠值（带符号：负数=减钱、正数=加价）</strong>，用 JSON 快照，便于追溯"当时按哪条规则算的"</li>
 <li><code>price_inquiry_result.sailing_info</code>：船期×截单矩阵为动态列结构（列数=覆盖的交货地数量），JSON 比固定列更合适</li>
 </ul>
 <h3 id="4-4-纯逻辑实体说明">4.4 纯逻辑实体说明</h3>
@@ -196,29 +198,40 @@
 <li>角色冻结不影响已分配该角色的子账号——冻结仅阻止新分配，已有权限保持不变</li>
 <li><strong>角色类型枚举（原型口径）</strong>：<code>系统默认</code> / <code>自定义</code>（<code>角色管理.html</code> 搜索条件的下拉取值）</li>
 </ul>
-<h3 id="4-10-优惠三表匹配口径-货主端只读消费">4.10 优惠三表匹配口径（货主端只读消费）</h3></p><p><blockquote><strong>★ 变更（2026-09-12）新增</strong>：本节对齐「超级运价」2026-09-12 定稿口径。货主端<strong>不配置、不落库</strong>任何优惠规则，只在查价时按当前登录客户匹配并展示。</blockquote></p><p><strong>三张优惠表：运费优惠 <code>freight_discount</code> / 泡比优惠 <code>density_discount</code> / 附加费优惠 <code>surcharge_discount</code></strong></p><p><div class="table-wrapper"><table><tr><td>维度</td><td>运费优惠</td><td>泡比优惠</td><td>附加费优惠</td></tr>
+<h3 id="4-10-优惠三表匹配口径-货主端只读消费">4.10 优惠三表匹配口径（货主端只读消费）</h3></p><p><blockquote><strong>★ 变更（2026-09-12）新增</strong>：本节对齐「超级运价」2026-09-12 定稿口径。货主端<strong>不配置、不落库</strong>任何优惠规则，只在查价时按当前登录客户匹配并展示。</blockquote>
+>
+<blockquote><strong>★ 变更（2026-09-12）：优惠值正负号翻转（覆盖旧约定，本节伪代码已同步）</strong> —— 固定减免的<strong>优惠值本身带符号</strong>：<strong>负数 = 减钱（正向优惠）</strong>、<strong>正数 = 加价（反向优惠）</strong>（~~原「正数=减价、负数=加价」~~ 作废）；计算由 ~~<code>原金额 − 优惠值</code>~~ 改为 <strong><code>结果金额 = 原金额 + 优惠值</code></strong>；显示：负 → <code>-¥X</code>、正 → <code>+¥X</code>、0 → 「全免」；附加费优惠的固定减免上限由 ~~<code>优惠值 ≤ 应收单价</code>~~ 改为 <strong><code>|优惠值| ≤ 应收单价</code></strong>（绝对值比较）。<strong>折扣率口径不变</strong>：乘数语义（<code><1</code> 折扣、<code>=1</code> 原价、<code>>1</code> 加价；一期 <code>0.01 ≤ 率 ≤ 1</code> 不支持加价），计算仍为 <strong><code>金额 × 率</code></strong>。</blockquote></p><p><strong>三张优惠表：运费优惠 <code>freight_discount</code> / 泡比优惠 <code>density_discount</code> / 附加费优惠 <code>surcharge_discount</code></strong></p><p><div class="table-wrapper"><table><tr><td>维度</td><td>运费优惠</td><td>泡比优惠</td><td>附加费优惠</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td>父实体</td><td>服务组合</td><td>服务组合</td><td>附加费规则</td></tr>
 <tr><td>优惠对象类型</td><td><strong>一期同时开放</strong>：10 客户特批 / 20 客户等级</td><td>同左</td><td>同左</td></tr>
 <tr><td>目标</td><td>特批→客户（多选）；等级→客户等级（多选）</td><td>同左</td><td>同左</td></tr>
 <tr><td>优先级</td><td><strong>客户特批 > 客户等级，高覆盖低、不叠加</strong></td><td>同左</td><td>同左</td></tr>
-<tr><td>优惠方式</td><td>一期仅 20 固定减免</td><td>一期仅 20 固定减免</td><td>折扣率/固定减免</td></tr>
+<tr><td>优惠方式</td><td>一期仅 20 固定减免（<strong>优惠值为带符号调整量</strong>：负数=减钱、正数=加价；计算 <code>金额 + 优惠值</code>）</td><td>同左</td><td>折扣率（<strong>乘数</strong>：<code>金额 × 率</code>；<code><1</code> 折扣、<code>=1</code> 原价、<code>>1</code> 加价；一期 <code>0.01 ≤ 率 ≤ 1</code> 不支持加价）/ 固定减免（同左，<strong>带符号优惠值</strong>）</td></tr>
 <tr><td>命中维度</td><td>组合 + 对象</td><td>组合 + 对象 + <strong>密度阈值</strong>（泡比 ≥ 阈值；多条命中取阈值最大档，不叠加）</td><td>附加费规则 + 对象</td></tr>
 <tr><td>叠加关系</td><td><strong>运费优惠 × 泡比优惠叠加</strong></td><td>与运费优惠叠加</td><td><strong>与运费优惠独立计算</strong></td></tr>
 <tr><td>有效期</td><td>一期：永久有效 / 固定期限</td><td>同左</td><td>同左</td></tr>
 <tr><td>飞书审批编号 <code>approval_no</code></td><td><strong>客户特批时必填</strong>；等级时为空。<strong>一期人工录入，不对接飞书审批流</strong>（不做审批单同步、不做「审批中/已通过」状态机），仅作追溯凭据</td><td>同左</td><td>同左</td></tr>
 <tr><td>费用方向</td><td>固定 10 应收</td><td>固定 10 应收</td><td>固定 10 应收</td></tr>
 </table></div>
-<strong>匹配伪代码（货主端侧消费口径）</strong>：</p><p><pre><code># 1. 运费优惠（特批 &gt; 等级，取一条）
+<strong>匹配伪代码（货主端侧消费口径）</strong>：</p><p><pre><code># 0. 优惠值符号约定（★ 2026-09-12 翻转，覆盖旧约定）
+#    固定减免 discount_value：负数 = 减钱（正向优惠）；正数 = 加价（反向优惠）
+#    结果金额 = 原金额 + discount_value        ← 旧口径「原金额 − discount_value」作废
+#    折扣率 rate 为乘数：&lt;1 折扣 / =1 原价 / &gt;1 加价（一期 0.01 ≤ rate ≤ 1，不支持加价）
+#    折扣率计算 = 金额 × rate（口径不变，不受符号翻转影响）
+#    显示：discount_value &lt; 0 → "-¥X"；&gt; 0 → "+¥X"；= 0 → "全免"
+
+# 1. 运费优惠（特批 &gt; 等级，取一条）
 候选 = { d ∈ freight_discount | d.combination_id = 当前组合 且 d.status=生效 }
 特批命中 = 候选.where(target_type=10 客户特批 且 当前客户 ∈ d.target_customers)
 等级命中 = 候选.where(target_type=20 客户等级 且 当前客户等级 ∈ d.target_levels)
 运费优惠 = 特批命中.第一条() ?? 等级命中.第一条() ?? 无     # 只取一条，不累加
+运费优惠值 = 运费优惠.discount_value                       # ★ 带符号：负数=减钱、正数=加价
 
 # 2. 泡比优惠（特批 &gt; 等级，再按密度阈值取最大档；仅 KG 计价行）
 泡比 = 总实重(kg) ÷ 总体积(m³)
 候选 = { d ∈ density_discount | d.combination_id = 当前组合 且 泡比 ≥ d.density_threshold }
 泡比优惠 = 候选.按(对象优先级, density_threshold 降序).第一条() ?? 无   # 多条命中取阈值最大档，不叠加
+泡比优惠值 = 泡比优惠.discount_value                       # ★ 带符号，同上
 
 # 3. 附加费优惠（按附加费规则逐条匹配，与运费优惠独立）
 对每条命中的附加费规则 r：
@@ -226,13 +239,21 @@
   特批命中 = 候选.where(target_type=10 且 当前客户 ∈ d.target_customers)
   等级命中 = 候选.where(target_type=20 且 当前客户等级 ∈ d.target_levels)
   附加费优惠 = 特批命中.第一条() ?? 等级命中.第一条() ?? 无
+  附加费优惠值 = 附加费优惠.discount_value                 # ★ 带符号（固定减免时）
+  附加费优惠后单价 = r.应收单价 + 附加费优惠值              # ★ 旧口径「应收单价 − 优惠值」作废
+  # 折扣率时：附加费优惠后单价 = r.应收单价 × 附加费优惠.rate（乘数，口径不变）
 
-# 4. 最终报价（超级运价 PRD §7.4）
-最终报价 = 公布价 − 运费优惠 + Σ(附加费原价 − 附加费优惠) − 泡比优惠
-约束：任一费用项最终金额不得为负（优惠上限截断 R31）
+# 4. 最终报价（★ 2026-09-12 符号翻转后重写；超级运价 PRD §7.4 的「折扣后运费 + 优惠后附加费」与此等价）
+最终报价 = (公布价 + 运费优惠值 + 泡比优惠值) + (Σ附加费原价 + Σ附加费优惠值)
+         # 分段式：先算完运费侧（公布价 + 运费优惠值 + 泡比优惠值），再单独加附加费侧
+约束：
+  a. 任一费用项最终金额不得为负（优惠上限截断 R31）——优惠值带符号，比较按绝对值
+     Σ|该费用项全部优惠值| ≤ 该费用项金额，超出按比例截断到 0
+  b. 附加费优惠的固定减免上限：|附加费优惠值| ≤ 应收单价（旧口径「优惠值 ≤ 应收单价」作废）
+  c. 泡比优惠只作用于运费侧，不得抵扣附加费
 </code></pre></p><p><blockquote><strong>⚠️ 未决项（见 §8 不一致处理标注）</strong>：
 <ul><li><strong>★ E9 已定（2026-09-12）——超重超长在查价阶段的参与方式</strong>：<strong>★ E9 已定（2026-09-12，产品确认）</strong>：查价阶段<strong>能否</strong>算出「超重超长」<strong>取决于包裹信息的录入方式</strong>，不是"算不算"的问题 ——① <strong>按单箱录入</strong>（填了长/宽/高）→ <strong>可以算</strong>：超重超长按公式判定（该规则计价单位<strong>仅按箱</strong>）、<strong>体积重 = 长×宽×高 ÷ 计泡系数</strong> → <strong>在查价结果中作预估展示</strong>；② <strong>按总体重量与体积录入</strong>（无单箱长宽高）→ <strong>算不出，不展示该项</strong>。<strong>正式计费仍以「拣货实测」为准</strong>（客户自填尺寸仅供预估），故结果区提示条<strong>保留</strong>并继续声明"以拣货实测为准"；<strong>规则口径不变</strong>：「字段&公式」型规则的<strong>正式触发与费用流水生成仍在「拣货」节点</strong>，查价阶段只是<strong>预估展示、不落库、不进账单</strong>。</li>
-<li><strong>附加费优惠与泡比优惠的叠加顺序</strong>：超级运价 PRD §7.4 的公式为 <code>最终报价 = 折扣后运费 + 优惠后附加费</code>，而原型费用明细弹窗展示为 <code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code>。两者计算结果一致（减法可交换），但<strong>展示顺序不一致</strong>，已在 §8 列出待确认。</blockquote></li>
+<li><strong>附加费优惠与泡比优惠的叠加顺序</strong>：超级运价 PRD §7.4 的公式为 <code>最终报价 = 折扣后运费 + 优惠后附加费</code>，而原型费用明细弹窗展示为 ~~<code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code>~~。<strong>★ 变更（2026-09-12，符号翻转）</strong>：货主端口径统一为 <strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong>，与超级运价 §7.4 的「折扣后运费 + 优惠后附加费」<strong>完全等价</strong>（<code>折扣后运费</code> 即 <code>公布价 + 运费优惠值 + 泡比优惠值</code>）；原「两种写法靠减法交换律等价」的说法在符号翻转后<strong>不再成立为"两种写法"</strong>，全系统同一写成法，已在 §8 更新。</blockquote></li>
 </ul>
 <hr></p><p><h2 id="5-枚举值集中定义">5. 枚举值集中定义</h2></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
 <tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>---------</td></tr>
@@ -244,8 +265,8 @@
 <tr><td>BillingUnit</td><td>20</td><td>CBM</td><td>立方米(m³)</td><td>price_inquiry_result</td></tr>
 <tr><td><strong>DiscountTargetType</strong></td><td>10</td><td>CUSTOMER_SPECIAL</td><td><strong>客户特批</strong></td><td>freight_discount / density_discount / surcharge_discount</td></tr>
 <tr><td><strong>DiscountTargetType</strong></td><td>20</td><td>CUSTOMER_LEVEL</td><td><strong>客户等级</strong></td><td>freight_discount / density_discount / surcharge_discount</td></tr>
-<tr><td><strong>DiscountMode</strong></td><td>10</td><td>RATE</td><td>折扣率（二期开放）</td><td>三张优惠表</td></tr>
-<tr><td><strong>DiscountMode</strong></td><td>20</td><td>FIXED</td><td>固定减免（一期）</td><td>三张优惠表</td></tr>
+<tr><td><strong>DiscountMode</strong></td><td>10</td><td>RATE</td><td>折扣率（二期开放；<strong>乘数</strong>：<code><1</code> 折扣、<code>=1</code> 原价、<code>>1</code> 加价；一期 <code>0.01 ≤ 率 ≤ 1</code> 不支持加价；计算 <code>金额 × 率</code>）</td><td>三张优惠表</td></tr>
+<tr><td><strong>DiscountMode</strong></td><td>20</td><td>FIXED</td><td>固定减免（一期；<strong>优惠值为带符号调整量</strong>：负数=减钱、正数=加价；计算 <code>金额 + 优惠值</code>）</td><td>三张优惠表</td></tr>
 <tr><td><strong>ValidityType</strong></td><td>10</td><td>PERMANENT</td><td>永久有效（一期）</td><td>三张优惠表</td></tr>
 <tr><td><strong>ValidityType</strong></td><td>20</td><td>FIXED_PERIOD</td><td>固定期限（一期）</td><td>三张优惠表</td></tr>
 <tr><td><strong>ValidityType</strong></td><td>30</td><td>SINGLE_USE</td><td>单次有效（二期，不作废但一期不开放）</td><td>三张优惠表</td></tr>
@@ -253,7 +274,7 @@
 <tr><td><strong>FeeDirection</strong></td><td>20</td><td>PAYABLE</td><td>应付（二期开放）</td><td>三张优惠表</td></tr>
 <tr><td><strong>SurchargeTagType</strong></td><td>20</td><td>SURCHARGE_TAG</td><td>附加费标识</td><td><code>surcharge_rule.tag_id</code> → 基础资料-标识管理 <code>tag.id</code></td></tr>
 </table></div>
-<blockquote><strong>★ 变更（2026-09-12）</strong>：新增 <code>DiscountTargetType</code> / <code>DiscountMode</code> / <code>ValidityType</code> / <code>FeeDirection</code> 四组枚举。要点：① <code>DiscountTargetType</code> <strong>一期同时开放 10 与 20</strong>（原「一期仅 20 客户等级」作废）；② <code>DiscountMode</code> 一期仅 20；③ <code>ValidityType</code> 一期 10/20；④ <code>FeeDirection</code> 固定 10。</blockquote></p><p><hr></p><p><h2 id="6-跨模块数据融合-货主端-客商中心">6. 跨模块数据融合：货主端 × 客商中心</h2></p><p><blockquote><strong>设计原则</strong>：货主端是客户主数据的 Consumer，不冗余存储客户字段（仅通过 <code>customer_id</code> 外键关联）。所有客户生命周期事件由客商中心通过接口推送到货主端。货主端登录时实时校验客户状态作为双重保障。</blockquote></p><p><h3 id="6-1-数据归属与引用关系">6.1 数据归属与引用关系</h3></p><p><pre><code>客商中心（System of Record）
+<blockquote><strong>★ 变更（2026-09-12）</strong>：新增 <code>DiscountTargetType</code> / <code>DiscountMode</code> / <code>ValidityType</code> / <code>FeeDirection</code> 四组枚举。要点：① <code>DiscountTargetType</code> <strong>一期同时开放 10 与 20</strong>（原「一期仅 20 客户等级」作废）；② <code>DiscountMode</code> 一期仅 20；③ <code>ValidityType</code> 一期 10/20；④ <code>FeeDirection</code> 固定 10。⑤ <strong>★ 2026-09-12 追加</strong>：<code>DiscountMode</code> 的<strong>金额语义</strong>明确——<code>10 RATE</code> 为<strong>乘数</strong>（<code>金额 × 率</code>；<code><1</code> 折扣、<code>=1</code> 原价、<code>>1</code> 加价；一期 <code>0.01 ≤ 率 ≤ 1</code> 不支持加价，<strong>不变</strong>）；<code>20 FIXED</code> 为<strong>带符号调整量</strong>（<strong>负数=减钱、正数=加价</strong>；<code>金额 + 优惠值</code>；显示负 <code>-¥X</code> / 正 <code>+¥X</code> / 0「全免」；上限按 <code>|优惠值| ≤ 应收单价</code> 校验）。原口径「固定减免正数=减价、负数=加价，计算 <code>金额 − 优惠值</code>」<strong>作废</strong>。</blockquote></p><p><hr></p><p><h2 id="6-跨模块数据融合-货主端-客商中心">6. 跨模块数据融合：货主端 × 客商中心</h2></p><p><blockquote><strong>设计原则</strong>：货主端是客户主数据的 Consumer，不冗余存储客户字段（仅通过 <code>customer_id</code> 外键关联）。所有客户生命周期事件由客商中心通过接口推送到货主端。货主端登录时实时校验客户状态作为双重保障。</blockquote></p><p><h3 id="6-1-数据归属与引用关系">6.1 数据归属与引用关系</h3></p><p><pre><code>客商中心（System of Record）
   customer                          ← 客户主数据唯一源
     ├── customer_name               → 货主端首页欢迎语
     ├── service_status (10/20)      → 货主端登录准入校验
@@ -356,10 +377,11 @@ Step 4: 签发 JWT token
 <tr><td>2</td><td>优惠对象类型</td><td>~~一期仅「客户等级」，「客户特批」二期~~</td><td><strong>一期同时开放「客户特批」+「客户等级」</strong>；<strong>特批 > 等级，高覆盖低不叠加</strong></td></tr>
 <tr><td>3</td><td>飞书审批编号</td><td>~~二期开放、一期恒为空~~</td><td><strong>一期必填（客户特批时）</strong>，<strong>人工录入，不对接飞书审批流</strong></td></tr>
 <tr><td>4</td><td>结果行字段</td><td><code>base_price</code>/<code>surcharge_detail</code>/<code>final_price</code> 三字段</td><td>新增 <code>service_combination_code</code> / <code>delivery_regions</code> / <code>freight_discount_detail</code> / <code>density_discount_detail</code> / <code>surcharge_discount_detail</code> / <code>sailing_info</code>(JSON)</td></tr>
-<tr><td>5</td><td><code>final_price</code> 公式</td><td>公布价 + 附加费 − 优惠</td><td><strong>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</strong></td></tr>
+<tr><td>5</td><td><code>final_price</code> 公式</td><td>公布价 + 附加费 − 优惠</td><td>~~公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠~~ → <strong>★ 2026-09-12 符号翻转后：<code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong></td></tr>
 <tr><td>6</td><td>引用表</td><td>无泡比优惠、无船期</td><td>新增 <code>density_discount</code>、<code>sailing_schedule</code></td></tr>
 <tr><td>7</td><td>邮箱必填（D1）</td><td>待确认</td><td><strong>已定</strong>：货主端手动创建子账号邮箱非必填；客商中心客户联系人邮箱必填</td></tr>
 <tr><td>8</td><td>页面名</td><td>收货地址管理</td><td><strong>地址管理</strong>（对齐原型）</td></tr>
+<tr><td><strong>9</strong></td><td><strong>优惠值正负号口径（★ 2026-09-12）</strong></td><td>~~固定减免「正数=减价、负数=加价」，计算 <code>原金额 − 优惠值</code>；附加费优惠上限 <code>优惠值 ≤ 应收单价</code>~~</td><td><strong>固定减免「负数=减钱（正向优惠）、正数=加价（反向优惠）」，计算 <code>原金额 + 优惠值</code></strong>；显示：负 <code>-¥X</code> / 正 <code>+¥X</code> / 0「全免」；附加费优惠上限改为 <strong><code>\</td><td>优惠值\</td><td>≤ 应收单价</code></strong>。<strong>折扣率不变</strong>（乘数，<code>金额 × 率</code>）</td></tr>
 </table></div>
 <hr></p><p><h2 id="8-不一致处理标注">8. 不一致处理标注</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>不一致点</td><td>超级运价 / 客商中心口径</td><td>货主端原型现状</td><td>处理</td></tr>
 <tr><td>---</td><td>---------</td><td>----------------------</td><td>--------------</td><td>------</td></tr>
@@ -368,8 +390,8 @@ Step 4: 签发 JWT token
 <tr><td>D2</td><td>ROOT冻结</td><td>客商中心 R25"关联账户同步冻结"</td><td>货主端"ROOT不可冻结"</td><td><strong>已解决</strong>：ROOT 不可被企业管理员<strong>单独</strong>冻结（前端隐藏按钮），但随客户冻结联动是系统级操作，不受此限制</td></tr>
 <tr><td>D3</td><td>角色表归属</td><td>客商中心不管理角色</td><td>货主端角色表引用系统设置模块</td><td><strong>已对齐</strong>：角色统一由系统设置模块管理，货主端只做引用和分配</td></tr>
 <tr><td>~~D4~~</td><td>~~报价查询接口路径~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12，选「甲」）</strong>：统一为 <code>POST /api/freight-rate/query</code>，<code>caller=shipper</code> 置于请求体；旧两路径作废</td></tr>
-<tr><td><strong>D5</strong></td><td><strong>优惠后金额的展示顺序</strong></td><td>超级运价 §7.4：<code>最终报价 = 折扣后运费 + 优惠后附加费</code>（先算折扣后运费，再加附加费净额）</td><td>原型费用明细弹窗：<code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code></td><td><strong>数值等价、展示顺序不同</strong>（减法可交换）。<strong>⚠️ 待确认</strong>：以哪个公式作为"研发唯一口径"表述</td></tr>
-<tr><td><strong>D6</strong></td><td><strong>附加入库/账单的叠加口径</strong></td><td>超级运价 §7.4 <code>折扣后运费 = 公布价 − Σ运费固定减免 − Σ泡比固定减免</code></td><td>原型 <code>finalUnit = afterFreight + scTotal − ddVal</code>（先减运费优惠得 <code>afterFreight</code>，加附加费净额，最后减泡比优惠）</td><td>同 D5，数值等价。<strong>⚠️ 待确认</strong>：泡比优惠在"是否可抵扣附加费"上两种写法都成立（因为都是纯减法），但若后续引入"附加费不可被泡比优惠抵扣"的业务约束则二者不等价</td></tr>
+<tr><td><strong>D5</strong></td><td><strong>优惠后金额的展示顺序</strong></td><td>超级运价 §7.4：<code>最终报价 = 折扣后运费 + 优惠后附加费</code>（先算折扣后运费，再加附加费净额）</td><td>原型费用明细弹窗：~~<code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code>~~</td><td><strong>★ 变更（2026-09-12，符号翻转）</strong>：货主端统一按 <strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong> 表述，与超级运价 §7.4 <strong>完全等价</strong>（<code>折扣后运费</code> = <code>公布价 + 运费优惠值 + 泡比优惠值</code>），<strong>"两种写法"不复存在</strong>。⚠️ 由「待确认」降级为<strong>表述一致性提示</strong>：原型 HTML 仍未按新符号口径改造（原型不在本次文档改动范围）</td></tr>
+<tr><td><strong>D6</strong></td><td><strong>附加入库/账单的叠加口径</strong></td><td>超级运价 §7.4 ~~<code>折扣后运费 = 公布价 − Σ运费固定减免 − Σ泡比固定减免</code>~~ → <strong>★ 2026-09-12：<code>折扣后运费 = 公布价 + Σ运费优惠值 + Σ泡比优惠值</code></strong>（固定减免已是带符号值，不再用减号）</td><td>原型 ~~<code>finalUnit = afterFreight + scTotal − ddVal</code>（先减运费优惠得 <code>afterFreight</code>，加附加费净额，最后减泡比优惠）~~</td><td><strong>★ 变更（2026-09-12，符号翻转）</strong>：正确口径为 <code>finalUnit = (公布价 + 运费优惠值 + 泡比优惠值) + (scTotal + 附加费优惠值合计)</code>——先算完<strong>运费侧</strong>，再单独加<strong>附加费侧</strong>。原型现写法把泡比优惠放在最后扣减、<strong>跨段抵扣附加费</strong>，与「泡比优惠只作用运费侧、不得抵扣附加费」硬约束冲突，<strong>已判为口径错误（不只是展示顺序问题）</strong>，归入"原型已修复（2026-09-12）"，不在本次文档改动范围</td></tr>
 <tr><td><strong>D7</strong></td><td><strong>原型缺页</strong></td><td>—</td><td>菜单已挂、<strong>页面文件不存在</strong>：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td><strong>如实标注为「菜单已挂、页面待建」</strong>，不计入已完成功能。<strong>⚠️ 待确认</strong>：是否本期建设</td></tr>
 </table></div>
 <hr>

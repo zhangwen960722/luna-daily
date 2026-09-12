@@ -205,16 +205,16 @@
             {code:'空运快线-空运-快递派-m³-不包税-散货',channel:'空运快线',transport:'空运',lastMile:'快递派',billing:'CBM',taxMethod:'不包税',svcType:'散货',专线:'空派'}
         ];},
         freightDiscounts:function(){return[
-            {targetType:'customer',targetId:'C001',mode:'fixed',val:1.5,priority:10,scope:['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-m³-包税-散货','美森432-海运-卡派-KG-不包税-散货']},
-            {targetType:'level',targetId:'S',mode:'fixed',val:1.0,priority:30,scope:['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-m³-包税-散货']}
+            {targetType:'customer',targetId:'C001',mode:'fixed',val:-1.5,priority:10,scope:['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-m³-包税-散货','美森432-海运-卡派-KG-不包税-散货']},
+            {targetType:'level',targetId:'S',mode:'fixed',val:-1.0,priority:30,scope:['美森360-海运-卡派-KG-包税-散货','美森360-海运-卡派-m³-包税-散货']}
         ];},
         surchargeDiscounts:function(){return[
             {ruleId:'R001',targetType:'customer',targetId:'C001',mode:'rate',val:0,priority:10},
-            {ruleId:'R001',targetType:'level',targetId:'S',mode:'fixed',val:0.3,priority:30}
+            {ruleId:'R001',targetType:'level',targetId:'S',mode:'fixed',val:-0.3,priority:30}
         ];},
         densityDiscounts:function(){return[
-            {threshold:400,val:1.0},
-            {threshold:250,val:0.5}
+            {threshold:400,val:-1.0},
+            {threshold:250,val:-0.5}
         ];},
         surchargeRules:function(){return[
             {id:'R001',label:'粉末品名加收',trigger:'粉末',kg:1.5,cbm:200},
@@ -255,7 +255,7 @@
         _discLabel:function(d,targetName){
             if(!d)return '';
             var tname=d.targetType==='customer'?('特批·'+targetName):(d.targetId+'级');
-            if(d.mode==='fixed')return tname+' -¥'+d.val.toFixed(2);
+            if(d.mode==='fixed')return tname+(d.val<0?(' -¥'+Math.abs(d.val).toFixed(2)):(d.val>0?(' +¥'+d.val.toFixed(2)):' 无优惠'));
             if(d.val===0)return tname+' 全免';
             return tname+' ×'+d.val.toFixed(2);
         },
@@ -318,8 +318,8 @@
                     if(cb.lastMile==='快递派'){var ex=self.expressAdjust[self._zipKey(zip)]||{kg:0,cbm:0};expressAdj=cb.billing==='KG'?ex.kg:ex.cbm;}
                     var pubAdj=pub!=null?(pub+truckingAdj+expressAdj):null;
                     var fd=self._matchFreightDisc(cb.code,cust);
-                    var fdVal=fd?(fd.mode==='fixed'?fd.val:pubAdj*(1-fd.val)):0;
-                    var afterFreight=pubAdj!=null?(pubAdj-fdVal):null;
+                    var fdVal=fd?(fd.mode==='fixed'?fd.val:pubAdj*(fd.val-1)):0;
+                    var afterFreight=pubAdj!=null?(pubAdj+fdVal):null;
                     var discLabel=fd?self._discLabel(fd,cust.name||cust.id):'';
                     var surcharges=[],scTotal=0;
                     self.surchargeRules.forEach(function(rule){
@@ -327,7 +327,7 @@
                         var amount=cb.billing==='KG'?rule.kg:rule.cbm;
                         var sd=self._matchSurchargeDisc(rule.id,cust);
                         var after=amount;
-                        if(sd)after=sd.mode==='fixed'?(amount-sd.val):(amount*sd.val);
+                        if(sd)after=sd.mode==='fixed'?(amount+sd.val):(amount*sd.val);
                         surcharges.push({label:rule.label,amount:amount,after:after,unit:'/'+unit,sd:sd,discLabel:sd?self._discLabel(sd,cust.name||cust.id):''});
                         scTotal+=after;
                     });
@@ -336,8 +336,8 @@
                         if(hasDims){var hasOversize=false;self.cargoItems.forEach(function(item){if(!item.l||!item.w||!item.h)return;if((item.l+item.w)*2+item.h>300||item.l+item.w*2+item.h*2>265)hasOversize=true;});if(hasOversize&&prods.indexOf('超大')===-1&&prods.indexOf('超重')===-1&&self.totalPieces>0){surcharges.push({label:'超重超长',amount:200,after:200,unit:'/箱',sd:null,discLabel:''});scTotal+=200/self.totalPieces;}}
                     }
                     var ddVal=0,ddLabel='';
-                    if(cb.billing==='KG'&&density>0){var hit=self.densityDiscounts.slice().sort(function(a,b){return b.threshold-a.threshold;}).filter(function(d){return density>=d.threshold;});if(hit.length){ddVal=hit[0].val;ddLabel='泡比'+density.toFixed(0)+'≥'+hit[0].threshold+' -¥'+ddVal.toFixed(1);}}
-                    var finalUnit=pubAdj!=null?(afterFreight+scTotal-ddVal):null;
+                    if(cb.billing==='KG'&&density>0){var hit=self.densityDiscounts.slice().sort(function(a,b){return b.threshold-a.threshold;}).filter(function(d){return density>=d.threshold;});if(hit.length){ddVal=hit[0].val;ddLabel='泡比'+density.toFixed(0)+'≥'+hit[0].threshold+' '+(ddVal<0?('-¥'+Math.abs(ddVal).toFixed(1)):(ddVal>0?('+¥'+ddVal.toFixed(1)):'全免'));}}
+                    var finalUnit=pubAdj!=null?(afterFreight+scTotal+ddVal):null;
                     allResults.push({专线:row.专线,_taxMethod:row.taxMethod,_destPort:row._destPort,channel:cb.code,billing:cb.billing,regions:(row.deliveryRegion||'').split(',').map(function(s){return s.trim();}).filter(Boolean).join('、'),price:pubAdj!=null?'¥'+pubAdj.toFixed(1)+'/'+unit:'—',discRule:discLabel,ddRule:ddLabel,surcharges:surcharges.map(function(s){return s.label+' +¥'+s.after.toFixed(2)+s.unit;}),scDiscs:surcharges.filter(function(s){return s.sd;}).map(function(s){return s.label+' · '+s.discLabel;}),finalPrice:finalUnit!=null?'¥'+finalUnit.toFixed(1)+'/'+unit:'—',_regions:(row.deliveryRegion||'').split(',').map(function(s){return s.trim();}).filter(Boolean),_sailings:row.sailings||[],_matched:pubAdj!=null,_pubRaw:pubAdj,_costRaw:null,_afterFreight:afterFreight,_scTotal:scTotal,_ddVal:ddVal,_ddLabel:ddLabel,_fd:fd,_fdVal:fdVal,_fdLabel:discLabel,_surcharges:surcharges,_tier:tier,_unit:unit,_chargeQty:(cb.billing==='KG'?totalWt:(totalCbm||0)),_cust:cust});
                 }
             });
@@ -349,7 +349,7 @@
             var h='<div style="font-size:13px;line-height:1.8"><div style="font-weight:600;margin-bottom:6px">'+row.channel+' — 费用明细</div>';
             h+='<table class="cost-detail-table"><tr><th colspan="2">① 公布价</th></tr><tr><td>匹配重量段</td><td><b>'+row._tier.range+'</b></td></tr><tr class="total-row"><td>公布价</td><td><b>¥'+row._pubRaw.toFixed(1)+'/'+unit+'</b></td></tr></table>';
             h+='<table class="cost-detail-table"><tr><th colspan="2">② 运费优惠</th></tr>';
-            if(row._fd){h+='<tr><td>'+row._fdLabel+'</td><td>-¥'+row._fdVal.toFixed(2)+'/'+unit+'</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>';}
+            if(row._fd){h+='<tr><td>'+row._fdLabel+'</td><td>'+(row._fdVal<0?('-¥'+Math.abs(row._fdVal).toFixed(2)):('+¥'+row._fdVal.toFixed(2)))+'/'+unit+'</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>';}
             else{h+='<tr><td colspan="2" style="color:#C0C4CC">当前客户无运费优惠</td></tr><tr class="total-row"><td>优惠后公布价</td><td><b>¥'+row._afterFreight.toFixed(2)+'/'+unit+'</b></td></tr>';}
             h+='</table>';
             h+='<table class="cost-detail-table"><tr><th colspan="2">③ 附加费</th></tr>';
@@ -360,7 +360,7 @@
             if(row._ddVal>0){h+='<tr><td>'+row._ddLabel+'</td><td>-¥'+row._ddVal.toFixed(2)+'/'+unit+'</td></tr>';}
             else{h+='<tr><td colspan="2" style="color:#C0C4CC">未命中泡比优惠（实重÷体积 < 阈值）</td></tr>';}
             h+='</table>';
-            var finalUnit=row._afterFreight+row._scTotal-row._ddVal;
+            var finalUnit=row._afterFreight+row._scTotal+row._ddVal;
             h+='<table class="cost-detail-table"><tr><th colspan="2">⑤ 最终报价</th></tr><tr class="total-row"><td>最终报价（公布价-运费优惠+附加费-泡比优惠）</td><td><b>¥'+finalUnit.toFixed(2)+'/'+unit+'</b></td></tr><tr><td>计费量</td><td>'+qty.toFixed(qty%1===0?0:2)+' '+unit+'</td></tr><tr class="total-row"><td>估算运费</td><td><b>¥'+(finalUnit*qty).toFixed(0)+'</b></td></tr></table>';
             h+='<p style="color:#909399;font-size:11px;margin-top:6px">*不含成本底价和盈亏标识，估算运费为演示参考，实际结算以运单为准</p></div>';
             ElementPlus.ElMessageBox.alert(h,'费用明细 — '+row.channel,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:460px'});
