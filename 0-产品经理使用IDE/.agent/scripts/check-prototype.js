@@ -132,8 +132,35 @@ function probes(inst) {
   if (typeof inst.addPricingRow === 'function') {
     P('addPricingRow ×2', () => { inst.addPricingRow(); inst.addPricingRow(); return '行数=' + ((F() || {}).pricingRows || []).length; });
   }
-  if (typeof inst.addDiscountRow === 'function') P('addDiscountRow', () => { inst.addDiscountRow(); return '优惠' + (((F() || {}).discountRules) || []).length + '条'; });
-  if (typeof inst.addDensityRow === 'function') P('addDensityRow', () => { inst.addDensityRow(); return '泡比' + (((F() || {}).densityRules) || []).length + '条'; });
+  // 优惠已从编辑弹窗拆到**独立优惠弹窗**：附加费页状态在 d.rules，
+  // 服务组合页状态在 dform.discountRules / dform.densityRules
+  const D = () => (inst.d !== undefined ? inst.d : (inst.dform !== undefined ? inst.dform : null));
+  const DR = () => { const d = D() || {}; if (Array.isArray(d.rules)) return d.rules; if (Array.isArray(d.discountRules)) return d.discountRules; return null; };
+  const DDen = () => { const d = D() || {}; return Array.isArray(d.densityRules) ? d.densityRules : null; };
+  const host = allRules ? (allRules.find(r => ((r._raw || {}).action === 'charge')) || allRules[0]) : null;
+  if (host && typeof inst.openDiscount === 'function') {
+    P('openDiscount: ' + (host.name || host.code), () => {
+      inst.openDiscount(host);
+      const bits = [];
+      const r = DR(); if (r) bits.push('优惠' + r.length + '条');
+      const de = DDen(); if (de) bits.push('泡比' + de.length + '条');
+      if (inst.d && inst.d.basePrice !== undefined) bits.push('应收单价=' + (inst.d.basePrice === null ? '-' : inst.d.basePrice));
+      bits.push('弹窗=' + (inst.showDiscountDialog ? '已打开' : '未打开'));
+      return bits.join(' ');
+    });
+  }
+  if (typeof inst.addDiscountRow === 'function' && DR()) {
+    P('addDiscountRow', () => { const b = DR().length; inst.addDiscountRow(); return '优惠 ' + b + '→' + DR().length + ' 条'; });
+  }
+  if (typeof inst.addDensityRow === 'function' && DDen()) {
+    P('addDensityRow', () => { const b = DDen().length; inst.addDensityRow(); return '泡比 ' + b + '→' + DDen().length + ' 条'; });
+  }
+  if (typeof inst.validateDiscountUniqueness === 'function' && DR()) {
+    P('validateDiscountUniqueness', () => { const r = inst.validateDiscountUniqueness(); return (r && r.conflict) ? ('冲突 行' + r.row1 + '/' + r.row2) : '无冲突'; });
+  }
+  if (typeof inst.checkSpecialWorse === 'function' && DR()) {
+    P('checkSpecialWorse', () => { const w = inst.checkSpecialWorse(); return Array.isArray(w) ? ('告警 ' + w.length + ' 条') : 'ok'; });
+  }
   if (inst.filteredRules !== undefined) P('filteredRules', () => '共 ' + inst.filteredRules.length + ' 条');
   if (inst.filteredCombos !== undefined) P('filteredCombos', () => '共 ' + inst.filteredCombos.length + ' 条');
   return out;
