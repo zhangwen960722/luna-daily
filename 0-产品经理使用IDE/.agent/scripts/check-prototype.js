@@ -33,6 +33,76 @@ function templateOnly(html) {
     .replace(/<!--[\s\S]*?-->/g, '');
 }
 
+/** 与 templateOnly 相同，但**保留换行**，使行号与原文件一致（供作用域检查报位置用） */
+function templateOnlyKeepLines(html) {
+  const blank = (m) => m.replace(/[^\n]/g, '');
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, blank)
+    .replace(/<style[\s\S]*?<\/style>/gi, blank)
+    .replace(/<!--[\s\S]*?-->/g, blank);
+}
+
+/**
+ * 模板作用域检查：`X.row` 只能在声明了 `#default="X"` 的槽**作用域内**使用。
+ * 为什么需要：槽外引用槽变量**不会白屏**，但会让包含它的组件渲染抛错 ——
+ * 若该组件是 `el-dialog` 的内容（Element Plus 懒渲染），表现为「**点按钮弹窗永远不出来**」，
+ * 是极难靠肉眼发现的静默失败（2026-09-12 在费用与标识规则页实际踩到）。
+ *
+ * 用**帧栈**而不是单个变量，因为表格可嵌套（展开行里再放一张表）：
+ * `<el-table-column>` / `<template>` 开标签入栈，对应闭标签出栈；某个 `X` 只要在栈内任一层声明过就算在作用域内。
+ */
+function slotScopeErrors(tpl) {
+  const errs = [];
+  const lines = tpl.split(/\r?\n/);
+  const stack = [];
+  const inScope = (name) => stack.some((f) => f.scope === name);
+  const tok = new RegExp(
+    '<el-table-column\\b[^>]*?/>' +                       // 自闭列
+    '|<el-table-column\\b[^>]*>' +                        // 列开
+    '|</el-table-column>' +                               // 列闭
+    '|<template\\b[^>]*>' +                               // 模板开（含 #default）
+    '|</template>' +                                      // 模板闭
+    '|(?:#default|v-slot:default)\\s*=\\s*"([A-Za-z_$][\\w$]*)"' + // 独立声明的槽变量
+    '|([A-Za-z_$][\\w$]*)\\.row\\b',                      // 槽变量使用
+    'g'
+  );
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let m;
+    tok.lastIndex = 0;
+    while ((m = tok.exec(line)) !== null) {
+      const t = m[0];
+      if (t.startsWith('<el-table-column')) {
+        const sc = /#default\s*=\s*"([A-Za-z_$][\w$]*)"/.exec(t);
+        stack.push({ kind: 'col', scope: sc ? sc[1] : null, selfClosed: /\/>$/.test(t), line: i + 1 });
+      } else if (t === '</el-table-column>') {
+        for (let k = stack.length - 1; k >= 0; k--) {
+          if (stack[k].kind !== 'col') continue;
+          if (stack[k].selfClosed) { stack.splice(k, 1); continue; } // 自闭列没配对闭标签，丢掉
+          stack.length = k;
+          break;
+        }
+      } else if (t === '</template>') {
+        for (let k = stack.length - 1; k >= 0; k--) {
+          if (stack[k].kind === 'col') break;                       // 不越过所属列
+          if (stack[k].kind === 'slot') { stack.length = k; break; }
+        }
+      } else if (t.startsWith('<template')) {
+        const sc = /#default\s*=\s*"([A-Za-z_$][\w$]*)"/.exec(t);
+        stack.push({ kind: 'slot', scope: sc ? sc[1] : null, line: i + 1 });
+      } else if (m[1]) {
+        stack.push({ kind: 'slot', scope: m[1], line: i + 1 });
+      } else if (m[2]) {
+        if (!inScope(m[2])) {
+          errs.push('第 ' + (i + 1) + ' 行用了 `' + m[2] + '.row`，但它不在 `#default="' + m[2] + '"` 的作用域内'
+            + (stack.length ? '（当前位置属于第 ' + stack[stack.length - 1].line + ' 行开始的元素）' : '（已不在任何表格列内）'));
+        }
+      }
+    }
+  }
+  return errs;
+}
+
 /** 取出所有**内联** <script> 块（排除带 src 的外链标签） */
 function inlineScripts(html) {
   const out = [];
@@ -188,6 +258,17 @@ for (const file of process.argv.slice(2)) {
   }
   if (synErr) continue;
   console.log('  [OK]   语法检查通过（' + blocks.length + ' 个内联 script 块）');
+
+  // 2.5 模板作用域：`X.row` 只能在声明了 `#default="X"` 的表格列**内部**使用。
+  //     槽外引用（如弹窗头部的按钮写成 :disabled="dLocked||s2.row._expired"）不会白屏，
+  //     但会让**整个 el-dialog 渲染抛错、弹窗永远打不开** —— 2026-09-12 实际踩过。
+  const scopeErrs = slotScopeErrors(templateOnlyKeepLines(html));
+  if (scopeErrs.length) {
+    scopeErrs.forEach((e) => console.log('  [ERR]  模板作用域: ' + e));
+    failed++;
+  } else {
+    console.log('  [OK]   模板作用域检查通过（槽变量未越界使用）');
+  }
 
   // 3. 运行时引用：用**含 createApp 的那个块**（原先固定取第一个，可能取错块）
   const mainIdx = blocks.findIndex((b) => /createApp\s*\(/.test(b));
