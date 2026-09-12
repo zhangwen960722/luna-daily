@@ -322,7 +322,7 @@
 <li>标题：「<strong>超重超长费用将在拣货实测后计算</strong>」</li>
 <li>正文：「以下报价依据您填写的箱数 / 尺寸 / 重量<strong>预估</strong>得出。其中<strong>超重、超长</strong>类附加费需以<strong>货物入仓后拣货实测的尺寸与重量</strong>为最终判定依据，<strong>实际费用以实测结果为准</strong>（可能高于或低于此处预估值）。」</li>
 </ul>
-<blockquote><strong>★ 背景与未决项 E9</strong>：超级运价已定「<strong>超重超长只在「拣货」触发</strong>」（下单尺寸是客户自填、算了也要被实测推翻），RDD 亦写「<strong>运价查询阶段不计算</strong>」；但货主端原型<strong>当前确实在查价阶段就计算并展示</strong>超重超长加收。<strong>是「查价阶段彻底不算(A)」还是「保留为预估但不落库、不进账单(B)」待产品确认</strong>——本文档如实描述原型现状 + 记录该待确认项，<strong>不自行选定</strong>。详见 §14 未决项。</blockquote></p><p><h4 id="区域五-结果区二次筛选">区域五：结果区二次筛选</h4></p><p><div class="table-wrapper"><table><tr><td>筛选项</td><td>控件</td><td>说明</td></tr>
+<blockquote><strong>★ E9 已定（2026-09-12，产品确认）</strong>：<strong>★ E9 已定（2026-09-12，产品确认）</strong>：查价阶段<strong>能否</strong>算出「超重超长」<strong>取决于包裹信息的录入方式</strong>，不是"算不算"的问题 ——① <strong>按单箱录入</strong>（填了长/宽/高）→ <strong>可以算</strong>：超重超长按公式判定（该规则计价单位<strong>仅按箱</strong>）、<strong>体积重 = 长×宽×高 ÷ 计泡系数</strong> → <strong>在查价结果中作预估展示</strong>；② <strong>按总体重量与体积录入</strong>（无单箱长宽高）→ <strong>算不出，不展示该项</strong>。<strong>正式计费仍以「拣货实测」为准</strong>（客户自填尺寸仅供预估），故结果区提示条<strong>保留</strong>并继续声明"以拣货实测为准"；<strong>规则口径不变</strong>：「字段&公式」型规则的<strong>正式触发与费用流水生成仍在「拣货」节点</strong>，查价阶段只是<strong>预估展示、不落库、不进账单</strong>。</blockquote></p><p><h4 id="区域五-结果区二次筛选">区域五：结果区二次筛选</h4></p><p><div class="table-wrapper"><table><tr><td>筛选项</td><td>控件</td><td>说明</td></tr>
 <tr><td>--------</td><td>------</td><td>------</td></tr>
 <tr><td>服务组合</td><td>输入框（可清空）</td><td>按服务组合名称模糊匹配</td></tr>
 <tr><td>目的港</td><td>下拉（可清空）</td><td>长滩港 / 洛杉矶港 / 奥克兰港 / 洛杉矶机场</td></tr>
@@ -371,7 +371,7 @@
 <li>[运费优惠]：按 客户特批 > 客户等级 匹配，<strong>只取一条参与计算</strong></li>
 <li>[泡比优惠]：泡比 ≥ 密度阈值命中，<strong>多条命中取阈值最大一档</strong>，<strong>仅作用于 KG 计价行</strong></li>
 <li>[附加费优惠]：绑定附加费规则匹配，<strong>与运费优惠独立计算</strong></li>
-<li>[超重超长]：⚠️ 原型当前在查价阶段依客户自填尺寸/属性计算并展示；超级运价定稿口径为拣货触发。<strong>口径待确认（E9）</strong>，页面已加提示条声明"以拣货实测为准"</li>
+<li>[超重超长]：<strong>★ E9 已定（2026-09-12）</strong> —— <strong>按单箱录入（有多件装箱的长/宽/高）时</strong>，查价阶段<strong>即计算并展示</strong>超重超长与体积重（预估）；<strong>按总体重量与体积录入时算不出、不展示</strong>。正式计费仍以<strong>拣货实测</strong>为准，预估<strong>不落库、不进账单</strong></li>
 </ul>
 <h4 id="关联接口">关联接口</h4></p><p><ul><li>报价查询：见 §9 接口清单（<strong>路径待确认，见 §14 D4</strong>）</li>
 </ul>  - 请求（示意）：<code>{ country, warehouseCode | zip, deliveryRegion, cargoMode, cargoSimple{weight,volume} | cargoItems[{qty,l,w,h,wt}], trunkLines[], productTypes[], taxMethods[], caller:'shipper' }</code>
@@ -578,7 +578,7 @@
 <tr><td><strong>R06e</strong></td><td><strong>查价-成本/利润隐藏</strong></td><td><code>caller=shipper</code> 时接口<strong>不返回</strong>成本底价、利润、盈亏标识</td><td>结果表不出成本相关列</td><td>未登录 + caller=shipper -> 401</td></tr>
 <tr><td>R07</td><td>查价-未匹配</td><td>某组合在当前仓点/邮编无运价行 -> 不返回该组合</td><td>结果区提示"当前筛选条件下无匹配报价"</td><td>--</td></tr>
 <tr><td>R08</td><td>查价-报价有效期</td><td>报价基于当前周批次 (weekly_schedule_batch.status = CURRENT)</td><td>页面底部标注"本报价为预估参考"</td><td>周批次过期 -> 无 CURRENT 批次 -> 查价返回空或提示系统维护中</td></tr>
-<tr><td><strong>R08a</strong></td><td><strong>查价-超重超长提示</strong></td><td>结果区上方固定展示 warning 提示条，声明超重超长以拣货实测为准</td><td>提示条</td><td><strong>⚠️ 该费用的计算时点存在未决项 E9，见 §14</strong></td></tr>
+<tr><td><strong>R08a</strong></td><td><strong>查价-超重超长提示</strong></td><td>结果区上方固定展示 warning 提示条，声明超重超长以<strong>拣货实测</strong>为准（<strong>★ E9 已定 2026-09-12</strong>：单箱录入时可算作预估展示、总体录入不算；预估不落库不进账单）</td><td>提示条</td><td>提示条<strong>保留</strong>（口径已定，非未决项）</td></tr>
 <tr><td><strong>R08b</strong></td><td><strong>查价-接口超时</strong></td><td>报价查询接口超时（3s）</td><td>提示"系统繁忙，请稍后重试"</td><td><strong>不降级返回缓存价</strong>（价格时效性要求高）</td></tr>
 <tr><td>R09</td><td>子账号-新增校验</td><td>account 同企业内唯一</td><td>后端校验 -> 重复则返回错误</td><td>前端 Toast 提示"账号已存在"</td></tr>
 <tr><td>R10</td><td>子账号-冻结确认</td><td>状态从"正常"变为"已冻结"</td><td>二次确认弹窗</td><td>用户取消 -> 不执行</td></tr>
@@ -828,7 +828,7 @@ Step 3 — 跨模块校验（客商中心）★ 必须同步校验:
 </table></div>
 <hr></p><p><h2 id="14-待确认未决项汇总-2026-09-12-新增">14. ⚠️ 待确认未决项汇总（★ 2026-09-12 新增）</h2></p><p><blockquote>以下为<strong>货主端无法自行判定、需产品拍板</strong>的口径冲突。本文档<strong>如实记录，不自行选定结论</strong>。</blockquote></p><p><div class="table-wrapper"><table><tr><td>#</td><td>未决项</td><td>超级运价口径</td><td>货主端原型现状</td><td>候选方案</td></tr>
 <tr><td>---</td><td>--------</td><td>------------</td><td>--------------</td><td>---------</td></tr>
-<tr><td><strong>E9 ★重点</strong></td><td><strong>超重超长是否在查价阶段计算</strong></td><td><strong>超重超长只在「拣货」触发</strong>（下单尺寸是客户自填、算了也要被实测推翻）；RDD 明确「<strong>运价查询阶段不计算</strong>」；附加费规则类型为「字段&公式」，计价单位<strong>仅按箱</strong>，触发节点=拣货</td><td><code>查价订舱.html</code> <strong>当前在查价阶段即依客户自填尺寸/货物属性计算并展示</strong>：「超重件加收 200/件」（货物属性含"超重"时，按件）、「超重超长 200/箱」（多件装箱行满足 <code>(长+宽)×2+高>300</code> 或 <code>长+宽×2+高×2>265</code> 时，按箱）。2026-09-12 已在报价结果区上方加提示条声明"以拣货实测为准"</td><td><strong>(A)</strong> 查价阶段彻底不算超重超长（对齐超级运价，结果表移除该项）/ <strong>(B)</strong> 保留为"预估展示"但<strong>不落库、不进账单</strong>。<strong>待产品确认</strong></td></tr>
+<tr><td>~~E9~~</td><td>~~超重超长是否在查价阶段计算~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12）</strong>：改为<strong>取决于录入方式</strong> —— <strong>按单箱录入</strong>（有长宽高）→ 查价阶段<strong>算得出</strong>（超重超长按公式、体积重 = 长×宽×高÷计泡系数）并作<strong>预估展示</strong>；<strong>按总体重量与体积录入</strong> → <strong>算不出、不展示</strong>。<strong>正式计费以拣货实测为准</strong>，预估<strong>不落库、不进账单</strong>；规则正式触发仍在<strong>拣货</strong>节点</td></tr>
 <tr><td><strong>D4</strong></td><td><strong>报价查询接口路径</strong></td><td>§5.12 写 <code>POST /api/freight-rate/query</code>；§R27 写 <code>GET /api/v1/quote/query?caller=shipper</code></td><td>原货主端 PRD 写 <code>POST /api/shipper/inquiry/price</code></td><td>三个路径并存，需确认货主端对接的唯一接口</td></tr>
 <tr><td>~~D5~~</td><td>~~优惠金额的展示顺序~~</td><td>—</td><td>—</td><td>✅ <strong>已关闭（2026-09-12）</strong>：由 D6 的结论定死 —— 泡比优惠不抵扣附加费，故必须分段：<code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code>。已统一全文</td></tr>
 <tr><td>~~D6~~</td><td>~~泡比优惠能否抵扣附加费~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12 产品确认）：不抵扣</strong> —— 泡比优惠只作用于运费侧、<strong>不得抵扣附加费</strong>，最终报价必须分段 <code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code>；已写成硬约束（见 R06 / §7.2）。同源推广：运费优惠只作用运费、附加费优惠只作用附加费</td><td>—</td><td>，需前置定论</td></tr>

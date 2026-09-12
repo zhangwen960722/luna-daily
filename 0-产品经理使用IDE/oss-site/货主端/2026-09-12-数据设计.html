@@ -231,7 +231,7 @@
 最终报价 = 公布价 − 运费优惠 + Σ(附加费原价 − 附加费优惠) − 泡比优惠
 约束：任一费用项最终金额不得为负（优惠上限截断 R31）
 </code></pre></p><p><blockquote><strong>⚠️ 未决项（见 §8 不一致处理标注）</strong>：
-<ul><li><strong>E9 — 超重超长是否在查价阶段参与计算</strong>：超级运价定稿口径为「超重超长只在<strong>拣货</strong>触发」（依据拣货实测尺寸/重量；RDD §1656 明确「运价查询阶段不计算」），但货主端原型 <code>查价订舱.html</code> <strong>当前仍在查价阶段依据客户自填尺寸/货物属性计算并展示</strong>「超重件加收 200/件」「超重超长 200/箱」。<strong>两种口径（A 查价阶段彻底不算 / B 保留为预估但不落库、不进账单）待产品确认，本文档不预设结论。</strong></li>
+<ul><li><strong>★ E9 已定（2026-09-12）——超重超长在查价阶段的参与方式</strong>：<strong>★ E9 已定（2026-09-12，产品确认）</strong>：查价阶段<strong>能否</strong>算出「超重超长」<strong>取决于包裹信息的录入方式</strong>，不是"算不算"的问题 ——① <strong>按单箱录入</strong>（填了长/宽/高）→ <strong>可以算</strong>：超重超长按公式判定（该规则计价单位<strong>仅按箱</strong>）、<strong>体积重 = 长×宽×高 ÷ 计泡系数</strong> → <strong>在查价结果中作预估展示</strong>；② <strong>按总体重量与体积录入</strong>（无单箱长宽高）→ <strong>算不出，不展示该项</strong>。<strong>正式计费仍以「拣货实测」为准</strong>（客户自填尺寸仅供预估），故结果区提示条<strong>保留</strong>并继续声明"以拣货实测为准"；<strong>规则口径不变</strong>：「字段&公式」型规则的<strong>正式触发与费用流水生成仍在「拣货」节点</strong>，查价阶段只是<strong>预估展示、不落库、不进账单</strong>。</li>
 <li><strong>附加费优惠与泡比优惠的叠加顺序</strong>：超级运价 PRD §7.4 的公式为 <code>最终报价 = 折扣后运费 + 优惠后附加费</code>，而原型费用明细弹窗展示为 <code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code>。两者计算结果一致（减法可交换），但<strong>展示顺序不一致</strong>，已在 §8 列出待确认。</blockquote></li>
 </ul>
 <hr></p><p><h2 id="5-枚举值集中定义">5. 枚举值集中定义</h2></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
@@ -363,7 +363,7 @@ Step 4: 签发 JWT token
 </table></div>
 <hr></p><p><h2 id="8-不一致处理标注">8. 不一致处理标注</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>不一致点</td><td>超级运价 / 客商中心口径</td><td>货主端原型现状</td><td>处理</td></tr>
 <tr><td>---</td><td>---------</td><td>----------------------</td><td>--------------</td><td>------</td></tr>
-<tr><td><strong>E9</strong></td><td><strong>超重超长是否在查价阶段计算</strong></td><td>超级运价已定：<strong>超重超长只在「拣货」触发</strong>（需拣货实测尺寸/重量）；RDD 明确「<strong>运价查询阶段不计算</strong>」</td><td><code>查价订舱.html</code> <strong>当前按客户自填尺寸/货物属性在查价阶段即计算并展示</strong>「超重件加收 200/件（按件）」「超重超长 200/箱（按箱）」；2026-09-12 已在报价结果区上方加提示条「超重超长费用将在拣货实测后计算……实际费用以实测结果为准」</td><td><strong>⚠️ 待产品确认，本文档不预设结论。</strong> 候选：<strong>(A)</strong> 查价阶段彻底不算超重超长；<strong>(B)</strong> 保留为"预估展示"但<strong>不落库、不进账单</strong>。确认后需同步修改本文件 §2.4 <code>surcharge_detail</code> 口径</td></tr>
+<tr><td>~~E9~~</td><td>~~超重超长是否在查价阶段计算~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12）</strong>：<strong>按单箱录入</strong>（询价结果行含长/宽/高）时可算并作<strong>预估展示</strong>（<code>surcharge_amount</code> 计入预估、体积重 = 长×宽×高÷计泡系数）；<strong>按总体重量与体积录入</strong>时不计算、不展示。预估<strong>不落库为应付依据</strong>，正式计费以<strong>拣货实测</strong>为准</td></tr>
 <tr><td>D1</td><td>联系人邮箱必填</td><td>客商中心：客户联系人.email 必填</td><td>货主端子账号.email 非必填（原型必填项仅 账号/姓/名/性别/手机号）</td><td><strong>✅ 已定（2026-09-12）</strong>：ROOT 账号邮箱来自客户联系人（<code>is_account_receiver=true</code>，必填）；<strong>手动创建的子账号邮箱非必填</strong>。二者不矛盾，非缺陷</td></tr>
 <tr><td>D2</td><td>ROOT冻结</td><td>客商中心 R25"关联账户同步冻结"</td><td>货主端"ROOT不可冻结"</td><td><strong>已解决</strong>：ROOT 不可被企业管理员<strong>单独</strong>冻结（前端隐藏按钮），但随客户冻结联动是系统级操作，不受此限制</td></tr>
 <tr><td>D3</td><td>角色表归属</td><td>客商中心不管理角色</td><td>货主端角色表引用系统设置模块</td><td><strong>已对齐</strong>：角色统一由系统设置模块管理，货主端只做引用和分配</td></tr>
