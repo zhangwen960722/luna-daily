@@ -373,7 +373,7 @@
 <li>[附加费优惠]：绑定附加费规则匹配，<strong>与运费优惠独立计算</strong></li>
 <li>[超重超长]：<strong>★ E9 已定（2026-09-12）</strong> —— <strong>按单箱录入（有多件装箱的长/宽/高）时</strong>，查价阶段<strong>即计算并展示</strong>超重超长与体积重（预估）；<strong>按总体重量与体积录入时算不出、不展示</strong>。正式计费仍以<strong>拣货实测</strong>为准，预估<strong>不落库、不进账单</strong></li>
 </ul>
-<h4 id="关联接口">关联接口</h4></p><p><ul><li>报价查询：见 §9 接口清单（<strong>路径待确认，见 §14 D4</strong>）</li>
+<h4 id="关联接口">关联接口</h4></p><p><ul><li>报价查询：<code>POST /api/freight-rate/query</code>，<strong><code>caller=shipper</code> 置于请求体</strong>（统一报价接口，2026-09-12 D4 定案）；详见 §9 接口清单</li>
 </ul>  - 请求（示意）：<code>{ country, warehouseCode | zip, deliveryRegion, cargoMode, cargoSimple{weight,volume} | cargoItems[{qty,l,w,h,wt}], trunkLines[], productTypes[], taxMethods[], caller:'shipper' }</code>
   - 返回（示意）：按专线分组的 <code>results[{ serviceCombinationCode, deliveryRegions[], billingUnit, publishedPrice, freightDiscount{ruleName,amount}, densityDiscount{ruleName,amount}, surcharges[{name,amount,after}], surchargeDiscounts[{ruleName,amount}], finalPrice, sailings[{routeName,etd,eta,fastestPickup,cutoffTimes{交货地:日期}}] }]</code>
   - <strong>不返回</strong>：成本底价、利润、盈亏标识</p><p><hr></p><p><h3 id="5-4-子账号管理-子账号管理-html">5.4 子账号管理 (子账号管理.html)</h3></p><p><strong>页面信息</strong>：
@@ -653,7 +653,7 @@
 <tr><td>------</td><td>------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td><td>---------</td></tr>
 <tr><td>登录</td><td>POST</td><td>/api/shipper/auth/login</td><td>login.html</td><td>{username, password}</td><td>{token, username, customer_id, customer_name}</td><td>Toast 错误信息</td></tr>
 <tr><td>首页统计</td><td>GET</td><td>/api/shipper/dashboard/stats</td><td>首页.html</td><td>--</td><td>{pendingOrders, inTransitOrders, pendingBills, monthlyVolume}</td><td>卡片显示"--"</td></tr>
-<tr><td><strong>报价查询</strong></td><td><strong>TBD</strong></td><td><strong>⚠️ 路径待确认，见 §14 D4</strong>（超级运价 §5.12：<code>POST /api/freight-rate/query</code>；§R27：<code>GET /api/v1/quote/query?caller=shipper</code>）（~~原 <code>/api/shipper/inquiry/price</code>~~）</td><td>查价订舱.html</td><td>{country, warehouseCode\</td><td>zip, deliveryRegion, cargoMode, cargoSimple\</td><td>cargoItems, trunkLines[], productTypes[], taxMethods[], caller:'shipper'}</td><td>按专线分组：{results:[{serviceCombinationCode, deliveryRegions, billingUnit, publishedPrice, freightDiscount{ruleName,amount}, densityDiscount{ruleName,amount}, surcharges[], surchargeDiscounts[], finalPrice, sailings[]}]}；<strong>不含成本底价/利润/盈亏标识</strong></td><td>超时3s→Toast"系统繁忙，请稍后重试"（不降级返回缓存价）</td></tr>
+<tr><td><strong>报价查询</strong></td><td><strong>POST</strong></td><td><strong><code>/api/freight-rate/query</code></strong>（统一报价接口；<strong><code>caller=shipper</code> 置于请求体</strong>，2026-09-12 D4 定案）（~~原 <code>/api/shipper/inquiry/price</code>~~）</td><td>查价订舱.html</td><td>{country, warehouseCode\</td><td>zip, deliveryRegion, cargoMode, cargoSimple\</td><td>cargoItems, trunkLines[], productTypes[], taxMethods[], caller:'shipper'}</td><td>按专线分组：{results:[{serviceCombinationCode, deliveryRegions, billingUnit, publishedPrice, freightDiscount{ruleName,amount}, densityDiscount{ruleName,amount}, surcharges[], surchargeDiscounts[], finalPrice, sailings[]}]}；<strong>不含成本底价/利润/盈亏标识</strong></td><td>超时3s→Toast"系统繁忙，请稍后重试"（不降级返回缓存价）</td></tr>
 <tr><td>子账号列表</td><td>GET</td><td>/api/shipper/sub-account/list</td><td>子账号管理.html</td><td>{account, email, name, phone, page, pageSize}</td><td>{list: [{id, account, name, gender, phone, email, status}], total}</td><td>Toast 提示查询失败</td></tr>
 <tr><td>新增子账号</td><td>POST</td><td>/api/shipper/sub-account</td><td>子账号管理.html</td><td>{account, lastName, firstName, gender, phone, email}</td><td>{id}</td><td>Toast 提示失败原因</td></tr>
 <tr><td>编辑子账号</td><td>PUT</td><td>/api/shipper/sub-account/{id}</td><td>子账号管理.html</td><td>同新增</td><td>--</td><td>Toast 提示失败原因</td></tr>
@@ -669,7 +669,7 @@
 <tr><td><strong>后台任务列表</strong></td><td>GET</td><td>/api/shipper/background-task/list</td><td>后台任务.html</td><td>{taskNo, moduleName, taskStatus, page, pageSize}</td><td>{list: [], total}</td><td><strong>⚠️ 接口归属待确认</strong></td></tr>
 </table></div>
 <blockquote><strong>★ 变更（2026-09-12）</strong>：
-1. 查价接口由 <code>POST /api/shipper/inquiry/price</code> 改为<strong>走超级运价统一报价 API</strong>，请求/返回结构按 §5.3 重写；<strong>具体路径待确认（D4）</strong>。
+1. 查价接口由 <code>POST /api/shipper/inquiry/price</code> 改为<strong>走超级运价统一报价 API</strong>：<strong><code>POST /api/freight-rate/query</code>，<code>caller=shipper</code> 置于请求体</strong>（2026-09-12 D4 定案），请求/返回结构按 §5.3 重写。
 2. 新增「后台任务列表」接口占位（归属待确认）。</blockquote></p><p><hr></p><p><h2 id="10-错误提示文案汇总">10. 错误提示文案汇总</h2></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发条件</td><td>文案</td><td>类型</td></tr>
 <tr><td>------</td><td>---------</td><td>------</td><td>------</td></tr>
 <tr><td>E01</td><td>账号为空</td><td>"请输入账号"</td><td>阻断</td></tr>
@@ -766,7 +766,7 @@
 <tr><td>------</td><td>------</td><td>------</td><td>--------</td><td>------</td><td>------</td></tr>
 <tr><td>查询客户状态</td><td>GET</td><td>/api/customer/{id}/status</td><td>客商中心</td><td>2s</td><td>登录/下单/查价时实时校验 service_status + sign_status + <strong>customer_level</strong></td></tr>
 <tr><td>查询客户信息</td><td>GET</td><td>/api/customer/{id}/profile</td><td>客商中心</td><td>2s</td><td>首页加载时获取企业名称</td></tr>
-<tr><td><strong>报价查询</strong></td><td><strong>TBD</strong></td><td><strong>⚠️ 待确认，见 §14 D4</strong></td><td><strong>超级运价</strong></td><td><strong>3s</strong></td><td>caller=shipper 字段过滤，不返回成本底价/利润/盈亏</td></tr>
+<tr><td><strong>报价查询</strong></td><td><strong>POST</strong></td><td><strong><code>POST /api/freight-rate/query</code></strong>（<code>caller=shipper</code> 于请求体）</td><td><strong>超级运价</strong></td><td><strong>3s</strong></td><td>caller=shipper 字段过滤，不返回成本底价/利润/盈亏</td></tr>
 </table></div>
 <h3 id="13-4-完整登录校验链">13.4 完整登录校验链</h3></p><p><pre><code>POST /api/shipper/auth/login { username, password }
 
@@ -829,7 +829,7 @@ Step 3 — 跨模块校验（客商中心）★ 必须同步校验:
 <hr></p><p><h2 id="14-待确认未决项汇总-2026-09-12-新增">14. ⚠️ 待确认未决项汇总（★ 2026-09-12 新增）</h2></p><p><blockquote>以下为<strong>货主端无法自行判定、需产品拍板</strong>的口径冲突。本文档<strong>如实记录，不自行选定结论</strong>。</blockquote></p><p><div class="table-wrapper"><table><tr><td>#</td><td>未决项</td><td>超级运价口径</td><td>货主端原型现状</td><td>候选方案</td></tr>
 <tr><td>---</td><td>--------</td><td>------------</td><td>--------------</td><td>---------</td></tr>
 <tr><td>~~E9~~</td><td>~~超重超长是否在查价阶段计算~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12）</strong>：改为<strong>取决于录入方式</strong> —— <strong>按单箱录入</strong>（有长宽高）→ 查价阶段<strong>算得出</strong>（超重超长按公式、体积重 = 长×宽×高÷计泡系数）并作<strong>预估展示</strong>；<strong>按总体重量与体积录入</strong> → <strong>算不出、不展示</strong>。<strong>正式计费以拣货实测为准</strong>，预估<strong>不落库、不进账单</strong>；规则正式触发仍在<strong>拣货</strong>节点</td></tr>
-<tr><td><strong>D4</strong></td><td><strong>报价查询接口路径</strong></td><td>§5.12 写 <code>POST /api/freight-rate/query</code>；§R27 写 <code>GET /api/v1/quote/query?caller=shipper</code></td><td>原货主端 PRD 写 <code>POST /api/shipper/inquiry/price</code></td><td>三个路径并存，需确认货主端对接的唯一接口</td></tr>
+<tr><td>~~D4~~</td><td>~~报价查询接口路径~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12，选「甲」）</strong>：<strong>全系统只保留一个统一报价接口</strong> <code>POST /api/freight-rate/query</code>，各端以请求体 <code>caller</code> 区分（<code>operator</code> / <code>shipper</code> / <code>public</code>）；原 <code>GET /api/v1/quote/query?caller=...</code> 与 <code>POST /api/shipper/inquiry/price</code> <strong>均作废</strong></td></tr>
 <tr><td>~~D5~~</td><td>~~优惠金额的展示顺序~~</td><td>—</td><td>—</td><td>✅ <strong>已关闭（2026-09-12）</strong>：由 D6 的结论定死 —— 泡比优惠不抵扣附加费，故必须分段：<code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code>。已统一全文</td></tr>
 <tr><td>~~D6~~</td><td>~~泡比优惠能否抵扣附加费~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12 产品确认）：不抵扣</strong> —— 泡比优惠只作用于运费侧、<strong>不得抵扣附加费</strong>，最终报价必须分段 <code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code>；已写成硬约束（见 R06 / §7.2）。同源推广：运费优惠只作用运费、附加费优惠只作用附加费</td><td>—</td><td>，需前置定论</td></tr>
 <tr><td><strong>D7</strong></td><td><strong>4 个待建页面</strong></td><td>—</td><td>菜单已挂、页面文件不存在：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td>是否本期建设？本文档如实标注「菜单已挂、页面待建」，<strong>不计入已完成功能</strong></td></tr>

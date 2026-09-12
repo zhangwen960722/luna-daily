@@ -164,7 +164,7 @@
 <li>船期/截单：查询 <code>sailing_schedule</code>（运输详情弹窗的当周船期×各交货地截单矩阵）</li>
 <li>以上均为<strong>只读查询</strong>，货主端不写入运价相关表</li>
 </ul>
-<blockquote><strong>★ 变更（2026-09-12）</strong> 三层询价数据安全（超级运价 PRD R27）：同一报价 API <code>GET /api/v1/quote/query</code>，<code>caller=shipper</code> 时<strong>只返回公布价+优惠，不返回成本底价/利润/盈亏标识</strong>；未登录 + <code>caller=shipper</code> → 401。</blockquote></p><p><h3 id="4-6-与共享实体的引用关系">4.6 与共享实体的引用关系</h3></p><p><div class="table-wrapper"><table><tr><td>货主端页面</td><td>引用实体</td><td>来源表</td><td>来源模块</td><td>引用方式</td></tr>
+<blockquote><strong>★ 变更（2026-09-12）</strong> 三层询价数据安全（超级运价 PRD R27）：同一报价 API <code>POST /api/freight-rate/query</code>，请求体 <code>caller=shipper</code> 时<strong>只返回公布价+优惠，不返回成本底价/利润/盈亏标识</strong>；未登录 + <code>caller=shipper</code> → 401。</blockquote></p><p><h3 id="4-6-与共享实体的引用关系">4.6 与共享实体的引用关系</h3></p><p><div class="table-wrapper"><table><tr><td>货主端页面</td><td>引用实体</td><td>来源表</td><td>来源模块</td><td>引用方式</td></tr>
 <tr><td>-----------</td><td>---------</td><td>--------</td><td>---------</td><td>---------</td></tr>
 <tr><td>商品管理</td><td>商品</td><td><code>product</code></td><td>基础资料</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
 <tr><td>地址管理</td><td>收货地址</td><td><code>shipping_address</code></td><td>基础资料</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
@@ -314,9 +314,9 @@
 <tr><td>批量启用子账号</td><td>POST</td><td>/api/shipper/sub-account/batch-enable</td><td>货主端</td><td>客商中心</td><td>✅ 已启用跳过</td><td>3s</td></tr>
 <tr><td>查询客户状态</td><td>GET</td><td>/api/customer/{id}/status</td><td>客商中心</td><td>货主端</td><td>—</td><td>2s</td></tr>
 <tr><td>查询客户信息</td><td>GET</td><td>/api/customer/{id}/profile</td><td>客商中心</td><td>货主端</td><td>—</td><td>2s</td></tr>
-<tr><td><strong>报价查询</strong></td><td><strong>POST</strong></td><td><strong>/api/freight-rate/query</strong> 或 <strong>GET /api/v1/quote/query?caller=shipper</strong></td><td><strong>超级运价</strong></td><td><strong>货主端</strong></td><td>—</td><td><strong>3s</strong></td></tr>
+<tr><td><strong>报价查询</strong></td><td><strong>POST</strong></td><td><strong><code>/api/freight-rate/query</code></strong>（统一报价接口；请求体 <strong><code>caller=shipper</code></strong>）</td><td><strong>超级运价</strong></td><td><strong>货主端</strong></td><td>—</td><td><strong>3s</strong></td></tr>
 </table></div>
-<blockquote><strong>★ 变更（2026-09-12）</strong>：新增「报价查询」接口行。超级运价 PRD 同时出现两个路径（§5.12 关联接口 <code>POST /api/freight-rate/query</code>、§R27 <code>GET /api/v1/quote/query</code>），<strong>两者口径不一致，待确认以哪个为准</strong>（已列入 §8）。</blockquote></p><p><h3 id="6-4-登录校验链-完整">6.4 登录校验链（完整）</h3></p><p><pre><code>货主端登录 POST /api/shipper/auth/login
+<blockquote><strong>★ 变更（2026-09-12，D4 已定）</strong>：新增「报价查询」接口行。<strong>全系统只保留一个统一报价接口</strong> <code>POST /api/freight-rate/query</code>，各端以请求体 <code>caller</code> 区分（<code>operator</code> / <code>shipper</code> / <code>public</code>）；原 <code>GET /api/v1/quote/query?caller=...</code> 与旧货主端 <code>POST /api/shipper/inquiry/price</code> <strong>均作废</strong>。</blockquote></p><p><h3 id="6-4-登录校验链-完整">6.4 登录校验链（完整）</h3></p><p><pre><code>货主端登录 POST /api/shipper/auth/login
   ↓
 Step 1: 验证账号密码
   → 匹配 sub_account.account 或 sub_account.email
@@ -367,7 +367,7 @@ Step 4: 签发 JWT token
 <tr><td>D1</td><td>联系人邮箱必填</td><td>客商中心：客户联系人.email 必填</td><td>货主端子账号.email 非必填（原型必填项仅 账号/姓/名/性别/手机号）</td><td><strong>✅ 已定（2026-09-12）</strong>：ROOT 账号邮箱来自客户联系人（<code>is_account_receiver=true</code>，必填）；<strong>手动创建的子账号邮箱非必填</strong>。二者不矛盾，非缺陷</td></tr>
 <tr><td>D2</td><td>ROOT冻结</td><td>客商中心 R25"关联账户同步冻结"</td><td>货主端"ROOT不可冻结"</td><td><strong>已解决</strong>：ROOT 不可被企业管理员<strong>单独</strong>冻结（前端隐藏按钮），但随客户冻结联动是系统级操作，不受此限制</td></tr>
 <tr><td>D3</td><td>角色表归属</td><td>客商中心不管理角色</td><td>货主端角色表引用系统设置模块</td><td><strong>已对齐</strong>：角色统一由系统设置模块管理，货主端只做引用和分配</td></tr>
-<tr><td><strong>D4</strong></td><td><strong>报价查询接口路径</strong></td><td>超级运价 PRD §5.12 写 <code>POST /api/freight-rate/query</code>；§R27 写 <code>GET /api/v1/quote/query?caller=shipper</code></td><td>货主端原 PRD 写 <code>POST /api/shipper/inquiry/price</code></td><td><strong>⚠️ 待确认</strong>：三个路径并存，需产品/研发确认货主端对接的唯一接口。本文档不自行选定</td></tr>
+<tr><td>~~D4~~</td><td>~~报价查询接口路径~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12，选「甲」）</strong>：统一为 <code>POST /api/freight-rate/query</code>，<code>caller=shipper</code> 置于请求体；旧两路径作废</td></tr>
 <tr><td><strong>D5</strong></td><td><strong>优惠后金额的展示顺序</strong></td><td>超级运价 §7.4：<code>最终报价 = 折扣后运费 + 优惠后附加费</code>（先算折扣后运费，再加附加费净额）</td><td>原型费用明细弹窗：<code>公布价 − 运费优惠 + 附加费(优惠后) − 泡比优惠</code></td><td><strong>数值等价、展示顺序不同</strong>（减法可交换）。<strong>⚠️ 待确认</strong>：以哪个公式作为"研发唯一口径"表述</td></tr>
 <tr><td><strong>D6</strong></td><td><strong>附加入库/账单的叠加口径</strong></td><td>超级运价 §7.4 <code>折扣后运费 = 公布价 − Σ运费固定减免 − Σ泡比固定减免</code></td><td>原型 <code>finalUnit = afterFreight + scTotal − ddVal</code>（先减运费优惠得 <code>afterFreight</code>，加附加费净额，最后减泡比优惠）</td><td>同 D5，数值等价。<strong>⚠️ 待确认</strong>：泡比优惠在"是否可抵扣附加费"上两种写法都成立（因为都是纯减法），但若后续引入"附加费不可被泡比优惠抵扣"的业务约束则二者不等价</td></tr>
 <tr><td><strong>D7</strong></td><td><strong>原型缺页</strong></td><td>—</td><td>菜单已挂、<strong>页面文件不存在</strong>：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td><strong>如实标注为「菜单已挂、页面待建」</strong>，不计入已完成功能。<strong>⚠️ 待确认</strong>：是否本期建设</td></tr>

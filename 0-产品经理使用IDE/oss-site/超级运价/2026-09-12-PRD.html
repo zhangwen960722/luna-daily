@@ -517,7 +517,7 @@
 <tr><td>10</td><td><strong>用户</strong></td><td>客户名称</td><td><strong>多选</strong></td><td>客商中心-客户管理（正常客户）</td></tr>
 </table></div>
 <blockquote><strong>本次调整点</strong>：① <strong>新增「服务组合」维度</strong>（多选）；② <strong>移除「用户等级」维度</strong>（等级优惠统一走优惠规则 §5.11，同一语义不留两个入口）；③ 原「本地仓」维度更名为「<strong>交货站点</strong>」，取值由自由输入改<strong>下拉多选</strong>；④ 「用户」取值由自由输入改<strong>下拉多选</strong>；⑤ 维度/取值改<strong>必填</strong>；⑥ 上表 10 个维度为<strong>「字段匹配」型</strong>可用集合，选择方式为多选的维度（8/9/10）可多值；⑦ <strong>「字段&公式」型维度条件只能是「服务组合」（多选，最多 1 行，可为空）</strong>，其余维度不可选。</blockquote></p><p><strong>字段&公式型 — 运算符支持</strong>（★ 2026-09-11 补齐）：</p><p><ul><li><strong>公式条件</strong>：多条 <strong>OR</strong> 关系；<strong>「字段&公式」时必填</strong>（<strong>≥1 条</strong>，保存时逐条查空）</li>
-<li><strong>可用变量</strong>：<strong>长、宽、高、重量、材积重</strong>（★ 2026-09-12 新增「材积重」；原「长宽高 / 单箱重量 / SKU数量」统一改为本口径）。<strong>材积重</strong>（体积重）——<strong>取运单货箱上的材积重值</strong>（即货箱的"重量方数"），公式中<strong>可直接引用、无需再写换算式</strong>；口径附注：按 KG 计费时 = 货箱<strong>材重</strong>（<code>长×宽×高 ÷ 计泡系数</code>，原型计泡系数 6000）；按 m³ 计费时 = 货箱<strong>重量方数</strong>（<code>实重 ÷ 计方系数</code>，原型计方系数 363）</li>
+<li><strong>可用变量</strong>：<strong>长、宽、高、重量、材积重</strong>（★ 2026-09-12 新增「材积重」；原「长宽高 / 单箱重量 / SKU数量」统一改为本口径）。<strong>材积重</strong>（体积重的<strong>统称</strong>）——<strong>货箱上的「材重」与「重量方数」都属于材积重</strong>，按计费方式取其一：<strong>按 KG 计费</strong> → 取货箱<strong>材重</strong>（<code>长×宽×高 ÷ 计泡系数</code>，原型计泡系数 6000）；<strong>按 m³ 计费</strong> → 取货箱<strong>重量方数</strong>（<code>实重 ÷ 计方系数</code>，原型计方系数 363）。公式中直接引用该值即可</li>
 <li><strong>算术运算符</strong>：<code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>(</code> <code>)</code></li>
 <li><strong>比较运算符</strong>：<code>></code> <code><</code> <code>>=</code> <code><=</code> <code>=</code></li>
 <li>公式示例：<code>(长+宽)*2+高 > 300</code>、<code>长*宽*高/6000 > 20</code>、<code>(长+宽+高)*2 >= 265</code></li>
@@ -700,7 +700,7 @@
 <li>类型：查询页（轻量版）</li>
 <li>访问角色：任何人（免登录）；点击「立即登录」跳转货主端登录界面</li>
 </ul>
-<strong>定位</strong>：货主端「在线询价」的轻量版，面向未登录散客与新媒体/销售分享场景。走同一报价引擎（<code>GET /api/v1/quote/query</code>，caller=public/shipper），仅 caller 与登录状态不同。</p><p><strong>页面结构</strong>：
+<strong>定位</strong>：货主端「在线询价」的轻量版，面向未登录散客与新媒体/销售分享场景。走同一报价引擎（<code>POST /api/freight-rate/query</code>，caller=public/shipper 置于请求体），仅 caller 与登录状态不同。</p><p><strong>页面结构</strong>：
 <ul><li>顶部导航：品牌标识 + 「访客模式」标签（公开页纯免登录，无模拟登录入口）</li>
 <li>Hero 区：标题「美国 FBA 海运费计算器」+ 副标题「免登录可用」</li>
 <li>查询区：目的国 + 仓库代码 + 交货地(收货仓) + 邮编(快递派) + 包裹重量(kg) + 包裹体积(m³) + 货物属性（多选，触发附加费）+ 包税方式（多选）+ 查询按钮</li>
@@ -815,7 +815,7 @@
 <tr><td>R24</td><td>快递派单价复制</td><td>组合生成时从 渠道快递派单价 逐行复制到 组合快递派单价，仅复制到快递派组合；组合级可覆盖单价或冻结行</td><td>组合快递派单价</td><td>—</td></tr>
 <tr><td>R25</td><td>成本Excel导入</td><td>四种导入统一在工作台入口：(1)普通成本项→更新模板default_price→R08传播；(2)拖车费→更新delivery_group；(3)卡派仓点→更新渠道仓点成本→D0a同步；(4)快递派单价→更新渠道快递单价→D0a同步。空单元格=不更新，仅更新已有项不新增不删除，≤50单事务/>50分批</td><td>更新成本+标记待重算</td><td>匹配失败行跳过并报告</td></tr>
 <tr><td>R26</td><td>加成额导入</td><td>工作台入口，按 组合+仓库组或邮编+重量段+交货地组 匹配 price_table_row，更新加成额。导入后公布价=成本底价+新加成额双向联动</td><td>更新加成额→公布价联动</td><td>匹配失败行跳过并报告</td></tr>
-<tr><td>R27</td><td>三层询价数据安全</td><td>同一报价API(GET /api/v1/quote/query)，caller=operator返回完整数据+成本+利润+盈亏灯；caller=shipper返回公布价+优惠无成本/利润；caller=public返回基础公布价无优惠。货主端和公开端不暴露成本底价</td><td>按角色过滤字段</td><td>未登录+caller=shipper→401</td></tr>
+<tr><td>R27</td><td>三层询价数据安全</td><td><strong>同一报价 API（<code>POST /api/freight-rate/query</code>，<code>caller</code> 置于请求体）</strong>，caller=operator返回完整数据+成本+利润+盈亏灯；caller=shipper返回公布价+优惠无成本/利润；caller=public返回基础公布价无优惠。货主端和公开端不暴露成本底价</td><td>按角色过滤字段</td><td>未登录+caller=shipper→401</td></tr>
 <tr><td>R28</td><td>公开计算器分享</td><td>独立页面 https://flytrans.com/calculator，免登录查基础公布价+附加费；登录后自动识别客户身份匹配运费优惠 + 泡比优惠（一期）。同URL覆盖公开和直客两场景</td><td>统一分享链接</td><td>同IP每分钟>10次→限流</td></tr>
 <tr><td>R29</td><td>渠道成本项删除级联</td><td>有影响因素的成本项（拖车费交货地行 / 卡派仓点成本行 / 快递派单价费率行）在服务渠道中删除 → 点击保存时自动查找关联服务组合中对应的成本明细行（按成本项名称 + 影响因素匹配）→ 同步删除组合侧对应行</td><td>组合成本项同步删除</td><td>删除为硬删除，不保留快照</td></tr>
 <tr><td>R30</td><td>重量段删除级联</td><td>服务渠道中删除重量段时二次确认 → 同步删除服务渠道及关联服务组合中「快递派单价」引用该重量段（按段名称匹配）的费率行</td><td>快递派单价同步删除</td><td>删除为硬删除，不保留快照</td></tr>
@@ -952,8 +952,10 @@
 <tr><td>导入卡派仓点成本</td><td>POST</td><td><code>/api/channel-warehouse-costs/import</code></td><td>工作台</td><td>Excel file</td><td>回传错误行号</td></tr>
 <tr><td>导入快递派单价</td><td>POST</td><td><code>/api/channel-express-rates/import</code></td><td>工作台</td><td>Excel file</td><td>回传错误行号</td></tr>
 <tr><td>导入加成额</td><td>POST</td><td><code>/api/price-table-rows/import-markup</code></td><td>工作台</td><td>Excel file</td><td>回传错误行号</td></tr>
-<tr><td>报价查询</td><td>GET</td><td><code>/api/v1/quote/query</code></td><td>运价查询/货主端/公开计算器</td><td>?caller=operator/shipper/public&country=&warehouse=&weight=&volume=&...</td><td>3s 超时；caller 控制返回字段</td></tr>
-<tr><td>审计日志查询</td><td>GET</td><td><code>/api/audit-logs</code></td><td>审计日志</td><td>?entity_type=&date_from=</td><td>—</td></tr>
+<tr><td>~~报价查询~~</td><td>—</td><td>—</td><td>—</td><td>✅ <strong>与上一行「运价查询」合并为同一接口</strong>（2026-09-12 D4 定案，见下注）</td><td>—</td></tr>
+</table></div>
+<blockquote><strong>★ 接口路径已统一（2026-09-12，D4 关闭）</strong>：全系统<strong>只保留一个统一报价接口</strong> <code>POST /api/freight-rate/query</code>，<strong>各端以请求体中的 <code>caller</code> 参数区分</strong>（<code>operator</code> 员工端 / <code>shipper</code> 货主端 / <code>public</code> 公开计算器），<code>caller</code> 同时控制返回字段（见 R27）。原 <code>GET /api/v1/quote/query?caller=...</code> <strong>作废</strong>（参数多且含嵌套包裹明细，不适宜用 GET）。</blockquote>
+<div class="table-wrapper"><table><tr><td>审计日志查询</td><td>GET</td><td><code>/api/audit-logs</code></td><td>审计日志</td><td>?entity_type=&date_from=</td><td>—</td></tr>
 <tr><td>询价日志查询</td><td>GET</td><td><code>/api/query-logs</code></td><td>询价日志</td><td>?operator_id=&date_from=</td><td>—</td></tr>
 </table></div>
 <hr></p><p><h2 id="10-错误提示文案汇总">10. 错误提示文案汇总</h2></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发条件</td><td>文案</td><td>类型</td></tr>

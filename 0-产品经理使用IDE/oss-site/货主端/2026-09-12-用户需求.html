@@ -520,7 +520,7 @@
 </ul>
 <strong>专家建议</strong>：</p><p>1. <strong>查价页是货主端"首页之后的第一个按钮"</strong>：建议在首页工作台将查价订舱卡片放在第一个位置（左上角），并用强调色突出，降低核心路径的点击成本。Demo 中已按此设计。</p><p>2. <strong>报价有效期明确标注</strong>：货主需要知道"这个报价能用多久"。Demo 中已标注"报价有效期为本周"，正式上线后建议关联周批次生效时间，如"本报价有效期至 2026-09-19（周日）"。</p><p>3. <strong>优惠透明化是信任基石</strong>（★ 2026-09-12 更新）：费用明细弹窗按 <strong>①公布价 → ②运费优惠 → ③附加费(含附加费优惠) → ④泡比优惠 → ⑤最终报价</strong> 五段展示完整计算链，且每条优惠展示<strong>规则名</strong>（如"特批·{客户名} -¥1.50"、"泡比500≥400 -¥1.0"）。建议后端在报价结果中同时返回"原始价"与"优惠后价"两组字段，避免前端二次计算导致口径不一致。</p><p>4. <strong>子账号角色粒度建议先粗后细</strong>：MVP 提供"财务角色/业务角色/客服角色"三个预置角色即可，后续根据货主反馈再细化权限粒度。角色定义在系统设置模块完成，货主端只做分配。</p><p>5. <strong>超重超长的口径必须在页面上讲清楚</strong>（★ 2026-09-12 新增）：货主对"报价与账单不一致"极为敏感。无论最终选方案 A（查价阶段彻底不算）还是 B（保留为预估但不落库、不进账单），<strong>都必须保留结果区上方的提示条</strong>；若选 A，提示条应改为"超重超长费用在拣货实测后另行计算，本页不展示"。</p><p><h3 id="下一步">下一步</h3></p><p>当前阶段：Phase 1（需求洞察）+ Phase 1.5（数据融合）+ <strong>2026-09-12 整体刷新</strong>均已完成。待办：
 1. ~~确认未决项 E9（超重超长是否在查价阶段计算）~~ ✅ <strong>已定（2026-09-12）</strong>：见 §5 R12a 与 §13 E9 行 —— 按单箱录入时可算作预估、按总体录入则不算；正式计费以拣货实测为准
-2. 确认报价查询接口路径（D4）与「优惠后金额」展示顺序（D5/D6）
+2. ~~确认报价查询接口路径（D4）与「优惠后金额」展示顺序（D5/D6）~~ ✅ <strong>均已定（2026-09-12）</strong>：D4 → 统一 <code>POST /api/freight-rate/query</code>（<code>caller=shipper</code> 于请求体）；D5/D6 → 分段式算式、泡比优惠不抵扣附加费
 3. 补齐 4 个待建页面（我的订单 / 草稿箱 / 异常订单 / 发票管理）的取舍</p><p><hr></p><p><h2 id="12-数据融合-货主端-客商中心">12. 数据融合：货主端 × 客商中心</h2></p><p><blockquote><strong>融合原则</strong>：客商中心是客户主数据的唯一真相源（System of Record），货主端作为客户自助操作端，通过 <code>customer_id</code> 关联客户主数据，不冗余存储客户字段。所有客户生命周期事件由客商中心驱动，货主端被动同步。</blockquote></p><p><h3 id="12-1-融合角色定位">12.1 融合角色定位</h3></p><p><div class="table-wrapper"><table><tr><td>模块</td><td>角色</td><td>数据职责</td></tr>
 <tr><td>------</td><td>------</td><td>---------</td></tr>
 <tr><td><strong>客商中心</strong></td><td>System of Record</td><td>客户主数据唯一源：创建/冻结/启用/签约状态/等级变更均在此发起</td></tr>
@@ -583,7 +583,7 @@
 <tr><td>IF3</td><td>接收</td><td><code>POST /api/shipper/sub-account/batch-enable</code></td><td>客商中心</td><td>客户启用</td><td>按customer_id批量启用子账号</td></tr>
 <tr><td>IF4</td><td>调用</td><td><code>GET /api/customer/{id}/status</code></td><td>客商中心</td><td>货主端登录/下单/查价</td><td>实时查询customer.service_status+sign_status+customer_level</td></tr>
 <tr><td>IF5</td><td>调用</td><td><code>GET /api/customer/{id}/profile</code></td><td>客商中心</td><td>货主端首页加载</td><td>获取企业名称用于欢迎语</td></tr>
-<tr><td><strong>IF6</strong></td><td><strong>调用</strong></td><td><strong>报价查询接口（路径待确认，见 §13 D4）</strong></td><td><strong>超级运价</strong></td><td><strong>货主端查价</strong></td><td><strong><code>caller=shipper</code> 字段过滤：只返回公布价+优惠，不返回成本底价/利润/盈亏</strong></td></tr>
+<tr><td><strong>IF6</strong></td><td><strong>调用</strong></td><td><strong>统一报价接口 <code>POST /api/freight-rate/query</code></strong>（<code>caller=shipper</code> 于请求体）</td><td><strong>超级运价</strong></td><td><strong>货主端查价</strong></td><td><strong><code>caller=shipper</code> 字段过滤：只返回公布价+优惠，不返回成本底价/利润/盈亏</strong></td></tr>
 </table></div>
 <h3 id="12-5-不一致处理标注">12.5 不一致处理标注</h3></p><p><div class="table-wrapper"><table><tr><td>#</td><td>不一致点</td><td>客商中心 / 超级运价</td><td>货主端</td><td>处理</td></tr>
 <tr><td>---</td><td>---------</td><td>---------</td><td>--------</td><td>------</td></tr>
@@ -594,7 +594,7 @@
 <h3 id="12-6-待确认未决项-本模块无法自行拍板">12.6 ⚠️ 待确认未决项（本模块无法自行拍板）</h3></p><p><div class="table-wrapper"><table><tr><td>#</td><td>未决项</td><td>超级运价口径</td><td>货主端原型现状</td><td>待产品确认的选项</td></tr>
 <tr><td>---</td><td>--------</td><td>------------</td><td>--------------</td><td>----------------</td></tr>
 <tr><td>~~E9~~</td><td>~~超重超长是否在查价阶段计算~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12）</strong>：<strong>按单箱录入</strong>（有长/宽/高）→ 查价阶段<strong>可算并作预估展示</strong>（超重超长按公式、体积重 = 长×宽×高÷计泡系数）；<strong>按总体重量与体积录入</strong> → <strong>算不出、不展示</strong>。正式计费<strong>以拣货实测为准</strong>，预估<strong>不落库、不进账单</strong>；规则的正式触发与流水生成<strong>仍在拣货节点</strong></td></tr>
-<tr><td><strong>D4</strong></td><td><strong>报价查询接口路径</strong></td><td>§5.12 写 <code>POST /api/freight-rate/query</code>；§R27 写 <code>GET /api/v1/quote/query?caller=shipper</code></td><td>原 PRD 写 <code>POST /api/shipper/inquiry/price</code></td><td>三个路径并存，需确认货主端对接的唯一接口</td></tr>
+<tr><td>~~D4~~</td><td>~~报价查询接口路径~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12，选「甲」）</strong>：全系统统一 <code>POST /api/freight-rate/query</code>，各端以请求体 <code>caller</code> 区分（<code>operator</code>/<code>shipper</code>/<code>public</code>）</td></tr>
 <tr><td>~~D5~~</td><td>~~优惠金额的展示顺序~~</td><td>—</td><td>—</td><td>✅ <strong>已关闭（2026-09-12）</strong>：由 D6 结论定死 —— 统一为分段式 <code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code></td></tr>
 <tr><td>~~D6~~</td><td>~~泡比优惠能否抵扣附加费~~</td><td>—</td><td>—</td><td>✅ <strong>已定（2026-09-12 产品确认）：不抵扣</strong> —— 泡比优惠只作用于运费侧、<strong>不得抵扣附加费</strong>，最终报价必须分段 <code>(公布价 − 运费优惠 − 泡比优惠) + 附加费净额</code>；已写成硬约束（见 R06 / §7.2）。同源推广：运费优惠只作用运费、附加费优惠只作用附加费</td><td>—</td><td>需前置定论</td></tr>
 <tr><td><strong>D7</strong></td><td><strong>4 个待建页面</strong></td><td>—</td><td>菜单已挂、页面文件不存在：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td>是否本期建设？本文档如实标注「菜单已挂、页面待建」，<strong>不计入已完成功能</strong></td></tr>

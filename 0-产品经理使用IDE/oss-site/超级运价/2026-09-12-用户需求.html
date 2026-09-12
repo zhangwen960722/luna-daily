@@ -727,7 +727,7 @@ Level 1: 定义段名       Level 2: 定义项名+公式+建议价    Level 3: �
 </table></div>
 <blockquote><strong>公式示例</strong>：<code>(长+宽)*2+高 > 300</code>、<code>长*宽*高/6000 > 20</code>、<code>(长+宽+高)*2 >= 265</code></blockquote>
 >
-<blockquote><strong>★ 变更（2026-09-11）</strong>：本节原为「公式阈值型」。① 类型名改为 <strong><code>字段&公式</code></strong>（原 <code>公式阈值</code> 作废）；② <strong>公式条件必填（≥1 条）</strong>，且维度条件只能是「服务组合」多选、最多 1 行（可为空）；③ 计价单位<strong>仅按箱</strong>；④ 可用变量统一写作 <strong>长 / 宽 / 高 / 重量</strong>（★ 2026-09-12 <strong>新增「材积重」</strong>：<strong>材积重</strong>（体积重）——<strong>取运单货箱上的材积重值</strong>（即货箱的"重量方数"），公式中<strong>可直接引用、无需再写换算式</strong>；口径附注：按 KG 计费时 = 货箱<strong>材重</strong>（<code>长×宽×高 ÷ 计泡系数</code>，原型计泡系数 6000）；按 m³ 计费时 = 货箱<strong>重量方数</strong>（<code>实重 ÷ 计方系数</code>，原型计方系数 363））（原「长(cm)、宽(cm)、高(cm)、单箱重量(kg)、SKU数量」写法作废）。</blockquote>
+<blockquote><strong>★ 变更（2026-09-11）</strong>：本节原为「公式阈值型」。① 类型名改为 <strong><code>字段&公式</code></strong>（原 <code>公式阈值</code> 作废）；② <strong>公式条件必填（≥1 条）</strong>，且维度条件只能是「服务组合」多选、最多 1 行（可为空）；③ 计价单位<strong>仅按箱</strong>；④ 可用变量统一写作 <strong>长 / 宽 / 高 / 重量</strong>（★ 2026-09-12 <strong>新增「材积重」</strong>：<strong>材积重</strong>（体积重的<strong>统称</strong>）——<strong>货箱上的「材重」与「重量方数」都属于材积重</strong>，按计费方式取其一：<strong>按 KG 计费</strong> → 取货箱<strong>材重</strong>（<code>长×宽×高 ÷ 计泡系数</code>，原型计泡系数 6000）；<strong>按 m³ 计费</strong> → 取货箱<strong>重量方数</strong>（<code>实重 ÷ 计方系数</code>，原型计方系数 363）。公式中直接引用该值即可）（原「长(cm)、宽(cm)、高(cm)、单箱重量(kg)、SKU数量」写法作废）。</blockquote>
 >
 <blockquote><strong>为什么括号必须支持</strong>：超重超长的判定式天然含括号（<code>(长+宽)*2+高</code>），若只开放四则运算而不支持 <code>( )</code>，运算优先级会算错，运价管理员只能靠手工展开变形——极易配错。</blockquote></p><p>匹配逻辑：<strong>触发节点 = 拣货</strong>（需拣货实测尺寸/重量，由规则类型自动决定，见 §8.7）；取运单货物参数代入公式，依次计算，任一公式满足阈值即触发，然后按 按箱 × 单价计算。</p><p><hr></p><p><h3 id="8-5-人工添加型-专属字段">8.5 人工添加型 — 专属字段</h3></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
 <tr><td>------</td><td>----</td><td>--</td><td>----------------------------------------</td></tr>
@@ -1060,7 +1060,7 @@ Step 7 — 底线检查
 │  🟢 = 毛利率正常  🟡 = 薄利   🔴 = 亏本                                  │
 │  [展开] 查看美森360 费用明细  [展开] 查看船期详情                           │
 └──────────────────────────────────────────────────────────────────────────┘
-</code></pre></p><p><blockquote><strong>一期不做</strong>：按价格排序、按时效排序、仅看最快/最便宜——这些在二期加入。一期保证"能查出来、数据准"。</blockquote></p><p><strong>相关 AC</strong>：<code>AC22</code> <code>AC23</code> <code>AC24</code></p><p><hr></p><p><h3 id="10-4-三层询价体系">10.4 三层询价体系</h3></p><p>同一套报价引擎（<code>GET /api/v1/quote/query</code>），通过 <code>caller</code> 参数控制返回字段，服务三个端：</p><p><div class="table-wrapper"><table><tr><td>运营端</td><td>货主端</td><td>公开计算器</td></tr>
+</code></pre></p><p><blockquote><strong>一期不做</strong>：按价格排序、按时效排序、仅看最快/最便宜——这些在二期加入。一期保证"能查出来、数据准"。</blockquote></p><p><strong>相关 AC</strong>：<code>AC22</code> <code>AC23</code> <code>AC24</code></p><p><hr></p><p><h3 id="10-4-三层询价体系">10.4 三层询价体系</h3></p><p>同一套报价引擎（<code>POST /api/freight-rate/query</code>），通过请求体 <code>caller</code> 参数控制返回字段，服务三个端：</p><p><div class="table-wrapper"><table><tr><td>运营端</td><td>货主端</td><td>公开计算器</td></tr>
 <tr><td>:---</td><td>:---:</td><td>:---:</td><td>:---:</td></tr>
 <tr><td>谁用</td><td>内部销售</td><td>已注册货主</td><td>任何人</td></tr>
 <tr><td>是否登录</td><td>是</td><td>是</td><td>否（登录后升权）</td></tr>
@@ -1181,7 +1181,7 @@ Step 7 — 底线检查
 </ul>
 <h3 id="加成额导入">加成额导入</h3></p><p><ul><li>[ ] <strong>AC34-加成额导入</strong>：工作台下载模板（含组合名称/仓库组或邮编/重量段/交货地组/当前加成额）→ 填新值 → 上传预览 → 确认后更新 price_table_row.加成额 → 公布价=成本底价+新加成额自动联动。按 组合+仓库组或邮编+重量段+交货地组 匹配</li>
 </ul>
-<h3 id="询价出口与分享链接">询价出口与分享链接</h3></p><p><ul><li>[ ] <strong>AC35-三层询价体系</strong>：同一报价 API（GET /api/v1/quote/query），caller=operator 返回完整数据（含成本/利润/盈亏灯），caller=shipper 返回公布价+优惠（无成本/利润），caller=public 返回基础公布价（无优惠）。货主端和公开计算器不暴露成本底价和盈亏灯</li>
+<h3 id="询价出口与分享链接">询价出口与分享链接</h3></p><p><ul><li>[ ] <strong>AC35-三层询价体系</strong>：<strong>同一报价 API（<code>POST /api/freight-rate/query</code>）</strong>，请求体 caller=operator 返回完整数据（含成本/利润/盈亏灯），caller=shipper 返回公布价+优惠（无成本/利润），caller=public 返回基础公布价（无优惠）。货主端和公开计算器不暴露成本底价和盈亏灯</li>
 <li>[ ] <strong>AC36-公开运费计算器与分享链接</strong>：独立页面 https://flytrans.com/calculator，免登录可查基础公布价+附加费+船期；登录后自动识别客户身份匹配运费优惠；底部引导未登录用户联系销售。新媒体和销售统一分享此链接。<strong>★ 变更（2026-09-12）：泡比优惠已回归一期，登录后匹配一期即含泡比优惠</strong>（~~<strong>★ 二期</strong>：登录后匹配增加泡比优惠~~）</li>
 </ul>
 <hr></p><p><h2 id="13-NFR-非功能性需求">13. NFR（非功能性需求）</h2></p><p><ul><li><strong>性能</strong>：运价查询（含优惠计算）响应时间 < 3 秒；汇率变更触发重算采用"标记脏数据 → 后台异步逐批重算 → 前端轮询"模式，单批 ≤ 50 条独立事务；批量更新 14 个组合 < 1 分钟</li>
