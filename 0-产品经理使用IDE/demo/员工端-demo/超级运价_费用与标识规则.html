@@ -213,7 +213,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
           <span style="display:flex;align-items:center;gap:8px"><el-button size="small" type="primary" plain @click="addDiscountRow">+ 添加规则</el-button></span>
         </div>
         <div style="width:100%; overflow-x:auto;">
-         <el-table :data="f.discountRules" border size="small" style="width:100%;min-width:920px;table-layout:fixed;" v-if="f.discountRules.length">
+         <el-table :data="f.discountRules" border size="small" style="width:100%;min-width:810px;table-layout:fixed;" v-if="f.discountRules.length">
            <el-table-column label="对象类型" min-width="100">
              <template #default="s2"><el-select v-model="s2.row.targetType" size="small" style="width:100%"><el-option label="客户等级" value="level"></el-option></el-select></template>
            </el-table-column>
@@ -228,9 +228,6 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
           <el-table-column min-width="115">
             <template #header><span style="color:#E6A23C">* </span>优惠值</template>
             <template #default="s2"><el-input-number v-if="s2.row.mode==='rate'" v-model="s2.row.val" :min="0.01" :max="1" :precision="2" size="small" style="width:100%" controls-position="right"></el-input-number><el-input-number v-else v-model="s2.row.val" :min="-999" :max="999" :precision="2" size="small" style="width:100%" controls-position="right"></el-input-number></template>
-          </el-table-column>
-          <el-table-column label="优惠后单价" min-width="110" align="right">
-            <template #default="s2"><span :style="{color:discountAfter(s2.row)<0?'#F56C6C':'#303133'}">{{ discountAfterText(s2.row) }}</span></template>
           </el-table-column>
           <el-table-column label="有效期" min-width="130">
             <template #default="s2"><el-select v-model="s2.row.validity" size="small" style="width:100%"><el-option label="永久有效" value="permanent"></el-option><el-option label="固定期限" value="period"></el-option></el-select></template>
@@ -304,7 +301,6 @@ computed:{
   dimOptions:function(){if(this.f.type==='fieldFormula'){return [{label:'服务组合',value:'combination'}]}return [{label:'尾程派送方式',value:'lastMile'},{label:'地址类型（第三方查询）',value:'address'},{label:'SKU属性（取自商品管理）',value:'sku'},{label:'是否FBA运单',value:'isFba'},{label:'报关方式',value:'customsMode'},{label:'自送标识',value:'selfDelivery'},{label:'邮编（第三方查询）',value:'zip'},{label:'交货站点（取自仓库列表-本地仓）',value:'warehouse'},{label:'服务组合',value:'combination'},{label:'用户',value:'user'}]},
   pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'},{label:'按数量',value:'unit'}]},
   receivablePrice:function(){var rows=this.f.pricingRows||[];for(var i=0;i<rows.length;i++){if(rows[i].dir==='r'&&rows[i].price!==null&&rows[i].price!==undefined)return Number(rows[i].price)}return null},
-  receivableUnitShort:function(){var rows=this.f.pricingRows||[];for(var i=0;i<rows.length;i++){if(rows[i].dir==='r')return puShort[rows[i].pu]||'单位'}return '单位'},
   isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status === '已冻结'; },
   filteredRules:function(){
     var self=this;
@@ -317,8 +313,6 @@ computed:{
   }
 },
 methods:{
-  discountAfter:function(row){var p=this.receivablePrice;if(p===null||row.val===null||row.val===undefined||row.val==='')return null;return row.mode==='rate'?p*Number(row.val):p-Number(row.val)},
-  discountAfterText:function(row){var v=this.discountAfter(row);if(v===null)return '—';return Number(v).toFixed(2)+' 元/'+this.receivableUnitShort},
   search:function(){},
   reset:function(){this.q={type:'',action:'',status:''}},
   openAdd:function(){
