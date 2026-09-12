@@ -274,7 +274,7 @@ var enabledChannels=['美森360','美森432','EX456','洛杉矶600'];
 var surchargeTags=[{id:1,label:'超重费',color:'#FFC0CB'},{id:2,label:'粉末品名加收',color:'#FFA500'},{id:3,label:'易碎品',color:'#98FB98'},{id:4,label:'带电',color:'#87CEEB'},{id:5,label:'地址加收',color:'#DDA0DD'},{id:6,label:'贴标',color:'#F0E68C'},{id:7,label:'偏远邮编',color:'#FFB6C1'}];
 var feeTypesAll=[{label:'海运费',dir:'r'},{label:'港杂费',dir:'r'},{label:'出口费用',dir:'r'},{label:'报关费',dir:'r'},{label:'派送费用',dir:'r'},{label:'增值服务',dir:'r'},{label:'国内存储费',dir:'r'},{label:'库内操作费',dir:'r'},{label:'干线运费',dir:'p'},{label:'尾程派送费',dir:'p'},{label:'清关服务费',dir:'p'},{label:'海外仓储费',dir:'p'}];
 var customerLevels=[{id:'SS',label:'SS'},{id:'S',label:'S'},{id:'A',label:'A'},{id:'B',label:'B'},{id:'C',label:'C'},{id:'D',label:'D'},{id:'E',label:'E'},{id:'F',label:'F'},{id:'G',label:'G'}];
-var customerList=[{id:'C001',name:'深圳市XX科技'},{id:'C002',name:'广州YY贸易'},{id:'C003',name:'杭州ZZ跨境'}];
+var customerList=[{id:'C001',name:'深圳市XX科技',level:'S'},{id:'C002',name:'广州YY贸易',level:'S'},{id:'C003',name:'杭州ZZ跨境',level:'A'}];
 // 交货站点：取值来源 仓库列表-本地仓 的仓库名称
 var localWarehouses=['花都仓','白云仓','东莞仓','深圳仓','义乌仓','中山仓','汕头仓'];
 // 服务组合：取值来源 超级运价-服务组合
@@ -363,6 +363,7 @@ methods:{
   
   
   onTypeChange:function(){var opts=this.pricingUnitOptions.map(function(u){return u.value});var row=this.f.pricingRows[0];if(row&&opts.indexOf(row.pu)===-1){row.pu=opts[0]}var dl=this.dimOptions.map(function(d){return d.value});var d0=this.dimOptions[0];this.f.conditions.forEach(function(cc){if(dl.indexOf(cc.dim)===-1){cc.dim=d0.value;cc.val=[]}});if(this.f.type==='fieldFormula'&&this.f.conditions.length>1){this.f.conditions=[this.f.conditions[0]]}},
+  checkSpecialWorse:function(){var self=this,out=[];var lvlOf=function(cid){for(var i=0;i<self.customerList.length;i++){if(self.customerList[i].id===cid)return self.customerList[i].level}return null};var rules=self.f.discountRules||[];for(var i=0;i<rules.length;i++){var r=rules[i];if(r.targetType!=="special"||r.mode!=="fixed")continue;var custs=r.targetCustomers||[];for(var j=0;j<custs.length;j++){var cid=custs[j],lv=lvlOf(cid);if(!lv)continue;var lvRule=null;for(var k=0;k<rules.length;k++){var q=rules[k];if(q.targetType==="level"&&q.mode==="fixed"&&(q.targetLevels||[]).indexOf(lv)!==-1){lvRule=q;break}}if(!lvRule)continue;if(Number(r.val)>Number(lvRule.val)){out.push("附加费优惠第 "+(i+1)+" 行：给「"+self.custNameById(cid)+"」（"+lv+"级）的特批 "+Number(r.val).toFixed(2)+" 比该等级的 "+Number(lvRule.val).toFixed(2)+" 更差，客户将按更差的执行")}}}return out},
   onDiscountTargetTypeChange:function(row){if(row.targetType==='special'){row.targetLevels=[]}else{row.targetCustomers=[];row.approvalNo=''}},
   custNameById:function(id){var l=this.customerList||[];for(var i=0;i<l.length;i++){if(l[i].id===id)return l[i].name}return id},
   addDiscountRow:function(){this.f.discountRules.push({targetType:'level',targetLevels:[],targetCustomers:[],mode:'fixed',val:-0.5,validity:'permanent',validRange:[],approvalNo:'',_expired:false})},
@@ -407,7 +408,7 @@ methods:{
   },
   save:function(){
     var self=this;
-    if(!this.f.name){ElementPlus.ElMessage.warning('请输入规则名称');return}
+    if(self._specialAck!==true){var _w0=self.checkSpecialWorse();if(_w0.length){ElementPlus.ElMessageBox.confirm("<div>以下客户特批<b>比其所属等级的优惠更差</b>，客户将按更差的执行：<br><br>"+_w0.join("<br>")+"<br><br>业务上允许（特批可用于收紧），确认是故意的吗？</div>","特批劣于等级提示",{confirmButtonText:"确认保存",cancelButtonText:"返回修改",type:"warning"}).then(function(){self._specialAck=true;self.save()}).catch(function(){});return}}self._specialAck=false;if(!this.f.name){ElementPlus.ElMessage.warning('请输入规则名称');return}
     if(this.f.type==='field'||this.f.type==='fieldFormula'){
       if(this.f.type==='field'&&(!this.f.conditions||!this.f.conditions.length)){ElementPlus.ElMessage.warning('请至少添加一条匹配条件');return}
       for(var ci=0;ci<this.f.conditions.length;ci++){
