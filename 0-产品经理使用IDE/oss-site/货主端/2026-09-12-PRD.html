@@ -30,9 +30,9 @@
 <li>需求背景：无（货主端基于整体 TMS 架构规划）</li>
 <li>原型：<code>demo/货主端-demo/</code> — 实际存在 12 页：<code>index.html</code>(Shell) / <code>login.html</code> / <code>首页.html</code> / <code>查价订舱.html</code> / <code>子账号管理.html</code> / <code>角色管理.html</code> / <code>商品管理.html</code> / <code>地址管理.html</code> / <code>VAT管理.html</code> / <code>VAT资料新增.html</code> / <code>账单管理.html</code> / <code>资金账户.html</code> / <code>后台任务.html</code></li>
 <li>上游口径依据：</li>
-</ul>  - <code><a href="../超级运价/2026-09-12-PRD.html">PRD</a></code>（PRD V2.25）— 重点 §5.11 / §5.12 / §5.13 / §7.4
-  - <code><a href="../超级运价/2026-09-12-用户需求.html">用户需求</a></code>（RDD v5.7）
-  - <code><a href="../超级运价/2026-09-12-数据设计.html">数据设计</a></code>（v5.7）
+</ul>  - <code><a href="../超级运价/2026-09-14-PRD.html">PRD</a></code>（PRD V2.26）— 重点 §5.11 / §5.12 / §5.13 / §7.4
+  - <code><a href="../超级运价/2026-09-14-用户需求.html">用户需求</a></code>（RDD v5.8）
+  - <code><a href="../超级运价/2026-09-14-数据设计.html">数据设计</a></code>（v5.8）
   - <code><a href="../客商中心/2026-08-21-用户需求.html">用户需求</a></code></p><p><h3 id="0-2-原型待建页面-菜单已挂-页面文件不存在">0.2 ⚠️ 原型待建页面（菜单已挂、页面文件不存在）</h3></p><p><div class="table-wrapper"><table><tr><td>菜单项</td><td>所属菜单</td><td>原型状态</td></tr>
 <tr><td>--------</td><td>---------</td><td>---------</td></tr>
 <tr><td>我的订单（<code>我的订单.html</code>）</td><td>订单中心</td><td>⚠️ <strong>菜单已挂、页面待建</strong></td></tr>
@@ -760,7 +760,7 @@
 <li>用户需求(RDD)（完整业务流程+字段表）：<code><a href="2026-09-12-用户需求.html">用户需求</a></code></li>
 <li>数据设计（完整 Schema+ER 图）：<code><a href="2026-09-12-数据设计.html">数据设计</a></code></li>
 <li>上游口径：</li>
-</ul>  - <code><a href="../超级运价/2026-09-12-PRD.html">PRD</a></code> §5.11 优惠子表 / §5.12 运营端运价查询 / §5.13 货主端在线询价 / §7.4 最终报价计算
+</ul>  - <code><a href="../超级运价/2026-09-14-PRD.html">PRD</a></code> §5.11 优惠子表 / §5.12 运营端运价查询 / §5.13 货主端在线询价 / §7.4 最终报价计算
   - <code><a href="../客商中心/2026-08-21-用户需求.html">用户需求</a></code></p><p><hr></p><p><hr></p><p><h2 id="13-数据融合-货主端-客商中心">13. 数据融合：货主端 × 客商中心</h2></p><p><blockquote><strong>核心原则</strong>：客商中心是客户主数据的 System of Record，货主端通过 <code>customer_id</code> 外键关联，不冗余存储客户字段。客户状态变更由客商中心推送，货主端被动同步 + 登录时实时校验双重保障。</blockquote></p><p><h3 id="13-1-融合业务规则">13.1 融合业务规则</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
 <tr><td>------</td><td>--------</td><td>----------</td><td>------</td><td>---------</td></tr>
 <tr><td>R-F01</td><td>货主端登录 Step3</td><td>调用 GET /api/customer/{customer_id}/status</td><td>service_status=20(已冻结)→拒绝登录，提示"您的企业账户已被冻结，请联系客服"</td><td>接口超时(>2s)→允许登录但记录告警</td></tr>
@@ -850,7 +850,7 @@ Step 3 — 跨模块校验（客商中心）★ 必须同步校验:
 <tr><td>D5</td><td>优惠金额的展示顺序</td><td>—</td><td>—</td><td>由 D6 结论定死 —— 泡比优惠不抵扣附加费，故必须分段：<strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong>（优惠值带符号：负数=减钱、正数=加价，负数值即等于减项）。已统一全文</td></tr>
 <tr><td>D6</td><td>泡比优惠能否抵扣附加费</td><td>—</td><td>—</td><td><strong>不抵扣</strong> —— 泡比优惠只作用于运费侧、<strong>不得抵扣附加费</strong>，最终报价必须分段 <strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong>；已写成硬约束（见 R06 / §7.2）。同源推广：运费优惠只作用运费、附加费优惠只作用附加费</td></tr>
 <tr><td>D7</td><td>4 个待建页面</td><td>—</td><td>菜单已挂、页面文件不存在：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td>本文档如实标注「菜单已挂、页面待建」，<strong>不计入已完成功能</strong>；本期不建设，<strong>后续做到该块时自然补充</strong></td></tr>
-<tr><td>D8</td><td>账单/资金账户/后台任务的实体归属</td><td>—</td><td>—</td><td>按「<strong>引用其他模块页面</strong>」处理 —— <strong>账单管理 / 资金账户 归「财务」模块</strong>（实体见 <code><a href="../财务/2026-09-12-数据设计.html">数据设计</a></code>），<strong>后台任务 归「后台任务」模块</strong>（见 <code>drafts/后台任务/</code>）。<strong>货主端只做展示与调用，不定义实体</strong></td></tr>
+<tr><td>D8</td><td>账单/资金账户/后台任务的实体归属</td><td>—</td><td>—</td><td>按「<strong>引用其他模块页面</strong>」处理 —— <strong>账单管理 / 资金账户 归「财务」模块</strong>（实体见 <code><a href="../财务/2026-09-14-数据设计.html">数据设计</a></code>），<strong>后台任务 归「后台任务」模块</strong>（见 <code>drafts/后台任务/</code>）。<strong>货主端只做展示与调用，不定义实体</strong></td></tr>
 <tr><td>D9</td><td>子账号「修改密码」与「ROOT 保护」的原型缺失</td><td>—</td><td>—</td><td><strong>文档侧设计口径保留、原型标记为「待补」</strong>，是否补齐原型由后续演示需要决定，<strong>不阻塞文档定稿</strong>。本文档已在 §5.4 就地标注「原型待补齐」</td></tr>
 </table></div>
 <hr>
