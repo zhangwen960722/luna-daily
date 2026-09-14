@@ -598,7 +598,8 @@
 <blockquote><strong>本模块对外提供的接口</strong>：</blockquote></p><p><div class="table-wrapper"><table><tr><td>调用方</td><td>接口</td><td>用途</td><td>说明</td></tr>
 <tr><td>---------</td><td>---------</td><td>---------</td><td>---------</td></tr>
 <tr><td>财务模块</td><td><code>POST /api/pricing/calc</code></td><td>运单收货完成 → 生成应收业务流水 <code>ar_flow</code> 时取数</td><td><strong>计费取数接口</strong>：入参 = 运单计费参数（服务组合 / 尾程派送方式 / 交货站点或仓库 / 邮编及是否偏远 / 货物属性 / 用户 / 件数·重量·体积）；出参 = <strong>逐条费用行</strong>（费用类型 / 单价 / 计费量 / 金额 / 来源规则类型 + ID / 币种）。与运价查询 <code>POST /api/freight-rate/query</code> <strong>共用同一套计算内核</strong>，差别只在 caller 与是否落库（查价试算不落库、应收流水逐行落库），链路见 §6.5</td></tr>
-<tr><td>前端（员工端 / 货主端 / 公开计算器）</td><td><code>GET/PUT /api/service-combinations/{id}/discounts</code></td><td>组合优惠配置弹窗读 / 写</td><td><strong>独立子资源</strong>：一次提交 <code>freight_discount</code> + <code>density_discount</code> 两张子表；<strong>不经父实体 <code>PUT /api/service-combinations/{id}</code></strong></td></tr>
+<tr><td>前端（员工端）</td><td><code>GET/PUT /api/service-combinations/{id}/freight-discounts</code></td><td>组合优惠配置弹窗 · 运费优惠 Tab 读 / 写</td><td><strong>独立子资源</strong>：提交 <code>freight_discount</code> 子表；<strong>不经父实体 <code>PUT /api/service-combinations/{id}</code></strong></td></tr>
+<tr><td>前端（员工端）</td><td><code>GET/PUT /api/service-combinations/{id}/density-discounts</code></td><td>组合优惠配置弹窗 · 泡比优惠 Tab 读 / 写</td><td><strong>独立子资源</strong>：提交 <code>density_discount</code> 子表（唯一性键另含「密度阈值」）；<strong>不经父实体编辑接口</strong>。与运费优惠拆为两个资源：两表字段与校验口径不同，拆开后互不影响</td></tr>
 <tr><td>前端（员工端）</td><td><code>GET/PUT /api/surcharge-rules/{id}/discounts</code></td><td>附加费优惠配置弹窗读 / 写</td><td><strong>独立子资源</strong>：提交 <code>surcharge_discount</code> 子表；<strong>不经父实体 <code>PUT /api/surcharge-rules/{id}</code></strong></td></tr>
 </table></div>
 <hr></p><p><h2 id="5-关键设计决策">5. 关键设计决策</h2></p><p><div class="table-wrapper"><table><tr><td>决策</td><td>方案</td><td>原因</td></tr>
@@ -710,16 +711,17 @@ M -.-&gt; M2[说明：「字段&amp;公式」型附加费（如超重超长）&l
     Q --&gt;|是| R[未审计的自动行重算覆盖&lt;br&gt;业务审计后冻结 · 进账单后彻底冻结&lt;br&gt;人工添加型永久豁免重扫]
     Q --&gt;|否| S[流水冻结]
     R --&gt; S
-</div></p><p><strong>逐行取数口径</strong>（一条费用项一行，<strong>优惠独立成行</strong>）：</p><p><div class="table-wrapper"><table><tr><td>流水行</td><td>费用类型来源</td><td>单价</td><td>计费量</td><td>金额公式</td><td>来源留痕</td></tr>
-<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
-<tr><td>① 运费行</td><td>基础资料-费用类型预置「运费」</td><td>当周公布价（运价行匹配结果）</td><td>按组合计费方式：KG→计费重量、m³→计费体积</td><td>公布价 × 计费量</td><td>规则类型=运价行 · 规则 ID=<code>price_table_row.id</code> · 规则名=服务组合 + 重量段 + 交货地</td></tr>
-<tr><td>② 运费优惠行</td><td><code>freight_discount.fee_type</code>（<strong>该条优惠规则上配置的费用类型</strong>）</td><td>优惠值 <code>discount_adjustment</code>（<strong>带符号，负=减钱</strong>）</td><td>同①</td><td>优惠值 × 计费量</td><td>规则类型=运费优惠 · 规则 ID=<code>freight_discount.id</code> · 规则名</td></tr>
-<tr><td>③ 泡比优惠行</td><td><code>density_discount.fee_type</code></td><td>优惠值（带符号）</td><td>同①（<strong>仅 KG 计价行</strong>，m³ 计价行不生成该行）</td><td>优惠值 × 计费量</td><td>规则类型=泡比优惠 · 规则 ID=<code>density_discount.id</code> · 规则名</td></tr>
-<tr><td>④ 附加费行</td><td>附加费规则<strong>计价明细「应收」行</strong>的费用类型</td><td>应收单价</td><td>按票=1 / 按箱=箱数 / 按KG=计费重量 / 按m³=计费体积 / 按数量=人工填入数量</td><td>应收单价 × 计费量</td><td>规则类型=附加费规则 · 规则 ID=<code>surcharge_rule.id</code> · 规则名</td></tr>
-<tr><td>⑤ 附加费优惠行</td><td><code>surcharge_discount.fee_type</code></td><td>优惠值（<strong>单价级</strong>、带符号；折扣率按乘数）</td><td>同④</td><td>优惠值 × 计费量</td><td>规则类型=附加费优惠 · 规则 ID=<code>surcharge_discount.id</code> · 规则名</td></tr>
+</div></p><p><strong>逐行取数口径</strong>（一条费用项一行，<strong>优惠独立成行</strong>）：</p><p><div class="table-wrapper"><table><tr><td>流水行</td><td>费用类型来源</td><td>计价单位</td><td>单价</td><td>计费量</td><td>金额公式</td><td>来源留痕</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>① 运费行</td><td>基础资料-费用类型预置「运费」</td><td><strong>服务组合的计费方式</strong>（KG / m³）</td><td>当周公布价（运价行匹配结果）</td><td>KG→计费重量、m³→计费体积</td><td>公布价 × 计费量</td><td>规则类型=运价行 · 规则 ID=<code>price_table_row.id</code> · 规则名=服务组合 + 重量段 + 交货地</td></tr>
+<tr><td>② 运费优惠行</td><td><code>freight_discount.fee_type</code>（<strong>该条优惠规则上配置的费用类型</strong>）</td><td><strong>同①</strong></td><td>优惠值 <code>discount_adjustment</code>（<strong>带符号，负=减钱</strong>）</td><td>同①</td><td>优惠值 × 计费量</td><td>规则类型=运费优惠 · 规则 ID=<code>freight_discount.id</code> · 规则名</td></tr>
+<tr><td>③ 泡比优惠行</td><td><code>density_discount.fee_type</code></td><td><strong>同①（仅 KG）</strong></td><td>优惠值（带符号）</td><td>同①（<strong>仅 KG 计价行</strong>，m³ 计价行不生成该行）</td><td>优惠值 × 计费量</td><td>规则类型=泡比优惠 · 规则 ID=<code>density_discount.id</code> · 规则名</td></tr>
+<tr><td>④ 附加费行</td><td>附加费规则<strong>计价明细「应收」行</strong>的费用类型</td><td><strong>该附加费规则的计价单位</strong>（按票/按箱/按KG/按m³/按数量）</td><td>应收单价</td><td>按票=1 / 按箱=箱数 / 按KG=计费重量 / 按m³=计费体积 / 按数量=人工填入数量</td><td>应收单价 × 计费量</td><td>规则类型=附加费规则 · 规则 ID=<code>surcharge_rule.id</code> · 规则名</td></tr>
+<tr><td>⑤ 附加费优惠行</td><td><code>surcharge_discount.fee_type</code></td><td><strong>同④</strong></td><td>优惠值（<strong>单价级</strong>、带符号；折扣率按乘数）</td><td>同④</td><td>优惠值 × 计费量</td><td>规则类型=附加费优惠 · 规则 ID=<code>surcharge_discount.id</code> · 规则名</td></tr>
 </table></div>
 <strong>共性口径</strong>：</p><p><ul><li><strong>优惠独立成行</strong>：优惠行不并入父行金额，<code>ar_flow</code> 里逐条可见——运单审计可下钻回答「这单为什么减了 3 元、是哪条规则给的、减在哪个费用项上」。</li>
 <li><strong>优惠实时匹配</strong>：三张优惠规则表在<strong>费用生成时点</strong>按当周批次（公布价 / 汇率 / 折算基准）+ 运单承载的客户身份（客户 ID / 客户等级）重新匹配，<strong>不读查价结果</strong>（查价是实时试算、不落库，见 §3.20.5）。</li>
+<li><strong>计价单位跟着规则走</strong>：运费侧的计价单位（KG / m³）取<strong>运单所关联服务组合的计费方式</strong>，附加费侧的计价单位取<strong>该条附加费规则的计价单位</strong>；<strong>优惠值量纲 = 元 / 计价单位</strong>（与公布价、应收单价同口径），因此三类优惠行与各自父行的计价单位、计费量完全一致，金额一律为 <code>单价 × 计费量</code>。</li>
 <li><strong>匹配优先级</strong>：运费优惠与泡比优惠均按「客户特批 > 客户等级，高覆盖低不叠加」；泡比优惠多条命中取<strong>阈值最大档</strong>（不叠加），且<strong>只作用于运费侧</strong>、不得抵扣附加费；附加费优惠与运费优惠独立计算（见 §3.19 矩阵）。</li>
 <li><strong>上限与截断</strong>：任一费用项最终金额不得为负（<code>Σ(该费用项各行) ≥ 0</code>），超出则对「负向优惠总量」按比例截断——<strong>报价侧与落库侧必须一致</strong>。</li>
 <li><strong>节点</strong>：字段匹配型附加费 → 收货完成；<strong>字段&公式型（超重超长）→ 拣货实测后追加一条流水</strong>；人工添加型 → 操作人手工新增（见 §3.14）。</li>

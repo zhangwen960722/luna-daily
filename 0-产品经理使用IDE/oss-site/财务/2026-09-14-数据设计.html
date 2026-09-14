@@ -53,7 +53,7 @@
 <tr><td>fee_type_id</td><td>费用类型ID</td><td>BigInt</td><td>Yes</td><td>Index</td><td>引用头程管理 fee_type 字典（运费/周六派送费/超重费/地址附加费/商品附加费/报关费/库内贴标费…）。<strong>取值来源按流水种类</strong>：运费行=预置费用类型「运费」；运费优惠/泡比优惠/附加费优惠行=<strong>优惠规则上配置的 <code>fee_type</code></strong>；附加费行=<strong>附加费规则计价明细「应收」行的费用类型</strong></td></tr>
 <tr><td>currency</td><td>币种</td><td>String(8)</td><td>Yes</td><td>—</td><td>CNY/USD/HKD…</td></tr>
 <tr><td>unit_price</td><td>本行单价</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>带符号：运费行=当周公布价、附加费行=应收单价、优惠行=优惠值（<strong>负=减钱、正=加价</strong>）；手工新增行可留空（直接填金额）</td></tr>
-<tr><td>pricing_unit</td><td>计价单位</td><td>TinyInt</td><td>No</td><td>—</td><td>10:按KG, 20:按m³, 30:按票, 40:按箱, 50:按数量</td></tr>
+<tr><td>pricing_unit</td><td>计价单位</td><td>TinyInt</td><td>No</td><td>—</td><td>10:按KG, 20:按m³, 30:按票, 40:按箱, 50:按数量。<strong>来源跟着规则走</strong>：运费 / 运费优惠 / 泡比优惠行 = 运单所关联<strong>服务组合的计费方式</strong>（KG / m³）；附加费 / 附加费优惠行 = 该条<strong>附加费规则的计价单位</strong>。同一父行的优惠行与其父行计价单位、计费量一致</td></tr>
 <tr><td>quantity</td><td>计费量</td><td>Decimal(20,6)</td><td>No</td><td>—</td><td>计费数量（重量/体积/箱数/张数）；按票计费=1；关联附加费规则按数量计费时由业务填写</td></tr>
 <tr><td>amount</td><td>本行金额</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td><code>amount = unit_price × quantity</code>，<strong>带符号</strong>：费用行为正；优惠行为负=减钱 / 正=加价；红冲行为原值取负。<strong>运单应收净额与账单金额一律按各行 <code>amount</code> 的代数和汇总</strong>（优惠已独立成行）</td></tr>
 <tr><td>rate</td><td>汇率</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td>生成/手工创建时自动取实时汇率，人民币=1，不参与金额计算</td></tr>
@@ -241,13 +241,13 @@
 <li>账期：引用客商中心 <code>customer_contract</code>（合同级），财务生成流水时快照账期字段，不重复维护</li>
 <li>币种：枚举字典；汇率：调<strong>阿里汇率接口</strong>实时获取（不落库、不自建汇率表），币种互转时以接口值预填、允许财务手工覆盖，<code>api_rate</code> + <code>rate</code> + <code>rate_source</code> 三者随单留痕；接口异常时降级为手工填写（rate_source=20）</li>
 </ul>
-<h3 id="4-7-应收流水生成与账单草稿池">4.7 应收流水生成与账单草稿池</h3></p><p><strong>触发</strong>：运单状态进入「已收货」→ 系统自动生成应收业务流水（R01）。<strong>分节点增量</strong>：字段匹配型附加费随收货完成生成；<strong>字段&公式型附加费（如超重超长）在拣货实测后追加一行</strong>；人工添加型由业务在运单「费用管理」手工新增。同一运单的流水<strong>可分批长出来</strong>，全部先进入账单草稿池。</p><p><strong>逐行构成（一次收货完成最多生成 5 类行）</strong>：</p><p><div class="table-wrapper"><table><tr><td>流水行</td><td><code>flow_kind</code></td><td>费用类型来源</td><td>单价</td><td>计费量</td><td>金额</td></tr>
-<tr><td>:---</td><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
-<tr><td>运费</td><td>10</td><td>预置费用类型「运费」</td><td>当周公布价（元/计价单位）</td><td>计费重量 / 体积</td><td><code>公布价 × 计费量</code></td></tr>
-<tr><td>运费优惠</td><td>20</td><td><strong>优惠规则配置的 <code>fee_type</code></strong></td><td>优惠值（带符号）</td><td>同运费行</td><td><code>优惠值 × 计费量</code></td></tr>
-<tr><td>泡比优惠</td><td>30</td><td><strong>优惠规则配置的 <code>fee_type</code></strong></td><td>优惠值（带符号）</td><td>同运费行</td><td><code>优惠值 × 计费量</code>（仅命中 KG 计价行）</td></tr>
-<tr><td>附加费</td><td>40</td><td>附加费规则计价明细「应收」行的费用类型</td><td>应收单价</td><td>按票=1 / 按箱=箱数 / 按KG=计费重量 / 按m³=计费体积 / 按数量=人工填</td><td><code>应收单价 × 计费量</code></td></tr>
-<tr><td>附加费优惠</td><td>50</td><td><strong>优惠规则配置的 <code>fee_type</code></strong></td><td>优惠值（单价级、带符号）</td><td>同该附加费行</td><td><code>优惠值 × 计费量</code></td></tr>
+<h3 id="4-7-应收流水生成与账单草稿池">4.7 应收流水生成与账单草稿池</h3></p><p><strong>触发</strong>：运单状态进入「已收货」→ 系统自动生成应收业务流水（R01）。<strong>分节点增量</strong>：字段匹配型附加费随收货完成生成；<strong>字段&公式型附加费（如超重超长）在拣货实测后追加一行</strong>；人工添加型由业务在运单「费用管理」手工新增。同一运单的流水<strong>可分批长出来</strong>，全部先进入账单草稿池。</p><p><strong>逐行构成（一次收货完成最多生成 5 类行）</strong>：</p><p><div class="table-wrapper"><table><tr><td>流水行</td><td><code>flow_kind</code></td><td>费用类型来源</td><td>计价单位（<code>pricing_unit</code>）</td><td>单价</td><td>计费量</td><td>金额</td></tr>
+<tr><td>:---</td><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td>运费</td><td>10</td><td>预置费用类型「运费」</td><td>服务组合的计费方式（按KG / 按m³）</td><td>当周公布价（元/计价单位）</td><td>计费重量 / 体积</td><td><code>公布价 × 计费量</code></td></tr>
+<tr><td>运费优惠</td><td>20</td><td><strong>优惠规则配置的 <code>fee_type</code></strong></td><td>同运费行</td><td>优惠值（带符号）</td><td>同运费行</td><td><code>优惠值 × 计费量</code></td></tr>
+<tr><td>泡比优惠</td><td>30</td><td><strong>优惠规则配置的 <code>fee_type</code></strong></td><td>同运费行（仅按KG）</td><td>优惠值（带符号）</td><td>同运费行</td><td><code>优惠值 × 计费量</code>（仅命中 KG 计价行）</td></tr>
+<tr><td>附加费</td><td>40</td><td>附加费规则计价明细「应收」行的费用类型</td><td><strong>该附加费规则的计价单位</strong>（按票/按箱/按KG/按m³/按数量）</td><td>应收单价</td><td>按票=1 / 按箱=箱数 / 按KG=计费重量 / 按m³=计费体积 / 按数量=人工填</td><td><code>应收单价 × 计费量</code></td></tr>
+<tr><td>附加费优惠</td><td>50</td><td><strong>优惠规则配置的 <code>fee_type</code></strong></td><td>同该附加费行</td><td>优惠值（单价级、带符号）</td><td>同该附加费行</td><td><code>优惠值 × 计费量</code></td></tr>
 </table></div>
 <strong>取价与优惠取数</strong>：运费取<strong>当周批次（CURRENT）</strong>运价行（仓库组 + 重量段 + 交货地组）的公布价；优惠<strong>从超级运价三张优惠表实时匹配</strong>（不进周批次快照）——运费优惠按 服务组合 ×（客户特批 > 客户等级）取一条生效规则，泡比优惠按 泡比 ≥ 密度阈值 取阈值最大档，附加费优惠按 附加费规则 × 目标匹配。取数链路见 <code><a href="../超级运价/2026-09-14-数据设计.html">数据设计</a></code> §6.5。</p><p><strong>重扫与冻结</strong>：运单信息变更 → <code>generate_node ∈ {10,20}</code> 且未审计的自动行<strong>重算覆盖</strong>；<code>generate_node=30</code>（人工添加）<strong>永久豁免重扫</strong>；<strong>业务审计后冻结</strong>（只能人工调整或红冲）、<strong>进账单后彻底冻结</strong>。</p><p><strong>账单草稿池</strong>：<code>bill_id</code> 为空的流水即处于草稿池；财务在「账单管理 → 草稿池」按 客户 × 主体 × 币种 × 账期 查看，勾选<strong>已审计</strong>的流水生成账单（R11）。
 </p></div></div>

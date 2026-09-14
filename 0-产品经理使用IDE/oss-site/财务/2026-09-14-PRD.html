@@ -647,6 +647,7 @@
 <tr><td>R52</td><td>分节点生成</td><td>运单状态推进</td><td>字段匹配型附加费随<strong>收货完成</strong>生成；<strong>字段&公式型附加费（如超重超长）在拣货实测后追加一行</strong>（<code>generate_node=20</code>）；人工添加型由业务在运单费用 tab 手工新增（<code>generate_node=30</code>）</td><td>拣货实测数据缺失 → 该费用行不生成，待实测后补生成，不阻断</td></tr>
 <tr><td>R53</td><td>重扫与冻结</td><td>运单信息变更</td><td><code>generate_node ∈ {10,20}</code> 且未审计的自动行<strong>重算覆盖</strong>（单价/计费量/金额/来源规则一并刷新）；<code>generate_node=30</code>（人工添加）<strong>永久豁免重扫</strong></td><td>业务审计后冻结（只能人工调整或红冲）；已关联账单（<code>bill_id</code> 非空）彻底冻结，改动只能走红冲</td></tr>
 <tr><td>R54</td><td>自动行幂等去重</td><td>流水生成/重扫时</td><td>自动行按 <code>UNIQUE(waybill_id, flow_kind, fee_type_id, source_rule_id)</code> 去重，重复触发只更新不新增</td><td>重复生成请求 → 返回已存在流水并标记为「已覆盖」，后台任务不报错</td></tr>
+<tr><td>R55</td><td>计价单位来源</td><td>流水生成时</td><td><strong>跟着规则走</strong>：运费 / 运费优惠 / 泡比优惠行的 <code>pricing_unit</code> = 运单所关联<strong>服务组合的计费方式</strong>（按KG / 按m³）；附加费 / 附加费优惠行的 <code>pricing_unit</code> = 该条<strong>附加费规则的计价单位</strong>（按票 / 按箱 / 按KG / 按m³ / 按数量）</td><td>取不到计价单位（组合计费方式缺失 / 附加费规则无计价明细）→ 该行不生成并写后台任务告警；<strong>优惠值量纲 = 元/计价单位</strong>，故优惠行与其父行的计价单位、计费量必须一致</td></tr>
 </table></div>
 <h3 id="6-2-账单">6.2 账单</h3></p><p><div class="table-wrapper"><table><tr><td>编号</td><td>触发点</td><td>条件/公式</td><td>输出</td><td>异常处理</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
@@ -990,7 +991,7 @@
 <tr><td>U09</td><td>菜单命名与钱包页分工</td><td>✅ 收敛为单页 <strong>「资金账户管理」</strong>（双 Tab），原「钱包」菜单下线</td></tr>
 <tr><td>U10</td><td>货主端默认钱包列</td><td>✅ 两端<strong>均不展示</strong>该字段（后台保留，二期「默认支付钱包」预留）；员工端该列改为<strong>「开通方式」</strong>（系统自动 / 财务手工）</td></tr>
 </table></div>
-<blockquote><strong>钱包开通与生命周期（2026-09-11 追加确认）</strong>：① 自动开通<strong>唯一触发点 = 合同签约完成</strong>（开户完成不再触发，统一覆盖正常/特殊入驻）；② 财务手工新增钱包的<strong>主体边界 = 该客户签约过的主体</strong>（含已过期/已解约，用于存量账单与赔付结算），未签约主体一律阻断、<strong>不设特批口子</strong>；③ 钱包与合同生命周期<strong>解耦</strong>（合同过期/解约不影响充值、核销、提现、互转、新增币种钱包）；④ 默认币种<strong>统一人民币</strong>（香港富力顿不特殊）。</blockquote></p><p><hr></p><p><blockquote><strong>质量自检</strong>：文档基础信息完整 ✅ ｜ 业务规则已编号 R01-R54 ✅ ｜ 验收标准可测试 A01-A28 ✅ ｜ 待确认项已全部关闭并转决策记录（§12.4，10 条）✅ ｜ 权限矩阵覆盖 5 类角色 ✅ ｜ 异常处理覆盖（E01-E44 + R 系列异常列）✅ ｜ RDD 一致性校验：16 项功能 / 18 条 AC 全量映射 ✅ ｜ 页面清单：员工端 7 页（§5.1-§5.7）+ 货主端 2 页（§5.8-§5.9）✅</blockquote>
+<blockquote><strong>钱包开通与生命周期（2026-09-11 追加确认）</strong>：① 自动开通<strong>唯一触发点 = 合同签约完成</strong>（开户完成不再触发，统一覆盖正常/特殊入驻）；② 财务手工新增钱包的<strong>主体边界 = 该客户签约过的主体</strong>（含已过期/已解约，用于存量账单与赔付结算），未签约主体一律阻断、<strong>不设特批口子</strong>；③ 钱包与合同生命周期<strong>解耦</strong>（合同过期/解约不影响充值、核销、提现、互转、新增币种钱包）；④ 默认币种<strong>统一人民币</strong>（香港富力顿不特殊）。</blockquote></p><p><hr></p><p><blockquote><strong>质量自检</strong>：文档基础信息完整 ✅ ｜ 业务规则已编号 R01-R55 ✅ ｜ 验收标准可测试 A01-A28 ✅ ｜ 待确认项已全部关闭并转决策记录（§12.4，10 条）✅ ｜ 权限矩阵覆盖 5 类角色 ✅ ｜ 异常处理覆盖（E01-E44 + R 系列异常列）✅ ｜ RDD 一致性校验：16 项功能 / 18 条 AC 全量映射 ✅ ｜ 页面清单：员工端 7 页（§5.1-§5.7）+ 货主端 2 页（§5.8-§5.9）✅</blockquote>
 </p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
