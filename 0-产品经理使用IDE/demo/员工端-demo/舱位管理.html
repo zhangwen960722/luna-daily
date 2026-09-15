@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物流管理系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script src="https://unpkg.com/echarts/dist/echarts.min.js"></script>
+
+    <style>
+        :root {
+            --el-color-primary: #2DA44E;
+            --el-bg-color-page: #F5F7FA;
+            --el-border-color: #DCDFE6;
+            --el-border-radius-base: 4px;
+        }
+        body { margin: 0; font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', sans-serif; background-color: var(--el-bg-color-page); overflow: hidden; height: 100vh; box-sizing: border-box; }
+        
+        .layout-container { display: flex; height: 100%; width: 100%; }
+        .sidebar { width: 200px; background-color: #001529; color: white; display: flex; flex-direction: column; }
+        .logo-area { height: 60px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; border-bottom: 1px solid #1f2d3d; }
+        .menu { flex: 1; border-right: none; }
+        .main-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .header { height: 60px; background-color: white; border-bottom: 1px solid var(--el-border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-shadow: 0 1px 4px rgba(0,21,41,.08); z-index: 10; }
+        .header-left, .header-right { display: flex; align-items: center; gap: 16px; }
+        .content-area { flex: 1; padding: 16px; overflow: auto; }
+        .page-card { background-color: white; border-radius: var(--el-border-radius-base); padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.05); margin-bottom: 16px; }
+        .search-area { margin-bottom: 16px; }
+        .toolbar { margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .el-drawer__body { padding: 0 !important; overflow: hidden !important; }
+        .detail-layout { height: 100vh; display: flex; flex-direction: column; background-color: #f5f7fa; }
+        .detail-header { background: white; padding: 16px 24px; border-bottom: 1px solid #ebeef5; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.05); z-index: 5; }
+        .detail-title { font-size: 20px; font-weight: bold; color: #303133; margin-right: 12px; }
+        .detail-meta { margin-top: 8px; color: #909399; font-size: 13px; display: flex; gap: 24px; align-items: center; }
+        .detail-body { flex: 1; padding: 16px; display: flex; gap: 16px; overflow: hidden; }
+        .detail-left { flex: 1; background: white; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+        .detail-left-content { flex: 1; padding: 16px; overflow-y: auto; background-color: #fafafa; }
+        .detail-right { flex: 0 0 350px; background: white; border-radius: 4px; overflow-y: auto; box-shadow: 0 1px 4px rgba(0,0,0,.05); transition: flex 0.3s; }
+.detail-right.collapsed { flex: 0 0 36px; overflow: hidden; }
+.space-edit-panel { background: #fafafa; padding: 20px; border-radius: 4px; }
+        
+        .section-block { background: white; padding: 20px; border-radius: 4px; margin-bottom: 16px; border: 1px solid #ebeef5; }
+        .section-title-line { font-weight: bold; font-size: 16px; margin-bottom: 16px; border-left: 4px solid var(--el-color-primary); padding-left: 10px; color: #303133; display: flex; justify-content: space-between; align-items: center; }
+        .space-add-form { max-height: 68vh; overflow-y: auto; padding: 4px 16px 8px 4px; }
+        .space-add-form .section-title-line { margin-top: 24px; margin-bottom: 18px; }
+        .space-add-form .section-title-line:first-child { margin-top: 4px; }
+        .space-add-form .el-row { margin-bottom: 2px; }
+        .space-add-form .el-form-item { margin-bottom: 18px; }
+        .space-add-form .el-form-item__label { color: #606266; }
+        .required-mark { color: #f56c6c; margin-right: 4px; font-weight: 700; }
+        .el-table th.el-table__cell { background-color: #fafafa !important; }
+        .base-stat-box { text-align: center; padding: 10px; }
+        .base-stat-title { font-size: 13px; color: #909399; margin-bottom: 8px; }
+        .base-stat-value { font-size: 18px; font-weight: bold; color: #303133; }
+    </style>
+</head>
+<body>
+    <div id="app" class="layout-container">
+        <div class="main-container">
+            <!-- ===================== 舱位管理模块 ===================== -->
+            <div class="content-area">
+                <!-- 搜索 -->
+                <div class="page-card search-area">
+                    <el-form :inline="true" :model="spaceSearchForm" size="default">
+                        <el-form-item label="渠道">
+                            <el-select v-model="spaceSearchForm.channel" placeholder="全部" style="width: 140px;" clearable>
+                                <el-option v-for="c in channelOptions" :key="c" :label="c" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <el-form-item label="舱位代理"><el-input v-model="spaceSearchForm.agent" placeholder="请输入舱位代理" style="width: 140px;" clearable></el-input></el-form-item>
+                        <el-form-item label="提单号"><el-input v-model="spaceSearchForm.blNo" placeholder="请输入提单号" style="width: 140px;" clearable></el-input></el-form-item>
+                        <el-form-item label="柜号"><el-input v-model="spaceSearchForm.containerNo" placeholder="请输入柜号" style="width: 140px;" clearable></el-input></el-form-item>
+                        <el-form-item label="船名航次"><el-input v-model="spaceSearchForm.vesselVoyage" placeholder="请输入船名航次" style="width: 160px;" clearable></el-input></el-form-item>
+                        <template v-if="isSpaceSearchExpanded">
+                            <el-form-item label="航线">
+                                <el-select v-model="spaceSearchForm.route" placeholder="全部" style="width: 160px;" clearable>
+                                    <el-option v-for="r in routeOptions" :key="r.name" :label="r.name" :value="r.name"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="标识">
+                                <el-select v-model="spaceSearchForm.markStatus" placeholder="全部" style="width: 120px;" clearable>
+                                    <el-option label="未标识" value="未标识"></el-option>
+                                    <el-option label="已标识" value="已标识"></el-option>
+                                </el-select>
+                            </el-form-item>
+                            <el-form-item label="创建时间"><el-date-picker v-model="spaceSearchForm.createTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
+                            <el-form-item label="转柜时间"><el-date-picker v-model="spaceSearchForm.transferTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
+                            <el-form-item label="开船时间"><el-date-picker v-model="spaceSearchForm.departureTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
+                            <el-form-item label="到港时间"><el-date-picker v-model="spaceSearchForm.arrivalTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
+                            <el-form-item label="清关时间"><el-date-picker v-model="spaceSearchForm.clearanceTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
+                            <el-form-item label="完成时间"><el-date-picker v-model="spaceSearchForm.finishTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
+                        </template>
+                        <el-form-item style="float: right; margin-right: 0;">
+                            <el-button type="primary" @click="handleAction('执行搜索')">搜索</el-button>
+                            <el-button @click="handleAction('重置搜索')">重置</el-button>
+                            <el-button type="primary" link @click="isSpaceSearchExpanded = !isSpaceSearchExpanded">
+                                {{ isSpaceSearchExpanded ? '收起' : '展开' }}
+                                <el-icon><ArrowUp v-if="isSpaceSearchExpanded"></ArrowUp><ArrowDown v-else></ArrowDown></el-icon>
+                            </el-button>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <!-- 列表 -->
+                <div class="page-card">
+                    <el-tabs v-model="spaceActiveTab">
+                        <el-tab-pane label="配载中" name="配载中"></el-tab-pane>
+                        <el-tab-pane label="已配载" name="已配载"></el-tab-pane>
+                        <el-tab-pane label="已装柜" name="已装柜"></el-tab-pane>
+                        <el-tab-pane label="已出发" name="已出发"></el-tab-pane>
+                        <el-tab-pane label="已到站" name="已到站"></el-tab-pane>
+                        <el-tab-pane label="已清关" name="已清关"></el-tab-pane>
+                        <el-tab-pane label="已完成" name="已完成"></el-tab-pane>
+                    </el-tabs>
+
+                    <div class="toolbar">
+                        <div>
+                            <el-button type="primary" @click="openSpaceAddDialog"><el-icon><Plus></Plus></el-icon> 新增</el-button>
+                            <el-button @click="handleAction('刷新列表')">刷新</el-button>
+                            <el-button @click="openStatusDialog" style="margin-left: 12px;">状态调整</el-button>
+                            <el-button @click="exportDialogVisible = true" style="margin-left: 12px;">导出</el-button>
+                            <el-button @click="markDialogVisible = true" style="margin-left: 12px;">标识</el-button>
+                            <el-dropdown style="margin-left: 12px;" trigger="click" @command="handleFeeCommand">
+                                <el-button>费用管理 <el-icon class="el-icon--right"><ArrowDown></ArrowDown></el-icon></el-button>
+                                <template #dropdown>
+                                    <el-dropdown-menu>
+                                        <el-dropdown-item command="ap">添加应付</el-dropdown-item>
+                                        <el-dropdown-item command="ar">添加应收</el-dropdown-item>
+                                        <el-dropdown-item command="audit" divided>审计</el-dropdown-item>
+                                        <el-dropdown-item command="unaudit">反审计</el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </template>
+                            </el-dropdown>
+                        </div>
+                    </div>
+
+                    <el-table :data="spaceTableData" stripe border style="width: 100%" height="calc(100vh - 420px)" @selection-change="onSpaceSelect">
+                        <el-table-column type="selection" width="55" fixed="left"></el-table-column>
+                        <el-table-column prop="serviceName" label="渠道" width="110" fixed="left"></el-table-column>
+                        <el-table-column prop="agent" label="舱位代理商" width="110" fixed="left" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="blNo" label="提单号" width="130" fixed="left" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="containerNo" label="柜号" width="120"></el-table-column>
+                        <el-table-column prop="sealNo" label="铅封号" width="120"></el-table-column>
+                        <el-table-column prop="vesselVoyage" label="船名航次" width="160" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="route" label="航线" width="140" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="etd" label="预计出发时间" width="160"></el-table-column>
+                        <el-table-column prop="eta" label="预计到达时间" width="160"></el-table-column>
+                        <el-table-column prop="volume" label="容积" width="90"></el-table-column>
+                        <el-table-column label="已配载量/总容量" width="160">
+                            <template #default="scope">
+                                <el-progress :percentage="scope.row.capacityRate" :color="scope.row.capacityRate > 50 ? '#E6A23C' : '#67C23A'"></el-progress>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="waybillCount" label="运单数" width="80"></el-table-column>
+                        <el-table-column prop="boxCount" label="箱数" width="80"></el-table-column>
+                        <el-table-column prop="realWeight" label="实重" width="90"></el-table-column>
+                        <el-table-column prop="volumeWeight" label="材重" width="90"></el-table-column>
+                        <el-table-column prop="trailerCompany" label="拖车行" width="130" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="customsBroker" label="报关行" width="130" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="remark" label="备注" width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="createTime" label="创建时间" width="160"></el-table-column>
+                        <el-table-column prop="loadTime" label="装柜时间" width="160"></el-table-column>
+                        <el-table-column prop="departureTime" label="开船时间" width="160"></el-table-column>
+                        <el-table-column prop="arrivalTime" label="到港时间" width="160"></el-table-column>
+                        <el-table-column prop="clearanceTime" label="清关时间" width="160"></el-table-column>
+                        <el-table-column prop="finishTime" label="完成时间" width="160"></el-table-column>
+                        <el-table-column label="操作" width="130" fixed="right">
+                            <template #default="scope">
+                                <el-button type="primary" link size="small" @click="openSpaceDetail(scope.row)">详情</el-button>
+                                <el-button type="primary" link size="small" @click="copySpace(scope.row)">复制</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+                        <el-pagination layout="total, sizes, prev, pager, next" :total="3"></el-pagination>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== 全局 Dialogs ===================== -->
+
+        <!-- 4. 舱位全屏详情 Drawer -->
+        <el-drawer v-model="spaceDetailVisible" :with-header="false" size="100%" destroy-on-close direction="rtl">
+            <div class="detail-layout" v-if="currentSpaceDetail">
+                <div class="detail-header">
+                    <div>
+                        <div style="display: flex; align-items: center;">
+                            <span class="detail-title">{{ currentSpaceDetail.blNo }}</span>
+                            <el-tag :type="getSpaceStatusType(currentSpaceDetail.status)" effect="dark" size="small">{{ currentSpaceDetail.status }}</el-tag>
+                        </div>
+                        <div class="detail-meta">
+                            <span><el-icon><Timer></Timer></el-icon> 创建时间: {{ currentSpaceDetail.createTime }}</span>
+                            <span><el-icon><Ship></Ship></el-icon> 船名航次: {{ currentSpaceDetail.vesselVoyage }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <el-button @click="spaceDetailVisible = false">返回列表</el-button>
+                    </div>
+                </div>
+
+                <div class="detail-body">
+                    <div class="detail-left">
+                        <el-tabs v-model="spaceDetailTab" style="padding: 10px 16px 0 16px;">
+                            <el-tab-pane label="基本信息" name="basic"></el-tab-pane>
+                            <el-tab-pane label="配载信息" name="load"></el-tab-pane>
+                            <el-tab-pane label="财务信息" name="finance"></el-tab-pane>
+                            <el-tab-pane label="工单管理" name="ticket"></el-tab-pane>
+                            <el-tab-pane label="操作日志" name="log"></el-tab-pane>
+                        </el-tabs>
+                        <div class="detail-left-content">
+                            <!-- 基本信息 -->
+                            <template v-if="spaceDetailTab === 'basic'">
+                                <div class="section-block">
+                                    <div class="section-title-line">
+                                        <span>基本信息</span>
+                                        <div>
+                                            <el-button v-if="!isSpaceEditing" type="primary" size="small" @click="startSpaceEdit"><el-icon><Edit></Edit></el-icon> 编辑舱位</el-button>
+                                            <el-button v-if="!isSpaceEditing" size="small" @click="handleAction('下载定制文件')">下载定制文件</el-button>
+                                            <el-button v-if="isSpaceEditing" size="small" @click="cancelSpaceEdit">取消</el-button>
+                                            <el-button v-if="isSpaceEditing" type="success" size="small" @click="saveSpaceEdit">保存修改</el-button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- View Mode -->
+                                    <div v-if="!isSpaceEditing">
+                                        <div style="font-weight: bold; margin: 0 0 8px 0; color: #606266;">基础信息</div>
+                                        <el-descriptions :column="2" size="small" border>
+                                            <el-descriptions-item label="类型">{{ currentSpaceDetail.type || '海运' }}</el-descriptions-item>
+                                            <el-descriptions-item label="提单号">{{ currentSpaceDetail.blNo || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="订舱号">{{ currentSpaceDetail.bookingNo || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="舱位代理商">{{ currentSpaceDetail.agent || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="渠道">{{ currentSpaceDetail.serviceName || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="备注" :span="2">{{ currentSpaceDetail.remark || '-' }}</el-descriptions-item>
+                                        </el-descriptions>
+
+                                        <div style="font-weight: bold; margin: 16px 0 8px 0; color: #606266;">船期航线</div>
+                                        <el-descriptions :column="2" size="small" border>
+                                            <el-descriptions-item label="船司">{{ currentSpaceDetail.carrier || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="船名">{{ currentSpaceDetail.vesselName || currentSpaceDetail.vessel || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="航次">{{ currentSpaceDetail.voyage || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="航线" :span="2">{{ currentSpaceDetail.route || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="出发国家">{{ currentSpaceDetail.polCountry || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="出发地点">{{ currentSpaceDetail.pol || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="发往国家">{{ currentSpaceDetail.podCountry || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="发往地点">{{ currentSpaceDetail.pod || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="预计开船时间 ETD">{{ currentSpaceDetail.etd || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="预计到港时间 ETA">{{ currentSpaceDetail.eta || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="截单">{{ currentSpaceDetail.cutOffTime || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="截重">{{ currentSpaceDetail.cutOffWeightTime || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="截 VGM">{{ currentSpaceDetail.cutOffVGMTime || '-' }}</el-descriptions-item>
+                                        </el-descriptions>
+
+                                        <div style="font-weight: bold; margin: 16px 0 8px 0; color: #606266;">货物信息</div>
+                                        <el-descriptions :column="2" size="small" border>
+                                            <el-descriptions-item label="总容积 (CBM)">{{ currentSpaceDetail.totalVolume || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="总载重 (KG)">{{ currentSpaceDetail.totalWeight || '-' }}</el-descriptions-item>
+                                        </el-descriptions>
+
+                                        <div style="font-weight: bold; margin: 16px 0 8px 0; color: #606266;">集装箱</div>
+                                        <el-descriptions :column="3" size="small" border>
+                                            <el-descriptions-item label="箱号 (柜号)">{{ currentSpaceDetail.containerNo || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="封号 (铅封号)">{{ currentSpaceDetail.sealNo || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="规格">{{ currentSpaceDetail.containerSpec || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="容积 (CBM)">{{ currentSpaceDetail.volume || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="箱重 (KG)">{{ currentSpaceDetail.containerWeight || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="是否带车架">{{ currentSpaceDetail.hasChassis || '-' }}</el-descriptions-item>
+                                        </el-descriptions>
+
+                                        <div style="font-weight: bold; margin: 16px 0 8px 0; color: #606266;">国内调度</div>
+                                        <el-descriptions :column="2" size="small" border>
+                                            <el-descriptions-item label="是否打单">{{ currentSpaceDetail.isPrinted || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="是否安排">{{ currentSpaceDetail.isArranged || '-' }}</el-descriptions-item>
+                                            <template v-if="currentSpaceDetail.isArranged === '是'">
+                                                <el-descriptions-item label="拖车行">{{ currentSpaceDetail.trailerCompany || '-' }}</el-descriptions-item>
+                                                <el-descriptions-item label="车牌">{{ currentSpaceDetail.plateNo || '-' }}</el-descriptions-item>
+                                                <el-descriptions-item label="联系人">{{ currentSpaceDetail.driver || '-' }}</el-descriptions-item>
+                                                <el-descriptions-item label="联系方式">{{ currentSpaceDetail.contactPhone || '-' }}</el-descriptions-item>
+                                                <el-descriptions-item label="开票税点">{{ currentSpaceDetail.trailerTaxPoint || '-' }}</el-descriptions-item>
+                                                <el-descriptions-item label="开票金额">{{ currentSpaceDetail.trailerInvoiceAmount || '-' }}</el-descriptions-item>
+                                            </template>
+                                        </el-descriptions>
+
+                                        <div style="font-weight: bold; margin: 16px 0 8px 0; color: #606266;">报关行</div>
+                                        <el-descriptions :column="3" size="small" border>
+                                            <el-descriptions-item label="报关行">{{ currentSpaceDetail.customsBroker || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="开票税点">{{ currentSpaceDetail.customsTaxPoint || '-' }}</el-descriptions-item>
+                                            <el-descriptions-item label="开票金额">{{ currentSpaceDetail.customsInvoiceAmount || '-' }}</el-descriptions-item>
+                                        </el-descriptions>
+                                    </div>
+
+                                    <!-- Edit Mode -->
+                                    <div v-else class="space-edit-panel">
+                                        <el-form :model="editSpaceForm" label-width="112px" size="default" class="space-add-form">
+                                            <div class="section-title-line">基础信息</div>
+                                            <el-row :gutter="28">
+                                                <el-col :span="12"><el-form-item label="类型"><el-select v-model="editSpaceForm.type" style="width:100%;"><el-option label="海运" value="海运"></el-option><el-option label="空运" value="空运"></el-option></el-select></el-form-item></el-col>
+                                                <el-col :span="12"><el-form-item label="提单号"><el-input v-model="editSpaceForm.blNo"></el-input></el-form-item></el-col>
+                                                <el-col :span="12"><el-form-item label="订舱号"><el-input v-model="editSpaceForm.bookingNo"></el-input></el-form-item></el-col>
+                                                <el-col :span="12"><el-form-item label="舱位代理商"><el-select v-model="editSpaceForm.agent" filterable clearable style="width:100%;"><el-option v-for="a in agentOptions" :key="a" :label="a" :value="a"></el-option></el-select></el-form-item></el-col>
+                                                <el-col :span="12"><el-form-item label="渠道"><el-select v-model="editSpaceForm.serviceName" filterable clearable style="width:100%;"><el-option v-for="s in serviceOptions" :key="s" :label="s" :value="s"></el-option></el-select></el-form-item></el-col>
+                                                <el-col :span="12"><el-form-item label="备注"><el-input v-model="editSpaceForm.remark"></el-input></el-form-item></el-col>
+                                            </el-row>
+                                            <div class="section-title-line">船舶信息</div>
+                                            <el-row :gutter="28"><el-col :span="8"><el-form-item label="船司"><el-input v-model="editSpaceForm.carrier"></el-input></el-form-item></el-col><el-col :span="8"><el-form-item label="船名"><el-input v-model="editSpaceForm.vesselName"></el-input></el-form-item></el-col><el-col :span="8"><el-form-item label="航次"><el-input v-model="editSpaceForm.voyage"></el-input></el-form-item></el-col></el-row>
+                                            <div class="section-title-line">集装箱信息</div>
+                                            <el-row :gutter="28"><el-col :span="12"><el-form-item label="柜号"><el-input v-model="editSpaceForm.containerNo"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="铅封号"><el-input v-model="editSpaceForm.sealNo"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="规格"><el-select v-model="editSpaceForm.containerSpec" @change="onSpecChange('edit')" style="width:100%;"><el-option v-for="s in specOptions" :key="s" :label="s" :value="s"></el-option></el-select></el-form-item></el-col><el-col :span="12"><el-form-item label="容积"><el-input-number v-model="editSpaceForm.volume" :disabled="true" style="width:100%;"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="是否带车架"><el-radio-group v-model="editSpaceForm.hasChassis"><el-radio label="是">是</el-radio><el-radio label="否">否</el-radio></el-radio-group></el-form-item></el-col></el-row>
+                                            <div class="section-title-line">路线与时间</div>
+                                            <el-row :gutter="28"><el-col :span="24"><el-form-item label="航线"><el-select v-model="editSpaceForm.route" clearable @change="onRouteChange('edit')" style="width:100%;"><el-option v-for="r in routeOptions" :key="r.name" :label="r.name" :value="r.name"></el-option></el-select></el-form-item></el-col><el-col :span="12"><el-form-item label="出发国家"><el-input v-model="editSpaceForm.polCountry"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="出发地点"><el-input v-model="editSpaceForm.pol"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="发往国家"><el-input v-model="editSpaceForm.podCountry"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="发往地点"><el-input v-model="editSpaceForm.pod"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="开船时间"><el-date-picker v-model="editSpaceForm.etd" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col><el-col :span="12"><el-form-item label="到港时间"><el-date-picker v-model="editSpaceForm.eta" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col></el-row>
+                                            <div class="section-title-line">船司截止时间</div><el-row :gutter="28"><el-col :span="8"><el-form-item label="截单"><el-date-picker v-model="editSpaceForm.cutOffTime" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col><el-col :span="8"><el-form-item label="截重"><el-date-picker v-model="editSpaceForm.cutOffWeightTime" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col><el-col :span="8"><el-form-item label="截VGM"><el-date-picker v-model="editSpaceForm.cutOffVGMTime" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col></el-row>
+                                            <div class="section-title-line">资源容量</div><el-row :gutter="28"><el-col :span="12"><el-form-item label="总容积(CBM)"><el-input-number v-model="editSpaceForm.totalVolume" style="width:100%;"></el-input-number></el-form-item></el-col><el-col :span="12"><el-form-item label="总载重(KG)"><el-input-number v-model="editSpaceForm.totalWeight" style="width:100%;"></el-input-number></el-form-item></el-col></el-row>
+                                            <div class="section-title-line">拖车信息</div><el-row :gutter="28"><el-col :span="12"><el-form-item label="是否打单"><el-radio-group v-model="editSpaceForm.isPrinted"><el-radio label="是">是</el-radio><el-radio label="否">否</el-radio></el-radio-group></el-form-item></el-col><el-col :span="12"><el-form-item label="是否安排"><el-radio-group v-model="editSpaceForm.isArranged"><el-radio label="是">是</el-radio><el-radio label="否">否</el-radio></el-radio-group></el-form-item></el-col><el-col :span="12"><el-form-item label="拖车行"><el-select v-model="editSpaceForm.trailerCompany" placeholder="选择拖车行" filterable clearable style="width:100%;"><el-option v-for="t in trailerCompanyOptions" :key="t" :label="t" :value="t"></el-option></el-select></el-form-item></el-col><el-col :span="12"><el-form-item label="车牌"><el-input v-model="editSpaceForm.plateNo"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="联系人"><el-input v-model="editSpaceForm.driver"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="联系电话"><el-input v-model="editSpaceForm.contactPhone"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="开票税点"><el-input v-model="editSpaceForm.trailerTaxPoint"></el-input></el-form-item></el-col><el-col :span="12"><el-form-item label="开票金额"><el-input v-model="editSpaceForm.trailerInvoiceAmount"></el-input></el-form-item></el-col></el-row>
+                                            <div class="section-title-line">报关行</div><el-row :gutter="28"><el-col :span="8"><el-form-item label="报关行"><el-select v-model="editSpaceForm.customsBroker" placeholder="选择报关行" filterable clearable style="width:100%;"><el-option v-for="b in customsBrokerOptions" :key="b" :label="b" :value="b"></el-option></el-select></el-form-item></el-col><el-col :span="8"><el-form-item label="开票税点"><el-input v-model="editSpaceForm.customsTaxPoint"></el-input></el-form-item></el-col><el-col :span="8"><el-form-item label="开票金额"><el-input v-model="editSpaceForm.customsInvoiceAmount"></el-input></el-form-item></el-col></el-row>
+                                        </el-form>
+                                    </div>
+                                </div>
+                            </template>
+                            <!-- 配载信息 -->
+                            <template v-if="spaceDetailTab === 'load'">
+                                <div class="section-block">
+                                    <div v-if="!hasLoadData && !isLoadEditing" style="text-align:center;padding:80px 0;">
+                                        <div style="font-size:14px;color:#999;margin-bottom:20px;">{{ spaceLoadLocked ? '该舱单已装柜，可新增客户现场配载' : '暂无配载信息' }}</div>
+                                        <el-button type="primary" icon="Plus" @click="openCreateLoadDialog">新增配载</el-button>
+                                    </div>
+
+                                    <template v-else>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+                                            <span style="font-size:12px;color:#2DA44E;border:1px solid #2DA44E;border-radius:3px;padding:2px 6px;flex-shrink:0;">汇总</span>
+                                            <div style="text-align:center;"><div style="font-size:20px;font-weight:bold;color:#2DA44E;">{{ loadStat.ordered.realWeight.toFixed(1) }} / {{ loadStat.received.realWeight.toFixed(1) }}</div><div style="font-size:12px;color:#999;">实重 下单/实收(KG)</div></div>
+                                            <div style="text-align:center;"><div style="font-size:20px;font-weight:bold;color:#2DA44E;">{{ loadStat.ordered.volumeWeight.toFixed(1) }} / {{ loadStat.received.volumeWeight.toFixed(1) }}</div><div style="font-size:12px;color:#999;">材重 下单/实收(KG)</div></div>
+                                            <div style="text-align:center;"><div style="font-size:20px;font-weight:bold;color:#2DA44E;">{{ loadStat.ordered.volume.toFixed(2) }} / {{ loadStat.received.volume.toFixed(2) }}</div><div style="font-size:12px;color:#999;">体积 下单/实收(CBM)</div></div>
+                                            <div style="text-align:center;"><div style="font-size:20px;font-weight:bold;">{{ loadTotalBoxes }}</div><div style="font-size:12px;color:#999;">货箱数</div></div>
+                                        </div>
+                                    </div>
+
+                                    <el-tabs v-model="activeLoadBatch" type="card" style="margin-bottom:12px;">
+                                        <el-tab-pane v-for="b in loadBatches" :key="b.id" :name="String(b.id)">
+                                            <template #label>
+                                                <span>{{ b.loadingWarehouse }} · {{ b.loadingTime }} · {{ batchBoxCount(b.id) }}箱</span>
+                                                <el-icon v-if="!spaceLoadLocked" style="margin-left:6px;color:#999;cursor:pointer;" @click.stop="openEditLoad(b)"><Edit></Edit></el-icon>
+                                            </template>
+                                        </el-tab-pane>
+                                    </el-tabs>
+
+                                    <div style="margin-bottom:12px;">
+                                        <el-radio-group v-model="loadViewMode" size="small">
+                                            <el-radio-button value="waybill">运单维度</el-radio-button>
+                                            <el-radio-button value="box">货箱维度</el-radio-button>
+                                        </el-radio-group>
+                                    </div>
+                                    <div style="margin-bottom:12px;">
+                                        <el-form :inline="true" size="small" style="margin:0;">
+                                            <template v-if="loadViewMode === 'box'">
+                                                <el-form-item label="用户"><el-input v-model="boxSearch.user" placeholder="用户" clearable style="width:130px;"></el-input></el-form-item>
+                                                <el-form-item label="货箱号"><el-input v-model="boxSearch.boxNo" placeholder="货箱号" clearable style="width:140px;"></el-input></el-form-item>
+                                            </template>
+                                            <template v-else>
+                                                <el-form-item label="用户"><el-input v-model="waybillSearch.user" placeholder="用户" clearable style="width:130px;"></el-input></el-form-item>
+                                                <el-form-item label="运单号"><el-input v-model="waybillSearch.waybillNo" placeholder="运单号" clearable style="width:140px;"></el-input></el-form-item>
+                                            </template>
+                                            <el-form-item>
+                                                <el-button type="primary" size="small" @click="doLoadSearch">搜索</el-button>
+                                                <el-button size="small" @click="resetLoadSearch">重置</el-button>
+                                            </el-form-item>
+                                        </el-form>
+                                    </div>
+
+                                    <el-table v-if="loadViewMode === 'box'" :data="pagedCurrentBatchItems" border>
+                                        <el-table-column prop="waybillNo" label="运单号" width="140"></el-table-column>
+                                        <el-table-column label="货箱号" width="160">
+                                            <template #default="s">
+                                                <span>{{ s.row.boxNo }}</span>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="user" label="用户" width="100"></el-table-column>
+                                        <el-table-column label="实重 下单/实收" width="130" align="center">
+                                            <template #default="s"><div style="line-height:1.6;"><div><span style="color:#999;font-size:11px;">下单 </span>{{ s.row.ordered.realWeight.toFixed(1) }}</div><div style="font-weight:600;"><span style="color:#999;font-size:11px;">实收 </span>{{ s.row.received.realWeight.toFixed(1) }}</div></div></template>
+                                        </el-table-column>
+                                        <el-table-column label="材重 下单/实收" width="130" align="center">
+                                            <template #default="s"><div style="line-height:1.6;"><div><span style="color:#999;font-size:11px;">下单 </span>{{ s.row.ordered.volumeWeight.toFixed(1) }}</div><div style="font-weight:600;"><span style="color:#999;font-size:11px;">实收 </span>{{ s.row.received.volumeWeight.toFixed(1) }}</div></div></template>
+                                        </el-table-column>
+                                        <el-table-column label="体积 下单/实收" width="130" align="center">
+                                            <template #default="s"><div style="line-height:1.6;"><div><span style="color:#999;font-size:11px;">下单 </span>{{ s.row.ordered.volume.toFixed(2) }}</div><div style="font-weight:600;"><span style="color:#999;font-size:11px;">实收 </span>{{ s.row.received.volume.toFixed(2) }}</div></div></template>
+                                        </el-table-column>
+                                        <el-table-column prop="currentWarehouse" label="当前仓库" width="100"></el-table-column>
+                                        <el-table-column label="状态" width="130">
+                                            <template #default="s">
+                                                <el-tag v-if="s.row.status === '临时加箱'" type="success" size="small">已装车</el-tag>
+                                                <el-tag v-else size="small" :type="loadStatusType(s.row.status)">{{ s.row.status }}</el-tag>
+                                                <el-tag v-if="s.row.status === '临时加箱'" type="warning" size="small" style="margin-left:4px;">临时</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+
+                                    <el-table v-if="loadViewMode === 'waybill'" :data="filteredWaybillRows" border>
+                                        <el-table-column prop="user" label="用户" width="90"></el-table-column>
+                                        <el-table-column prop="waybillNo" label="运单号" width="140"></el-table-column>
+                                        <el-table-column prop="service" label="服务" width="100"></el-table-column>
+                                        <el-table-column label="件数" width="80" align="center">
+                                            <template #default="s">
+                                                <span v-if="s.row.status === '部分装车'">{{ s.row.loadedBoxes }}/{{ s.row.totalBoxes }}</span>
+                                                <span v-else>{{ s.row.totalBoxes }}</span>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="addressCode" label="地址编码" width="110" show-overflow-tooltip></el-table-column>
+                                        <el-table-column prop="customsType" label="报关方式" width="100"></el-table-column>
+                                        <el-table-column prop="summary" label="简述" width="120" show-overflow-tooltip></el-table-column>
+                                        <el-table-column prop="weight" label="重量" width="80" align="right"></el-table-column>
+                                        <el-table-column prop="volume" label="体积" width="80" align="right"></el-table-column>
+                                        <el-table-column prop="destCountry" label="发往国家" width="100"></el-table-column>
+                                        <el-table-column prop="pickTime" label="拣货时间" width="140"></el-table-column>
+                                        <el-table-column label="状态" width="150" fixed="right">
+                                            <template #default="s">
+                                                <el-tag v-if="s.row.status === '已装车'" type="success" size="small">已装车</el-tag>
+                                                <el-tag v-else-if="s.row.status === '待装车'" type="info" size="small">待装车</el-tag>
+                                                <el-tag v-else type="warning" size="small">部分装车 {{ s.row.progress }}</el-tag>
+                                                <el-tag v-if="s.row.hasTemp" type="warning" size="small" style="margin-left:4px;">临时</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+
+                                    <div v-if="loadViewMode === 'box'" style="margin-top:12px; display:flex; justify-content:flex-end;">
+                                        <el-pagination layout="total, prev, pager, next" :total="filteredBoxItems.length" :page-size="10" v-model:current-page="loadPage"></el-pagination>
+                                    </div>
+                                    </template>
+                                </div>
+                            </template>
+                            <!-- 财务信息 -->
+                            <template v-if="spaceDetailTab === 'finance'">
+                                <div class="section-block">
+                                    <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
+                                        <el-button type="primary" size="small" @click="feeDialogVisible = true; feeType = 'ap'"><el-icon><Plus></Plus></el-icon> 添加费用</el-button>
+                                        <span style="font-weight: bold; font-size: 16px; color: #f56c6c;">总费用：$ 1,250.00</span>
+                                    </div>
+                                    <el-table :data="mockFinanceData" border stripe>
+                                        <el-table-column prop="type" label="费用类型"></el-table-column>
+                                        <el-table-column prop="unitPrice" label="单位费用"></el-table-column>
+                                        <el-table-column prop="currency" label="币种"></el-table-column>
+                                        <el-table-column prop="desc" label="描述"></el-table-column>
+                                    </el-table>
+                                </div>
+                            </template>
+                            <!-- 工单管理 -->
+                            <template v-if="spaceDetailTab === 'ticket'">
+                                <div class="section-block">
+                                    <div style="margin-bottom: 16px;">
+                                        <el-button type="primary" size="small" @click="handleAction('创建工单')"><el-icon><Plus></Plus></el-icon> 创建工单</el-button>
+                                    </div>
+                                    <el-table :data="mockTicketData" border stripe>
+                                        <el-table-column prop="type" label="类型"></el-table-column>
+                                        <el-table-column prop="desc" label="描述" show-overflow-tooltip></el-table-column>
+                                        <el-table-column prop="status" label="状态">
+                                            <template #default="scope">
+                                                <el-tag :type="scope.row.status === '已处理' ? 'success' : 'warning'">{{ scope.row.status }}</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </div>
+                            </template>
+                            <!-- 操作日志 -->
+                            <template v-if="spaceDetailTab === 'log'">
+                                <div class="section-block">
+                                    <el-table :data="mockSpaceLogData" border stripe>
+                                        <el-table-column prop="operator" label="操作人" width="120"></el-table-column>
+                                        <el-table-column prop="time" label="操作时间" width="160"></el-table-column>
+                                        <el-table-column prop="action" label="操作事项" width="150"></el-table-column>
+                                        <el-table-column prop="remark" label="备注"></el-table-column>
+                                    </el-table>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Right Sidebar: 路由信息 (Timeline) -->
+                    <div class="detail-right" :class="{ collapsed: detailRightCollapsed }">
+                        <div style="padding: 8px 12px; border-bottom: 1px solid #ebeef5; display: flex; justify-content: space-between; align-items: center; background: #fafafa; position: sticky; top: 0; z-index: 10; min-height: 36px;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span @click="detailRightCollapsed = !detailRightCollapsed" style="cursor:pointer;font-size:14px;color:#2DA44E;line-height:1;font-weight:bold;" :title="detailRightCollapsed ? '展开路由信息' : '收起路由信息'">{{ detailRightCollapsed ? '«' : '»' }}</span>
+                                <div v-if="!detailRightCollapsed" class="section-title-line" style="margin-bottom: 0;">路由信息</div>
+                            </div>
+                            <div v-if="!detailRightCollapsed">
+                                <el-button type="success" size="small" @click="routeDialogVisible = true"><el-icon><Plus></Plus></el-icon> 添加</el-button>
+                                <el-button size="small" @click="handleAction('复制路由')">复制</el-button>
+                            </div>
+                        </div>
+                        <div v-show="!detailRightCollapsed" style="padding: 20px;">
+                            <el-timeline>
+                                <el-timeline-item timestamp="2024-04-15 10:00" placement="top" color="#2DA44E">
+                                    <div style="font-weight: bold; margin-bottom: 4px;">【已出发】 已发往目的港</div>
+                                    <div style="font-size: 13px; color: #666;">国家: 美国 城市: 洛杉矶</div>
+                                    <div style="font-size: 13px; color: #666; margin-bottom: 8px;">操作备注：准时开船</div>
+                                    <div>
+                                        <el-button link type="primary" size="small" @click="handleAction('编辑路由')">编辑</el-button>
+                                        <el-button link type="danger" size="small" @click="handleAction('删除路由')">删除</el-button>
+                                    </div>
+                                </el-timeline-item>
+                            </el-timeline>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </el-drawer>
+
+        <!-- 5. 舱位 新增 Dialog (No longer used for edit) -->
+        <el-dialog v-model="spaceDialogVisible" title="新增舱位" width="1100px" top="5vh" destroy-on-close>
+            <el-form :model="spaceFormData" label-width="112px" size="default" class="space-add-form">
+                <div class="section-title-line">基础信息</div>
+                <el-row :gutter="28">
+                    <el-col :span="12"><el-form-item label="类型"><el-select v-model="spaceFormData.type" placeholder="选择类型" style="width:100%;"><el-option label="海运" value="海运"></el-option><el-option label="空运" value="空运"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>提单号</template><el-input v-model="spaceFormData.blNo" placeholder="请输入提单号"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="订舱号"><el-input v-model="spaceFormData.bookingNo" placeholder="选填"></el-input></el-form-item></el-col>
+                     <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>舱位代理商</template><el-select v-model="spaceFormData.agent" placeholder="选择代理商" filterable clearable style="width:100%;"><el-option v-for="a in agentOptions" :key="a" :label="a" :value="a"></el-option></el-select></el-form-item></el-col>
+                     <el-col :span="12"><el-form-item label="渠道"><el-select v-model="spaceFormData.serviceName" placeholder="选择渠道" filterable clearable style="width:100%;"><el-option v-for="s in serviceOptions" :key="s" :label="s" :value="s"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="24"><el-form-item label="备注"><el-input v-model="spaceFormData.remark" placeholder="选填"></el-input></el-form-item></el-col>
+                </el-row>
+                <div class="section-title-line">船舶信息</div>
+                <el-row :gutter="28">
+                    <el-col :span="8"><el-form-item label="船司"><el-input v-model="spaceFormData.carrier"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item><template #label><span class="required-mark">*</span>船名</template><el-input v-model="spaceFormData.vesselName"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item><template #label><span class="required-mark">*</span>航次</template><el-input v-model="spaceFormData.voyage"></el-input></el-form-item></el-col>
+                </el-row>
+                <div class="section-title-line">集装箱信息</div>
+                <el-row :gutter="28">
+                    <el-col :span="12"><el-form-item label="柜号"><el-input v-model="spaceFormData.containerNo"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>铅封号</template><el-input v-model="spaceFormData.sealNo"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="规格"><el-select v-model="spaceFormData.containerSpec" placeholder="选择规格" @change="onSpecChange('add')" style="width:100%;"><el-option v-for="s in specOptions" :key="s" :label="s" :value="s"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>容积</template><el-input-number v-model="spaceFormData.volume" :disabled="true" style="width:100%;"></el-input-number></el-form-item></el-col>
+                    <el-col :span="24"><el-form-item label="是否带车架"><el-radio-group v-model="spaceFormData.hasChassis"><el-radio label="是">是</el-radio><el-radio label="否">否</el-radio></el-radio-group></el-form-item></el-col>
+                </el-row>
+                <div class="section-title-line">路线与时间</div>
+                <el-row :gutter="28">
+                    <el-col :span="24"><el-form-item label="航线"><el-select v-model="spaceFormData.route" placeholder="选择航线（自动带出起运/目的）" clearable @change="onRouteChange('add')" style="width:100%;"><el-option v-for="r in routeOptions" :key="r.name" :label="r.name" :value="r.name"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="出发国家"><el-input v-model="spaceFormData.polCountry"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>出发地点</template><el-input v-model="spaceFormData.pol"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="发往国家"><el-input v-model="spaceFormData.podCountry"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>发往地点</template><el-input v-model="spaceFormData.pod"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="开船时间"><el-date-picker v-model="spaceFormData.etd" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>到港时间</template><el-date-picker v-model="spaceFormData.eta" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                </el-row>
+                <div class="section-title-line">船司截止时间</div>
+                <el-row :gutter="28">
+                    <el-col :span="8"><el-form-item label="截单"><el-date-picker v-model="spaceFormData.cutOffTime" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item><template #label><span class="required-mark">*</span>截重</template><el-date-picker v-model="spaceFormData.cutOffWeightTime" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item><template #label><span class="required-mark">*</span>截VGM</template><el-date-picker v-model="spaceFormData.cutOffVGMTime" type="datetime" style="width:100%;"></el-date-picker></el-form-item></el-col>
+                </el-row>
+                <div class="section-title-line">资源容量</div>
+                <el-row :gutter="28">
+                    <el-col :span="12"><el-form-item label="总容积(CBM)"><el-input-number v-model="spaceFormData.totalVolume" style="width:100%;"></el-input-number></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>总载重(KG)</template><el-input-number v-model="spaceFormData.totalWeight" style="width:100%;"></el-input-number></el-form-item></el-col>
+                </el-row>
+
+                <div class="section-title-line">拖车信息</div>
+                <el-row :gutter="28">
+                    <el-col :span="12"><el-form-item label="是否打单"><el-radio-group v-model="spaceFormData.isPrinted"><el-radio label="是">是</el-radio><el-radio label="否">否</el-radio></el-radio-group></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>是否安排</template><el-radio-group v-model="spaceFormData.isArranged"><el-radio label="是">是</el-radio><el-radio label="否">否</el-radio></el-radio-group></el-form-item></el-col>
+                     <el-col :span="12"><el-form-item label="拖车行"><el-select v-model="spaceFormData.trailerCompany" placeholder="选择拖车行" filterable clearable style="width:100%;"><el-option v-for="t in trailerCompanyOptions" :key="t" :label="t" :value="t"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>车牌</template><el-input v-model="spaceFormData.plateNo"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="联系人"><el-input v-model="spaceFormData.driver"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item><template #label><span class="required-mark">*</span>联系电话</template><el-input v-model="spaceFormData.contactPhone"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="开票税点"><el-input v-model="spaceFormData.trailerTaxPoint"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="开票金额"><el-input v-model="spaceFormData.trailerInvoiceAmount"></el-input></el-form-item></el-col>
+                </el-row>
+
+                <div class="section-title-line">报关行</div>
+                <el-row :gutter="28">
+                     <el-col :span="8"><el-form-item label="报关行"><el-select v-model="spaceFormData.customsBroker" placeholder="选择报关行" filterable clearable style="width:100%;"><el-option v-for="b in customsBrokerOptions" :key="b" :label="b" :value="b"></el-option></el-select></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="开票税点"><el-input v-model="spaceFormData.customsTaxPoint"></el-input></el-form-item></el-col>
+                    <el-col :span="8"><el-form-item label="开票金额"><el-input v-model="spaceFormData.customsInvoiceAmount"></el-input></el-form-item></el-col>
+                </el-row>
+            </el-form>
+            <template #footer>
+                <el-button @click="spaceDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="handleAction('保存新增'); spaceDialogVisible = false;">确定</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 6. 标识 Dialog -->
+        <el-dialog v-model="markDialogVisible" title="批量标识" width="500px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-form-item label="操作类型">
+                    <el-radio-group v-model="markForm.actionType"><el-radio label="add">添加</el-radio><el-radio label="remove">移除</el-radio></el-radio-group>
+                </el-form-item>
+                <el-form-item label="运单号"><el-input type="textarea" v-model="markForm.blNos" placeholder="多行输入" :rows="4"></el-input></el-form-item>
+                <el-form-item label="标识项"><el-select v-model="markForm.tag" style="width: 100%;"><el-option label="加急" value="urgent"></el-option></el-select></el-form-item>
+            </el-form>
+            <template #footer><el-button @click="markDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('提交标识'); markDialogVisible = false;">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 7. 状态调整 Dialog (Global) -->
+        <el-dialog v-model="statusDialogVisible" title="状态调整" width="500px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-form-item label="选中提单号">
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                        <el-tag v-for="r in selectedSpaces" :key="r.blNo" size="small">{{ r.blNo }}</el-tag>
+                    </div>
+                </el-form-item>
+                <el-form-item label="调整至状态">
+                    <el-select v-model="newStatus" style="width: 100%;">
+                        <el-option label="待配载" value="待配载"></el-option>
+                        <el-option label="配载中" value="配载中"></el-option>
+                        <el-option label="已配载" value="已配载"></el-option>
+                        <el-option label="已装柜" value="已装柜"></el-option>
+                        <el-option label="已出发" value="已出发"></el-option>
+                        <el-option label="已到站" value="已到站"></el-option>
+                        <el-option label="已清关" value="已清关"></el-option>
+                        <el-option label="已完成" value="已完成"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="statusDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('保存状态'); statusDialogVisible = false;">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 7.5 导出 Dialog -->
+        <el-dialog v-model="exportDialogVisible" title="导出提单" width="560px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-form-item label="导出模板">
+                    <el-radio-group v-model="exportForm.template">
+                        <el-radio label="提单">提单</el-radio>
+                        <el-radio label="运单">运单</el-radio>
+                        <el-radio label="货箱">货箱</el-radio>
+                        <el-radio label="申报">申报</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="exportDialogVisible = false">取消</el-button><el-button type="primary" @click="doExport">导出</el-button></template>
+        </el-dialog>
+
+        <!-- 8. 添加费用 Dialog -->
+        <el-dialog v-model="feeDialogVisible" :title="feeType === 'ap' ? '添加应付' : '添加应收'" width="600px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-form-item label="运单号"><el-input type="textarea" v-model="feeForm.blNos"></el-input></el-form-item>
+                <el-form-item label="业务时间"><el-date-picker v-model="feeForm.time" type="date" style="width: 100%;"></el-date-picker></el-form-item>
+                <el-form-item label="费用类型"><el-input v-model="feeForm.type"></el-input></el-form-item>
+                <el-row>
+                    <el-col :span="12"><el-form-item label="币种"><el-input v-model="feeForm.currency"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="汇率"><el-input v-model="feeForm.rate"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-row>
+                    <el-col :span="12"><el-form-item label="单位"><el-input v-model="feeForm.unit"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="单位费用"><el-input v-model="feeForm.unitPrice"></el-input></el-form-item></el-col>
+                </el-row>
+                <el-form-item label="描述"><el-input v-model="feeForm.desc"></el-input></el-form-item>
+                <el-form-item label="备注"><el-input v-model="feeForm.remark"></el-input></el-form-item>
+            </el-form>
+            <template #footer><el-button @click="feeDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('保存费用'); feeDialogVisible = false;">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 9. 审计/反审计 Dialog -->
+        <el-dialog v-model="auditDialogVisible" :title="auditType === 'audit' ? '审计' : '反审计'" width="500px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-form-item label="运单号"><el-input type="textarea" v-model="auditForm.blNos" placeholder="支持多行显示" :rows="3"></el-input></el-form-item>
+                <el-form-item label="类型">
+                    <el-checkbox-group v-model="auditForm.types" style="display: flex; flex-direction: column;">
+                        <el-checkbox label="应收-仅流水">应收-仅流水</el-checkbox>
+                        <el-checkbox label="应付-仅流水">应付-仅流水</el-checkbox>
+                        <el-checkbox label="应收-运单及流水">应收-运单及流水</el-checkbox>
+                        <el-checkbox label="应付-运单及流水">应付-运单及流水</el-checkbox>
+                    </el-checkbox-group>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="auditDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('执行审计'); auditDialogVisible = false;">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 10. 路由添加 Dialog -->
+        <el-dialog v-model="routeDialogVisible" title="添加路由节点" width="500px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-form-item label="时间"><el-date-picker v-model="routeForm.time" type="datetime" style="width: 100%;"></el-date-picker></el-form-item>
+                <el-form-item label="操作信息"><el-input v-model="routeForm.action"></el-input></el-form-item>
+                <el-form-item label="国家"><el-input v-model="routeForm.country"></el-input></el-form-item>
+                <el-form-item label="城市"><el-input v-model="routeForm.city"></el-input></el-form-item>
+                <el-form-item label="文字备注"><el-input type="textarea" v-model="routeForm.remark"></el-input></el-form-item>
+            </el-form>
+            <template #footer><el-button @click="routeDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('保存路由节点'); routeDialogVisible = false;">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 新增/编辑配载 Dialog -->
+        <el-dialog v-model="createLoadDialogVisible" :title="isEditingLoad ? '编辑配载' : '新增配载'" width="760px" destroy-on-close append-to-body>
+            <el-form label-width="90px">
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="装柜地点">
+                            <el-select v-model="createLoadForm.loadingWarehouse" placeholder="选择装柜地点" style="width:100%;" :disabled="spaceLoadLocked">
+                                <el-option v-for="w in loadingWarehouseOptions" :key="w" :label="w" :value="w"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="装柜时间">
+                            <el-date-picker v-model="createLoadForm.loadingTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:100%;"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+            </el-form>
+
+            <div style="font-weight:bold;font-size:14px;margin:4px 0 12px;">货箱信息</div>
+            <el-form label-width="90px">
+                <el-form-item label="添加维度">
+                    <el-radio-group v-model="createLoadForm.addType">
+                        <el-radio-button value="waybill">运单维度</el-radio-button>
+                        <el-radio-button value="box">货箱维度</el-radio-button>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item :label="createLoadForm.addType === 'waybill' ? '运单号' : '货箱号'">
+                    <el-input type="textarea" v-model="createLoadForm.inputNos" :placeholder="createLoadForm.addType === 'waybill' ? '输入运单号，多行输入' : '输入货箱号，多行输入'" :rows="6"></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input type="textarea" v-model="createLoadForm.remark" :rows="2" placeholder="选填"></el-input>
+                </el-form-item>
+            </el-form>
+
+            <template #footer>
+                <el-button @click="createLoadDialogVisible = false">取消</el-button>
+                <el-button type="primary" @click="saveCreateLoad">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 11. 添加配载 Dialog -->
+        <el-dialog v-model="loadDialogVisible" :title="loadDialogTitle" width="620px" destroy-on-close append-to-body>
+            <el-form label-width="110px">
+                <el-form-item :label="loadForm.type==='waybill' ? '运单号' : (loadForm.type==='abnormal' ? '异常件货箱号' : '货箱号')">
+                    <el-input type="textarea" v-model="loadForm.nos" placeholder="支持多行输入" :rows="3"></el-input>
+                </el-form-item>
+                <el-form-item label="装柜批次">
+                    <el-select v-model="loadForm.batchId" placeholder="选择装柜批次（装柜地点 + 时间）" style="width:100%;">
+                        <el-option v-for="b in loadBatches" :key="b.id" :label="b.loadingWarehouse + ' · ' + b.loadingTime" :value="b.id"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input type="textarea" v-model="loadForm.remark" :rows="2" placeholder="选填"></el-input>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="loadDialogVisible = false">取消</el-button><el-button type="primary" @click="saveLoad">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 新建调拨批次 Dialog -->
+        <el-dialog v-model="createBatchDialogVisible" title="新建调拨批次" width="760px" destroy-on-close append-to-body>
+            <el-form label-width="100px">
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="装柜地点">
+                            <el-select v-model="createBatchForm.loadingWarehouse" placeholder="选择装柜地点" style="width:100%;">
+                                <el-option label="花都仓" value="花都仓"></el-option>
+                                <el-option label="中山仓" value="中山仓"></el-option>
+                                <el-option label="东莞仓" value="东莞仓"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="装柜时间">
+                            <el-date-picker v-model="createBatchForm.loadingTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:100%;"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="输入单号/箱号">
+                    <div style="width:100%;">
+                        <el-input type="textarea" v-model="createBatchForm.nos" placeholder="输入运单号或货箱号，多行输入" :rows="2"></el-input>
+                        <el-button size="small" style="margin-top:8px;" @click="loadPoolItems">加载货箱</el-button>
+                    </div>
+                </el-form-item>
+            </el-form>
+            <el-table :data="createBatchForm.previewItems" border size="small" max-height="260" empty-text="输入单号/箱号后点击「加载货箱」">
+                <el-table-column label="货箱号 / 运单号" width="150">
+                    <template #default="s"><span>{{ s.row.dimension === '运单' ? '—' : s.row.boxNo }}</span><div style="color:#999;font-size:11px;">{{ s.row.waybillNo }}</div></template>
+                </el-table-column>
+                <el-table-column prop="currentWarehouse" label="当前仓库" width="90"></el-table-column>
+                <el-table-column label="实重 下单/实收" width="120" align="center">
+                    <template #default="s"><div style="line-height:1.6;"><div><span style="color:#999;font-size:11px;">下单 </span>{{ s.row.ordered.realWeight.toFixed(1) }}</div><div style="font-weight:600;"><span style="color:#999;font-size:11px;">实收 </span>{{ s.row.received.realWeight.toFixed(1) }}</div></div></template>
+                </el-table-column>
+                <el-table-column label="材重 下单/实收" width="120" align="center">
+                    <template #default="s"><div style="line-height:1.6;"><div><span style="color:#999;font-size:11px;">下单 </span>{{ s.row.ordered.volumeWeight.toFixed(1) }}</div><div style="font-weight:600;"><span style="color:#999;font-size:11px;">实收 </span>{{ s.row.received.volumeWeight.toFixed(1) }}</div></div></template>
+                </el-table-column>
+                <el-table-column label="体积 下单/实收" width="120" align="center">
+                    <template #default="s"><div style="line-height:1.6;"><div><span style="color:#999;font-size:11px;">下单 </span>{{ s.row.ordered.volume.toFixed(2) }}</div><div style="font-weight:600;"><span style="color:#999;font-size:11px;">实收 </span>{{ s.row.received.volume.toFixed(2) }}</div></div></template>
+                </el-table-column>
+                <el-table-column label="调拨" width="80" align="center">
+                    <template #default="s"><el-tag v-if="s.row.needTransfer" type="warning" size="small">待调拨</el-tag><span v-else style="color:#ccc;">—</span></template>
+                </el-table-column>
+            </el-table>
+            <template #footer><el-button @click="createBatchDialogVisible = false">取消</el-button><el-button type="primary" @click="saveCreateBatch">确认</el-button></template>
+        </el-dialog>
+
+        <!-- 添加/编辑批次 Dialog -->
+        <el-dialog v-model="batchDialogVisible" :title="batchDialogTitle" width="460px" destroy-on-close append-to-body>
+            <el-form label-width="110px">
+                <el-form-item label="装柜地点">
+                    <el-select v-model="batchForm.loadingWarehouse" placeholder="选择装柜地点" style="width:100%;">
+                        <el-option label="花都仓" value="花都仓"></el-option>
+                        <el-option label="中山仓" value="中山仓"></el-option>
+                        <el-option label="东莞仓" value="东莞仓"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="装柜时间">
+                    <el-date-picker v-model="batchForm.loadingTime" type="datetime" value-format="YYYY-MM-DD HH:mm" style="width:100%;"></el-date-picker>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="batchDialogVisible = false">取消</el-button><el-button type="primary" @click="saveBatch">确定</el-button></template>
+        </el-dialog>
+
+        <!-- 移到其他批次 Dialog -->
+        <el-dialog v-model="moveBatchVisible" title="移到其他批次" width="460px" destroy-on-close append-to-body>
+            <el-form label-width="110px">
+                <el-form-item label="目标批次">
+                    <el-select v-model="moveBatchForm.targetBatchId" placeholder="选择目标批次" style="width:100%;">
+                        <el-option v-for="b in loadBatches" :key="b.id" :label="b.loadingWarehouse + ' · ' + b.loadingTime" :value="b.id"></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="moveBatchVisible = false">取消</el-button><el-button type="primary" @click="doMoveBatch">确定</el-button></template>
+        </el-dialog>
+
+    </div>
+
+    <script>
+        const { createApp, ref, reactive } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const activeMenu = ref('2'); 
+                const handleMenuSelect = (index) => { activeMenu.value = index; };
+                const handleAction = (msg) => { ElMessage.success(msg); };
+
+                // ================= Space Logic (舱位管理) =================
+                const spaceSearchForm = reactive({ channel: '', agent: '', blNo: '', containerNo: '', vesselVoyage: '', route: '', markStatus: '', createTime: [], transferTime: [], departureTime: [], arrivalTime: [], clearanceTime: [], finishTime: [] });
+                const channelOptions = ['美森360', '美森限时达', '以星普船', '加拿大海派'];
+                const isSpaceSearchExpanded = ref(false);
+                const spaceActiveTab = ref('配载中');
+                const getSpaceStatusType = (status) => { const map = { '待配载': 'info', '配载中': 'info', '已配载': 'warning', '已装柜': 'primary', '已出发': 'primary', '已到站': 'success', '已清关': 'success', '已完成': 'success', '已作废': 'danger' }; return map[status] || 'primary'; };
+                
+                const allSpaceData = [
+                    { blNo: 'BL20240401', bookingNo: 'BK20240401', agent: '万海代理', carrier: '万海航运', vessel: 'WAN HAI 506', voyage: 'V123', vesselVoyage: '万海航运/WAN HAI 506/V123', containerNo: 'WHLU1234567', sealNo: 'S987654', status: '配载中', pol: '深圳', pod: '洛杉矶', isPrinted: '是', isArranged: '否', capacityRate: 20, volume: 68, realWeight: 12000, volumeWeight: 13500, createTime: '2024-04-20 09:00', etd: '2024-05-10 12:00', eta: '2024-05-25 12:00', remark: '优先处理', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240402', bookingNo: 'BK20240402', agent: '长荣代理', carrier: '长荣海运', vessel: 'EVER GIVEN', voyage: 'E456', vesselVoyage: '长荣海运/EVER GIVEN/E456', containerNo: 'EMCU7654321', sealNo: 'S123456', status: '配载中', pol: '宁波', pod: '纽约', isPrinted: '否', isArranged: '否', capacityRate: 0, volume: 68, realWeight: 0, volumeWeight: 0, createTime: '2024-04-21 10:30', etd: '2024-05-12 14:00', eta: '2024-06-05 08:00', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240403', bookingNo: 'BK20240403', agent: '中远代理', carrier: '中远海运', vessel: 'COSCO SHIPPING', voyage: 'C789', vesselVoyage: '中远海运/COSCO SHIPPING/C789', containerNo: 'CBHU1122334', sealNo: 'S334455', status: '已装柜', pol: '上海', pod: '鹿特丹', isPrinted: '是', isArranged: '是', capacityRate: 85, volume: 68, realWeight: 22000, volumeWeight: 21500, createTime: '2024-04-18 11:00', etd: '2024-04-25 10:00', eta: '2024-05-20 12:00', remark: '重货', loadLocation: 'customer_site' },
+                    { blNo: 'BL20240404', bookingNo: 'BK20240404', agent: '地中海代理', carrier: '地中海航运', vessel: 'MSC OSCAR', voyage: 'M012', vesselVoyage: '地中海航运/MSC OSCAR/M012', containerNo: 'MSCU5566778', sealNo: 'S667788', status: '已装柜', pol: '青岛', pod: '汉堡', isPrinted: '是', isArranged: '是', capacityRate: 95, volume: 68, realWeight: 24000, volumeWeight: 23800, createTime: '2024-04-19 09:45', etd: '2024-04-26 15:00', eta: '2024-05-22 09:00', remark: '满载', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240405', bookingNo: 'BK20240405', agent: '马士基代理', carrier: '马士基', vessel: 'MAERSK MC-KINNEY', voyage: 'K345', vesselVoyage: '马士基/MAERSK MC-KINNEY/K345', containerNo: 'MRKU9988776', sealNo: 'S998877', status: '已出发', pol: '广州', pod: '悉尼', isPrinted: '是', isArranged: '是', capacityRate: 90, volume: 68, realWeight: 23000, volumeWeight: 22000, createTime: '2024-04-10 14:20', etd: '2024-04-18 08:00', eta: '2024-05-10 16:00', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240406', bookingNo: 'BK20240406', agent: '赫伯罗特代理', carrier: '赫伯罗特', vessel: 'HAPAG LLOYD', voyage: 'H678', vesselVoyage: '赫伯罗特/HAPAG LLOYD/H678', containerNo: 'HLBU3322110', sealNo: 'S332211', status: '已出发', pol: '天津', pod: '安特卫普', isPrinted: '是', isArranged: '是', capacityRate: 88, volume: 68, realWeight: 22500, volumeWeight: 21800, createTime: '2024-04-12 10:15', etd: '2024-04-20 11:00', eta: '2024-05-18 14:00', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240407', bookingNo: 'BK20240407', agent: '万海代理', carrier: '万海航运', vessel: 'WAN HAI 312', voyage: 'V901', vesselVoyage: '万海航运/WAN HAI 312/V901', containerNo: 'WHLU8877665', sealNo: 'S887766', status: '已到站', pol: '厦门', pod: '长滩', isPrinted: '是', isArranged: '是', capacityRate: 92, volume: 68, realWeight: 23500, volumeWeight: 23000, createTime: '2024-03-25 09:00', etd: '2024-04-05 10:00', eta: '2024-04-21 08:00', remark: '准备清关', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240408', bookingNo: 'BK20240408', agent: '长荣代理', carrier: '长荣海运', vessel: 'EVER GLORY', voyage: 'E234', vesselVoyage: '长荣海运/EVER GLORY/E234', containerNo: 'EMCU2233445', sealNo: 'S223344', status: '已到站', pol: '大连', pod: '西雅图', isPrinted: '是', isArranged: '是', capacityRate: 80, volume: 68, realWeight: 20000, volumeWeight: 19500, createTime: '2024-03-28 11:30', etd: '2024-04-08 14:00', eta: '2024-04-22 09:30', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240409', bookingNo: 'BK20240409', agent: '中远代理', carrier: '中远海运', vessel: 'COSCO STAR', voyage: 'C567', vesselVoyage: '中远海运/COSCO STAR/C567', containerNo: 'CBHU5544332', sealNo: 'S554433', status: '已清关', pol: '宁波', pod: '洛杉矶', isPrinted: '是', isArranged: '是', capacityRate: 98, volume: 68, realWeight: 25000, volumeWeight: 24500, createTime: '2024-03-15 10:45', etd: '2024-03-25 12:00', eta: '2024-04-10 10:00', remark: '清关顺利', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240410', bookingNo: 'BK20240410', agent: '马士基代理', carrier: '马士基', vessel: 'MAERSK LINE', voyage: 'K890', vesselVoyage: '马士基/MAERSK LINE/K890', containerNo: 'MRKU1133557', sealNo: 'S113355', status: '已清关', pol: '深圳', pod: '纽约', isPrinted: '是', isArranged: '是', capacityRate: 85, volume: 68, realWeight: 21000, volumeWeight: 20500, createTime: '2024-03-18 14:20', etd: '2024-03-28 08:00', eta: '2024-04-15 14:00', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240411', bookingNo: 'BK20240411', agent: '地中海代理', carrier: '地中海航运', vessel: 'MSC ZOE', voyage: 'M123', vesselVoyage: '地中海航运/MSC ZOE/M123', containerNo: 'MSCU7788990', sealNo: 'S778899', status: '已完成', pol: '上海', pod: '汉堡', isPrinted: '是', isArranged: '是', capacityRate: 100, volume: 68, realWeight: 26000, volumeWeight: 25500, createTime: '2024-02-20 09:00', etd: '2024-03-05 10:00', eta: '2024-04-01 08:00', remark: '已送达', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240412', bookingNo: 'BK20240412', agent: '赫伯罗特代理', carrier: '赫伯罗特', vessel: 'HAPAG LLOYD II', voyage: 'H456', vesselVoyage: '赫伯罗特/HAPAG LLOYD II/H456', containerNo: 'HLBU9900112', sealNo: 'S990011', status: '已完成', pol: '青岛', pod: '安特卫普', isPrinted: '是', isArranged: '是', capacityRate: 90, volume: 68, realWeight: 23000, volumeWeight: 22500, createTime: '2024-02-25 11:30', etd: '2024-03-10 14:00', eta: '2024-04-05 09:30', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240413', bookingNo: 'BK20240413', agent: '万海代理', carrier: '万海航运', vessel: 'WAN HAI 808', voyage: 'V789', vesselVoyage: '万海航运/WAN HAI 808/V789', containerNo: '-', sealNo: '-', status: '已作废', pol: '广州', pod: '悉尼', isPrinted: '否', isArranged: '否', capacityRate: 0, volume: 68, realWeight: 0, volumeWeight: 0, createTime: '2024-04-05 10:00', etd: '2024-04-15 12:00', eta: '2024-05-05 10:00', remark: '客户取消订舱', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240414', bookingNo: 'BK20240414', agent: '长荣代理', carrier: '长荣海运', vessel: 'EVER SHINE', voyage: 'E012', vesselVoyage: '长荣海运/EVER SHINE/E012', containerNo: '-', sealNo: '-', status: '已作废', pol: '天津', pod: '西雅图', isPrinted: '否', isArranged: '否', capacityRate: 0, volume: 68, realWeight: 0, volumeWeight: 0, createTime: '2024-04-08 14:20', etd: '2024-04-18 08:00', eta: '2024-05-08 14:00', remark: '航线变更', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240415', bookingNo: 'BK20240415', agent: '万海代理', carrier: '万海航运', vessel: 'WAN HAI 606', voyage: 'V456', vesselVoyage: '万海航运/WAN HAI 606/V456', containerNo: 'WHLU1122334', sealNo: 'S112233', status: '配载中', pol: '深圳', pod: '洛杉矶', isPrinted: '否', isArranged: '否', capacityRate: 0, volume: 76, realWeight: 0, volumeWeight: 0, createTime: '2024-04-22 09:00', etd: '2024-05-15 12:00', eta: '2024-06-01 12:00', remark: '-', loadLocation: 'warehouse' },
+                    { blNo: 'BL20240416', bookingNo: 'BK20240416', agent: '中远代理', carrier: '中远海运', vessel: 'COSCO WAVE', voyage: 'C111', vesselVoyage: '中远海运/COSCO WAVE/C111', containerNo: 'CBHU6677889', sealNo: 'S667788', status: '已配载', pol: '上海', pod: '洛杉矶', isPrinted: '是', isArranged: '是', capacityRate: 72, volume: 76, realWeight: 18000, volumeWeight: 17600, createTime: '2024-04-16 10:00', etd: '2024-05-08 14:00', eta: '2024-06-10 12:00', remark: '已配载待装柜', loadLocation: 'warehouse' }
+                ];
+                // 补列表展示字段（原型 mock，避免逐条手改）
+                const agentToService = { '万海代理':'美森360', '长荣代理':'美森限时达', '中远代理':'以星普船', '地中海代理':'加拿大海派', '马士基代理':'美森360', '赫伯罗特代理':'以星普船' };
+                const statusStep = { '配载中':0, '已配载':1, '已装柜':2, '已出发':3, '已到站':4, '已清关':5, '已完成':6 };
+                 allSpaceData.forEach((r, index) => {
+                     r.serviceName = agentToService[r.agent] || '美森360';
+                     r.route = r.pol + '-' + r.pod;
+                     r.type = '海运';
+                     r.vesselName = r.vessel || '';
+                     r.voyage = r.voyage || '';
+                     r.polCountry = '中国';
+                     r.podCountry = r.pod === '鹿特丹' ? '荷兰' : r.pod === '汉堡' ? '德国' : r.pod === '悉尼' ? '澳大利亚' : '美国';
+                     r.containerSpec = '40HQ';
+                     r.containerWeight = 3800;
+                     r.hasChassis = '否';
+                     r.totalVolume = r.volume || 68;
+                     r.totalWeight = 26000;
+                     r.trailerCompany = index % 3 === 0 ? '华南集卡运输' : index % 3 === 1 ? '顺达拖车' : '';
+                     r.plateNo = r.isArranged === '是' ? '粤B·A1234' : '';
+                     r.driver = r.isArranged === '是' ? '李师傅' : '';
+                     r.contactPhone = r.isArranged === '是' ? '13800138000' : '';
+                     r.trailerTaxPoint = r.trailerCompany ? '6%' : '';
+                     r.trailerInvoiceAmount = r.trailerCompany ? '1800' : '';
+                     r.customsBroker = index % 2 === 0 ? '华通报关' : '远洋报关';
+                     r.customsTaxPoint = '6%';
+                     r.customsInvoiceAmount = '650';
+                     r.waybillCount = Math.max(1, Math.round(r.volume / 12));
+                    r.boxCount = Math.max(1, Math.round(r.realWeight / 400));
+                    const s = statusStep[r.status] || 0;
+                    r.loadTime = s >= 2 ? '2024-05-08 16:00' : '';
+                    r.departureTime = s >= 3 ? r.etd : '';
+                    r.arrivalTime = s >= 4 ? r.eta : '';
+                    r.clearanceTime = s >= 5 ? '2024-05-28 10:00' : '';
+                    r.finishTime = s >= 6 ? '2024-06-02 09:00' : '';
+                });
+                const spaceLoadLocked = Vue.computed(() => {
+                    return currentSpaceDetail.value ? (statusStep[currentSpaceDetail.value.status] || 0) >= 2 : false;
+                });
+                const spaceTableData = ref(allSpaceData.filter(item => item.status === '配载中'));
+
+                Vue.watch(spaceActiveTab, (newTab) => {
+                    spaceTableData.value = allSpaceData.filter(item => item.status === newTab);
+                });
+
+                // Space Global Dialogs
+                const spaceDialogVisible = ref(false);
+                const spaceDialogType = ref('add');
+                 const agentOptions = ['万海代理', '长荣代理', '中远代理', '地中海代理', '马士基代理', '赫伯罗特代理'];
+                 const trailerCompanyOptions = ['华南集卡运输', '顺达拖车', '安捷拖车', '中港拖车服务'];
+                 const customsBrokerOptions = ['华通报关', '远洋报关', '顺港报关', '中联报关'];
+                const serviceOptions = ['美森360', '美森限时达', '以星普船', '加拿大海派'];
+                const specOptions = ['40HQ', '45HQ', '53HQ'];
+                const specToVolume = { '40HQ': 76, '45HQ': 86, '53HQ': 110 };
+                const regionOptions = ['华南', '华东'];
+                const weekOptions = ['2024年 第33周', '2024年 第34周', '2024年 第35周', '2024年 第36周', '2024年 第37周'];
+                const spaceFormData = reactive({ type: '海运', blNo: '', bookingNo: '', agent: '', serviceName: '', receiveWeek: '', region: '', remark: '', carrier: '', vesselName: '', voyage: '', vesselVoyage: '', containerNo: '', sealNo: '', containerWeight: 0, containerSpec: '', volume: 0, hasChassis: '否', route: '', polCountry: '', pol: '', podCountry: '', pod: '', etd: '', eta: '', cutOffTime: '', cutOffWeightTime: '', cutOffVGMTime: '', totalVolume: 0, totalWeight: 0, isPrinted: '否', isArranged: '否', trailerCompany: '', plateNo: '', driver: '', contactPhone: '', trailerTaxPoint: '', trailerInvoiceAmount: '', customsBroker: '', customsTaxPoint: '', customsInvoiceAmount: '' });
+                const onSpecChange = (mode) => {
+                    const form = mode === 'edit' ? editSpaceForm : spaceFormData;
+                    form.volume = specToVolume[form.containerSpec] || 0;
+                };
+
+                const openSpaceAddDialog = () => { spaceDialogType.value = 'add'; spaceDialogVisible.value = true; };
+
+                // 复制单个舱单
+                const copySpace = (row) => {
+                    const keys = ['type','bookingNo','agent','serviceName','remark','carrier','vesselName','vessel','voyage','vesselVoyage','containerWeight','containerSpec','volume','hasChassis','route','polCountry','pol','podCountry','pod','etd','eta','cutOffTime','cutOffWeightTime','cutOffVGMTime','totalVolume','totalWeight','isPrinted','isArranged','trailerCompany','plateNo','driver','contactPhone','trailerTaxPoint','trailerInvoiceAmount','customsBroker','customsTaxPoint','customsInvoiceAmount'];
+                    keys.forEach(k => { if (row[k] !== undefined) spaceFormData[k] = row[k]; });
+                    spaceFormData.blNo = ''; spaceFormData.containerNo = ''; spaceFormData.sealNo = '';
+                    spaceDialogType.value = 'add'; spaceDialogVisible.value = true;
+                    ElMessage.success('已复制舱单数据，请填写新的提单号/柜号/封号');
+                };
+
+                const markDialogVisible = ref(false);
+                const markForm = reactive({ actionType: 'add', blNos: '', tag: '' });
+
+                const selectedSpaces = ref([]);
+                const onSpaceSelect = (rows) => { selectedSpaces.value = rows; };
+                const statusDialogVisible = ref(false);
+                const newStatus = ref('');
+                const openStatusDialog = () => {
+                    if (selectedSpaces.value.length === 0) { ElMessage.warning('请先勾选舱单'); return; }
+                    statusDialogVisible.value = true;
+                };
+
+                const exportDialogVisible = ref(false);
+                const exportForm = reactive({ template: '提单' });
+                const doExport = () => {
+                    ElMessage.success('已导出 ' + exportForm.template + ' 模板');
+                    exportDialogVisible.value = false;
+                };
+
+                const feeDialogVisible = ref(false);
+                const feeType = ref('ap'); 
+                const feeForm = reactive({ blNos: '', time: '', type: '', currency: '', rate: '', unit: '', unitPrice: '', desc: '', remark: '' });
+
+                const auditDialogVisible = ref(false);
+                const auditType = ref('audit'); 
+                const auditForm = reactive({ blNos: '', types: [] });
+
+                const handleFeeCommand = (cmd) => {
+                    if (cmd === 'ap' || cmd === 'ar') { feeType.value = cmd; feeDialogVisible.value = true; } 
+                    else if (cmd === 'audit' || cmd === 'unaudit') { auditType.value = cmd; auditDialogVisible.value = true; }
+                };
+
+                // Space Detail Logic
+                const spaceDetailVisible = ref(false);
+                const spaceDetailTab = ref('basic');
+                const currentSpaceDetail = ref(null);
+                
+                const isSpaceEditing = ref(false);
+                const editSpaceForm = reactive({});
+
+                const startSpaceEdit = () => {
+                    Object.assign(editSpaceForm, currentSpaceDetail.value);
+                    isSpaceEditing.value = true;
+                };
+                const cancelSpaceEdit = () => { isSpaceEditing.value = false; };
+                const saveSpaceEdit = () => {
+                    Object.assign(currentSpaceDetail.value, editSpaceForm);
+                    isSpaceEditing.value = false;
+                    ElMessage.success('舱位信息修改成功');
+                };
+                
+                const routeDialogVisible = ref(false);
+                const routeForm = reactive({ time: '', action: '', country: '', city: '', remark: '' });
+
+                const routeOptions = [
+                    { name: '深圳-洛杉矶', polCountry: '中国', pol: '深圳', podCountry: '美国', pod: '洛杉矶' },
+                    { name: '宁波-纽约', polCountry: '中国', pol: '宁波', podCountry: '美国', pod: '纽约' },
+                    { name: '上海-鹿特丹', polCountry: '中国', pol: '上海', podCountry: '荷兰', pod: '鹿特丹' },
+                    { name: '青岛-汉堡', polCountry: '中国', pol: '青岛', podCountry: '德国', pod: '汉堡' },
+                    { name: '广州-悉尼', polCountry: '中国', pol: '广州', podCountry: '澳大利亚', pod: '悉尼' },
+                    { name: '厦门-长滩', polCountry: '中国', pol: '厦门', podCountry: '美国', pod: '长滩' },
+                    { name: '天津-安特卫普', polCountry: '中国', pol: '天津', podCountry: '比利时', pod: '安特卫普' }
+                ];
+                const onRouteChange = (mode) => {
+                    const form = mode === 'edit' ? editSpaceForm : spaceFormData;
+                    const r = routeOptions.find(x => x.name === form.route);
+                    if (r) { form.polCountry = r.polCountry; form.pol = r.pol; form.podCountry = r.podCountry; form.pod = r.pod; }
+                };
+
+                const loadBatches = ref([]);
+                const activeLoadBatch = ref('');
+                const loadLocked = ref(false);
+                const loadCompleted = ref(false);
+                const isLoadEditing = ref(false);
+                const loadEditMode = ref('create');
+                let loadEditSnapshot = null;
+
+                const loadItems = ref([]);
+                const hasLoadData = Vue.computed(() => loadBatches.value.length > 0);
+
+                const batchBoxCount = (batchId) => loadItems.value.filter(r => r.batchId === batchId).length;
+                const currentBatchItems = Vue.computed(() => {
+                    const bid = Number(activeLoadBatch.value);
+                    return loadItems.value.filter(r => r.batchId === bid).map(r => {
+                        const b = loadBatches.value.find(x => x.id === r.batchId);
+                        return Object.assign({}, r, { needTransfer: b ? (r.currentWarehouse && r.currentWarehouse !== b.loadingWarehouse) : false });
+                    });
+                });
+                const loadStat = Vue.computed(() => {
+                    const rows = loadItems.value;
+                    const sum = (key, sub) => rows.reduce((s, r) => s + r[key][sub], 0);
+                    return {
+                        ordered: { realWeight: sum('ordered','realWeight'), volumeWeight: sum('ordered','volumeWeight'), volume: sum('ordered','volume') },
+                        received: { realWeight: sum('received','realWeight'), volumeWeight: sum('received','volumeWeight'), volume: sum('received','volume') }
+                    };
+                });
+                const loadTotalBoxes = Vue.computed(() => loadItems.value.length);
+                const loadPage = ref(1);
+                const loadViewMode = ref('waybill');
+                const detailRightCollapsed = ref(false);
+                const boxSearch = reactive({ user: '', boxNo: '' });
+                const waybillSearch = reactive({ user: '', waybillNo: '' });
+                const filteredBoxItems = Vue.computed(() => {
+                    return currentBatchItems.value.filter(r => {
+                        if (boxSearch.user && !r.user.includes(boxSearch.user)) return false;
+                        if (boxSearch.boxNo && !r.boxNo.includes(boxSearch.boxNo)) return false;
+                        return true;
+                    });
+                });
+                const pagedCurrentBatchItems = Vue.computed(() => {
+                    const start = (loadPage.value - 1) * 10;
+                    return filteredBoxItems.value.slice(start, start + 10);
+                });
+                const waybillRows = Vue.computed(() => {
+                    const map = {};
+                    currentBatchItems.value.forEach(r => {
+                        if (!map[r.waybillNo]) {
+                            map[r.waybillNo] = { user: r.user, waybillNo: r.waybillNo, service: '美森360', addressCode: 'US-LAX-01', customsType: '正式报关', summary: '电子产品', weight: 0, volume: 0, destCountry: '美国', pickTime: '2024-05-06 14:00', totalBoxes: 0, loadedBoxes: 0, hasTemp: false };
+                        }
+                        const w = map[r.waybillNo];
+                        w.weight += r.received.realWeight;
+                        w.volume += r.received.volume;
+                        w.totalBoxes += 1;
+                        if (r.status === '已装车' || r.status === '临时加箱') w.loadedBoxes += 1;
+                        if (r.status === '临时加箱') w.hasTemp = true;
+                    });
+                    return Object.values(map).map(w => {
+                        let status;
+                        if (w.loadedBoxes === 0) status = '待装车';
+                        else if (w.loadedBoxes === w.totalBoxes) status = '已装车';
+                        else status = '部分装车';
+                        return Object.assign({}, w, { status, progress: w.loadedBoxes + '/' + w.totalBoxes });
+                    });
+                });
+                const filteredWaybillRows = Vue.computed(() => {
+                    return waybillRows.value.filter(w => {
+                        if (waybillSearch.user && !w.user.includes(waybillSearch.user)) return false;
+                        if (waybillSearch.waybillNo && !w.waybillNo.includes(waybillSearch.waybillNo)) return false;
+                        return true;
+                    });
+                });
+                const doLoadSearch = () => { ElMessage.success('搜索完成'); };
+                const resetLoadSearch = () => {
+                    if (loadViewMode.value === 'box') Object.assign(boxSearch, { user: '', boxNo: '' });
+                    else Object.assign(waybillSearch, { user: '', waybillNo: '' });
+                };
+                const loadStatusType = (s) => ({ '待装车':'info', '已装车':'success', '未装':'danger', '临时加箱':'warning' }[s] || 'info');
+                const selectedLoadItems = ref([]);
+                const onLoadSelect = (rows) => { selectedLoadItems.value = rows; };
+                const selectableLoad = (row) => row.status === '待装车' && isLoadEditing.value;
+                const removeLoadItem = (row) => { if (!isLoadEditing.value) { ElMessage.warning('请先点「编辑配载」进入编辑'); return; } if (row.status !== '待装车') { ElMessage.warning('仅待装车的货箱可移除'); return; } const i = loadItems.value.findIndex(x => x.id === row.id); if (i >= 0) { loadItems.value.splice(i, 1); ElMessage.success('已移除，货箱回到待配载池'); } };
+                const removeSelectedLoad = () => { if (!selectedLoadItems.value.length) { ElMessage.warning('请先勾选'); return; } const movable = selectedLoadItems.value.filter(r => r.status === '待装车'); if (!movable.length) { ElMessage.warning('仅待装车的货箱可移除'); return; } movable.forEach(r => removeLoadItem(r)); selectedLoadItems.value = []; };
+                const moveToAbnormal = (row) => { const i = loadItems.value.findIndex(x => x.id === row.id); if (i >= 0) { loadItems.value.splice(i, 1); ElMessage.success('已移动到异常件页面'); } };
+                const deleteBatch = (batchId) => { if (batchBoxCount(batchId) !== 0) { ElMessage.warning('该批次有货箱，不能删除'); return; } const i = loadBatches.value.findIndex(b => b.id === batchId); if (i >= 0) loadBatches.value.splice(i, 1); if (activeLoadBatch.value === String(batchId)) activeLoadBatch.value = loadBatches.value.length ? String(loadBatches.value[0].id) : ''; ElMessage.success('批次已删除'); };
+                const simulateLoadStart = () => {
+                    loadLocked.value = true;
+                    ElMessage.warning('已进入装柜锁定（距装柜不足60分钟），配载不可再编辑');
+                };
+                const simulateLoadComplete = () => {
+                    loadCompleted.value = true;
+                    loadItems.value.forEach(r => { if (r.status === '待装车') r.status = (r.boxNo === 'BOX004') ? '未装' : '已装车'; });
+                    loadItems.value.push({ id: 999, batchId: 1, boxNo: 'BOX099', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 10, volumeWeight: 10.5, volume: 0.04 }, received: { realWeight: 10.2, volumeWeight: 10.8, volume: 0.04 }, currentWarehouse: '花都仓', transferred: false, status: '临时加箱' });
+                    ElMessage.success('装柜完成，真实装柜信息已反写');
+                };
+
+                const transferGroups = Vue.computed(() => {
+                    const bid = Number(activeLoadBatch.value);
+                    const batch = loadBatches.value.find(b => b.id === bid);
+                    if (!batch) return [];
+                    if (batch.loadingWarehouse === '客户现场') return [];
+                    const map = {};
+                    loadItems.value.filter(r => r.batchId === bid).forEach(r => {
+                        if (r.transferred) return;
+                        if (r.currentWarehouse !== batch.loadingWarehouse) {
+                            const key = r.currentWarehouse + '→' + batch.loadingWarehouse;
+                            if (!map[key]) map[key] = { from: r.currentWarehouse, to: batch.loadingWarehouse, boxes: 0, time: r.transferTime || '' };
+                            map[key].boxes++;
+                            if (r.transferTime) map[key].time = r.transferTime;
+                        }
+                    });
+                    return Object.values(map);
+                });
+                const transferTotal = Vue.computed(() => transferGroups.value.reduce((s, g) => s + g.boxes, 0));
+                const startLoadCreate = () => {
+                    loadEditMode.value = 'create';
+                    loadEditSnapshot = { batches: [], items: [] };
+                    isLoadEditing.value = true;
+                };
+                const startLoadEdit = () => {
+                    loadEditMode.value = 'edit';
+                    loadEditSnapshot = { batches: JSON.parse(JSON.stringify(loadBatches.value)), items: JSON.parse(JSON.stringify(loadItems.value)) };
+                    isLoadEditing.value = true;
+                };
+                const cancelLoadEdit = () => {
+                    if (loadEditSnapshot) { loadBatches.value = loadEditSnapshot.batches; loadItems.value = loadEditSnapshot.items; }
+                    loadEditSnapshot = null;
+                    isLoadEditing.value = false;
+                    selectedLoadItems.value = [];
+                    ElMessage.info('已取消，改动未保存');
+                };
+                const confirmLoad = () => {
+                    const isCreate = loadEditMode.value === 'create';
+                    if (transferGroups.value.length && transferGroups.value.some(g => !g.time)) { ElMessage.warning('请填写各调拨方向的调拨时间'); return; }
+                    const commit = () => {
+                        loadEditSnapshot = null;
+                        isLoadEditing.value = false;
+                        selectedLoadItems.value = [];
+                        ElMessage.success(isCreate ? '配载已创建，调拨单已同步' : '配载已确认，调拨单已同步');
+                    };
+                    if (transferGroups.value.length) {
+                        const desc = transferGroups.value.map(g => g.from + '→' + g.to + '(' + g.boxes + '箱)').join('、');
+                        ElMessageBox.confirm('本次将同步调拨单：' + desc + '。待调出态更新、非待调出态重新生成。确认提交？', isCreate ? '确认创建配载' : '确认配载', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '再改改' }).then(commit).catch(() => {});
+                    } else {
+                        commit();
+                    }
+                };
+
+                const loadDialogVisible = ref(false);
+                const loadForm = reactive({ type: 'box', nos: '', batchId: null, remark: '' });
+                const loadDialogTitle = Vue.computed(() => ({ box:'添加货箱', waybill:'添加运单', abnormal:'添加异常件' }[loadForm.type] || '添加配载'));
+                const openLoadDialog = (type) => {
+                    loadForm.type = type;
+                    loadForm.nos = ''; loadForm.remark = '';
+                    loadForm.batchId = Number(activeLoadBatch.value) || (loadBatches.value.length ? loadBatches.value[0].id : null);
+                    loadDialogVisible.value = true;
+                };
+                let loadItemSeq = 100;
+                const saveLoad = () => {
+                    if (!loadForm.nos) { ElMessage.warning('请输入' + (loadForm.type === 'waybill' ? '运单号' : '货箱号')); return; }
+                    if (!loadForm.batchId) { ElMessage.warning('请选择装柜批次'); return; }
+                    const batch = loadBatches.value.find(b => b.id === loadForm.batchId);
+                    const nos = loadForm.nos.split('\n').map(s => s.trim()).filter(Boolean);
+                    const isWaybill = loadForm.type === 'waybill';
+                    nos.forEach((no) => {
+                        loadItems.value.push({
+                            id: loadItemSeq++, batchId: loadForm.batchId, boxNo: isWaybill ? '—' : no, waybillNo: isWaybill ? no : 'FD20240401', user: '待定',
+                            dimension: isWaybill ? '运单' : '货箱',
+                            ordered: { realWeight: 0, volumeWeight: 0, volume: 0 }, received: { realWeight: 0, volumeWeight: 0, volume: 0 },
+                            currentWarehouse: batch.loadingWarehouse, transferred: false, status: '待装车'
+                        });
+                    });
+                    ElMessage.success('配载信息已保存（' + nos.length + ' 条）'); loadDialogVisible.value = false;
+                };
+
+                const batchDialogVisible = ref(false);
+                const batchForm = reactive({ id: null, loadingWarehouse: '', loadingTime: '' });
+                const batchDialogTitle = Vue.computed(() => batchForm.id ? '编辑批次' : '添加批次');
+                const openBatchDialog = () => { batchForm.id = null; batchForm.loadingWarehouse=''; batchForm.loadingTime=''; batchDialogVisible.value = true; };
+                const openEditBatch = (b) => { batchForm.id = b.id; batchForm.loadingWarehouse = b.loadingWarehouse; batchForm.loadingTime = b.loadingTime; batchDialogVisible.value = true; };
+                const warehouseUsed = (wh, excludeId) => loadBatches.value.some(b => b.loadingWarehouse === wh && b.id !== excludeId);
+                const saveBatch = () => {
+                    if (!batchForm.loadingWarehouse || !batchForm.loadingTime) { ElMessage.warning('请填写装柜地点和时间'); return; }
+                    if (warehouseUsed(batchForm.loadingWarehouse, batchForm.id)) { ElMessage.warning('同一仓点只能有一个批次，' + batchForm.loadingWarehouse + ' 已存在批次'); return; }
+                    if (batchForm.id) {
+                        const b = loadBatches.value.find(x => x.id === batchForm.id);
+                        if (b) { b.loadingWarehouse = batchForm.loadingWarehouse; b.loadingTime = batchForm.loadingTime; }
+                        ElMessage.success('批次已更新（改仓点会重算该批次货箱的调拨方向）');
+                    } else {
+                        const newId = loadBatches.value.length ? Math.max.apply(null, loadBatches.value.map(b => b.id)) + 1 : 1;
+                        loadBatches.value.push({ id: newId, loadingWarehouse: batchForm.loadingWarehouse, loadingTime: batchForm.loadingTime });
+                        activeLoadBatch.value = String(newId);
+                        ElMessage.success('批次已创建（空批次，可通过「移到批次」加入货箱）');
+                    }
+                    batchDialogVisible.value = false;
+                };
+
+                // 新建调拨批次（装柜地点 + 时间 + 单号/箱号加载货箱）
+                const createBatchDialogVisible = ref(false);
+                const createBatchForm = reactive({ loadingWarehouse: '', loadingTime: '', nos: '', previewItems: [] });
+                const loadPool = ref([
+                    { boxNo: 'BOX001', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 15, volumeWeight: 16, volume: 0.06 }, received: { realWeight: 15.5, volumeWeight: 16.0, volume: 0.06 }, currentWarehouse: '花都仓' },
+                    { boxNo: 'BOX002', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 18, volumeWeight: 19, volume: 0.07 }, received: { realWeight: 18.2, volumeWeight: 19.0, volume: 0.07 }, currentWarehouse: '花都仓' },
+                    { boxNo: 'BOX003', waybillNo: 'FD2024040102', user: '客户B', dimension: '货箱', ordered: { realWeight: 22, volumeWeight: 23, volume: 0.08 }, received: { realWeight: 22.0, volumeWeight: 23.5, volume: 0.08 }, currentWarehouse: '中山仓' },
+                    { boxNo: 'BOX004', waybillNo: 'FD2024040102', user: '客户B', dimension: '货箱', ordered: { realWeight: 20, volumeWeight: 21, volume: 0.075 }, received: { realWeight: 20.1, volumeWeight: 21.0, volume: 0.075 }, currentWarehouse: '中山仓' },
+                    { boxNo: 'BOX005', waybillNo: 'FD2024040103', user: '客户C', dimension: '货箱', ordered: { realWeight: 30, volumeWeight: 31, volume: 0.11 }, received: { realWeight: 30.0, volumeWeight: 31.5, volume: 0.11 }, currentWarehouse: '东莞仓' },
+                    { boxNo: 'BOX006', waybillNo: 'FD2024040104', user: '客户D', dimension: '货箱', ordered: { realWeight: 12, volumeWeight: 12.5, volume: 0.05 }, received: { realWeight: 12.0, volumeWeight: 12.5, volume: 0.05 }, currentWarehouse: '花都仓' }
+                ]);
+                const openCreateBatchDialog = () => {
+                    createBatchForm.loadingWarehouse = ''; createBatchForm.loadingTime = ''; createBatchForm.nos = ''; createBatchForm.previewItems = [];
+                    createBatchDialogVisible.value = true;
+                };
+                const loadPoolItems = () => {
+                    if (!createBatchForm.loadingWarehouse) { ElMessage.warning('请先选择装柜地点'); return; }
+                    if (!createBatchForm.nos) { ElMessage.warning('请输入单号/箱号'); return; }
+                    const nos = createBatchForm.nos.split('\n').map(s => s.trim()).filter(Boolean);
+                    const matched = loadPool.value.filter(p => nos.some(no => p.boxNo === no || p.waybillNo === no));
+                    if (!matched.length) { createBatchForm.previewItems = []; ElMessage.warning('未匹配到货箱，请检查单号/箱号'); return; }
+                    createBatchForm.previewItems = matched.map(m => Object.assign({}, m, { needTransfer: m.currentWarehouse !== createBatchForm.loadingWarehouse }));
+                    ElMessage.success('已加载 ' + matched.length + ' 箱');
+                };
+                const saveCreateBatch = () => {
+                    if (!createBatchForm.loadingWarehouse || !createBatchForm.loadingTime) { ElMessage.warning('请填写装柜地点和时间'); return; }
+                    if (warehouseUsed(createBatchForm.loadingWarehouse, null)) { ElMessage.warning('同一仓点只能有一个批次，' + createBatchForm.loadingWarehouse + ' 已存在批次'); return; }
+                    const newId = loadBatches.value.length ? Math.max.apply(null, loadBatches.value.map(b => b.id)) + 1 : 1;
+                    loadBatches.value.push({ id: newId, loadingWarehouse: createBatchForm.loadingWarehouse, loadingTime: createBatchForm.loadingTime });
+                    createBatchForm.previewItems.forEach(m => {
+                        loadItems.value.push({ id: loadItemSeq++, batchId: newId, boxNo: m.boxNo, waybillNo: m.waybillNo, user: m.user, dimension: m.dimension, ordered: m.ordered, received: m.received, currentWarehouse: m.currentWarehouse, transferred: false, status: '待装车' });
+                    });
+                    activeLoadBatch.value = String(newId);
+                    const n = createBatchForm.previewItems.length;
+                    ElMessage.success('调拨批次已创建' + (n ? '，加载 ' + n + ' 箱' : ''));
+                    createBatchDialogVisible.value = false;
+                };
+
+                // 新增/编辑配载弹窗
+                const createLoadDialogVisible = ref(false);
+                const isEditingLoad = ref(false);
+                const editingBatchId = ref(null);
+                const createLoadForm = reactive({ loadingWarehouse: '', loadingTime: '', addType: 'waybill', inputNos: '', remark: '' });
+                const loadingWarehouseOptions = Vue.computed(() => spaceLoadLocked.value ? ['客户现场'] : ['花都仓', '中山仓', '东莞仓', '客户现场']);
+                const openCreateLoadDialog = () => {
+                    isEditingLoad.value = false;
+                    editingBatchId.value = null;
+                    createLoadForm.loadingWarehouse = spaceLoadLocked.value ? '客户现场' : '';
+                    createLoadForm.loadingTime = ''; createLoadForm.addType = 'waybill'; createLoadForm.inputNos = ''; createLoadForm.remark = '';
+                    createLoadDialogVisible.value = true;
+                };
+                const openEditLoad = (batch) => {
+                    isEditingLoad.value = true;
+                    editingBatchId.value = batch.id;
+                    createLoadForm.loadingWarehouse = batch.loadingWarehouse;
+                    createLoadForm.loadingTime = batch.loadingTime;
+                    createLoadForm.addType = 'box';
+                    createLoadForm.inputNos = loadItems.value.filter(r => r.batchId === batch.id).map(r => r.boxNo).join('\n');
+                    createLoadForm.remark = '';
+                    createLoadDialogVisible.value = true;
+                };
+                const createLoadMatchedItems = Vue.computed(() => {
+                    const nos = createLoadForm.inputNos.split('\n').map(s => s.trim()).filter(Boolean);
+                    if (!nos.length) return [];
+                    const isWaybill = createLoadForm.addType === 'waybill';
+                    return loadPool.value.filter(p => nos.some(no => isWaybill ? p.waybillNo === no : p.boxNo === no));
+                });
+                const createLoadTransferGroups = Vue.computed(() => {
+                    const wh = createLoadForm.loadingWarehouse;
+                    if (!wh || wh === '客户现场') return [];
+                    const map = {};
+                    createLoadMatchedItems.value.forEach(r => {
+                        if (r.currentWarehouse !== wh) {
+                            const key = r.currentWarehouse + '→' + wh;
+                            if (!map[key]) map[key] = { from: r.currentWarehouse, to: wh, boxes: 0, time: '' };
+                            map[key].boxes++;
+                        }
+                    });
+                    return Object.values(map);
+                });
+                const saveCreateLoad = () => {
+                    const isCustomerSite = createLoadForm.loadingWarehouse === '客户现场';
+                    if (!createLoadForm.loadingWarehouse) { ElMessage.warning('请选择装柜地点'); return; }
+                    if (!createLoadForm.loadingTime) { ElMessage.warning('请选择装柜时间'); return; }
+                    const items = createLoadMatchedItems.value;
+                    if (!items.length) { ElMessage.warning('请输入运单号/货箱号'); return; }
+                    if (!isCustomerSite && warehouseUsed(createLoadForm.loadingWarehouse, isEditingLoad.value ? editingBatchId.value : null)) { ElMessage.warning('同一仓点只能有一个批次，' + createLoadForm.loadingWarehouse + ' 已存在批次'); return; }
+                    const groups = createLoadTransferGroups.value;
+                    if (groups.length && groups.some(g => !g.time)) { ElMessage.warning('请填写各调拨方向的调拨时间'); return; }
+                    let batchId;
+                    if (isEditingLoad.value) {
+                        batchId = editingBatchId.value;
+                        const batch = loadBatches.value.find(b => b.id === batchId);
+                        if (batch) { batch.loadingWarehouse = createLoadForm.loadingWarehouse; batch.loadingTime = createLoadForm.loadingTime; }
+                        loadItems.value = loadItems.value.filter(r => r.batchId !== batchId);
+                    } else {
+                        batchId = loadBatches.value.length ? Math.max.apply(null, loadBatches.value.map(b => b.id)) + 1 : 1;
+                        loadBatches.value.push({ id: batchId, loadingWarehouse: createLoadForm.loadingWarehouse, loadingTime: createLoadForm.loadingTime });
+                    }
+                    const dimension = createLoadForm.addType === 'waybill' ? '运单' : '货箱';
+                    items.forEach(m => {
+                        loadItems.value.push({ id: loadItemSeq++, batchId: batchId, boxNo: m.boxNo, waybillNo: m.waybillNo, user: m.user, dimension: dimension, ordered: m.ordered, received: m.received, currentWarehouse: isCustomerSite ? '' : m.currentWarehouse, transferred: false, transferTime: '', status: '待装车' });
+                    });
+                    groups.forEach(g => {
+                        loadItems.value.filter(r => r.batchId === batchId && r.currentWarehouse === g.from).forEach(r => { r.transferTime = g.time; });
+                    });
+                    activeLoadBatch.value = String(batchId);
+                    ElMessage.success(isEditingLoad.value ? '配载已更新' : '配载已保存');
+                    isEditingLoad.value = false;
+                    editingBatchId.value = null;
+                    createLoadDialogVisible.value = false;
+                };
+
+                const moveBatchVisible = ref(false);
+                const moveBatchForm = reactive({ targetBatchId: null });
+                const openMoveBatch = () => { if (!selectedLoadItems.value.length) { ElMessage.warning('请先勾选'); return; } moveBatchForm.targetBatchId = null; moveBatchVisible.value = true; };
+                const doMoveBatch = () => {
+                    if (!moveBatchForm.targetBatchId) { ElMessage.warning('请选择目标批次'); return; }
+                    const target = Number(moveBatchForm.targetBatchId);
+                    const movable = selectedLoadItems.value.filter(r => r.status === '待装车');
+                    if (!movable.length) { ElMessage.warning('仅待装车的货箱可移动'); return; }
+                    movable.forEach(r => { r.batchId = target; });
+                    const n = movable.length; selectedLoadItems.value = [];
+                    ElMessage.success('已移动 ' + n + ' 箱到目标批次'); moveBatchVisible.value = false;
+                };
+
+                const openSpaceDetail = (row) => {
+                    currentSpaceDetail.value = row;
+                    spaceDetailTab.value = 'basic';
+                    isSpaceEditing.value = false;
+                    // 根据 Space 状态预置配载数据（mock 演示）
+                    const s = statusStep[row.status] || 0;
+                    if (s >= 2) {
+                        loadBatches.value = [{ id: 1, loadingWarehouse: '花都仓', loadingTime: '2024-05-08 14:00' }];
+                        loadItems.value = [
+                            { id: 1, batchId: 1, boxNo: 'BOX001', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 15, volumeWeight: 16, volume: 0.06 }, received: { realWeight: 15.5, volumeWeight: 16.0, volume: 0.06 }, currentWarehouse: '花都仓', transferred: false, transferTime: '', status: '已装车' },
+                            { id: 2, batchId: 1, boxNo: 'BOX002', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 18, volumeWeight: 19, volume: 0.07 }, received: { realWeight: 18.2, volumeWeight: 19.0, volume: 0.07 }, currentWarehouse: '花都仓', transferred: false, transferTime: '', status: '已装车' },
+                            { id: 3, batchId: 1, boxNo: 'BOX004', waybillNo: 'FD2024040102', user: '客户B', dimension: '货箱', ordered: { realWeight: 20, volumeWeight: 21, volume: 0.075 }, received: { realWeight: 20.1, volumeWeight: 21.0, volume: 0.075 }, currentWarehouse: '中山仓', transferred: false, transferTime: '2024-05-07 10:00', status: '未装' },
+                            { id: 4, batchId: 1, boxNo: 'BOX099', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 10, volumeWeight: 10.5, volume: 0.04 }, received: { realWeight: 10.2, volumeWeight: 10.8, volume: 0.04 }, currentWarehouse: '花都仓', transferred: false, transferTime: '', status: '临时加箱' },
+                            { id: 5, batchId: 1, boxNo: 'BOX005', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 12, volumeWeight: 13, volume: 0.05 }, received: { realWeight: 12.5, volumeWeight: 13.2, volume: 0.05 }, currentWarehouse: '花都仓', transferred: false, transferTime: '', status: '未装' }
+                        ];
+                        activeLoadBatch.value = '1';
+                        loadPage.value = 1;
+                    } else if (s === 1) {
+                        loadBatches.value = [{ id: 1, loadingWarehouse: '花都仓', loadingTime: '2024-05-08 14:00' }];
+                        loadItems.value = [
+                            { id: 1, batchId: 1, boxNo: 'BOX001', waybillNo: 'FD2024040101', user: '客户A', dimension: '货箱', ordered: { realWeight: 15, volumeWeight: 16, volume: 0.06 }, received: { realWeight: 15.5, volumeWeight: 16.0, volume: 0.06 }, currentWarehouse: '花都仓', transferred: false, transferTime: '', status: '待装车' },
+                            { id: 2, batchId: 1, boxNo: 'BOX003', waybillNo: 'FD2024040102', user: '客户B', dimension: '货箱', ordered: { realWeight: 22, volumeWeight: 23, volume: 0.08 }, received: { realWeight: 22.0, volumeWeight: 23.5, volume: 0.08 }, currentWarehouse: '中山仓', transferred: false, transferTime: '2024-05-07 10:00', status: '待装车' }
+                        ];
+                        activeLoadBatch.value = '1';
+                        loadPage.value = 1;
+                    } else {
+                        loadBatches.value = [];
+                        loadItems.value = [];
+                        activeLoadBatch.value = '';
+                        loadPage.value = 1;
+                    }
+                    spaceDetailVisible.value = true;
+                };
+
+                // Mocks
+                const mockFinanceData = ref([{ type: '海运费', unitPrice: 1000, currency: 'USD', desc: '基础海运费' }]);
+                const mockTicketData = ref([{ type: '查验异常', desc: '海关例行查验', status: '处理中' }]);
+                const mockSpaceLogData = ref([{ operator: '系统', action: '创建舱位', remark: '初始化数据', time: '2024-04-10' }]);
+
+                return {
+                    activeMenu, handleMenuSelect, handleAction,
+                    spaceSearchForm, channelOptions, isSpaceSearchExpanded, spaceActiveTab, spaceTableData, getSpaceStatusType, spaceLoadLocked,
+                     spaceDialogVisible, spaceDialogType, spaceFormData, agentOptions, trailerCompanyOptions, customsBrokerOptions, serviceOptions, specOptions, specToVolume, regionOptions, weekOptions, onSpecChange, openSpaceAddDialog,
+                    copySpace,
+                    markDialogVisible, markForm, statusDialogVisible, newStatus,
+                    selectedSpaces, onSpaceSelect, openStatusDialog, exportDialogVisible, exportForm, doExport,
+                    feeDialogVisible, feeType, feeForm, handleFeeCommand, auditDialogVisible, auditType, auditForm,
+                    
+                    spaceDetailVisible, spaceDetailTab, currentSpaceDetail, openSpaceDetail, detailRightCollapsed,
+                    isSpaceEditing, editSpaceForm, startSpaceEdit, cancelSpaceEdit, saveSpaceEdit,
+                    routeDialogVisible, routeForm,
+                    routeOptions, onRouteChange,
+                    loadBatches, activeLoadBatch, loadLocked, loadCompleted, loadItems, batchBoxCount, currentBatchItems, pagedCurrentBatchItems, loadPage, loadStat, loadTotalBoxes, loadStatusType, loadViewMode, boxSearch, waybillSearch, filteredBoxItems, waybillRows, filteredWaybillRows, doLoadSearch, resetLoadSearch,
+                    selectedLoadItems, onLoadSelect, selectableLoad, removeLoadItem, removeSelectedLoad, moveToAbnormal, deleteBatch, simulateLoadStart, simulateLoadComplete,
+                    isLoadEditing, loadEditMode, hasLoadData, startLoadCreate, startLoadEdit, cancelLoadEdit, confirmLoad,
+                    transferGroups, transferTotal,
+                    createLoadDialogVisible, createLoadForm, isEditingLoad, editingBatchId, openCreateLoadDialog, openEditLoad, createLoadMatchedItems, createLoadTransferGroups, saveCreateLoad, loadingWarehouseOptions,
+                    loadDialogVisible, loadForm, loadDialogTitle, openLoadDialog, saveLoad,
+                    createBatchDialogVisible, createBatchForm, loadPool, openCreateBatchDialog, loadPoolItems, saveCreateBatch,
+                    batchDialogVisible, batchForm, batchDialogTitle, openBatchDialog, openEditBatch, saveBatch,
+                    moveBatchVisible, moveBatchForm, openMoveBatch, doMoveBatch,
+                    mockFinanceData, mockTicketData, mockSpaceLogData
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) { app.component(key, component); }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

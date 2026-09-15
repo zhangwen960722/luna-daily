@@ -58,7 +58,7 @@
                     </el-button>
                 </template>
                 <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
-                    <span style="color: #909399; font-size: 13px;">运单收货生成的应收流水先进入账单草稿池；财务按 客户×主体×账期×币种 聚合已锁定的业务流水生成账单</span>
+                    <span style="color: #909399; font-size: 13px;">运单收货生成的应收流水先进入账单草稿池；财务按 客户×主体×币种×账期 聚合已锁定的业务流水生成账单</span>
                     <el-button type="primary" @click="openGenerate">
                         <el-icon style="margin-right: 4px;"><Plus /></el-icon>生成账单
                     </el-button>
@@ -79,7 +79,8 @@
                     <el-table-column label="账期" min-width="180">
                         <template #default="scope">{{ scope.row.billingDate }} · {{ scope.row.paymentTermsDays ? scope.row.paymentTermsDays + ' 天' : '账期待补录' }}</template>
                     </el-table-column>
-                    <el-table-column prop="flowCount" label="流水条数" width="100" align="center"></el-table-column>
+                    <el-table-column prop="dueDate" label="到期日期" width="110" align="center"><template #default="scope">{{ scope.row.dueDate || '—' }}</template></el-table-column>
+                <el-table-column prop="flowCount" label="流水条数" width="100" align="center"></el-table-column>
                     <el-table-column label="可成账金额" min-width="130" align="right">
                         <template #default="scope"><span style="font-weight:600;">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.auditedAmount) }}</span></template>
                     </el-table-column>
@@ -284,6 +285,7 @@
                     <el-table-column label="单价" min-width="90" align="right">
                         <template #default="scope">{{ formatMoney(scope.row.unitPrice) }}</template>
                     </el-table-column>
+                    <el-table-column prop="pricingUnit" label="计价单位" width="90" align="center"></el-table-column>
                     <el-table-column prop="quantity" label="计费量" width="90" align="center"></el-table-column>
                     <el-table-column label="金额" min-width="110" align="right">
                         <template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? '#F56C6C' : ''}">{{ currencySymbol(currentBill.currency) }}{{ formatSigned(scope.row.amount) }}</span></template>
@@ -316,6 +318,7 @@
                 <el-table-column label="金额" width="110" align="right">
                     <template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? '#F56C6C' : ''}">{{ formatSigned(scope.row.amount) }}</span></template>
                 </el-table-column>
+                <el-table-column prop="dueDate" label="到期日期" width="110" align="center"><template #default="scope">{{ scope.row.dueDate || '—' }}</template></el-table-column>
                 <el-table-column prop="sourceRule" label="来源规则" min-width="220"></el-table-column>
                 <el-table-column prop="auditStatus" label="审计状态" width="110" align="center">
                     <template #default="scope"><el-tag :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'" size="small">{{ scope.row.auditStatus }}</el-tag></template>
@@ -358,7 +361,7 @@
                 const pendingSearch = reactive({ billNo: '' });
 
                 const bills = reactive([
-                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1280.50, receivedAmount: 0, status: '已生成', paymentTermsDays: 15, termSource: '合同账期' },
+                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1095.00, receivedAmount: 0, status: '已生成', paymentTermsDays: 15, termSource: '合同账期' },
                     { billNo: 'AR-SZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'USD', billingDate: '2026-08-15', billAmount: 1200.00, receivedAmount: 0, status: '已生成', paymentTermsDays: 30, termSource: '合同账期' },
                     { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 3500.00, receivedAmount: 2219.50, status: '部分核销', paymentTermsDays: 15, termSource: '合同账期' },
                     { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 2800.00, receivedAmount: 2800.00, status: '已核销', paymentTermsDays: 20, termSource: '手工补录' }
@@ -367,19 +370,18 @@
                 // 账单费用明细 = 该账单聚合的应收流水行（优惠独立成行、金额带符号）
                 const billDetailsMap = {
                     'AR-GZ-202608-001': [
-                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 10.00, quantity: 120, amount: 1200.00, source: '报价' },
-                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, quantity: 120, amount: -120.00, source: '运费优惠 · S级特批' },
-                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, quantity: 120, amount: -60.00, source: '泡比优惠 · 阈值300' },
-                        { waybillNo: 'WB20260728001', feeType: '超重费', kind: '附加费', unitPrice: 20.00, quantity: 5, amount: 100.00, source: '超重超长规则' },
-                        { waybillNo: 'WB20260728001', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, quantity: 5, amount: -25.00, source: '附加费优惠 · A级' },
-                        { waybillNo: 'WB20260729001', feeType: '运费', kind: '运费', unitPrice: 8.60, quantity: 0, amount: 1280.50, source: '报价' }
+                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: '按KG', quantity: 120, amount: 1200.00, source: '报价' },
+                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: '按KG', quantity: 120, amount: -120.00, source: '运费优惠 · S级特批' },
+                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: '按KG', quantity: 120, amount: -60.00, source: '泡比优惠 · 阈值300' },
+                        { waybillNo: 'WB20260728001', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: '按KG', quantity: 5, amount: 100.00, source: '超重超长规则' },
+                        { waybillNo: 'WB20260728001', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: '按KG', quantity: 5, amount: -25.00, source: '附加费优惠 · A级' }
                     ],
-                    'AR-SZ-202608-001': [{ waybillNo: 'WB20260801001', feeType: '运费', kind: '运费', unitPrice: 12.00, quantity: 100, amount: 1200.00, source: '报价' }],
+                    'AR-SZ-202608-001': [{ waybillNo: 'WB20260801001', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: '按KG', quantity: 100, amount: 1200.00, source: '报价' }],
                     'AR-GZ-202607-001': [
-                        { waybillNo: 'WB20260628001', feeType: '运费', kind: '运费', unitPrice: 8.60, quantity: 348, amount: 3000.00, source: '报价' },
-                        { waybillNo: 'WB20260628002', feeType: '周六派送费', kind: '附加费', unitPrice: 50.00, quantity: 10, amount: 500.00, source: '周六派送规则' }
+                        { waybillNo: 'WB20260628001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: '按KG', quantity: 300, amount: 3000.00, source: '报价' },
+                        { waybillNo: 'WB20260628002', feeType: '周六派送费', kind: '附加费', unitPrice: 50.00, pricingUnit: '按票', quantity: 10, amount: 500.00, source: '周六派送规则' }
                     ],
-                    'AR-GZ-202606-001': [{ waybillNo: 'WB20260528001', feeType: '运费', kind: '运费', unitPrice: 8.00, quantity: 350, amount: 2800.00, source: '报价' }]
+                    'AR-GZ-202606-001': [{ waybillNo: 'WB20260528001', feeType: '运费', kind: '运费', unitPrice: 8.00, pricingUnit: '按KG', quantity: 350, amount: 2800.00, source: '报价' }]
                 };
 
                 const pendingSend = computed(() => bills.filter(b => b.status === '已生成'));
@@ -434,24 +436,24 @@
                 ];
                 // 账单草稿池：收货生成的应收流水（未关联账单即停留在池内），按 客户 × 主体 × 币种 × 账期 分组
                 const draftGroups = [
-                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, flowCount: 6, auditedAmount: 1095.00, pendingAmount: 1032.00 },
-                    { customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, flowCount: 1, auditedAmount: 860.00, pendingAmount: 0 },
-                    { customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', billingDate: '2026-08-15', paymentTermsDays: 0, flowCount: 1, auditedAmount: 0, pendingAmount: 480.00 }
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, dueDate: '2026-08-15', flowCount: 6, auditedAmount: 1095.00, pendingAmount: 1032.00 },
+                    { customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, dueDate: '2026-08-15', flowCount: 1, auditedAmount: 860.00, pendingAmount: 0 },
+                    { customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', billingDate: '2026-08-15', paymentTermsDays: 0, dueDate: '', flowCount: 1, auditedAmount: 0, pendingAmount: 480.00 }
                 ];
                 const draftFlowsMap = {
                     '深圳市华美科技有限公司|广州飞点|CNY': [
-                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: 'KG', quantity: 120, amount: 1200.00, sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: 'KG', quantity: 120, amount: -120.00, sourceRule: '运费优惠 · S级客户特批 -1.00/KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: 'KG', quantity: 120, amount: -60.00, sourceRule: '泡比优惠 · 密度阈值300 -0.50/KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: 'KG', quantity: 5, amount: 100.00, sourceRule: '超重超长（字段&公式）· 按箱实测', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: 'KG', quantity: 5, amount: -25.00, sourceRule: '附加费优惠 · A级客户 -5.00/KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260729001', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 120, amount: 1032.00, sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '待业务审计' }
+                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: 'KG', quantity: 120, amount: 1200.00, dueDate: '2026-08-15', sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '已审计' },
+                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: 'KG', quantity: 120, amount: -120.00, dueDate: '2026-08-15', sourceRule: '运费优惠 · S级客户特批 -1.00/KG', auditStatus: '已审计' },
+                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: 'KG', quantity: 120, amount: -60.00, dueDate: '2026-08-15', sourceRule: '泡比优惠 · 密度阈值300 -0.50/KG', auditStatus: '已审计' },
+                        { waybillNo: 'WB20260728001', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: 'KG', quantity: 5, amount: 100.00, dueDate: '2026-08-15', sourceRule: '超重超长（字段&公式）· 按箱实测', auditStatus: '已审计' },
+                        { waybillNo: 'WB20260728001', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: 'KG', quantity: 5, amount: -25.00, dueDate: '2026-08-15', sourceRule: '附加费优惠 · A级客户 -5.00/KG', auditStatus: '已审计' },
+                        { waybillNo: 'WB20260729001', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 120, amount: 1032.00, dueDate: '2026-08-15', sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '待业务审计' }
                     ],
                     '广州迅达贸易有限公司|广州飞点|CNY': [
-                        { waybillNo: 'WB20260730001', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 100, amount: 860.00, sourceRule: '运价行 · 美森360/ORD2/100-500KG', auditStatus: '已审计' }
+                        { waybillNo: 'WB20260730001', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 100, amount: 860.00, dueDate: '2026-08-15', sourceRule: '运价行 · 美森360/ORD2/100-500KG', auditStatus: '已审计' }
                     ],
                     '东莞新锐电子有限公司|广东飞点|USD': [
-                        { waybillNo: 'WB20260810001', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: 'KG', quantity: 40, amount: 480.00, sourceRule: '运价行 · 美森432/LAX9/50-100KG', auditStatus: '待业务审计' }
+                        { waybillNo: 'WB20260810001', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: 'KG', quantity: 40, amount: 480.00, dueDate: '', sourceRule: '运价行 · 美森432/LAX9/50-100KG', auditStatus: '待业务审计' }
                     ]
                 };
                 const generatableFlows = computed(() => {

@@ -44,9 +44,9 @@ description: 原型设计师，基于项目沉淀的组件库、交互模式和�
 | 上游 | RDD + 数据设计 + PRD | 取最新日期 |
 | 端侧 | `demo/员工端-demo/index.html` 或 `demo/货主端-demo/index.html` | 菜单结构 |
 | 端侧 | 同端 ≥2 个已有 `.html` 页面 | 确保样式一致 |
-| 项目 | `.claude/CLAUDE.md` | — |
+| 项目 | `AGENTS.md` | — |
 
-**文件定位步骤**：按 CLAUDE.md §文件定位步骤 执行（含页面级兜底）。
+**文件定位步骤**：按 AGENTS.md §文件定位步骤 执行（含页面级兜底）。
 
 ### 3. 冲突处理
 若上游文档间字段定义不一致 → **以 PRD 为准**，主动提醒用户。
@@ -104,7 +104,7 @@ Vue 3 CDN + Element Plus CDN + Element Plus Icons CDN
 
 ## ↔️ 与 Workflow 3 对接
 
-> 文件操作遵循 CLAUDE.md §修改前判断 + §修改后自检 + §文件联动规则。
+> 文件操作遵循 AGENTS.md §修改前判断 + §修改后自检 + §文件联动规则。
 
 1. 读取本 Skill + `style-guide.md` 取代码模板
 2. 读取上游文档（PRD / 数据设计）获取字段列表和交互

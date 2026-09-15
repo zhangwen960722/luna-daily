@@ -1,10 +1,10 @@
-
+﻿
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>运单管理</title>
+    <title>运单管理（货主）</title>
     <script src="https://unpkg.com/vue@3.3.4/dist/vue.global.prod.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/element-plus@2.3.14/dist/index.css">
     <script src="https://unpkg.com/element-plus@2.3.14/dist/index.full.min.js"></script>
@@ -258,28 +258,6 @@
         .decl-empty:hover { border-color: var(--el-color-primary); color: var(--el-color-primary); }
         .export-tpl-card:hover { border-color: #2DA44E !important; background: #f0f9eb; }
         .export-tpl-card.active { border-color: #2DA44E !important; background: #f0f9eb; }
-        /* 费用管理 · 应收流水表：汇总条 + 紧凑单元格 + 操作列不换行 */
-        .fee-summary { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 14px; background: #F7F8FA; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; }
-        .fee-summary-metrics { display: flex; gap: 32px; align-items: baseline; }
-        .fee-metric { display: inline-flex; align-items: baseline; gap: 6px; }
-        .fee-metric-label { color: var(--el-text-color-secondary); font-size: 13px; }
-        .fee-metric-value { font-size: 16px; }
-        .fee-flow-table .el-table__cell { padding: 6px 0; }
-        .fee-op-cell .cell { white-space: nowrap; }
-        /* 添加应收弹窗：顶部只读信息条 */
-        .fee-add-info { display: flex; gap: 28px; align-items: center; padding: 8px 14px; margin-bottom: 12px; background: #F7F8FA; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; font-size: 13px; color: var(--el-text-color-regular); }
-        .fee-add-info .fee-add-label { color: var(--el-text-color-secondary); margin-right: 6px; }
-        .fee-add-card { border: 1px solid var(--el-border-color-lighter); border-radius: 8px; padding: 12px 14px 2px; margin-bottom: 12px; background: #fff; }
-        .fee-add-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .fee-add-card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--el-text-color-primary); }
-        .fee-add-hint { font-size: 12px; font-weight: 400; color: #E6A23C; cursor: help; border-bottom: 1px dashed #E6A23C; }
-        .fee-add-card-sub { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary); }
-        .fee-add-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-        .fee-add-field-label { font-size: 12px; color: var(--el-text-color-secondary); }
-        .fee-add-field-label .req { color: var(--el-color-danger); font-style: normal; }
-        .fee-add-amount { font-weight: 600; font-size: 15px; line-height: 32px; }
-        .fee-add-tag { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; color: var(--el-text-color-secondary); }
-        .fee-add-tag-note { color: var(--el-text-color-placeholder); }
     </style>
 </head>
 <body>
@@ -288,8 +266,8 @@
         <div class="main-content">
             <div class="content-area" style="padding: 0;">
                 <!-- Search & Tabs -->
-                <div class="card" style="border-bottom: 1px solid var(--el-border-color); border-radius: 4px 4px 0 0;">
-                    <el-tabs v-model="activeStatusTab" class="mb-4">
+                <div class="card" style="border-radius: 4px 4px 0 0;">
+                    <el-tabs v-model="activeStatusTab">
                         <el-tab-pane v-for="tab in statusTabs" :key="tab.name" :name="tab.name">
                             <template #label>
                                 {{ tab.name }} <span style="margin-left: 4px; color: var(--el-text-color-secondary); font-size: 12px;">({{ tab.count }})</span>
@@ -297,156 +275,14 @@
                         </el-tab-pane>
                     </el-tabs>
                     <div class="search-area">
-                        <div class="search-item"><span class="search-label">运单号</span><el-input v-model="search.orderNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable></el-input></div>
-                        <div class="search-item"><span class="search-label">客户单号</span><el-input v-model="search.customerNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable></el-input></div>
-                        <div class="search-item"><span class="search-label">关联单号</span><el-input v-model="search.relNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable></el-input></div>
-                        <div class="search-item">
-                            <span class="search-label">客户昵称</span>
-                            <el-select v-model="search.user" placeholder="请选择 (支持多选)" class="search-control" multiple clearable collapse-tags collapse-tags-tooltip>
-                                <el-option label="szcross" value="szcross"></el-option>
-                                <el-option label="gzeda" value="gzeda"></el-option>
-                                <el-option label="ywscm" value="ywscm"></el-option>
-                                <el-option label="jm123" value="jm123"></el-option>
-                            </el-select>
-                        </div>
-                        <div class="search-item"><span class="search-label">仓库代码</span><el-input v-model="search.warehouseCode" placeholder="精确搜索" class="search-control" clearable></el-input></div>
-                        <div class="search-item"><span class="search-label">邮编</span><el-input v-model="search.zipCode" placeholder="精确搜索" class="search-control" clearable></el-input></div>
-
-                        <template v-if="isSearchExpanded">
-                            <div class="search-item"><span class="search-label">FBA单号</span><el-input v-model="search.fbaNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable></el-input></div>
-                            <div class="search-item"><span class="search-label">提单号</span><el-input v-model="search.blNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable></el-input></div>
-                            <div class="search-item">
-                                <span class="search-label">渠道来源</span>
-                                <el-select v-model="search.source" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="API" value="API"></el-option>
-                                    <el-option label="手工" value="MANUAL"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">服务</span>
-                                <el-select v-model="search.service" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="空派-包税-DPD" value="空派-包税-DPD"></el-option>
-                                    <el-option label="海派" value="海派"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">国家</span>
-                                <el-select v-model="search.country" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="美国" value="美国"></el-option>
-                                    <el-option label="英国" value="英国"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">已标识</span>
-                                <el-select v-model="search.markedYes" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="VIP" value="VIP"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">未标识</span>
-                                <el-select v-model="search.markedNo" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="无标识" value="无标识"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">产品属性</span>
-                                <el-select v-model="search.productAttr" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="普货" value="普货"></el-option>
-                                    <el-option label="带电" value="带电"></el-option>
-                                    <el-option label="液体" value="液体"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">供应商服务</span>
-                                <el-select v-model="search.supplierService" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="UPS Ground" value="UPS"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">所在仓</span>
-                                <el-select v-model="search.curSite" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="深圳总仓" value="深圳总仓"></el-option>
-                                    <el-option label="洛杉矶仓" value="洛杉矶仓"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">销售代表</span>
-                                <el-select v-model="search.sales" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="李四" value="李四"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">客服代表</span>
-                                <el-select v-model="search.csRep" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="张三" value="张三"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">附加费标识</span>
-                                <el-select v-model="search.surchargeMark" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="超长" value="超长"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">快递单</span>
-                                <el-select v-model="search.expressLabel" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="未下单" value="10"></el-option>
-                                    <el-option label="待打单" value="20"></el-option>
-                                    <el-option label="已打单" value="30"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item"><span class="search-label">快递单号</span><el-input v-model="search.expressNo" placeholder="精确搜索" class="search-control" clearable></el-input></div>
-                            <div class="search-item">
-                                <span class="search-label">报关方式</span>
-                                <el-select v-model="search.declareWay" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="买单报关" value="买单报关"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">清关方式</span>
-                                <el-select v-model="search.clearWay" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="包清关" value="包清关"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">进口申报模式</span>
-                                <el-select v-model="search.importDeclareMode" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="一般贸易清关" value="一般贸易清关"></el-option>
-                                    <el-option label="监管仓分票清关" value="监管仓分票清关"></el-option>
-                                    <el-option label="监管仓专BOND清关" value="监管仓专BOND清关"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">出口先查后装</span>
-                                <el-select v-model="search.exportInspectFirst" placeholder="请选择" class="search-control" multiple clearable collapse-tags>
-                                    <el-option label="是" value="是"></el-option>
-                                    <el-option label="否" value="否"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item">
-                                <span class="search-label">VAT</span>
-                                <el-select v-model="search.vat" placeholder="请选择" class="search-control" clearable>
-                                    <el-option label="VAT001" value="VAT001"></el-option>
-                                </el-select>
-                            </div>
-                            <div class="search-item"><span class="search-label">PO Number</span><el-input v-model="search.poNumber" placeholder="精确搜索" class="search-control" clearable></el-input></div>
-                            <div class="search-item"><span class="search-label">下单时间</span><el-date-picker v-model="search.orderTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                            <div class="search-item"><span class="search-label">拣货时间</span><el-date-picker v-model="search.pickTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                            <div class="search-item"><span class="search-label">提取时间</span><el-date-picker v-model="search.expressPickTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                            <div class="search-item"><span class="search-label">开船时间</span><el-date-picker v-model="search.sailTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                            <div class="search-item"><span class="search-label">到港时间</span><el-date-picker v-model="search.portTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                            <div class="search-item"><span class="search-label">提柜时间</span><el-date-picker v-model="search.cabinetTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                            <div class="search-item"><span class="search-label">签收时间</span><el-date-picker v-model="search.signTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束"></el-date-picker></div>
-                        </template>
-
-                        <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
-                            <el-button type="primary" link @click="isSearchExpanded = !isSearchExpanded">
-                                {{ isSearchExpanded ? '收起' : '展开' }}
-                                <el-icon class="el-icon--right"><ArrowUp v-if="isSearchExpanded" ></ArrowUp><ArrowDown v-else ></ArrowDown></el-icon>
-                            </el-button>
-                            <el-button>重置</el-button>
-                            <el-button type="primary">搜索</el-button>
-                        </div>
+                        <div class="search-item"><span class="search-label">运单号</span><el-input v-model="search.orderNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable /></div>
+                        <div class="search-item"><span class="search-label">客户单号</span><el-input v-model="search.customerNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable /></div>
+                        <div class="search-item"><span class="search-label">关联单号</span><el-input v-model="search.relNo" placeholder="精确搜索，多个逗号隔开" class="search-control" clearable /></div>
+                        <div class="search-item"><span class="search-label">收件人</span><el-input v-model="search.receiver" placeholder="精确搜索" class="search-control" clearable /></div>
+                        <div class="search-item"><span class="search-label">国家</span><el-select v-model="search.country" placeholder="请选择" class="search-control" clearable><el-option label="美国" value="美国" /><el-option label="英国" value="英国" /><el-option label="德国" value="德国" /><el-option label="日本" value="日本" /></el-select></div>
+                        <div class="search-item"><span class="search-label">下单时间</span><el-date-picker v-model="search.orderTime" type="daterange" class="search-control" start-placeholder="开始" end-placeholder="结束" /></div>
+                        <el-button type="primary" @click="doSearch">查询</el-button>
+                        <el-button @click="doReset">重置</el-button>
                     </div>
                 </div>
 
@@ -454,64 +290,11 @@
                 <div class="card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 16px; border-top: none; border-radius: 0 0 4px 4px;">
                     <div style="margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;">
                         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            <el-button type="primary" @click="openCreate"><el-icon><Plus ></Plus></el-icon> 创建运单</el-button>
+                            <el-button type="primary" @click="openCreate"><el-icon><Plus /></el-icon> 创建运单</el-button>
                             <el-button @click="dialogImport = true"><el-icon><Upload /></el-icon> 导入</el-button>
-                            <!-- 二期：预约取件 <el-button @click="openDialog('dialogPickup')" :disabled="!hasSelection">预约取件</el-button> -->
-                            <el-button @click="openDialog('dialogCompare')" :disabled="!canCompareOrPrint">快递比价</el-button>
-                            <el-dropdown trigger="click" @command="handlePrintCommand">
-                                <el-button :disabled="!canCompareOrPrint">打印标签<el-icon class="el-icon--right"><arrow-down ></arrow-down></el-icon></el-button>
-                                <template #dropdown>
-                                    <el-dropdown-menu>
-                                        <el-dropdown-item command="sysLabel">系统标签</el-dropdown-item>
-                                        <el-dropdown-item command="expressLabel">快递标签</el-dropdown-item>
-                                    </el-dropdown-menu>
-                                </template>
-                            </el-dropdown>
-                            <!-- 二期：购买保险 <el-button @click="openInsuranceDialog({no: selectedOrderNos.join(', ')})" :disabled="!hasSelection">购买保险</el-button> -->
-                            
-                            <el-dropdown trigger="click" @command="handleCommand">
-                                <el-button :disabled="!canMarkOrRoute">路由管理<el-icon class="el-icon--right"><arrow-down ></arrow-down></el-icon></el-button>
-                                <template #dropdown>
-                                    <el-dropdown-menu>
-                                        <el-dropdown-item command="routeAdd">添加路由</el-dropdown-item>
-                                        <el-dropdown-item command="routeDel">删除路由</el-dropdown-item>
-                                    </el-dropdown-menu>
-                                </template>
-                            </el-dropdown>
-
-                            <el-button @click="openDialog('dialogEdit')" :disabled="!canMarkOrRoute">资料修改</el-button>
-                            <el-button @click="openDialog('dialogMark')" :disabled="!canMarkOrRoute">标识</el-button>
-
-                            <el-dropdown trigger="click" @command="handleCommand">
-                                <el-button :disabled="!hasSelection">供应商互联<el-icon class="el-icon--right"><arrow-down ></arrow-down></el-icon></el-button>
-                                <template #dropdown>
-                                    <el-dropdown-menu>
-                                        <el-dropdown-item command="supPush">同行推单</el-dropdown-item>
-                                        <el-dropdown-item command="supExtract">提取数据</el-dropdown-item>
-                                        <el-dropdown-item command="supPrint">打印供应商标签</el-dropdown-item>
-                                        <el-dropdown-item command="supPod">抓取POD</el-dropdown-item>
-                                    </el-dropdown-menu>
-                                </template>
-                            </el-dropdown>
-
-
-
-                            <el-dropdown trigger="click" @command="handleCommand" style="margin-left: 8px;">
-                                <el-button>更多操作<el-icon class="el-icon--right"><arrow-down ></arrow-down></el-icon></el-button>
-                                <template #dropdown>
-                                    <el-dropdown-menu>
-                                        <el-dropdown-item command="statusAdj">状态调整</el-dropdown-item>
-                                        <el-dropdown-item command="copyOrder">复制运单号</el-dropdown-item>
-                                        <el-dropdown-item command="copyWeight">复制收费重</el-dropdown-item>
-                                        <el-dropdown-item command="showStat">查看统计</el-dropdown-item>
-                                        <el-dropdown-item command="export">导出</el-dropdown-item>
-                                        <el-dropdown-item command="returnGoods" :disabled="!canReturn">退件</el-dropdown-item>
-                                        <el-dropdown-item divided style="color: var(--el-color-danger);" command="cancelOrder" :disabled="!canCancel">取消</el-dropdown-item>
-                                    </el-dropdown-menu>
-                                </template>
-                            </el-dropdown>
+                            <el-button @click="openPrintDialog" :disabled="!canCompareOrPrint">打印标签</el-button>
                         </div>
-                        <div><el-button circle @click="dialogListConfig = true"><el-icon><Setting ></Setting></el-icon></el-button></div>
+                        <span v-if="hasSelection" style="color:#999;font-size:12px;">已选 {{ selectedOrderNos.length }} 条</span>
                     </div>
 
                     <el-table :data="filteredTableData" border style="width: 100%; flex: 1;" height="100%" @selection-change="handleSelectionChange" @row-click="openDetail">
@@ -521,20 +304,15 @@
                                 <span style="color: var(--el-color-primary); cursor: pointer; font-weight: bold; font-size: 15px;" @click="openDetail(scope.row)">{{ scope.row.orderNo }}</span>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="user" label="客户昵称" width="110"></el-table-column>
                         <el-table-column prop="customerNo" label="客户单号" width="140" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="relNo" label="关联单号" width="120"></el-table-column>
                         <el-table-column prop="fbaNo" label="FBA单号" width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="poNumber" label="PO Number" width="120"></el-table-column>
                         <el-table-column prop="service" label="服务" width="180" show-overflow-tooltip></el-table-column>
-                        <el-table-column prop="source" label="渠道来源" width="100"></el-table-column>
                         <el-table-column prop="receiver" label="收件人" width="120"></el-table-column>
                         <el-table-column prop="country" label="国家" width="80"></el-table-column>
                         <el-table-column prop="zipCode" label="邮编" width="100"></el-table-column>
                         <el-table-column prop="warehouseCode" label="仓库代码" width="120"></el-table-column>
-                        <el-table-column prop="blNo" label="提单号" width="120"></el-table-column>
-                        <el-table-column prop="vesselName" label="船名" width="120"></el-table-column>
-                        <el-table-column prop="voyage" label="航次" width="100"></el-table-column>
-                        <el-table-column prop="customMark" label="标识" width="120"></el-table-column>
                         <el-table-column label="产品属性" width="150">
                             <template #default="scope">
                                 <el-tag v-for="attr in scope.row.attrs" :key="attr" size="small" type="warning" style="margin-right:4px;">{{attr}}</el-tag>
@@ -548,61 +326,13 @@
                         <el-table-column prop="volume" label="体积" width="80"></el-table-column>
                         <el-table-column prop="volWeight" label="材重" width="80"></el-table-column>
                         <el-table-column prop="chargeWeight" label="收费重" width="80"></el-table-column>
-                        <el-table-column prop="supWeight" label="供应商重量" width="100"></el-table-column>
-                        <el-table-column prop="supplier" label="供应商" width="120"></el-table-column>
-                        <el-table-column prop="carrier" label="承运方" width="120"></el-table-column>
-                        <el-table-column prop="carrierInfo" label="承运信息" width="120" show-overflow-tooltip></el-table-column>
-                        <el-table-column prop="site" label="交货站点" width="120"></el-table-column>
                         <el-table-column prop="curSite" label="所在站点" width="120"></el-table-column>
-                        <el-table-column label="费用审计" width="156" align="center">
-                            <template #default="scope">
-                                <el-tooltip :content="scope.row.arAuditStatus === '已审计' ? `应收已整票审计（${scope.row.arAuditBy} · ${scope.row.arAuditAt}）｜整票不允许新增应收费用` : '应收未审计｜可新增应收费用；已审计的单条流水不可变更、但可加新流水'" placement="top">
-                                    <el-tag size="small" :type="scope.row.arAuditStatus === '已审计' ? 'success' : 'info'">应收 {{ scope.row.arAuditStatus || '未审计' }}</el-tag>
-                                </el-tooltip>
-                                <el-tooltip content="应付方向审计（一期页面为占位，接口预留）" placement="top">
-                                    <el-tag size="small" type="info" effect="plain" style="margin-left:4px;">应付 {{ scope.row.apAuditStatus || '未审计' }}</el-tag>
-                                </el-tooltip>
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="sales" label="销售代表" width="100"></el-table-column>
-                        <el-table-column prop="csRep" label="客服代表" width="100"></el-table-column>
                         <el-table-column prop="declareValue" label="申报价值" width="100"></el-table-column>
-                        <el-table-column label="附加费标识" width="150">
-                            <template #default="scope">
-                                <el-tag v-for="t in (scope.row.surchargeMark || [])" :key="t" size="small" type="danger" style="margin-right:4px;">{{ t }}</el-tag>
-                                <span v-if="!(scope.row.surchargeMark || []).length" style="color:var(--el-text-color-secondary);">—</span>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="应收" width="120">
-                            <template #default>
-                                <div style="font-size: 12px; line-height: 1.2;">快递 20.00CNY</div>
-                            </template>
-                        </el-table-column>
-                        <el-table-column label="应付" width="120">
-                            <template #default>
-                                <div style="font-size: 12px; line-height: 1.2;">装柜 180.00CNY</div>
-                            </template>
-                        </el-table-column>
                         <el-table-column prop="declareWay" label="报关方式" width="120"></el-table-column>
-                        <el-table-column prop="expressLabel" label="快递单" width="100">
-                            <template #default="scope">
-                                <el-tag :type="scope.row.expressLabel===30?'success':scope.row.expressLabel===20?'warning':'info'" size="small">{{ scope.row.expressLabelText }}</el-tag>
-                            </template>
-                        </el-table-column>
                         <el-table-column prop="cusRemark" label="客户备注" width="150" show-overflow-tooltip></el-table-column>
-                        <el-table-column prop="innerRemark" label="内部备注" width="150" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="clearWay" label="清关方式" width="120"></el-table-column>
-                        <el-table-column prop="importDeclareMode" label="进口申报模式" width="140"></el-table-column>
-                        <el-table-column prop="exportInspectFirst" label="出口先查后装" width="120"></el-table-column>
                         <el-table-column prop="vat" label="VAT" width="120"></el-table-column>
-                        <el-table-column prop="poNumber" label="PO Number" width="120"></el-table-column>
                         <el-table-column prop="orderTime" label="下单时间" width="160"></el-table-column>
-                        <el-table-column prop="pickTime" label="拣货时间" width="160"></el-table-column>
-                        <el-table-column prop="expressPickTime" label="提取时间" width="160"></el-table-column>
-                        <el-table-column prop="sailTime" label="开船时间" width="160"></el-table-column>
-                        <el-table-column prop="portTime" label="到港时间" width="160"></el-table-column>
-                        <el-table-column prop="cabinetTime" label="提柜时间" width="160"></el-table-column>
-                        <el-table-column prop="signTime" label="签收时间" width="160"></el-table-column>
                     </el-table>
 
                     <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
@@ -615,7 +345,7 @@
         <!-- ================== 抽屉模块 ================== -->
 
         <!-- 1. 创建/编辑运单 -->
-        <el-drawer v-model="drawerCreate" :title="isEditMode ? '编辑运单' : '创建运单'" size="100%" :close-on-click-modal="false" append-to-body>
+        <el-drawer v-model="drawerCreate" :title="isEditMode ? '编辑运单' : '创建运单'" size="1300px" :close-on-click-modal="false">
             <div style="display: flex; flex-direction: column; height: 100%; background-color: #f0f2f5;">
                 <div style="flex: 1; overflow-y: auto; padding: 16px;">
                     <el-form :model="formCreate" label-width="100px" label-position="top">
@@ -625,8 +355,7 @@
                                 <div style="font-weight: bold; font-size: 16px;">基本信息</div>
                             </template>
                             <el-row :gutter="20">
-                                <el-col :span="8"><el-form-item label="客户昵称" required><el-select v-model="formCreate.user" style="width:100%"><el-option label="szcross" value="1"></el-option><el-option label="gzeda" value="2"></el-option><el-option label="ywscm" value="3"></el-option></el-select></el-form-item></el-col>
-                                <el-col :span="8"><el-form-item label="服务" required><el-select v-model="formCreate.service" style="width:100%"><el-option label="干线-尾程-包税" value="1"></el-option></el-select></el-form-item></el-col>
+                                <el-col :span="12"><el-form-item label="服务" required><el-select v-model="formCreate.service" style="width:100%"><el-option label="干线-尾程-包税" value="1"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8"><el-form-item label="申报币种" required><el-select v-model="formCreate.currency" style="width:100%"><el-option v-for="c in ['USD', 'CNY', 'EUR', 'GBP', 'JPY', 'KRW', 'MXN', 'NZD', 'SGD', 'THB', 'TWD', 'VND']" :key="c" :label="c" :value="c"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8"><el-form-item label="客户单号"><el-input v-model="formCreate.customerNo" placeholder="请输入客户单号"></el-input></el-form-item></el-col>
                                 <el-col :span="16"><el-form-item label="备注"><el-input v-model="formCreate.remark" placeholder="请输入备注"></el-input></el-form-item></el-col>
@@ -638,7 +367,6 @@
                                 <div style="font-weight: bold; font-size: 16px; display: flex; align-items: center;">
                                     收件信息
                                     <el-tag v-if="formCreate.isFba !== '是' && formCreate.isPrivateAddr" type="success" size="small" effect="plain" style="margin-left: 8px;">私人地址</el-tag>
-                                    <el-tag v-if="getSelectedAddrIsNew(formCreate.addrShort, formCreate.isFba)" type="warning" size="small" style="margin-left: 8px;">待审核</el-tag>
                                 </div>
                             </template>
                             <el-row :gutter="20">
@@ -651,24 +379,15 @@
                                     <el-form-item label="地址简称" required>
                                         <el-select v-model="formCreate.addrShort" @change="handleAddrChange" style="width:100%" placeholder="请选择或新增地址">
                                             <template v-if="formCreate.isFba === '是'">
-                                                <el-option v-for="opt in fbaOptions" :key="opt.value" :label="opt.label" :value="opt.value">
-                                                    <span style="float: left">{{ opt.label }}</span>
-                                                    <span v-if="opt.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                                                </el-option>
+                                                <el-option v-for="opt in fbaOptions" :key="opt.value" :label="opt.label" :value="opt.value"></el-option>
                                                 <el-option label="+ 新增FBA仓库信息" value="NEW_FBA" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                             </template>
                                             <template v-else>
-                                                <el-option v-for="opt in otherOptions" :key="opt.value" :label="opt.label" :value="opt.value">
-                                                    <span style="float: left">{{ opt.label }}</span>
-                                                    <span v-if="opt.isNew" style="float: right; display: flex; align-items: center; gap: 4px; height: 100%;">
-                                                        <el-tag size="small" type="warning" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">待审核</el-tag>
-                                                    </span>
-                                                </el-option>
+                                                <el-option v-for="opt in otherOptions" :key="opt.value" :label="opt.label" :value="opt.value"></el-option>
                                                 <el-option v-for="opt in privateOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                     <span style="float: left">{{ opt.label }}</span>
                                                     <span style="float: right; display: flex; align-items: center; gap: 4px; height: 100%;">
                                                         <el-tag size="small" type="success" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">私人地址</el-tag>
-                                                        <el-tag v-if="opt.isNew" size="small" type="warning" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">待审核</el-tag>
                                                     </span>
                                                 </el-option>
                                                 <el-option label="+ 新增其他平台仓信息" value="NEW_OTHER" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
@@ -786,15 +505,13 @@
                                                                 <el-select v-model="sku.sku" filterable allow-create placeholder="SKU" size="small" @change="(val)=>handleSkuChange(sku,val)" style="flex:1;">
                                                                     <el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku">
                                                                         <span style="float:left">{{item.sku}}</span>
-                                                                        <span v-if="item.isNew" style="float:right;color:#E6A23C;font-size:12px;">待审核</span>
-                                                                    </el-option>
+                                                                                                                                            </el-option>
                                                                     <el-option label="+ 新增SKU信息" value="NEW_SKU" style="color:var(--el-color-primary);font-weight:bold;"></el-option>
                                                                 </el-select>
                                                                 <span v-if="sIndex===box.skus.length-1" class="btn-action" @click="box.skus.push({sku:'',qty:1})" title="新增SKU" style="margin-left:4px;">+</span>
                                                                 <span v-if="box.skus.length>1" class="btn-action danger" @click="box.skus.splice(sIndex,1)" title="删除SKU" style="margin-left:4px;">-</span>
                                                             </div>
-                                                            <el-tag v-if="sku.isNew" type="warning" size="small" style="margin-top:4px;transform:scale(0.8);">待审核</el-tag>
-                                                        </div>
+                                                                                                                    </div>
                                                     </td>
                                                     <td><input v-model="sku.qty" type="number" placeholder="数量" /></td>
                                                     <td><input :disabled="!sku.isNew" v-model="sku.cnName" placeholder="中文品名" /></td>
@@ -880,7 +597,7 @@
                                                                 <td v-if="sIndex===0" :rowspan="box.skus.length"><div style="display:flex;align-items:center;"><input v-model="box.sysNo" disabled style="flex:1;background:#f5f7fa;color:#909399;" /><span v-if="activeFbaTab!=='all'" class="btn-action" @click="addFbaBoxSmart(formCreate.fbaOrders[activeFbaTab])" title="新增货箱" style="margin-left:4px;">+</span><span v-if="activeFbaTab!=='all'" class="btn-action danger" @click="formCreate.fbaOrders[activeFbaTab].boxes.splice(bIndex,1)" title="删除货箱" style="margin-left:4px;">-</span></div></td>
                                                                 <td v-if="sIndex===0" :rowspan="box.skus.length"><input v-model="box.fbaExtNo" disabled style="background:#f5f7fa;color:#909399;" /></td>
                                                                 <td v-if="sIndex===0" :rowspan="box.skus.length"><input v-model="box.weight" /></td><td v-if="sIndex===0" :rowspan="box.skus.length"><input v-model="box.length" /></td><td v-if="sIndex===0" :rowspan="box.skus.length"><input v-model="box.width" /></td><td v-if="sIndex===0" :rowspan="box.skus.length"><input v-model="box.height" /></td>
-                                                                <td><div style="display:flex;flex-direction:column;align-items:center;"><div style="display:flex;align-items:center;width:100%;"><el-select v-model="sku.sku" filterable allow-create placeholder="SKU" size="small" @change="(val)=>handleSkuChange(sku,val)" style="flex:1;"><el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku"></el-option><el-option label="+ 新增SKU" value="NEW_SKU" style="color:var(--el-color-primary);font-weight:bold;"></el-option></el-select><span v-if="sIndex===box.skus.length-1" class="btn-action" @click="box.skus.push({sku:'',qty:1})" title="新增SKU" style="margin-left:4px;">+</span><span v-if="box.skus.length>1" class="btn-action danger" @click="box.skus.splice(sIndex,1)" title="删除SKU" style="margin-left:4px;">-</span></div><el-tag v-if="sku.isNew" type="warning" size="small" style="margin-top:4px;transform:scale(0.8);">待审核</el-tag></div></td>
+                                                                <td><div style="display:flex;flex-direction:column;align-items:center;"><div style="display:flex;align-items:center;width:100%;"><el-select v-model="sku.sku" filterable allow-create placeholder="SKU" size="small" @change="(val)=>handleSkuChange(sku,val)" style="flex:1;"><el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku"></el-option><el-option label="+ 新增SKU" value="NEW_SKU" style="color:var(--el-color-primary);font-weight:bold;"></el-option></el-select><span v-if="sIndex===box.skus.length-1" class="btn-action" @click="box.skus.push({sku:'',qty:1})" title="新增SKU" style="margin-left:4px;">+</span><span v-if="box.skus.length>1" class="btn-action danger" @click="box.skus.splice(sIndex,1)" title="删除SKU" style="margin-left:4px;">-</span></div></div></td>
                                                                 <td><input v-model="sku.qty" type="number" /></td><td><input :disabled="!sku.isNew" v-model="sku.cnName" /></td><td><input :disabled="!sku.isNew" v-model="sku.enName" /></td>
                                                                 <td><span v-if="!sku.isNew&&sku.priceLocked" class="locked-field" @click="openDeclDialog(sku,'edit')">{{sku.price}}</span><span v-else-if="!sku.isNew&&!sku.price" class="decl-empty" @click="openDeclDialog(sku,'fill')">待输入</span><input v-else v-model="sku.price" /></td>
                                                                 <td><span v-if="!sku.isNew&&sku.linkLocked" class="locked-field" @click="openDeclDialog(sku,'edit')">{{sku.link}}</span><span v-else-if="!sku.isNew&&!sku.link" class="decl-empty" @click="openDeclDialog(sku,'fill')">待输入</span><input v-else v-model="sku.link" /></td>
@@ -950,8 +667,7 @@
                             <template #header>
                                 <div style="font-weight: bold; font-size: 16px;">
                                     报关信息
-                                    <el-tag v-if="getSelectedVatIsNew(formCreate.vat)" type="warning" size="small" style="margin-left: 8px;">待审核</el-tag>
-                                </div>
+                                                                    </div>
                             </template>
                             <el-row :gutter="20">
                                 <el-col :span="8"><el-form-item label="报关方式"><el-select v-model="formCreate.declare" style="width:100%"><el-option label="普通报关" value="1"></el-option><el-option label="9710" value="9710"></el-option><el-option label="9810" value="9810"></el-option><el-option label="0110" value="0110"></el-option><el-option label="1039" value="1039"></el-option></el-select></el-form-item></el-col>
@@ -962,8 +678,7 @@
                                         <el-select v-model="formCreate.vat" @change="handleVatChange" style="width:100%" placeholder="请选择或新增VAT" :allow-create="formCreate.vat === 'NEW'" :filterable="formCreate.vat === 'NEW'">
                                             <el-option v-for="opt in vatOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                 <span style="float: left">{{ opt.label }}</span>
-                                                <span v-if="opt.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                                            </el-option>
+                                                                                            </el-option>
                                             <el-option label="+ 新增VAT号信息" value="NEW" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                         </el-select>
                                     </el-form-item>
@@ -973,11 +688,9 @@
                                         <el-input v-model="formCreate.eori" :disabled="formCreate.vat !== 'NEW' && formCreate.vat !== ''" placeholder="EORI号"></el-input>
                                     </el-form-item>
                                 </el-col>
-                                <el-col :span="8"><el-form-item label="进口申报模式"><el-select v-model="formCreate.importDeclareMode" style="width:100%"><el-option label="一般贸易清关" value="一般贸易清关"></el-option><el-option label="监管仓分票清关" value="监管仓分票清关"></el-option><el-option label="监管仓专BOND清关" value="监管仓专BOND清关"></el-option></el-select></el-form-item></el-col>
-                                <el-col :span="8"><el-form-item label="出口先查后装模式"><el-select v-model="formCreate.exportInspectFirst" style="width:100%"><el-option label="是" value="是"></el-option><el-option label="否" value="否"></el-option></el-select></el-form-item></el-col>
                             </el-row>
                         </el-card>
-
+                        
                         <el-card shadow="never" style="margin-bottom: 16px;">
                             <template #header>
                                 <div style="font-weight: bold; font-size: 16px;">取件信息</div>
@@ -1029,8 +742,7 @@
                         <el-select v-model="batchSelectedSkus" multiple filterable placeholder="请选择商品SKU" style="width: 100%;" @change="handleBatchSkuChange">
                             <el-option v-for="item in nameData" :key="item.sku" :label="item.sku + ' (' + item.cnName + ')'" :value="item.sku">
                                 <span style="float: left">{{ item.sku }} ({{ item.cnName }})</span>
-                                <span v-if="item.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                            </el-option>
+                                                            </el-option>
                             <el-option label="+ 新增SKU信息" value="NEW_SKU" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                         </el-select>
                     </el-form-item>
@@ -1109,8 +821,7 @@
                                                 <el-select v-model="sku.sku" filterable allow-create placeholder="SKU" size="small" @change="(val) => handleSkuChange(sku, val)" style="flex: 1; width: 90px;">
                                                     <el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku">
                                                         <span style="float: left">{{ item.sku }}</span>
-                                                        <span v-if="item.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                                                    </el-option>
+                                                                                                            </el-option>
                                                     <el-option label="+ 新增SKU信息" value="NEW_SKU" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                                 </el-select>
                                             </div>
@@ -1204,8 +915,7 @@
                                             <el-select v-model="sku.sku" filterable allow-create placeholder="SKU" size="small" @change="(val) => handleSkuChange(sku, val)" style="flex: 1; width: 90px;">
                                                 <el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku">
                                                     <span style="float: left">{{ item.sku }}</span>
-                                                    <span v-if="item.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                                                </el-option>
+                                                                                                    </el-option>
                                                 <el-option label="+ 新增SKU信息" value="NEW_SKU" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                             </el-select>
                                         </div>
@@ -1265,6 +975,7 @@
                             <th style="width:100px;">扩展箱号</th>
                             <th style="width:160px;">客户申报(尺寸/重量)</th>
                             <th style="width:160px;">拣货数据(实/材)</th>
+                            <th style="width:90px;">单箱收费重</th>
                             <th style="width:80px;">围长</th>
                             <th style="width:100px;">提单号</th>
                             <th style="width:100px;">承运商</th>
@@ -1298,6 +1009,7 @@
                                     </div>
                                     <input v-model="box.weight" style="width:50px;text-align:center;margin-top:2px;" placeholder="重量">
                                 </td>
+                                <td v-if="si===0" :rowspan="box.skus.length" style="text-align:center;font-weight:500;">{{ getBoxChargeableWeightShipper(box) }}</td>
                                 <td v-if="si===0" :rowspan="box.skus.length">-</td>
                                 <td v-if="si===0" :rowspan="box.skus.length">-</td>
                                 <td v-if="si===0" :rowspan="box.skus.length">-</td>
@@ -1344,70 +1056,50 @@
             </template>
         </el-dialog>
 
-        <!-- 导入弹窗（统合单票+批量） -->
+        <!-- 导入弹窗 -->
         <el-dialog v-model="dialogImport" title="导入运单" width="700px" append-to-body @close="resetImport">
+            <!-- 步骤条 -->
             <div style="padding: 24px 24px 0;">
                 <el-steps :active="importStep" align-center finish-status="success">
-                    <el-step title="下载模板" description="选择客户并下载对应模板" />
-                    <el-step title="上传文件" description="填写后上传" />
-                    <el-step title="查看结果" description="确认导入结果" />
+                    <el-step title="准备导入文件" description="获取账号对应模板" />
+                    <el-step title="上传导入文件" description="填写后上传" />
+                    <el-step title="任务创建" description="后台处理" />
                 </el-steps>
             </div>
 
-            <!-- Step 1: 选择客户 + 下载模板 -->
+            <!-- Step 1: 准备导入文件 -->
             <div v-if="importStep === 0" style="padding: 24px;">
-                <el-form label-width="80px" style="margin-bottom: 16px;">
-                    <el-form-item label="选择客户" required>
-                        <el-select v-model="importCustomer" placeholder="请选择客户" style="width: 100%;">
-                            <el-option label="szcross" value="szcross"></el-option>
-                            <el-option label="gzeda" value="gzeda"></el-option>
-                            <el-option label="ywscm" value="ywscm"></el-option>
-                        </el-select>
-                    </el-form-item>
-                </el-form>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <!-- 单票导入卡片 -->
-                    <div style="border: 1px solid #DCDFE6; border-radius: 6px; padding: 20px; text-align: center; opacity: 0.5; transition: opacity 0.2s;" :style="importCustomer ? {opacity:1} : {opacity:0.45}">
-                        <div style="font-size: 32px; margin-bottom: 8px;">📋</div>
-                        <div style="font-weight: 600; font-size: 15px; color: #303133; margin-bottom: 8px;">单票导入</div>
-                        <div style="font-size: 12px; color: #909399; line-height: 1.8; margin-bottom: 16px; text-align: left;">
-                            一次导入<b>一票</b>运单<br>
-                            1个填写Sheet + 9个参考Sheet<br>
-                            适合货箱/SKU较多的场景
-                        </div>
-                        <el-button :disabled="!importCustomer" @click="downloadTemplateSingle" style="width: 100%;">
-                            <el-icon style="margin-right: 4px;"><Download /></el-icon>下载模板（.xlsx）
-                        </el-button>
-                    </div>
-                    <!-- 批量导入卡片 -->
-                    <div style="border: 1px solid #DCDFE6; border-radius: 6px; padding: 20px; text-align: center; opacity: 0.5; transition: opacity 0.2s;" :style="importCustomer ? {opacity:1} : {opacity:0.45}">
-                        <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
-                        <div style="font-weight: 600; font-size: 15px; color: #303133; margin-bottom: 8px;">批量导入</div>
-                        <div style="font-size: 12px; color: #909399; line-height: 1.8; margin-bottom: 16px; text-align: left;">
-                            一次导入<b>多票</b>运单<br>
-                            2个填写Sheet（运单列表+货箱明细）<br>
-                            适合一次录多票的场景
-                        </div>
-                        <el-button :disabled="!importCustomer" @click="downloadTemplate" style="width: 100%;">
-                            <el-icon style="margin-right: 4px;"><Download /></el-icon>下载模板（.xlsx）
-                        </el-button>
-                    </div>
+                <div style="margin-bottom: 18px;">
+                    <div style="font-size: 18px; font-weight: 600; color: #303133;">准备导入文件</div>
+                    <div style="margin-top: 6px; font-size: 13px; color: #909399;">系统将根据当前账号生成运单导入模板</div>
                 </div>
-                <div v-if="importCustomer" style="margin-top: 12px; padding: 10px 12px; background: #f5f7fa; border-radius: 4px; font-size: 12px; color: #909399; line-height: 1.6;">
-                    💡 模板根据「{{ importCustomer }}」生成对应的 SKU库、地址库、VAT库。含VLOOKUP自动带出、红色<span style="color:#f56c6c;">*必填</span>/灰色<span style="color:#999;">*条件必填</span>标记、下拉校验。
+                <div style="border: 1px solid #67C23A; border-radius: 8px; padding: 22px; text-align: center;">
+                    <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+                    <div style="font-weight: 600; font-size: 16px; color: #303133; margin-bottom: 8px;">运单导入模板</div>
+                    <div style="font-size: 13px; color: #606266; line-height: 1.8; margin-bottom: 4px;">支持一次导入 1～200 票运单</div>
+                    <div style="font-size: 12px; color: #909399; margin-bottom: 16px;">包含：运单列表、货箱明细</div>
+                    <el-button type="primary" plain @click="downloadTemplate" style="width: 240px;">
+                        <el-icon style="margin-right: 4px;"><Download /></el-icon>获取导入模板（.xlsx）
+                    </el-button>
+                </div>
+                <div style="margin-top: 16px; padding: 12px; background: #f5f7fa; border-radius: 4px; font-size: 12px; color: #909399; line-height: 1.6;">
+                    模板包含填写说明、下拉选项和账号对应的参考数据。请勿修改 Sheet 名称、业务表头和必填列，填写完成后上传。
                 </div>
             </div>
 
-            <!-- Step 2: 上传文件 -->
+            <!-- Step 2: 上传导入文件 -->
             <div v-if="importStep === 1" style="padding: 32px 24px;">
-                <el-upload class="upload-demo" drag action="#" :auto-upload="false" :on-change="onImportFileChange" :limit="1" accept=".xlsx,.xls">
+                <div style="margin-bottom: 18px;">
+                    <div style="font-size: 18px; font-weight: 600; color: #303133;">上传导入文件</div>
+                </div>
+                <el-upload class="upload-demo" drag action="#" :auto-upload="false" :on-change="onImportFileChange" :limit="1" accept=".xlsx">
                     <el-icon style="font-size: 48px; color: #c0c4cc;"><UploadFilled /></el-icon>
                     <div style="margin-top: 12px; color: #606266;">
-                        将填好的 Excel 文件拖到此处，或 <em style="color: var(--el-color-primary);">点击上传</em>
+                        将填写好的 Excel 文件拖到此处，或 <em style="color: var(--el-color-primary);">点击上传</em>
                     </div>
                     <template #tip>
                         <div style="margin-top: 12px; font-size: 12px; color: #909399;">
-                            支持 .xlsx、.xls 格式。系统将自动识别单票/批量模板结构
+                            仅支持 .xlsx 格式文件<br>系统将按运单导入模板解析“运单列表”和“货箱明细”
                         </div>
                     </template>
                 </el-upload>
@@ -1416,47 +1108,14 @@
                 </div>
             </div>
 
-            <!-- Step 3: 结果 -->
-            <div v-if="importStep === 2" style="padding: 24px;">
-                <div v-if="importResult.failCount === 0" style="text-align: center; padding: 32px 0;">
-                    <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
-                    <div style="font-size: 18px; font-weight: 500; color: #303133; margin-bottom: 8px;">导入成功！</div>
-                    <div style="font-size: 14px; color: #606266;">共导入 <b style="color: #67c23a;">{{ importResult.successCount }}</b> 票运单，状态为「已下单」</div>
-                    <div style="margin-top: 24px;">
-                        <el-button type="primary" @click="dialogImport = false">查看运单列表</el-button>
-                    </div>
-                </div>
-                <div v-else>
-                    <div style="text-align: center; padding: 16px 0;">
-                        <div style="font-size: 48px; margin-bottom: 12px;">{{ importResult.successCount > 0 ? '⚠️' : '❌' }}</div>
-                        <div style="font-size: 16px; font-weight: 500; color: #303133;">
-                            成功 <b style="color: #67c23a;">{{ importResult.successCount }}</b> 票，失败 <b style="color: #f56c6c;">{{ importResult.failCount }}</b> 票
-                        </div>
-                    </div>
-                    <el-table :data="importResult.failures" border size="small" max-height="240" style="margin-top: 16px;">
-                        <el-table-column prop="sheet" label="Sheet" width="120"></el-table-column>
-                        <el-table-column prop="location" label="位置" width="130"></el-table-column>
-                        <el-table-column prop="reason" label="失败原因" min-width="200" show-overflow-tooltip></el-table-column>
-                    </el-table>
-                    <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: center;">
-                        <el-button type="primary" plain @click="downloadFailureList">📥 下载失败清单</el-button>
-                        <el-button v-if="importResult.successCount > 0" type="primary" @click="dialogImport = false">查看运单列表</el-button>
-                    </div>
-                </div>
-            </div>
-
             <template #footer>
                 <template v-if="importStep === 0">
                     <el-button @click="dialogImport = false">取消</el-button>
-                    <el-button type="primary" @click="importStep = 1" :disabled="!importCustomer">已下载，下一步</el-button>
+                    <el-button type="primary" @click="importStep = 1" :disabled="!importTemplateReady">已准备好，下一步</el-button>
                 </template>
                 <template v-if="importStep === 1">
                     <el-button @click="importStep = 0">上一步</el-button>
                     <el-button type="primary" @click="executeImport" :disabled="!importFileName" :loading="importLoading">开始导入</el-button>
-                </template>
-                <template v-if="importStep === 2">
-                    <el-button @click="resetImport">重新导入</el-button>
-                    <el-button type="primary" @click="dialogImport = false">关闭</el-button>
                 </template>
             </template>
         </el-dialog>
@@ -1478,10 +1137,6 @@
                         <el-option v-for="tpl in exportTemplates" :key="tpl.id" :label="tpl.name" :value="tpl.id"></el-option>
                     </el-select>
                 </el-form-item>
-                <!-- 文件名称 -->
-                <el-form-item label="文件名称">
-                    <el-input v-model="exportFileName" placeholder="选填，默认使用模板名称+时间戳" style="width:100%;" clearable></el-input>
-                </el-form-item>
                 <div v-if="!exportTemplates.length" style="text-align:center;padding:20px;color:#c0c4cc;font-size:13px;">
                     暂无可用模板，请前往「配置管理 → 模板管理」创建
                 </div>
@@ -1501,7 +1156,7 @@
         </el-dialog>
 
         <!-- 2. 运单详情 (基于图片设计) -->
-        <el-drawer v-model="drawerDetail" :show-close="false" size="100%" :with-header="false" append-to-body style="background-color: var(--el-bg-color-page);">
+        <el-drawer v-model="drawerDetail" :show-close="false" size="100%" :with-header="false" style="background-color: var(--el-bg-color-page);">
             <div style="display: flex; flex-direction: column; height: 100vh; background: var(--el-bg-color-page);">
                 
                 <!-- 顶部 Header -->
@@ -1512,9 +1167,8 @@
                             <el-tag type="success" size="small">{{ currentRow.status || '已收货' }}</el-tag>
                         </div>
                         <div class="detail-header-sub">
-                            <span><el-icon><Calendar ></Calendar></el-icon> 下单时间: 2026-04-13 10:00:00</span>
-                            <span><el-icon><Document ></Document></el-icon> 提单号: BL998822</span>
-                            <span><el-icon><User ></User></el-icon> 客户昵称: szcross</span>
+                            <span><el-icon><Calendar /></el-icon> 下单时间: 2026-04-13 10:00:00</span>
+                            <span><el-icon><Document /></el-icon> 提单号: BL998822</span>
                         </div>
                     </div>
                     <div style="display: flex; gap: 12px;">
@@ -1531,20 +1185,10 @@
                                 <el-tab-pane label="运单概览" name="overview"></el-tab-pane>
                                 <el-tab-pane label="货箱信息" name="box"></el-tab-pane>
                                 <el-tab-pane label="商品信息" name="product"></el-tab-pane>
-                                <el-tab-pane label="派送标签" name="tag"></el-tab-pane>
+                                <el-tab-pane label="费用明细" name="fee"></el-tab-pane>
                                 <el-tab-pane label="POD管理" name="pod"></el-tab-pane>
-                                <el-tab-pane label="费用管理" name="fee"></el-tab-pane>
-                                <el-tab-pane label="工单与日志" name="log"></el-tab-pane>
+                                <el-tab-pane label="附件管理" name="log"></el-tab-pane>
                             </el-tabs>
-                            <template v-if="detailActiveTab === 'overview'">
-                                <template v-if="!isOverviewEditing">
-                                    <el-button type="primary" size="small" @click="startOverviewEdit">编辑运单</el-button>
-                                </template>
-                                <template v-else>
-                                    <el-button size="small" @click="cancelOverviewEdit">取消</el-button>
-                                    <el-button type="primary" size="small" @click="saveOverviewEdit" :loading="overviewSaving">保存运单</el-button>
-                                </template>
-                            </template>
                         </div>
 
                         <div style="flex: 1; overflow-y: auto; padding: 24px; background: var(--el-bg-color-page);">
@@ -1668,38 +1312,6 @@
                                             <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.boxes }} 箱</div>
                                         </div>
                                     </div>
-                                    <!-- 按方计费 -->
-                                    <div v-else style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px;">
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">收费重 (m³)</div>
-                                            <el-input v-if="isOverviewEditing" v-model="editForm.chargeWeight" size="small" style="width:100px;" class="edit-input"></el-input>
-                                            <div v-else style="font-size: 20px; font-weight: bold; color: var(--el-color-primary);">{{ editForm.chargeWeight }}</div>
-                                        </div>
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">实重 (kg)</div>
-                                            <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.realWeight }}</div>
-                                        </div>
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">材重 (kg)</div>
-                                            <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.volWeight }}</div>
-                                        </div>
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">重量方数</div>
-                                            <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.volume }}</div>
-                                        </div>
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">计方系数</div>
-                                            <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.ratio }}</div>
-                                        </div>
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">体积 (cbm)</div>
-                                            <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.volume }}</div>
-                                        </div>
-                                        <div>
-                                            <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">箱数</div>
-                                            <div style="font-size: 16px; font-weight: 500; height: 40px; line-height: 40px;">{{ editForm.boxes }} 箱</div>
-                                        </div>
-                                    </div>
                                 </el-card>
 
                                 <!-- 基本信息 & 报关信息 -->
@@ -1736,28 +1348,8 @@
                                                 </el-col>
                                             </el-row>
                                             <el-row :gutter="20">
-                                                <el-col :span="12">
-                                                    <el-form-item label="销售代表"><el-input v-model="editForm.sales" class="edit-input"></el-input></el-form-item>
-                                                </el-col>
-                                                <el-col :span="12">
-                                                    <el-form-item label="客服代表"><el-input v-model="editForm.cs" class="edit-input"></el-input></el-form-item>
-                                                </el-col>
-                                            </el-row>
-                                            <el-row :gutter="20">
-                                                <el-col :span="12">
-                                                    <el-form-item label="交货站点">
-                                                        <el-select v-model="editForm.deliveryStation" class="edit-input" style="width: 100%" clearable placeholder="请选择"><el-option label="花都仓" value="花都仓"></el-option><el-option label="义务仓" value="义务仓"></el-option><el-option label="澄海仓" value="澄海仓"></el-option><el-option label="东莞仓" value="东莞仓"></el-option><el-option label="中山仓" value="中山仓"></el-option></el-select>
-                                                    </el-form-item>
-                                                </el-col>
-                                            </el-row>
-                                            <el-row :gutter="20">
                                                 <el-col :span="24">
                                                     <el-form-item label="客户备注"><el-input v-model="editForm.cusRemark" type="textarea" :rows="2" class="edit-input"></el-input></el-form-item>
-                                                </el-col>
-                                            </el-row>
-                                            <el-row :gutter="20">
-                                                <el-col :span="24">
-                                                    <el-form-item label="内部备注"><el-input v-model="editForm.innerRemark" type="textarea" :rows="2" class="edit-input"></el-input></el-form-item>
                                                 </el-col>
                                             </el-row>
                                         </el-form>
@@ -1765,7 +1357,7 @@
                                     <el-card shadow="never" style="flex: 1; margin: 0;">
                                         <template #header>
                                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                                <span style="font-weight: bold; font-size: 15px; padding-left: 12px; border-left: 4px solid var(--el-color-primary);">报关信息<el-tag v-if="getSelectedVatIsNew(editForm.vat)" type="warning" size="small" style="margin-left: 8px;">待审核</el-tag></span>
+                                                <span style="font-weight: bold; font-size: 15px; padding-left: 12px; border-left: 4px solid var(--el-color-primary);">报关信息</span>
                                             </div>
                                         </template>
                                         <el-form :model="editForm" label-position="top" :disabled="!isOverviewEditing" class="read-only-form">
@@ -1801,8 +1393,7 @@
                                                         <el-select v-model="editForm.vat" @change="handleVatChange" class="edit-input" style="width: 100%" placeholder="请选择或新增VAT">
                                                             <el-option v-for="opt in vatOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                                 <span style="float: left">{{ opt.label }}</span>
-                                                                <span v-if="opt.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                                                            </el-option>
+                                                                                                                            </el-option>
                                                             <el-option label="+ 新增VAT号信息" value="NEW" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                                         </el-select>
                                                     </el-form-item>
@@ -1811,25 +1402,6 @@
                                             <el-form-item label="EORI">
                                                 <el-input v-model="editForm.eori" class="edit-input"></el-input>
                                             </el-form-item>
-                                            <el-row :gutter="20">
-                                                <el-col :span="12">
-                                                    <el-form-item label="进口申报模式">
-                                                        <el-select v-model="editForm.importDeclareMode" style="width: 100%" class="edit-input">
-                                                            <el-option label="一般贸易清关" value="一般贸易清关"></el-option>
-                                                            <el-option label="监管仓分票清关" value="监管仓分票清关"></el-option>
-                                                            <el-option label="监管仓专BOND清关" value="监管仓专BOND清关"></el-option>
-                                                        </el-select>
-                                                    </el-form-item>
-                                                </el-col>
-                                                <el-col :span="12">
-                                                    <el-form-item label="出口先查后装模式">
-                                                        <el-select v-model="editForm.exportInspectFirst" style="width: 100%" class="edit-input">
-                                                            <el-option label="是" value="是"></el-option>
-                                                            <el-option label="否" value="否"></el-option>
-                                                        </el-select>
-                                                    </el-form-item>
-                                                </el-col>
-                                            </el-row>
                                         </el-form>
                                     </el-card>
                                     <!-- 二期：保险信息 -->
@@ -1874,7 +1446,7 @@
                                     <el-card shadow="never" style="flex: 1; margin: 0;">
                                         <template #header>
                                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                                <span style="font-weight: bold; font-size: 15px; padding-left: 12px; border-left: 4px solid var(--el-color-primary);">收件信息<el-tag v-if="editForm.isFba !== '是' && editForm.isPrivateAddr" type="success" size="small" effect="plain" style="margin-left: 8px;">私人地址</el-tag><el-tag v-if="getSelectedAddrIsNew(editForm.addrShort, editForm.isFba)" type="warning" size="small" style="margin-left: 8px;">待审核</el-tag></span>
+                                                <span style="font-weight: bold; font-size: 15px; padding-left: 12px; border-left: 4px solid var(--el-color-primary);">收件信息<el-tag v-if="editForm.isFba !== '是' && editForm.isPrivateAddr" type="success" size="small" effect="plain" style="margin-left: 8px;">私人地址</el-tag></span>
                                             </div>
                                         </template>
                                         <el-form :model="editForm" label-position="top" :disabled="!isOverviewEditing" class="read-only-form">
@@ -1891,22 +1463,19 @@
                                                             <template v-if="editForm.isFba === '是'">
                                                                 <el-option v-for="opt in fbaOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                                     <span style="float: left">{{ opt.label }}</span>
-                                                                    <span v-if="opt.isNew" style="float: right; color: #E6A23C; font-size: 12px; transform: scale(0.8);">待审核</span>
-                                                                </el-option>
+                                                                                                                                    </el-option>
                                                             </template>
                                                             <template v-else>
                                                                 <el-option v-for="opt in otherOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                                     <span style="float: left">{{ opt.label }}</span>
                                                                     <span v-if="opt.isNew" style="float: right; display: flex; align-items: center; gap: 4px; height: 100%;">
-                                                                        <el-tag size="small" type="warning" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">待审核</el-tag>
-                                                                    </span>
+                                                                                                                                            </span>
                                                                 </el-option>
                                                                 <el-option v-for="opt in privateOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                                     <span style="float: left">{{ opt.label }}</span>
                                                                     <span style="float: right; display: flex; align-items: center; gap: 4px; height: 100%;">
                                                                         <el-tag size="small" type="success" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">私人地址</el-tag>
-                                                                        <el-tag v-if="opt.isNew" size="small" type="warning" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">待审核</el-tag>
-                                                                    </span>
+                                                                                                                                            </span>
                                                                 </el-option>
                                                             </template>
                                                         </el-select>
@@ -1964,21 +1533,8 @@
                             <!-- 其他 Tabs -->
                             <template v-if="detailActiveTab === 'box'">
 
-                                <!-- 顶部：标题 + 编辑按钮 -->
                                 <div style="display:flex; justify-content:space-between; margin-bottom:12px; align-items:center;">
                                     <span style="font-weight:bold;font-size:15px;">货箱信息</span>
-                                    <div style="display:flex; gap:8px;">
-                                        <template v-if="detailEditMode==='view'">
-                                            <el-button type="primary" size="small" @click="detailEditMode='box'" v-if="canShowEditBoxBtn">编辑货箱</el-button>
-                                            <el-button type="warning" plain size="small" @click="detailEditMode='measure'" v-if="userRole==='cs' && canShowEditMeasureBtn">编辑测量数据</el-button>
-                                            <el-button plain size="small" @click="detailEditMode='transfer'" v-if="canShowEditExpressBtn">编辑快递单</el-button>
-                                            <el-button type="danger" plain size="small" @click="openBoxCancelReturnDialog" v-if="canCancelOrReturnBox">取消/退件货箱</el-button>
-                                        </template>
-                                        <template v-else>
-                                            <el-button type="primary" size="small" @click="saveDetailEdit">保存</el-button>
-                                            <el-button size="small" @click="cancelDetailEdit">取消</el-button>
-                                        </template>
-                                    </div>
                                 </div>
 
                                 <!-- FBA运单Tabs + 添加按钮 -->
@@ -2012,14 +1568,10 @@
                                             <th style="width:160px;">客户数据</th>
                                             <th style="width:160px;">{{ pickDataLabel }}</th>
                                             <th style="width:90px;">单箱收费重</th>
-                                            <th style="width:60px;">围长</th>
-                                            <th style="width:100px;">提单号</th>
                                             <th style="width:100px;">承运商</th>
                                             <th style="width:120px;">快递单</th>
                                             <th style="width:60px;">SKU数</th>
-                                            <th style="width:80px;">拣货站</th>
                                             <th style="width:80px;">状态</th>
-                                            <th style="width:100px;">操作</th>
                                         </tr></thead>
                                         <tbody>
                                             <template v-for="(box,bIdx) in (formCreate.hasFbaOrder ? detailPagedFbaBoxesFlat : detailPagedBoxes)" :key="box.sysNo">
@@ -2051,9 +1603,7 @@
                                                             <input v-model="box.pickHeight" style="width:28px;" placeholder="高" />
                                                         </span>
                                                     </td>
-                                                    <td style="text-align:center;font-weight:500;">{{ getBoxChargeableWeight(box) }}</td>
-                                                    <td>-</td>
-                                                    <td>-</td>
+                                                    <td style="text-align:center;font-weight:500;">{{ getBoxChargeableWeightShipper(box) }}</td>
                                                     <td>
                                                         <span v-if="detailEditMode!=='transfer'">{{ box.carrier||'-' }}</span>
                                                         <input v-else v-model="box.carrier" placeholder="承运商" style="width:80px;" />
@@ -2063,12 +1613,8 @@
                                                         <input v-else v-model="box.expressNo" placeholder="快递单" style="width:100px;" />
                                                     </td>
                                                     <td style="text-align:center;">{{ box.skus.length }}</td>
-                                                    <td>-</td>
                                                     <td>
                                                         <el-tag size="small" :type="boxLogisticsTag(box._logisticsStatus)" style="cursor:pointer;" @click="toggleDetailExpand(box)" :title="'点击展开查看货箱详情'">{{ getBoxStatusLabel(box) }}</el-tag>
-                                                    </td>
-                                                    <td>
-                                                        <span style="color:#C0C4CC;">--</span>
                                                     </td>
                                                 </tr>
                                                 <!-- 展开的SKU明细行 -->
@@ -2249,57 +1795,22 @@
                             </template>
 
                             <template v-if="detailActiveTab === 'fee'">
-                                <el-tabs type="card">
-                                    <el-tab-pane label="应收">
-                                        <div class="fee-summary">
-                                            <div class="fee-summary-metrics">
-                                                <span class="fee-metric"><span class="fee-metric-label">流水条数</span><b class="fee-metric-value" style="color:var(--el-color-primary);">{{ feeArFlows.length }}</b></span>
-                                                <span class="fee-metric"><span class="fee-metric-label">运单应收净额</span><b class="fee-metric-value" style="color:var(--el-color-danger);">¥{{ feeArNet.toFixed(2) }}</b></span>
-                                            </div>
-                                        </div>
-                                        <el-table :data="feeArFlows" border size="small" class="fee-flow-table">
-                                            <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
-                                            <el-table-column prop="kindLabel" label="流水种类" width="88" align="center"></el-table-column>
-                                            <el-table-column label="审计状态" width="104" align="center">
-                                                <template #default="scope">
-                                                    <el-tag size="small" :type="scope.row.auditStatus === '已审计' ? 'success' : (scope.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
-                                                </template>
-                                            </el-table-column>
-                                            <el-table-column label="币种" width="64" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
-                                            <el-table-column label="单价" width="88" align="right"><template #default="scope"><span :style="{color: scope.row.unitPrice < 0 ? 'var(--el-color-danger)' : ''}">{{ scope.row.unitPrice }}</span></template></el-table-column>
-                                            <el-table-column label="计价单位" width="76" align="center"><template #default="scope">{{ scope.row.unit || '—' }}</template></el-table-column>
-                                            <el-table-column label="计费量" width="72" align="center"><template #default="scope">{{ scope.row.quantity }}</template></el-table-column>
-                                            <el-table-column label="金额" width="100" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
-                                            <el-table-column prop="rate" label="汇率" width="64" align="center"></el-table-column>
-                                            <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip></el-table-column>
-                                            <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
-                                            <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
-                                            <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
-                                            <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
-                                            <el-table-column label="操作" width="70" align="center" class-name="fee-op-cell">
-                                                <template #default="scope">
-                                                    <el-button link type="primary" size="small" @click="openFeeArDetail(scope.row)">详情</el-button>
-                                                </template>
-                                            </el-table-column>
-                                        </el-table>
-                                    </el-tab-pane>
-                                    <el-tab-pane label="应付">
-                                        <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-                                            <div><span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">{{ feeApFlows.length }}</span></div>
-                                        </div>
-                                        <el-table :data="feeApFlows" border size="small">
-                                            <el-table-column prop="type" label="费用类型" min-width="110"></el-table-column>
-                                            <el-table-column label="币种" width="80" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
-                                            <el-table-column label="金额" width="100" align="right"><template #default="scope">{{ scope.row.amount }}</template></el-table-column>
-                                            <el-table-column prop="rate" label="汇率" width="70" align="center"></el-table-column>
-                                            <el-table-column prop="quantity" label="数量" width="70" align="center"></el-table-column>
-                                            <el-table-column prop="remark" label="备注" min-width="110"></el-table-column>
-                                            <el-table-column prop="time" label="业务时间" width="150"></el-table-column>
-                                            <el-table-column prop="source" label="数据来源" width="90" align="center"></el-table-column>
-
-                                        </el-table>
-                                    </el-tab-pane>
-                                </el-tabs>
+                                <div style="margin-bottom:16px;">
+                                    <span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-primary);">{{ feeArFlows.length }}</span>
+                                    <span style="color:var(--el-text-color-regular); margin-left:16px;">运单应收净额：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">¥{{ feeArNet.toFixed(2) }}</span>
+                                </div>
+                                <el-table :data="feeArFlows" border size="small">
+                                    <el-table-column prop="type" label="费用类型" min-width="110"></el-table-column>
+                                    <el-table-column prop="kindLabel" label="流水种类" width="90" align="center"></el-table-column>
+                                    <el-table-column label="币种" width="70" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
+                                    <el-table-column label="单价" width="90" align="right"><template #default="scope"><span :style="{color: scope.row.unitPrice < 0 ? 'var(--el-color-danger)' : ''}">{{ scope.row.unitPrice }}</span></template></el-table-column>
+                                    <el-table-column label="计价单位" width="80" align="center"><template #default="scope">{{ scope.row.unit || '—' }}</template></el-table-column>
+                                    <el-table-column label="计费量" width="80" align="center"><template #default="scope">{{ scope.row.quantity }}</template></el-table-column>
+                                    <el-table-column label="金额" width="100" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
+                                    <el-table-column prop="rate" label="汇率" width="70" align="center"></el-table-column>
+                                    <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip></el-table-column>
+                                    <el-table-column prop="pickTime" label="拣货时间" width="150" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
+                                </el-table>
                             </template>
 
                             <template v-if="detailActiveTab === 'log'">
@@ -2332,14 +1843,6 @@
                                             </el-table-column>
                                         </el-table>
                                     </el-tab-pane>
-                                    <el-tab-pane label="操作日志">
-                                        <el-table :data="[{user:'Admin', time:'2026-04-13 10:00:00', action:'创建运单', remark:'正常'}]" border size="small">
-                                            <el-table-column prop="user" label="操作人"></el-table-column>
-                                            <el-table-column prop="time" label="操作时间"></el-table-column>
-                                            <el-table-column prop="action" label="操作事项"></el-table-column>
-                                            <el-table-column prop="remark" label="备注"></el-table-column>
-                                        </el-table>
-                                    </el-tab-pane>
                                 </el-tabs>
                             </template>
 
@@ -2353,7 +1856,6 @@
                                 <span @click="detailRightCollapsed=!detailRightCollapsed" style="cursor:pointer;font-size:14px;color:#2DA44E;line-height:1;font-weight:bold;" :title="detailRightCollapsed?'展开轨迹':'收起轨迹'">{{ detailRightCollapsed ? '«' : '»' }}</span>
                                 <div v-if="!detailRightCollapsed" class="section-title" style="margin-bottom: 0;">轨迹追踪</div>
                             </div>
-                            <el-button v-if="!detailRightCollapsed" type="primary" size="small" @click="dialogRouteAdd = true"><el-icon><Plus /></el-icon> 添加</el-button>
                         </div>
                         <div v-show="!detailRightCollapsed" style="padding: 20px;">
                             <div class="custom-timeline">
@@ -2362,28 +1864,18 @@
                                     <div style="font-size: 12px; color: var(--el-text-color-regular); margin-bottom: 4px;">2026-04-13 14:00:00</div>
                                     <div style="font-weight: 500; margin-bottom: 4px;">收货中</div>
                                     <div style="font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 8px;">司机已出发。 国家：中国 城市：广州</div>
-                                    <div>
-                                        <el-button type="text" size="small" @click="dialogRouteAdd = true">编辑</el-button>
-                                        <el-button type="text" size="small" title="复制"><el-icon><DocumentCopy /></el-icon></el-button>
-                                        <el-button type="text" class="is-danger" size="small" @click="handleDelete('确认删除该条路由信息吗？')">删除</el-button>
-                                    </div>
                                 </div>
                                 <div class="timeline-item">
                                     <div class="timeline-dot inactive"></div>
                                     <div style="font-size: 12px; color: var(--el-text-color-regular); margin-bottom: 4px;">2026-04-13 10:00:00</div>
                                     <div style="font-weight: 500; margin-bottom: 4px;">已下单</div>
                                     <div style="font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 8px;">运单创建成功。 国家：中国 城市：广州</div>
-                                    <div>
-                                        <el-button type="text" size="small" @click="dialogRouteAdd = true">编辑</el-button>
-                                        <el-button type="text" size="small" title="复制"><el-icon><DocumentCopy /></el-icon></el-button>
-                                        <el-button type="text" class="is-danger" size="small" @click="handleDelete('确认删除该条路由信息吗？')">删除</el-button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
         </el-drawer>
 
         <!-- ================== 各类业务弹窗 ================== -->
@@ -2466,86 +1958,65 @@
             </template>
         </el-dialog>
 
-        <!-- 快递比价弹框 -->
-        <el-dialog v-model="dialogCompare" title="快递比价" width="1050px" append-to-body>
-            <template v-if="selectedOrderNos.length > 0">
-                <div style="margin-bottom:10px; display:flex; align-items:center; gap:12px;">
-                    <span style="font-size:13px; color:var(--el-text-color-secondary);">已选 {{ selectedOrderNos.length }} 票运单</span>
-                    <span style="flex:1;"></span>
-                    <el-button size="small" @click="handleRecompareAll">全部重新比价</el-button>
-                </div>
-
-                <!-- 运单报价表格 -->
-                <el-table :data="compareTableData" border size="small" max-height="50vh">
-                    <el-table-column prop="orderNo" label="运单号" width="150" fixed="left">
-                        <template #default="scope">
-                            <span style="font-weight:500;color:var(--el-color-primary);">{{ scope.row.orderNo }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="用户" width="100">
-                        <template #default="scope">
-                            <span style="font-size:12px;">{{ scope.row.user }}</span>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="目的地" width="140">
-                        <template #default="scope">
-                            <div style="font-size:12px;">{{ scope.row.country }} · {{ scope.row.city }}</div>
-                            <el-tag size="small" :type="scope.row.addrType === '商业' ? 'success' : 'warning'">{{ scope.row.addrType }}地址</el-tag>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="箱/重" width="80" align="center">
-                        <template #default="scope">
-                            <div style="font-size:12px;">{{ scope.row.boxes }}箱</div>
-                            <div style="font-size:11px;color:var(--el-text-color-secondary);">{{ scope.row.weight }}kg</div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="渠道报价" min-width="340">
-                        <template #default="scope">
-                            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                                <span v-for="(ch, ci) in scope.row.channels" :key="ch.label"
-                                      style="display:inline-flex; align-items:center; gap:4px;">
-                                    <el-checkbox :model-value="ch.checked"
-                                                 @change="(val) => onChannelCheck(scope.$index, ci, val)"
-                                                 size="small" />
-                                    <span @click="ch.checked && ch.cached ? (compareSelected[scope.$index] = ch.label) : null"
-                                          :style="ch.checked
-                                            ? (compareSelected[scope.$index] === ch.label
-                                                ? 'background:#e6f7e9;color:#2DA44E;box-shadow:0 0 0 1px #2DA44E inset;cursor:pointer;'
-                                                : 'background:#f5f7fa;color:#606266;cursor:pointer;')
-                                            : 'background:#fafafa;color:#c0c4cc;cursor:not-allowed;'"
-                                          style="border-radius:4px; padding:4px 10px; font-size:12px; white-space:nowrap; transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; min-width:70px; justify-content:center;">
-                                        <span>{{ ch.label }}</span>
-                                        <span v-if="ch.checked && ch.cached" style="font-weight:bold;">¥{{ ch.cost }}</span>
-                                        <span v-else style="font-size:11px;">—</span>
-                                        <span v-if="ch.isLowest && ch.checked && ch.cached" style="font-size:10px;opacity:0.85;">最低</span>
-                                    </span>
-                                </span>
-                                <el-button link type="primary" size="small" @click="handleRecompare(scope.$index)" style="font-size:11px;margin-left:8px;">重新比价</el-button>
+        <!-- 快递比价弹窗 -->
+        <el-dialog v-model="dialogCompare" title="快递比价" width="1000px" append-to-body>
+            <div style="margin-bottom: 16px;">
+                <el-form label-width="80px" inline>
+                    <el-form-item label="已选运单" style="margin-bottom: 0;">
+                        <el-input disabled :value="selectedOrderNos.join(', ') || '未选择数据'" style="width: 400px;"></el-input>
+                    </el-form-item>
+                </el-form>
+            </div>
+            
+            <div style="margin-top: 16px; max-height: 60vh; overflow-y: auto;">
+                <template v-if="selectedOrderNos.length > 0">
+                    <div v-for="orderNo in selectedOrderNos" :key="orderNo" style="margin-bottom: 24px; border: 1px solid var(--el-border-color-light); border-radius: 4px; padding: 16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <div style="font-weight: bold; font-size: 15px; color: var(--el-color-primary);">运单号：{{ orderNo }}</div>
+                            <div style="display:flex; align-items:center; gap: 16px;">
+                                <div style="display:flex; align-items:center; background-color: var(--el-fill-color-light); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--el-border-color-lighter);">
+                                    <span style="margin-right: 12px; font-size: 13px; color: var(--el-text-color-regular);">快递商</span>
+                                    <el-checkbox-group v-model="compareChecks" size="small">
+                                        <el-checkbox label="UPS">UPS</el-checkbox>
+                                        <el-checkbox label="FedEx">FedEx</el-checkbox>
+                                        <el-checkbox label="USPS">USPS</el-checkbox>
+                                    </el-checkbox-group>
+                                </div>
+                                <el-button type="primary" plain size="small" @click="handleCommand('重新比价')">重新比价</el-button>
                             </div>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="参考号" width="160">
-                        <template #default="scope">
-                            <el-input v-model="compareRefNos[scope.$index]" size="small" placeholder="自动生成" style="width:140px;"></el-input>
-                        </template>
-                    </el-table-column>
-                </el-table>
-
-                <div style="margin-top:4px; font-size:11px; color:var(--el-text-color-secondary);">演示数据，实际调用快递商 API 实时询价</div>
-            </template>
-            <template v-else>
-                <el-empty description="请先在列表选择运单" :image-size="60"></el-empty>
-            </template>
-
+                        </div>
+                        <el-table :data="[{order: orderNo, user:'szcross', country:'US', addr:'Los Angeles, CA 90001', addrAttr:'商业地址', pieces:10, realWeight:51.2, upsPrice:'120.00', fedexPrice:'125.00', uspsPrice:'130.00', selected:'UPS'}]" border size="small">
+                            <el-table-column prop="user" label="客户昵称" width="110"></el-table-column>
+                            <el-table-column prop="country" label="国家" width="80"></el-table-column>
+                            <el-table-column prop="addr" label="收件地址" show-overflow-tooltip></el-table-column>
+                            <el-table-column prop="addrAttr" label="地址属性" width="80"></el-table-column>
+                            <el-table-column prop="pieces" label="件数" width="60"></el-table-column>
+                            <el-table-column prop="realWeight" label="实重" width="60"></el-table-column>
+                            <el-table-column label="UPS报价" width="90" v-if="compareChecks.includes('UPS')">
+                                <template #default="scope"><span :style="scope.row.selected === 'UPS' ? 'color:var(--el-color-danger); font-weight:bold;' : ''">{{scope.row.upsPrice}}</span></template>
+                            </el-table-column>
+                            <el-table-column label="FedEx报价" width="90" v-if="compareChecks.includes('FedEx')">
+                                <template #default="scope"><span :style="scope.row.selected === 'FedEx' ? 'color:var(--el-color-danger); font-weight:bold;' : ''">{{scope.row.fedexPrice}}</span></template>
+                            </el-table-column>
+                            <el-table-column label="USPS报价" width="90" v-if="compareChecks.includes('USPS')">
+                                <template #default="scope"><span :style="scope.row.selected === 'USPS' ? 'color:var(--el-color-danger); font-weight:bold;' : ''">{{scope.row.uspsPrice}}</span></template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                </template>
+                <template v-else>
+                    <el-empty description="请先在列表选择运单" :image-size="60"></el-empty>
+                </template>
+            </div>
+            
             <template #footer>
                 <el-button @click="dialogCompare = false">取消</el-button>
-                <el-button type="primary" @click="handleConfirmCompare">确认下单（{{ selectedOrderNos.length }} 票）</el-button>
+                <el-button type="primary" @click="dialogCompare = false">保存比价</el-button>
             </template>
         </el-dialog>
 
-        <!-- 打印标签弹窗 -->
-        <!-- 系统标签（箱唛标签） -->
-        <el-dialog v-model="dialogPrint" title="系统标签" width="600px" append-to-body>
+        <!-- 打印系统标签弹窗（货主端仅系统标签） -->
+        <el-dialog v-if="dialogSysLabel" v-model="dialogSysLabel" title="系统标签" width="600px">
             <div style="display:flex; gap:20px;">
                 <div style="width:50%; height:200px; background:#f5f5f5; border:1px dashed var(--el-border-color); display:flex; align-items:center; justify-content:center;">标签预览区 (正常显示)</div>
                 <div style="flex:1;">
@@ -2557,26 +2028,8 @@
                 </div>
             </div>
             <template #footer>
-                <el-button @click="dialogPrint = false">下载</el-button>
-                <el-button type="primary" @click="dialogPrint = false">打印</el-button>
-            </template>
-        </el-dialog>
-
-        <!-- 快递标签（员工端独立入口） -->
-        <el-dialog v-model="dialogExpressPrint" title="快递标签" width="600px" append-to-body>
-            <div style="display:flex; gap:20px;">
-                <div style="width:50%; height:200px; background:#f5f5f5; border:1px dashed var(--el-border-color); display:flex; align-items:center; justify-content:center;">快递单预览区 (正常显示)</div>
-                <div style="flex:1;">
-                    <div style="margin-bottom:12px; font-weight:500;">打印格式</div>
-                    <el-radio-group v-model="printFormatInv" style="display:flex; flex-direction:column; gap:12px;">
-                        <el-radio label="标签纸">标签纸</el-radio>
-                        <el-radio label="A4">A4</el-radio>
-                    </el-radio-group>
-                </div>
-            </div>
-            <template #footer>
-                <el-button @click="dialogExpressPrint = false">下载</el-button>
-                <el-button type="primary" @click="dialogExpressPrint = false">打印</el-button>
+                <el-button @click="dialogSysLabel = false">下载</el-button>
+                <el-button type="primary" @click="dialogSysLabel = false">打印</el-button>
             </template>
         </el-dialog>
 
@@ -2629,8 +2082,6 @@
                     <el-col v-if="editPermChecks.内部备注" :span="12"><el-form-item label="内部备注"><el-input placeholder="不修改勿填"></el-input></el-form-item></el-col>
                     <el-col v-if="editPermChecks.报关方式" :span="12"><el-form-item label="报关方式"><el-select style="width:100%" placeholder="不修改勿选" clearable><el-option label="普通报关" value="1"></el-option><el-option label="9710" value="2"></el-option><el-option label="9810" value="3"></el-option></el-select></el-form-item></el-col>
                     <el-col v-if="editPermChecks.清关方式" :span="12"><el-form-item label="清关方式"><el-select style="width:100%" placeholder="不修改勿选" clearable><el-option label="一般贸易清关" value="1"></el-option><el-option label="快件清关" value="2"></el-option></el-select></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.进口申报模式" :span="12"><el-form-item label="进口申报模式"><el-select style="width:100%" placeholder="不修改勿选" clearable><el-option label="一般贸易清关" value="一般贸易清关"></el-option><el-option label="监管仓分票清关" value="监管仓分票清关"></el-option><el-option label="监管仓专BOND清关" value="监管仓专BOND清关"></el-option></el-select></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.出口先查后装模式" :span="12"><el-form-item label="出口先查后装模式"><el-select style="width:100%" placeholder="不修改勿选" clearable><el-option label="是" value="是"></el-option><el-option label="否" value="否"></el-option></el-select></el-form-item></el-col>
                 </el-row>
             </el-form>
             <template #footer>
@@ -2702,32 +2153,27 @@
             <template #footer><el-button @click="dialogSupPod = false">取消</el-button><el-button type="primary">抓取</el-button></template>
         </el-dialog>
 
-
-        <!-- 应收流水行详情：来源规则下钻（运单审计用） -->
-        <el-dialog :model-value="!!feeArDetail" title="流水详情" width="720px" append-to-body @update:model-value="feeArDetail = null">
-            <el-descriptions v-if="feeArDetail" :column="2" border size="small">
-                <el-descriptions-item label="费用类型">{{ feeArDetail.type }}</el-descriptions-item>
-                <el-descriptions-item label="流水种类">{{ feeArDetail.kindLabel }}</el-descriptions-item>
-                <el-descriptions-item label="金额">{{ feeArDetail.currency }} {{ feeAmountText(feeArDetail) }}</el-descriptions-item>
-                <el-descriptions-item label="来源类型">{{ feeArDetail.sourceType === 20 ? '人工添加' : '系统自动计算' }}</el-descriptions-item>
-                <el-descriptions-item label="描述" :span="2">{{ feeArDetail.description || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="数据来源">{{ feeArDetail.source || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="来源规则类型">{{ feeArDetail.sourceRuleType ? feeRuleTypeLabel(feeArDetail.sourceRuleType) : '—' }}</el-descriptions-item>
-                <el-descriptions-item label="来源规则ID">{{ feeArDetail.sourceRuleId || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="生成节点">{{ generateNodeLabel(feeArDetail) }}</el-descriptions-item>
-                <el-descriptions-item label="来源规则名（快照）" :span="2">{{ feeArDetail.sourceRuleName || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="创建人">{{ feeArDetail.createdBy || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="拣货时间">{{ feeArDetail.pickTime || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="内部备注" :span="2">{{ feeArDetail.remark || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="关联账单" :span="2">
-                    <el-tag v-if="feeArDetail.billNo" size="small" type="warning">{{ feeArDetail.billNo }}</el-tag>
-                    <span v-else style="color:var(--el-text-color-secondary);">未关联账单（仍在账单草稿池）</span>
-                </el-descriptions-item>
-            </el-descriptions>
-            <template #footer><el-button @click="feeArDetail = null">关闭</el-button></template>
+        <!-- 费用管理拆分弹窗 -->
+        <el-dialog v-model="dialogFeeAr" title="添加应收" width="900px" append-to-body>
+            <div style="margin-bottom:16px;">
+                <el-form label-width="80px" inline>
+                    <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos.join(', ') || '未选择数据'" style="width:300px"></el-input></el-form-item>
+                </el-form>
+            </div>
+            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeArList.push({})">添加一行</el-button></div>
+            <el-table :data="feeArList" border size="small">
+                <el-table-column label="业务时间" width="160"><template #default="scope"><el-date-picker v-model="scope.row.time" type="datetime" size="small" style="width:100%"></el-date-picker></template></el-table-column>
+                <el-table-column label="费用类型" width="120"><template #default="scope"><el-select v-model="scope.row.type" size="small"><el-option label="运费" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small"><el-option label="CNY" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="汇率" width="80"><template #default="scope"><el-input v-model="scope.row.rate" size="small"></el-input></template></el-table-column>
+                <el-table-column label="单位" width="80"><template #default="scope"><el-select v-model="scope.row.unit" size="small"><el-option label="票" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="单位费用" width="100"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false"></el-input-number></template></el-table-column>
+                <el-table-column label="描述" min-width="120"><template #default="scope"><el-input v-model="scope.row.desc" size="small"></el-input></template></el-table-column>
+                <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeArList.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
+            </el-table>
+            <template #footer><el-button @click="dialogFeeAr = false">取消</el-button><el-button type="primary">保存</el-button></template>
         </el-dialog>
-
-
+        
         <!-- 新增基础数据弹窗集合 -->
         <el-dialog v-model="dialogAddFbaAddr" title="新增FBA平台仓库" width="800px" append-to-body>
             <el-form label-position="top" :model="formAddFba" class="custom-dialog-form">
@@ -2947,29 +2393,54 @@
             <template #footer><el-button @click="dialogAddVat = false">取消</el-button><el-button type="primary" @click="handleSaveVat">保存</el-button></template>
         </el-dialog>
 
-
-
-        <!-- 运单级审计 / 反审计（按费用方向整票审计） -->
-        <el-dialog v-model="waybillAuditVisible" :title="waybillAuditMode === 'audit' ? '运单审计' : '运单反审计'" width="560px" append-to-body>
-            <div class="fee-add-info" style="margin-bottom:14px;">
-                <span><span class="fee-add-label">运单</span><b style="color:var(--el-text-color-primary);">{{ waybillAuditSummary }}</b></span>
+        <el-dialog v-model="dialogFeeAp" title="添加应付" width="900px" append-to-body>
+            <div style="margin-bottom:16px;">
+                <el-form label-width="80px" inline>
+                    <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos.join(', ') || '未选择数据'" style="width:300px"></el-input></el-form-item>
+                </el-form>
             </div>
-            <el-form label-width="90px">
-                <el-form-item :label="waybillAuditMode === 'audit' ? '审计范围' : '反审计范围'">
-                    <el-checkbox-group v-model="waybillAuditDirs">
-                        <el-checkbox label="应收" value="ar" :disabled="!waybillAuditDirUsable('ar')">应收（该运单全部应收流水统一{{ waybillAuditMode === 'audit' ? '审计' : '反审计' }}）</el-checkbox>
-                        <el-checkbox label="应付" value="ap" :disabled="!waybillAuditDirUsable('ap')">应付（该运单全部应付流水统一{{ waybillAuditMode === 'audit' ? '审计' : '反审计' }}）</el-checkbox>
+            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeApList.push({})">添加一行</el-button></div>
+            <el-table :data="feeApList" border size="small">
+                <el-table-column label="业务时间" width="160"><template #default="scope"><el-date-picker v-model="scope.row.time" type="datetime" size="small" style="width:100%"></el-date-picker></template></el-table-column>
+                <el-table-column label="费用类型" width="120"><template #default="scope"><el-select v-model="scope.row.type" size="small"><el-option label="操作费" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small"><el-option label="CNY" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="汇率" width="80"><template #default="scope"><el-input v-model="scope.row.rate" size="small"></el-input></template></el-table-column>
+                <el-table-column label="单位" width="80"><template #default="scope"><el-select v-model="scope.row.unit" size="small"><el-option label="票" value="1"></el-option></el-select></template></el-table-column>
+                <el-table-column label="单位费用" width="100"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false"></el-input-number></template></el-table-column>
+                <el-table-column label="描述" min-width="120"><template #default="scope"><el-input v-model="scope.row.desc" size="small"></el-input></template></el-table-column>
+                <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeApList.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
+            </el-table>
+            <template #footer><el-button @click="dialogFeeAp = false">取消</el-button><el-button type="primary">保存</el-button></template>
+        </el-dialog>
+
+        <el-dialog v-model="dialogFeeAudit" title="审计" width="400px" append-to-body>
+            <el-form label-width="80px">
+                <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos"></el-input></el-form-item>
+                <el-form-item label="类型">
+                    <el-checkbox-group v-model="auditTypes" style="display:flex; flex-direction:column;">
+                        <el-checkbox label="应收-仅流水">应收-仅流水</el-checkbox>
+                        <el-checkbox label="应付-仅流水">应付-仅流水</el-checkbox>
+                        <el-checkbox label="应收-运单及流水">应收-运单及流水</el-checkbox>
+                        <el-checkbox label="应付-运单及流水">应付-运单及流水</el-checkbox>
                     </el-checkbox-group>
                 </el-form-item>
             </el-form>
-            <div style="color:var(--el-text-color-regular); font-size:13px; line-height:1.7; padding-left:90px;">
-                <template v-if="waybillAuditMode === 'audit'">审计通过后：运单该方向标记置「已审计」，<b>整票不允许再新增该方向费用</b>，该方向流水全部冻结。</template>
-                <template v-else>反审计后：运单该方向标记回到「未审计」，该方向流水回到「待业务审计」，业务可再次修改并重新审计。</template>
-            </div>
-            <template #footer>
-                <el-button @click="waybillAuditVisible = false">取消</el-button>
-                <el-button :type="waybillAuditMode === 'audit' ? 'primary' : 'danger'" @click="submitWaybillAudit">{{ waybillAuditMode === 'audit' ? '确认审计' : '确认反审计' }}</el-button>
-            </template>
+            <template #footer><el-button @click="dialogFeeAudit = false">取消</el-button><el-button type="primary">执行审计</el-button></template>
+        </el-dialog>
+        
+        <el-dialog v-model="dialogFeeAntiAudit" title="反审计" width="400px" append-to-body>
+            <el-form label-width="80px">
+                <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos"></el-input></el-form-item>
+                <el-form-item label="操作">
+                    <el-checkbox-group v-model="auditTypes" style="display:flex; flex-direction:column;">
+                        <el-checkbox label="应收-仅流水">应收-仅流水</el-checkbox>
+                        <el-checkbox label="应付-仅流水">应付-仅流水</el-checkbox>
+                        <el-checkbox label="应收-运单及流水">应收-运单及流水</el-checkbox>
+                        <el-checkbox label="应付-运单及流水">应付-运单及流水</el-checkbox>
+                    </el-checkbox-group>
+                </el-form-item>
+            </el-form>
+            <template #footer><el-button @click="dialogFeeAntiAudit = false">取消</el-button><el-button type="danger" @click="handleDelete('确认执行反审计吗')">执行反审计</el-button></template>
         </el-dialog>
 
         <!-- 状态调整 -->
@@ -3087,16 +2558,14 @@
                                                         <el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku">
                                                             <span style="float: left">{{ item.sku }}</span>
                                                             <span v-if="item.isNew" style="float: right; display: flex; align-items: center; gap: 4px; height: 100%;">
-                                                                <el-tag size="small" type="warning" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">待审核</el-tag>
-                                                            </span>
+                                                                                                                            </span>
                                                         </el-option>
                                                         <el-option label="+ 新增SKU信息" value="NEW_SKU" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                                     </el-select>
                                                     <span v-if="sIndex === box.skus.length - 1" class="btn-action" @click="box.skus.push({sku: '', qty: 1, isNew: true})" title="新增SKU" style="margin-left:4px;">+</span>
                                                     <span v-if="box.skus.length > 1" class="btn-action danger" @click="box.skus.splice(sIndex, 1)" title="删除SKU" style="margin-left:4px;">-</span>
                                                 </div>
-                                                <el-tag v-if="sku.isNew" type="warning" size="small" style="margin-top: 4px; transform: scale(0.8);">待审核</el-tag>
-                                            </div>
+                                                                                            </div>
                                         </td>
                                         <td>
                                             <input v-model="sku.qty" type="number" placeholder="数量" />
@@ -3218,16 +2687,14 @@
                                                             <el-option v-for="item in nameData" :key="item.sku" :label="item.sku" :value="item.sku">
                                                                 <span style="float: left">{{ item.sku }}</span>
                                                                 <span v-if="item.isNew" style="float: right; display: flex; align-items: center; gap: 4px; height: 100%;">
-                                                                    <el-tag size="small" type="warning" effect="plain" style="height: 20px; line-height: 18px; padding: 0 4px; border-radius: 2px;">待审核</el-tag>
-                                                                </span>
+                                                                                                                                    </span>
                                                             </el-option>
                                                             <el-option label="+ 新增SKU信息" value="NEW_SKU" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
                                                         </el-select>
                                                         <span v-if="sIndex === box.skus.length - 1" class="btn-action" @click="box.skus.push({sku: '', qty: 1})" title="新增SKU" style="margin-left:4px;">+</span>
                                                         <span v-if="box.skus.length > 1" class="btn-action danger" @click="box.skus.splice(sIndex, 1)" title="删除SKU" style="margin-left:4px;">-</span>
                                                     </div>
-                                                    <el-tag v-if="sku.isNew" type="warning" size="small" style="margin-top: 4px; transform: scale(0.8);">待审核</el-tag>
-                                                </div>
+                                                                                                    </div>
                                             </td>
                                             <td><input v-model="sku.qty" type="number" placeholder="数量" /></td>
                                             <td><input :disabled="!sku.isNew" v-model="sku.cnName" placeholder="中文品名" /></td>
@@ -3557,7 +3024,7 @@
                     fbaNo: '', blNo: '', source: [], service: [],
                     country: '', markedYes: '', markedNo: '', productAttr: '', supplierService: '',
                     curSite: '', sales: [], csRep: '',
-                    surchargeMark: [], declareWay: [], expressLabel: '', expressNo: '', clearWay: [], importDeclareMode: [], exportInspectFirst: [], vat: '', poNumber: '',
+                    surchargeMark: [], declareWay: [], expressLabel: '', expressNo: '', clearWay: [], vat: '', poNumber: '',
                     orderTime: [], pickTime: [], expressPickTime: [], sailTime: [], portTime: [], cabinetTime: [], signTime: []
                 });
                 
@@ -3576,7 +3043,7 @@
                     volWeight:15, chargeWeight:15, supWeight:15,
                     supplier:'UPS', carrierInfo:'UPS Ground',
                     site:'深圳总仓', curSite:'深圳总仓', isInsured:'否',
-                    sales:'李四', declareValue:1000, declareWay:'买单报关', clearWay:'包清关', importDeclareMode: Math.random() > 0.5 ? '一般贸易清关' : '监管仓分票清关', exportInspectFirst: Math.random() > 0.5 ? '否' : '是',
+                    sales:'李四', declareValue:1000, declareWay:'买单报关', clearWay:'包清关',
                     orderTime:'2026-04-10 10:00:00', cabinetTime:'2026-04-11 10:00:00',
                     pickTime:'2026-04-11 14:00:00', signTime:'-', sailTime:'-', portTime:'-',
                     status,
@@ -3585,9 +3052,6 @@
                     supplierService: isFba ? 'UPS Ground' : 'FedEx Home',
                     csRep: '张三',
                     creator: 'Admin',
-                    // 运单级审计标记（**两态：未审计 / 已审计**，按费用方向各一条）—— 应收整票审计通过后，整票不允许新增应收费用
-                    arAuditStatus: '未审计', arAuditBy: '', arAuditAt: '',
-                    apAuditStatus: '未审计', apAuditBy: '', apAuditAt: '',
                     companyName: isFba ? 'Amazon' : ('客户公司'+Math.floor(Math.random()*9+1)),
                     location: isFba ? ('A'+(Math.floor(Math.random()*20+1))+'-'+(Math.floor(Math.random()*5+1))) : '',
                     supplierOrderNo: '',
@@ -3596,13 +3060,12 @@
                 const tableData = ref([
                     mkRow('YD20260413001','已下单',false), mkRow('YD20260413002','已下单',true,'FBA-A001'),
                     mkRow('YD20260413003','收货中',false), mkRow('YD20260413004','收货中',true,'FBA-B002'),
-                    (()=>{ const r=mkRow('YD20260413005','已收货',false); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; r.surchargeMark=['超长']; return r; })(),
+                    (()=>{ const r=mkRow('YD20260413005','已收货',false); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; return r; })(),
                     (()=>{ const r=mkRow('YD20260413006','已收货',true,'FBA-C003'); r.billingType='cbm'; r.service='美森360-海运-卡派-按方包税'; return r; })(),
                     mkRow('YD20260413007','转运中',false), mkRow('YD20260413008','转运中',true,'FBA-E005'),
                     mkRow('YD20260413009','已到港',false), mkRow('YD20260413010','已到港',true,'FBA-F006'),
                     mkRow('YD20260413011','已清关',false), mkRow('YD20260413012','已清关',true,'FBA-G007'),
-                    mkRow('YD20260413013','已到仓',false),
-                    (()=>{ const r=mkRow('YD20260413014','已签收',false); r.arAuditStatus='已审计'; r.arAuditBy='财务-王五'; r.arAuditAt='2026-04-15 10:20'; return r; })(),
+                    mkRow('YD20260413013','已到仓',false), mkRow('YD20260413014','已签收',false),
                     mkRow('YD20260413015','退件',false), mkRow('YD20260413016','已取消',false),
                 ]);
                 const filteredTableData = computed(() => {
@@ -3627,16 +3090,13 @@
                     const h = box.pickHeight || '-';
                     const bt = currentRow.value && currentRow.value.billingType ? currentRow.value.billingType : 'kg';
                     if (bt === 'cbm') {
-                        // 按m³计费：显示 实重(kg) / 重量方数(m³)，重量方数=实重/计方系数(363)
                         const weightCbm = parseFloat(box.pickWeight) ? (parseFloat(box.pickWeight) / 363).toFixed(3) : '-';
                         return w + 'kg / ' + weightCbm + 'm³  ' + l + '×' + wi + '×' + h + '(cm)';
                     }
-                    // 按KG计费：显示 实重(kg) / 材重(kg)，材重=(长×宽×高)/计泡系数(6000)，3位小数
                     const volW = (parseFloat(l) * parseFloat(wi) * parseFloat(h) / 6000).toFixed(3);
                     return w + 'kg / ' + (isNaN(parseFloat(volW)) ? '-' : volW) + 'kg  ' + l + '×' + wi + '×' + h + '(cm)';
                 };
-                // 单箱收费重：简化计算（原型展示用），完整逻辑见 PRD §3.2.3 及 运费计价逻辑.md
-                const getBoxChargeableWeight = (box) => {
+                const getBoxChargeableWeightShipper = (box) => {
                     if (!box) return '-';
                     const bt = currentRow.value && currentRow.value.billingType ? currentRow.value.billingType : 'kg';
                     const w = parseFloat(box.pickWeight) || parseFloat(box.weight) || 0;
@@ -3644,13 +3104,11 @@
                     const wi = parseFloat(box.pickWidth) || parseFloat(box.width) || 0;
                     const h = parseFloat(box.pickHeight) || parseFloat(box.height) || 0;
                     if (bt === 'cbm') {
-                        // 按m³计费：单箱收费重 = MAX(重量方数, 体积)，2位小数
                         const cbm = (l * wi * h) / 1000000;
                         const weightCbm = w / 363;
                         const val = Math.max(weightCbm, cbm);
                         return val > 0 ? val.toFixed(2) + ' m³' : '-';
                     }
-                    // 按KG计费：单箱收费重 = MAX(实重, 材重)，整数
                     const volW = (l * wi * h) / 6000;
                     const val = Math.max(w, volW);
                     return val > 0 ? Math.ceil(val) + ' KG' : '-';
@@ -3666,7 +3124,7 @@
                     { field: '材重', show: true }, { field: '收费重', show: true }, { field: '供应商重量', show: true }, { field: '供应商', show: true },
                     { field: '承运信息', show: true }, { field: '交货站点', show: true }, { field: '所在站点', show: true },
                     { field: '销售代表', show: true }, { field: '客服代表', show: true }, { field: '申报价值', show: true }, { field: '附加费标识', show: true }, { field: '应收', show: true },
-                    { field: '应付', show: true }, { field: '报关方式', show: true }, { field: '快递单', show: true }, { field: '清关方式', show: true }, { field: '进口申报模式', show: true }, { field: '出口先查后装', show: true }, { field: 'VAT', show: true }, { field: 'PO Number', show: true }, { field: '下单时间', show: true },
+                    { field: '应付', show: true }, { field: '报关方式', show: true }, { field: '快递单', show: true }, { field: '清关方式', show: true }, { field: 'VAT', show: true }, { field: 'PO Number', show: true }, { field: '下单时间', show: true },
                     { field: '提柜时间', show: true }, { field: '拣货时间', show: true }, { field: '提取时间', show: true }, { field: '签收时间', show: true }, { field: '开船时间', show: true },
                     { field: '到港时间', show: true }, { field: '状态', show: true }
                 ]);
@@ -4607,7 +4065,7 @@
                 };
                 // ===== END =====
                 const userRole = ref('cs'); // 当前演示角色：'cs'=客服(可见编辑测量数据), 'warehouse'=仓库(不可见)
-                const detailActiveTab = ref('fee');          // 默认停在「费用管理」
+                const detailActiveTab = ref('fee');          // 默认停在「费用明细」
                 const detailRightCollapsed = ref(true);      // 轨迹追踪默认收起
                 const detailEditMode = ref('view'); // 'view' | 'box' | 'measure' | 'transfer'
                 const saveDetailEdit = () => { detailEditMode.value = 'view'; ElMessage.success('保存成功'); };
@@ -4869,7 +4327,7 @@
                 const editForm = reactive({
                     chargeWeight: '160.0', realWeight: '150.5', volWeight: '160.0', ratio: '6000', volume: '2.5', boxes: '10',
                     service: '空派-包税-DPD', currency: 'USD', cusNo: 'CUS-123456', relNo: 'REL-001', sales: '王五', cs: '赵六', cusRemark: '加急件', innerRemark: '',
-                    declareWay: '普通报关', clearWay: '一般贸易清关', importDeclareMode: '一般贸易清关', exportInspectFirst: '否', terms: 'DDP', vat: 'GB123456789', eori: 'GB123456789000',
+                    declareWay: '普通报关', clearWay: '一般贸易清关', terms: 'DDP', vat: 'GB123456789', eori: 'GB123456789000',
                     insuranceType: 'feidian', insuranceProduct: 'basic', insuranceFee: '10.00',
                     isFba: '是', addrShort: '美西1仓', receiver: 'John Doe', phone: '13800000000', country: 'US', city: 'Los Angeles', state: 'CA', zip: '90001', address: '123 Main Street',
                     isDeliveryToDoor: '是', deliveryStation: '花都仓', warehouseCode: 'ONT8'
@@ -4927,60 +4385,31 @@
                     ElMessage.success('运单修改保存成功');
                 };
 
-                // ===== 导入（统合单票+批量） =====
-                const downloadTemplateSingle = () => {
-                    // 员工端：实际使用时根据 importCustomer 动态生成模板
-                    // 原型阶段下载通用模板
-                    const a = document.createElement('a');
-                    a.href = '../../导出模板/单票导入模板-20260704-货主端.xlsx';
-                    a.download = `单票导入模板_${importCustomer.value}.xlsx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    ElMessage.success('模板下载中。如未自动下载，请到「导出模板」文件夹手动获取');
-                };
-
+                // ===== 导入 =====
                 const dialogImport = ref(false);
                 const importStep = ref(0);
-                const importCustomer = ref('');
+                const importTemplateReady = ref(false);
                 const importFileName = ref('');
                 const importLoading = ref(false);
-                const importResult = reactive({ successCount: 0, failCount: 0, failures: [] });
-                const resetImport = () => { importStep.value = 0; importCustomer.value = ''; importFileName.value = ''; importLoading.value = false; importResult.successCount = 0; importResult.failCount = 0; importResult.failures = []; };
+                const resetImport = () => { importStep.value = 0; importTemplateReady.value = false; importFileName.value = ''; importLoading.value = false; };
                 const onImportFileChange = (file) => { importFileName.value = file.name; };
                 const downloadTemplate = () => {
                     const a = document.createElement('a');
                     a.href = '../../导出模板/批量导入模板-20260708-货主端.xlsx';
-                    a.download = `批量导入模板_${importCustomer.value}.xlsx`;
+                    a.download = '运单导入模板-货主端.xlsx';
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                    importTemplateReady.value = true;
                     ElMessage.success('模板下载中。如未自动下载，请到「导出模板」文件夹手动获取');
                 };
                 const executeImport = () => {
                     importLoading.value = true;
                     setTimeout(() => {
                         importLoading.value = false;
-                        importResult.successCount = 75;
-                        importResult.failCount = 5;
-                        importResult.failures = [
-                            { sheet: '运单列表', location: '第3行·服务', reason: '服务未填写' },
-                            { sheet: '运单列表', location: '第7行·地址简称', reason: '"LAX-02"不在地址库中' },
-                            { sheet: '运单列表', location: '第9行·服务', reason: '服务目的国(US)与地址国家(GB)不匹配' },
-                            { sheet: '货箱明细', location: '第4行·所属运单', reason: '关联的运单行号对应运单已失败' },
-                            { sheet: '货箱明细', location: '第12行·商品SKU', reason: '"SKU-889"不在SKU库中' },
-                        ];
-                        importStep.value = 2;
+                        ElMessage.success('导入任务已创建，系统正在后台处理，可在后台任务中查看进度。');
+                        dialogImport.value = false;
                     }, 1500);
-                };
-                const downloadFailureList = () => {
-                    const wb = XLSX.utils.book_new();
-                    const headers = ['Sheet','位置','失败原因'];
-                    const rows = importResult.failures.map(f => [f.sheet, f.location, f.reason]);
-                    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-                    ws['!cols'] = [{ wch: 22 }, { wch: 16 }, { wch: 50 }];
-                    XLSX.utils.book_append_sheet(wb, ws, '失败清单');
-                    XLSX.writeFile(wb, `导入失败清单_${new Date().toISOString().slice(0,10)}.xlsx`);
                 };
                 // ===== 导入 END =====
 
@@ -4989,8 +4418,8 @@
                 const dialogPickup = ref(false);
                 const dialogCompare = ref(false);
                 const showCompareResult = ref(false);
-                const dialogPrint = ref(false);
-                const dialogExpressPrint = ref(false);                const dialogRouteAdd = ref(false);
+                const dialogSysLabel = ref(false);
+                const dialogRouteAdd = ref(false);
                 const dialogRouteDel = ref(false);
                 const dialogRouteInfo = ref(false);
                 const dialogStat = ref(false);
@@ -5031,46 +4460,11 @@
                     if (selection.value.length === 0) return false;
                     return selection.value.every(s => ['收货中','已收货','转运中'].includes(s.status));
                 });
-                // 费用操作允许的运单状态（列表入口与详情入口共用同一份口径）：
-                // 已下单 / 收货中 尚未产生计费；已取消 / 退件 须走赔付或红冲，一律不允许费用操作
-                const FEE_ALLOWED_STATES = ['已收货','转运中','已到港','已清关','已到仓','已签收'];
+                // 费用管理: 已收货→已签收
                 const canFee = computed(() => {
                     if (selection.value.length === 0) return false;
-                    return selection.value.every(s => FEE_ALLOWED_STATES.includes(s.status));
+                    return selection.value.every(s => ['已收货','转运中','已到港','已清关','已到仓','已签收'].includes(s.status));
                 });
-                // 新增费用许可（按方向）：运单状态允许 + 至少有一票在该方向未整票审计
-                const canAddFeeByDir = (dir) => {
-                    if (!canFee.value) return false;
-                    return selection.value.some(s => !waybillFeeAudited(s, dir || 'ar'));
-                };
-                const canAddFeeAr = computed(() => canAddFeeByDir('ar'));
-                const canAddFeeAp = computed(() => canAddFeeByDir('ap'));
-
-                // 详情抽屉：当前运单是否允许「新增」费用（运单已整单审计则整票不允许加）
-                const feeWaybillOperable = computed(() => !!currentRow.value && FEE_ALLOWED_STATES.includes(currentRow.value.status) && !waybillFeeAudited(currentRow.value, 'ar'));
-                const feeWaybillLockReason = computed(() => {
-                    const cur = currentRow.value || {};
-                    const st = cur.status || '';
-                    if (!FEE_ALLOWED_STATES.includes(st)) return `运单状态「${st}」不支持费用操作` + (['已取消','退件'].includes(st) ? '，赔付类费用请走赔付流程' : '，收货完成后才产生计费');
-                    if (waybillFeeAudited(cur, 'ar')) return `运单「应收」已整票审计（${cur.arAuditBy || '财务'} · ${cur.arAuditAt || ''}），整票不允许新增应收费用；如需补收请先到「财务中心 → 运单审计」反审计应收`;
-                    return '';
-                });
-                // 两层审计标签：
-                //   ① 运单审计标签（waybill.feeAuditStatus）= 待审计 / 已审计 —— 「整单审计通过」写在运单上，**已审计 → 整票不允许新增费用**
-                //   ② 流水审计标签（ar_flow.auditStatus）= 待业务审计 / 已审计 / 已红冲 —— **运单未审计但该条已审计 → 该条不可变更，只能加新流水**
-                // 运单在该方向是否已整票审计（dir: 'ar' 应收 / 'ap' 应付）
-                const waybillFeeAudited = (w, dir) => !!w && (dir === 'ap' ? w.apAuditStatus : w.arAuditStatus) === '已审计';
-                // 行级冻结边界（优先级：运单状态 → 运单级审计 → 账单关联 → 流水级审计）
-                const feeRowLockReason = (row) => {
-                    const cur = currentRow.value || {};
-                    if (!FEE_ALLOWED_STATES.includes(cur.status || '')) return `运单状态「${cur.status}」不支持费用操作`;
-                    if (waybillFeeAudited(cur, 'ar')) return `运单「应收」已整票审计（${cur.arAuditBy || '财务'} · ${cur.arAuditAt || ''}），应收流水全部冻结；如需变更请到「财务中心 → 运单审计」反审计应收`;
-                    if (row && row.billNo) return `已生成账单（${row.billNo}），彻底冻结；如需调整请反审计整票运单后红冲`;
-                    if (row && row.auditStatus === '已审计') return '该条流水已审计，不可变更；如需补收请新增流水';
-                    if (row && row.auditStatus === '已红冲') return '已红冲流水，只读';
-                    return '';
-                };
-                const feeRowEditable = (row) => feeRowLockReason(row) === '';
 
                 // 资料修改弹窗 — 按权限矩阵控制字段显隐
                 const editPermChecks = computed(() => {
@@ -5085,8 +4479,6 @@
                         内部备注: noneIn('已取消', '退件'),
                         报关方式: noneIn('已清关', '已到仓', '已签收', '已取消', '退件'),
                         清关方式: noneIn('已清关', '已到仓', '已签收', '已取消', '退件'),
-                        进口申报模式: noneIn('已清关', '已到仓', '已签收', '已取消', '退件'),
-                        出口先查后装模式: noneIn('已清关', '已到仓', '已签收', '已取消', '退件'),
                     };
                 });
                 const onEditDialogOpen = () => { /* 预留：弹窗打开时的初始化逻辑 */ };
@@ -5100,6 +4492,8 @@
                 // Fee
                 const dialogFeeAr = ref(false);
                 const dialogFeeAp = ref(false);
+                const dialogFeeAudit = ref(false);
+                const dialogFeeAntiAudit = ref(false);
                 const dialogStatusAdj = ref(false);
                 
                 const dialogAddFbaAddr = ref(false);
@@ -5315,381 +4709,34 @@
                     return (insuranceAmount.value * insuranceRate.value).toFixed(2);
                 });
                 
-                const compareChecks = ref(['UPS', 'FedEx']);  // 尾程派送比价用
-                // 快递比价弹框 state
-                const compareRefNos = ref([]);             // 参考号，按运单索引
-                const compareSelected = ref([]);            // 选中的承运商（绿色框），按运单索引
-                const compareCheckedChannels = ref([]);     // 2D：每运单每个渠道是否勾选参与比价
-                // 渠道数据源
-                const compareAllChannels = [
-                    { key: 'UPS',  label: 'UPS',  base: 'zhongmeng-UPS-UPS@Gr',    cost: 120 },
-                    { key: 'FedEx', label: 'FedEx', base: 'zhongmeng-FedEx-FedEx@Gr', cost: 125 },
-                    { key: 'USPS', label: 'USPS', base: '打单易-USPS Ground',        cost: 138 },
-                    { key: 'DHL',  label: 'DHL',  base: '打单易-DHL Express',        cost: 142 },
-                ];
-                // 每个运单有自己默认的渠道组合 + 各自独立的缓存状态
-                const genMockCompare = (idx) => {
-                    // 不同运单默认不同渠道：idx=0 全有缓存，idx=1 缺USPS，idx=2 缺DHL+USPS，其余随机
-                    const cachedKeys = (() => {
-                        if (idx === 0) return ['UPS', 'FedEx', 'USPS', 'DHL'];
-                        if (idx === 1) return ['UPS', 'FedEx', 'DHL'];
-                        if (idx === 2) return ['UPS', 'FedEx'];
-                        // 其余运单随机 2~4 个渠道有缓存
-                        const all = ['UPS', 'FedEx', 'USPS', 'DHL'];
-                        const n = 2 + Math.floor(Math.random() * 3);
-                        return all.sort(() => Math.random() - 0.5).slice(0, n);
-                    })();
-                    return compareAllChannels.map((c, i) => ({
-                        channelName: c.base,
-                        label: c.label,
-                        cost: cachedKeys.includes(c.key) ? (c.cost + idx * 3 + Math.random() * 5).toFixed(2) : null,
-                        cached: cachedKeys.includes(c.key),
-                        checked: cachedKeys.includes(c.key),  // 有缓存的默认勾选
-                        isLowest: false
-                    })).map((c, i, arr) => {
-                        // 有缓存渠道中，最低价标为推荐
-                        const cached = arr.filter(x => x.cached);
-                        if (cached.length > 0 && c.cached) {
-                            const minCost = Math.min(...cached.map(x => parseFloat(x.cost)));
-                            c.isLowest = parseFloat(c.cost) === minCost;
-                        }
-                        return c;
-                    });
-                };
-                const compareMockData = ref([]);
-                const compareCachedCount = computed(() => {
-                    return compareMockData.value.filter(d => d && d.length > 0).length;
-                });
-                // 表格行数据：合并运单信息 + 报价数据
-                const compareTableData = computed(() => {
-                    return selectedOrderNos.value.map((no, i) => {
-                        const channels = compareMockData.value[i] || [];
-                        return {
-                            orderNo: no,
-                            user: ['szcross','gzeda','ywscm','jm123'][i % 4],
-                            country: 'US',
-                            city: i === 0 ? 'Los Angeles' : 'New York',
-                            addrType: i === 0 ? '商业' : '住宅',
-                            boxes: 8 + i,
-                            weight: (45.2 + i * 10).toFixed(1),
-                            channels: channels.map(c => ({
-                                label: c.label,
-                                cost: c.cost,
-                                cached: c.cached,
-                                checked: c.checked,
-                                isLowest: c.isLowest
-                            }))
-                        };
-                    });
-                });
-                const onChannelCheck = (rowIdx, chIdx, checked) => {
-                    // 直接更新 channel 对象的 checked 状态
-                    if (compareMockData.value[rowIdx] && compareMockData.value[rowIdx][chIdx]) {
-                        compareMockData.value[rowIdx][chIdx].checked = checked;
-                    }
-                };
-                const initCompareDialog = () => {
-                    const count = selectedOrderNos.value.length;
-                    compareRefNos.value = selectedOrderNos.value.map((no, i) => no + '-EXP');
-                    compareMockData.value = selectedOrderNos.value.map((_, i) => genMockCompare(i));
-                    // 默认选中每个运单有缓存的最低价渠道
-                    compareSelected.value = compareMockData.value.map(data => {
-                        const cached = data.filter(d => d.cached);
-                        if (cached.length === 0) return '';
-                        const lowest = cached.reduce((a, b) => parseFloat(a.cost) < parseFloat(b.cost) ? a : b);
-                        return lowest.label;
-                    });
-                };
-                const handleRecompare = (idx) => {
-                    // 重新比价：勾选的渠道生成新报价，未勾选的清空缓存
-                    compareMockData.value[idx] = compareMockData.value[idx].map(c => {
-                        if (c.checked) {
-                            return { ...c, cached: true, cost: (100 + Math.random() * 50).toFixed(2), isLowest: false };
-                        }
-                        return { ...c, cached: false, cost: null, isLowest: false };
-                    });
-                    // 重新计算最低价
-                    const arr = compareMockData.value[idx];
-                    const cachedList = arr.filter(c => c.cached);
-                    if (cachedList.length > 0) {
-                        const minCost = Math.min(...cachedList.map(c => parseFloat(c.cost)));
-                        const lowest = cachedList.find(c => parseFloat(c.cost) === minCost);
-                        if (lowest) lowest.isLowest = true;
-                        compareSelected.value[idx] = lowest.label;
-                    }
-                };
-                const handleRecompareAll = () => {
-                    for (let i = 0; i < selectedOrderNos.value.length; i++) {
-                        handleRecompare(i);
-                    }
-                };
-                const onChannelSelect = (idx, row) => {
-                    compareSelected.value[idx] = row.channelName;
-                };
-                const handleConfirmCompare = () => {
-                    const unselected = compareSelected.value.filter((v, i) => i < selectedOrderNos.value.length && !v).length;
-                    if (unselected > 0) {
-                        ElementPlus.ElMessage.warning('请为每个运单选择一个渠道');
-                        return;
-                    }
-                    ElementPlus.ElMessage.success('已提交 ' + selectedOrderNos.value.length + ' 个运单的快递下单请求');
-                    dialogCompare.value = false;
-                };
+                const compareChecks = ref(['UPS', 'FedEx']);
                 const printFormat = ref('标签纸');
                 const printFormatInv = ref('A4');
                 const printFormatSup = ref('标签纸');
                 const extractTypes = ref(['提取供应商重量']);
                 const markType = ref('添加');
+                const auditTypes = ref(['应收-运单及流水']);
                 const insureType = ref('按货值');
                 const podStatus = ref('否');
                 const podVisible = ref('否');
                 const buyInsurance = ref('是');
                 const fileVisible = ref('是');
-                // 入口上下文：'detail' = 运单详情的费用 tab（该运单）；'list' = 运单列表工具栏（勾选的运单，可多票）
-                const feeAddContext = ref({ source: 'detail', waybills: [] });
-                const newFeeRow = () => ({
-                    waybillNos: (feeAddContext.value.waybills || []).filter(w => !waybillFeeAudited(w, 'ar')).map(w => w.orderNo),
-                    type: '', rules: [], ruleId: null, autoHint: '', ruleTag: '',
-                    unitPrice: null, unit: '', currency: 'CNY', rate: 1, quantity: 1, amount: 0,
-                    description: '', remark: ''
-                });
-                const feeArList = ref([newFeeRow()]);
-                const feeApList = ref([newFeeRow()]);
-
-                // 费用类型字典（引用头程管理 fee_type，unitPrice=null 表示直接填金额）
-                const feeTypeArOptions = [
-                    { name: '运费', unitPrice: null, unit: '' },
-                    { name: '周六派送费', unitPrice: 50, unit: '票' },
-                    { name: '超重费', unitPrice: 20, unit: 'kg' },
-                    { name: '地址附加费', unitPrice: 15, unit: '票' },
-                    { name: '商品附加费', unitPrice: 5, unit: '件' },
-                    { name: '报关费', unitPrice: 120, unit: '票' },
-                    { name: '库内贴标费', unitPrice: 0.5, unit: '张' },
-                    { name: '运费优惠' }, { name: '泡比优惠' }, { name: '附加费优惠' }
-                ];
-
-                // 费用类型 × 规则绑定（反查：某费用类型下有哪些**可选的**来源规则）
-                //   有 rules ：该费用类型被「人工添加型」附加费规则（surcharge_rule.rule_type=30）的计价明细「应收」行引用
-                //              → 「来源规则」列出现且**选填**：选了 → 币种 / 单价 / 计价单位按规则带出并置灰、流水种类=附加费；不选 → 自由填写、流水种类=手工新增
-                //   有 autoHint：该费用类型通常由系统自动生成（运价行 / 字段匹配 / 字段&公式 / 优惠规则）
-                //              → **仍然允许手工新增**（业务认为自动行不对时，先删除原行再手工新增），仅在「流水种类」标签上给悬浮提示
-                const feeTypeArBindings = {
-                    '运费': { autoHint: '运费通常由运价行在收货完成时自动生成；手工新增的行不参与重算，若原自动行有误请先删除再补录' },
-                    '周六派送费': { rules: [{ id: 7021, name: '周六派送费（人工添加 · 按票）', unit: '票', unitPrice: 50, currency: 'CNY', tagId: 4021, tagName: '周六派送' }] },
-                    '超重费': { rules: [
-                        { id: 7012, name: '超重超长（人工添加 · 按箱）', unit: '箱', unitPrice: 20, currency: 'CNY', tagId: 4001, tagName: '超长' },
-                        { id: 7013, name: '超重费（人工添加 · 按 KG）', unit: 'KG', unitPrice: 12, currency: 'CNY', tagId: 4001, tagName: '超长' }
-                    ] },
-                    '地址附加费': { autoHint: '地址附加费通常由字段匹配型规则在收货完成时自动生成；手工新增的行不参与重算' },
-                    '商品附加费': { autoHint: '商品附加费通常由字段匹配型规则在收货完成时自动生成；手工新增的行不参与重算' },
-                    '库内贴标费': { rules: [{ id: 7002, name: '库内贴标费（人工添加 · 按张）', unit: '张', unitPrice: 0.5, currency: 'CNY', tagId: 4002, tagName: '库内贴标' }] },
-                    '报关费': {},
-                    '运费优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' },
-                    '泡比优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' },
-                    '附加费优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' }
-                };
-
-                // 弹窗顶部与逐行：单票 = 主运单号（从详情或列表单选进入）；多票 = 逐行指定运单
-                const feeAddWaybillOptions = computed(() => (feeAddContext.value.waybills || []).map(w => w.orderNo));
-                // 已整单审计的票在「适用运单」里不可选（整票不允许加费用）
-                const feeAddWaybillDisabled = (no) => {
-                    const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
-                    return waybillFeeAudited(w, 'ar');
-                };
-                const feeAddWaybillText = computed(() => {
-                    const opts = feeAddWaybillOptions.value;
-                    if (!opts.length) return '—';
-                    if (opts.length === 1) return opts[0] + '（主运单号）';
-                    return `已选 ${opts.length} 票：${opts.slice(0, 3).join(' / ')}${opts.length > 3 ? ' …' : ''}`;
-                });
-                const feeAddCustomerText = computed(() => {
-                    const ws = feeAddContext.value.waybills || [];
-                    return ws.length === 1 ? (ws[0].user || '—') : (ws.length ? '多票 · 见各流水' : '—');
-                });
-                const feeAddServiceText = computed(() => {
-                    const ws = feeAddContext.value.waybills || [];
-                    return ws.length === 1 ? (ws[0].service || '—') : (ws.length ? '多票 · 见各流水' : '—');
-                });
-                // 该行实际适用的运单：多票上下文取行上多选；单票上下文即唯一样本
-                const feeRowWaybills = (row) => (feeAddWaybillOptions.value.length > 1 ? (row.waybillNos || []) : feeAddWaybillOptions.value).filter(Boolean);
-                // 批量合计 = 单价 × 计费量 × 票数
-                const feeBatchAmountText = (row) => feeAmountText({ amount: Number(((row.unitPrice || 0) * (row.quantity || 0) * feeRowWaybills(row).length).toFixed(2)) });
-                // 流水种类：选了来源规则 = 附加费；否则 = 手工新增
-                const feeArKindLabel = (row) => (row && row.ruleId ? '附加费' : '手工新增');
-                // 选了来源规则 → 币种 / 单价 / 计价单位 / 汇率按规则带出，不允许改
-                const feeArRowLocked = (row) => !!(row && row.ruleId);
-
-                // 选费用类型 → 带出可选来源规则（选填）与「通常自动生成」提示；带不出规则即自由填写
-                const handleFeeArTypeChange = (row) => {
-                    row.ruleId = null; row.rules = []; row.autoHint = '';
-                    if (!row.type) { row.kindLabel = '手工新增'; return; }
-                    const b = feeTypeArBindings[row.type] || {};
-                    row.rules = b.rules || [];
-                    row.autoHint = b.autoHint || '';
-                    if (row.rules.length === 1) { row.ruleId = row.rules[0].id; handleFeeArRuleChange(row); return; }
-                    const opt = feeTypeArOptions.find(t => t.name === row.type) || {};
-                    if (opt.unit != null) row.unit = opt.unit;
-                    if (opt.unitPrice != null) row.unitPrice = opt.unitPrice;
-                    row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
-                };
-
-                // 选 / 清空来源规则：清空后回到自由填写（按费用类型字典带出默认单价）
-                const handleFeeArRuleChange = (row) => {
-                    const r = (row.rules || []).find(x => x.id === row.ruleId);
-                    if (!r) {
-                        const opt = feeTypeArOptions.find(t => t.name === row.type) || {};
-                        row.unit = opt.unit || ''; row.unitPrice = (opt.unitPrice != null ? opt.unitPrice : null);
-                        row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
-                        row.ruleTag = '';
-                        return;
-                    }
-                    row.currency = r.currency; row.unit = r.unit; row.unitPrice = r.unitPrice;
-                    row.ruleTag = r.tagName || '';   // 规则上绑定的「附加费标识」，保存后自动打在运单上
-                    row.rate = r.currency === 'CNY' ? 1 : (row.rate || 1);
-                    row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
-                };
-
-                // 保存：校验 → 落库（source_type=20 / generate_node=30；拣货时间与创建日期由后台赋值）
-                const saveFeeAr = () => {
-                    const feeRows = feeArList.value.filter(r => r.type);
-                    if (!feeRows.length) { ElMessage.warning('请先选择费用类型'); return; }
-                    for (const r of feeRows) {
-                        if (!feeRowWaybills(r).length) { ElMessage.warning(`「${r.type}」请至少选择一票适用运单`); return; }
-                        const audited = feeRowWaybills(r).filter(no => feeAddWaybillDisabled(no));
-                        if (audited.length) { ElMessage.warning(`运单 ${audited.join('、')} 已整单审计，不允许新增费用；如需补收请先反审计`); return; }
-                        if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.type}」请填写计费量`); return; }
-                        if (/优惠$/.test(r.type) && !r.description) { ElMessage.warning(`「${r.type}」为优惠类手工新增，请在「描述」中说明原因`); return; }
-                    }
-                    // 一条费用 × 每票运单 = 一条流水（批量铺费用）
-                    const rows = [];
-                    feeRows.forEach(r => feeRowWaybills(r).forEach(no => rows.push(Object.assign({}, r, { waybillNo: no }))));
-                    const now = new Date();
-                    const pad = n => String(n).padStart(2, '0');
-                    const createdAt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-                    let seq = 9100;
-                    // 选中来源规则的流水 → 按规则绑定的「附加费标识」为运单打标（与自动命中口径一致；重复标识不重复打）
-                    const tagNames = [];
-                    rows.forEach(r => {
-                        const rl = (r.rules || []).find(x => x.id === r.ruleId);
-                        if (rl && rl.tagName && !tagNames.includes(rl.tagName)) tagNames.push(rl.tagName);
-                    });
-                    rows.forEach(r => {
-                        const rule = (r.rules || []).find(x => x.id === r.ruleId) || null;
-                        feeArFlows.value.push({
-                            id: seq++,
-                            type: r.type, kindLabel: rule ? '附加费' : '手工新增', currency: r.currency,
-                            unitPrice: r.unitPrice, unit: r.unit, quantity: r.quantity,
-                            amount: Number(((r.unitPrice || 0) * (r.quantity || 0)).toFixed(2)),
-                            rate: r.rate, description: r.description || '', remark: r.remark || '',
-                            pickTime: '2026-04-14 16:20',
-                            source: rule ? '附加费规则' : '李四',
-                            sourceType: 20, createdBy: '李四', createdAt, generateNode: 30,
-                            sourceRuleType: rule ? 40 : undefined,
-                            sourceRuleId: rule ? rule.id : undefined,
-                            sourceRuleName: rule ? rule.name : undefined
-                        });
-                    });
-                    // 打标按「该行所属运单」执行（详情进入 = 该运单；列表多选进入 = 行上所选运单），同一标识不重复打
-                    if (tagNames.length) {
-                        const tagByWaybill = {};
-                        rows.forEach(r => {
-                            const rl = (r.rules || []).find(x => x.id === r.ruleId);
-                            if (!rl || !rl.tagName) return;
-                            const key = r.waybillNo || '';
-                            (tagByWaybill[key] = tagByWaybill[key] || []).push(rl.tagName);
-                        });
-                        Object.keys(tagByWaybill).forEach(no => {
-                            const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
-                            if (!w) return;
-                            const marks = w.surchargeMark || (w.surchargeMark = []);
-                            tagByWaybill[no].forEach(t => { if (!marks.includes(t)) marks.push(t); });
-                        });
-                    }
-                    const waybillCount = [...new Set(rows.map(r => r.waybillNo).filter(Boolean))].length;
-                    const batchNote = feeRows.length !== rows.length ? `${feeRows.length} 条费用 × ${waybillCount} 票 = ` : '';
-                    ElMessage.success(`已添加 ${batchNote}${rows.length} 条应收流水` + (tagNames.length ? `，并按规则为运单打标：${tagNames.join('、')}` : ''));
-                    dialogFeeAr.value = false;
-                    feeArList.value = [newFeeRow()];
-                };
-                const feeTypeApOptions = [
-                    { name: '操作费', unitPrice: 10, unit: '票' },
-                    { name: '提货费', unitPrice: 30, unit: '票' },
-                    { name: '拖车费', unitPrice: null, unit: '' },
-                    { name: '干线运输费', unitPrice: null, unit: '' }
-                ];
-
-                // 费用 tab 展示的业务流水（粒度=运单 × 费用项；一条费用项一行、优惠独立成行）
-                // 收货完成时由系统生成：运费（预置费用类型）→ 运费优惠 / 泡比优惠（费用类型取优惠规则配置的）→ 附加费（匹配动作类型=加收费用的规则）→ 附加费优惠
-                // 每条流水留痕来源规则，供运单审计下钻「这笔钱是哪条规则给的」；生成后进入账单草稿池（未关联账单即停留池内）
+                const feeArList = ref([{}]);
+                const feeApList = ref([{}]);
+                // 费用明细（只读）：运单收货完成后系统生成的应收业务流水，逐行展示；内部字段（备注 / 数据来源 / 来源规则 / 创建人）不下发
                 const feeArFlows = ref([
-                    { id: 9001, auditStatus: '待业务审计', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', remark: '当周公布价 × 计费重量', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
-                    { id: 9002, auditStatus: '已审计', type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', remark: '客户特批（S 级客户）', pickTime: '2026-04-14 16:20', source: '特批规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 20, sourceRuleId: 5021, sourceRuleName: 'S级客户运费特批 -1.00/KG' },
-                    { id: 9003, auditStatus: '已审计', type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', remark: '泡比 360 ≥ 阈值 300', pickTime: '2026-04-14 16:20', source: '泡比规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 30, sourceRuleId: 6012, sourceRuleName: '密度阈值300 泡比优惠 -0.50/KG' },
-                    { id: 9004, auditStatus: '已审计', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', remark: '拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
-                    { id: 9005, auditStatus: '已审计', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
-                    { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
-                    { id: 9007, auditStatus: '待业务审计', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
+                    { type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', pickTime: '2026-04-14 16:20' },
+                    { type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', pickTime: '2026-04-14 16:20' },
+                    { type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', pickTime: '2026-04-14 16:20' },
+                    { type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', pickTime: '2026-04-14 16:20' },
+                    { type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', pickTime: '2026-04-14 16:20' },
+                    { type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', pickTime: '2026-04-14 16:20' }
                 ]);
-                // 运单应收净额 = 各行金额的代数和（优惠已独立成行，不再逐行做「公布价 − 优惠」）
                 const feeArNet = computed(() => feeArFlows.value.reduce((s, r) => s + Number(r.amount || 0), 0));
                 const feeAmountText = (row) => {
                     const v = Number((row && row.amount) || 0);
                     const abs = Math.abs(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     return (v < 0 ? '-' : '') + abs;
-                };
-                const feeApFlows = ref([
-                    { type: '操作费', kindLabel: '手工新增', currency: 'CNY', amount: 80.00, rate: 1, quantity: 8, remark: '分拣操作', time: '2026-04-13 10:00', source: '李四' }
-                ]);
-
-                const pricingUnitOptions = ['KG', 'm³', '票', '箱', '数量'];
-
-                // 生成节点 / 来源规则类型标签（行详情用）
-                const generateNodeLabel = (row) => ({ 10: '收货完成', 20: '拣货完成', 30: '人工添加' }[row && row.generateNode] || '—');
-                const feeRuleTypeLabel = (t) => ({ 10: '运价行', 20: '运费优惠规则', 30: '泡比优惠规则', 40: '附加费规则', 50: '附加费优惠规则' }[t] || '—');
-
-                // 行详情：来源规则 / 数据来源 / 创建人 / 创建时间 / 生成节点 —— 运单审计下钻「这笔钱是哪条规则给的」
-                const feeArDetail = ref(null);
-                const openFeeArDetail = (row) => { feeArDetail.value = row; };
-
-                // 编辑：人工添加行可改金额口径；系统自动行仅可改「描述 + 内部备注」（其余字段由重算维护）
-                const feeArEdit = ref(null);
-                const openFeeArEdit = (row) => {
-                    const reason = feeRowLockReason(row);
-                    if (reason) { ElMessage.warning(reason); return; }
-                    feeArEdit.value = Object.assign({}, row);
-                };
-                const feeEditLocked = computed(() => !!feeArEdit.value && feeArEdit.value.sourceType === 10);
-                const saveFeeArEdit = () => {
-                    if (!feeArEdit.value) return;
-                    if (!feeRowEditable(feeArEdit.value)) { ElMessage.warning(feeRowLockReason(feeArEdit.value)); feeArEdit.value = null; return; }
-                    const idx = feeArFlows.value.findIndex(r => r.id === feeArEdit.value.id);
-                    if (idx > -1) feeArFlows.value[idx] = Object.assign({}, feeArEdit.value);
-                    ElMessage.success('已保存');
-                    feeArEdit.value = null;
-                };
-
-                // 选费用类型：带出单价与计价单位，并按 单价×计费量 自动算金额
-                const handleFeeTypeChange = (row, direction) => {
-                    const opts = direction === 'ar' ? feeTypeArOptions : feeTypeApOptions;
-                    const opt = opts.find(o => o.name === row.type);
-                    if (opt) {
-                        if (opt.unitPrice != null) row.unitPrice = opt.unitPrice;
-                        if (opt.unit) row.unit = opt.unit;
-                    }
-                    if (opt && opt.unitPrice != null && row.quantity) {
-                        row.amount = Number((opt.unitPrice * row.quantity).toFixed(2));
-                    }
-                };
-                // 手工改单价：金额 = 单价 × 计费量（可再手工覆盖）
-                const handleFeeUnitPriceChange = (row) => {
-                    if (row.unitPrice != null && row.quantity) {
-                        row.amount = Number((row.unitPrice * row.quantity).toFixed(2));
-                    }
-                };
-                // 选币种：人民币默认1，外币自动取实时汇率（mock）
-                const handleFeeCurrencyChange = (row) => {
-                    const rateMap = { CNY: 1, USD: 7.25, HKD: 0.92, EUR: 7.85 };
-                    row.rate = rateMap[row.currency] || 1;
                 };
 
                 const handleSelectionChange = (val) => { selection.value = val; };
@@ -5735,8 +4782,7 @@
                     for (let i=0; i<count; i++) {
                         const si = i % skus.length;
                         const st = statuses[i % statuses.length];
-                        // 已收货及以上状态模拟拣货数据
-                        const hasPick = ![10,90].includes(st); // 已下单/已取消 无拣货
+                        const hasPick = ![10,90].includes(st);
                         boxes.push({
                             sysNo: genSysNo(i+1),
                             fbaExtNo: genFbaExtNo('', i+1),
@@ -5779,42 +4825,29 @@
                     drawerDetail.value = true;
                 };
 
+                const openPrintDialog = () => {
+                    dialogSysLabel.value = true;
+                };
+
                 const openDialog = (dialogRef) => {
-                    const dialogs = { 
-                        dialogPickup, dialogCompare, dialogPrint, dialogEdit, dialogMark, dialogInsurance, dialogImport
+                    const dialogs = {
+                        dialogPickup, dialogCompare, dialogSysLabel, dialogEdit, dialogMark, dialogInsurance, dialogImport
                     };
-                    if(dialogRef === 'dialogCompare') initCompareDialog();
+                    if(dialogRef === 'dialogCompare') showCompareResult.value = false;
                     if(dialogRef === 'dialogImport') resetImport();
                     if(dialogs[dialogRef]) dialogs[dialogRef].value = true;
                 };
 
-                const openFeeArDialog = (source) => {
-                    let ways = [];
-                    if (source === 'list') {
-                        ways = (selection.value || []).slice();
-                        if (!ways.length) { ElMessage.warning('请先勾选需要添加应收的运单'); return; }
-                    } else if (currentRow.value && currentRow.value.orderNo) {
-                        ways = [currentRow.value];
-                    } else {
-                        ways = (selection.value || []).slice();
-                        if (!ways.length) { ElMessage.warning('请先勾选需要添加应收的运单'); return; }
-                    }
-                    feeAddContext.value = { source: source || 'detail', waybills: ways };
-                    feeArList.value = [newFeeRow()];
-                    dialogFeeAr.value = true;
-                };
-
                 const handleCommand = (command) => {
-                    if (command === 'feeAr') { openFeeArDialog('list'); return; }
                     // 权限拦截
                     if (command === 'cancelOrder' && !canCancel.value) { ElMessage.warning('所选运单状态不支持取消操作'); return; }
                     if (command === 'returnGoods' && !canReturn.value) { ElMessage.warning('所选运单状态不支持退件操作'); return; }
-                    if (['feeAp','feeAr'].includes(command) && !canFee.value) { ElMessage.warning('所选运单状态不支持费用操作'); return; }
+                    if (['feeAp','feeAr','feeAudit','feeAntiAudit'].includes(command) && !canFee.value) { ElMessage.warning('所选运单状态不支持费用操作'); return; }
                     if (['routeAdd','routeDel'].includes(command) && !canMarkOrRoute.value) { ElMessage.warning('所选运单状态不支持路由操作'); return; }
                     const map = {
                         'routeAdd': dialogRouteAdd, 'routeDel': dialogRouteDel,
                         'supPush': dialogSupPush, 'supExtract': dialogSupExtract, 'supPrint': dialogSupPrint, 'supPod': dialogSupPod,
-                        'feeAp': dialogFeeAp, 'feeAr': dialogFeeAr,
+                        'feeAp': dialogFeeAp, 'feeAr': dialogFeeAr, 'feeAudit': dialogFeeAudit, 'feeAntiAudit': dialogFeeAntiAudit,
                         'statusAdj': dialogStatusAdj, 'showStat': dialogStat
                     };
                     if (map[command]) {
@@ -5830,15 +4863,6 @@
                     }
                 };
 
-                // 打印标签下拉菜单（员工端：系统标签 / 快递标签）
-                const handlePrintCommand = (command) => {
-                    if (command === 'sysLabel') {
-                        dialogPrint.value = true;
-                    } else if (command === 'expressLabel') {
-                        dialogExpressPrint.value = true;
-                    }
-                };
-
                 const handleDelete = (msg) => {
                     ElMessageBox.confirm(msg + '，该操作不可恢复，是否继续？', '系统警告', {
                         confirmButtonText: '确定',
@@ -5851,7 +4875,6 @@
                 // ====== 导出功能 ======
                 const dialogExport = ref(false);
                 const exportSelected = ref(null);
-                const exportFileName = ref('');
                 const exportScope = ref('selected');
 
                 // 模拟从 API 加载的可用模板列表（按当前用户角色过滤）
@@ -5904,23 +4927,19 @@
                     drawerDetail, currentRow, userRole, detailActiveTab, detailRightCollapsed, detailEditMode, saveDetailEdit, cancelDetailEdit, canShowEditBoxBtn, canEditBoxFields, canShowEditMeasureBtn, canShowEditExpressBtn, detailExpandedSet, toggleDetailExpand, isDetailExpanded, openDetail, openEdit, openCreate, detailBoxPage, detailPageSize, detailFbaBoxPage, detailFbaTab, detailBoxTotalPages, detailPagedBoxes, detailFbaBoxesAll, detailPagedFbaBoxesFlat, dialogBoxCancelReturn, boxOpType, boxOpCandidates, boxOpSelected, canCancelOrReturnBox, openBoxCancelReturnDialog, onBoxOpTypeChange, initBoxCancelReturn, onBoxOpSelectionChange, confirmBoxCancelReturn, isEditMode, isEditing, editForm, saveEdit,
                     isOverviewEditing, overviewSaving, startOverviewEdit, cancelOverviewEdit, saveOverviewEdit,
                     dialogInsurance, formInsurance, calculateInsuranceFee, openInsuranceDialog, submitInsurance,
-                    dialogListConfig, dialogPickup, dialogCompare, showCompareResult, dialogPrint, dialogExpressPrint, dialogRouteInfo, dialogStat,
+                    dialogListConfig, dialogPickup, dialogCompare, showCompareResult, dialogSysLabel, dialogRouteInfo, dialogStat,
                     dialogRouteAdd, dialogRouteDel, dialogEdit, dialogMark,
                     dialogSupPush, dialogSupExtract, dialogSupPrint, dialogSupPod,
-                    dialogFeeAr, dialogFeeAp, dialogStatusAdj,
+                    dialogFeeAr, dialogFeeAp, dialogFeeAudit, dialogFeeAntiAudit, dialogStatusAdj,
                     dialogPick, dialogTransferNo, dialogAddBoxDetail, boxData, productActiveTab, isEditProduct, isEditBox, productData, nameData, brandOptions, attrOptions, boxLogisticsMap, boxLogisticsTag, getBoxStatusLabel, canRemoveBox, canReturnBox, canOperateBox, dialogEditFbaBox, dialogEditNonFbaBox, dialogEditMeasure, editMeasureBoxes, openEditMeasureDialog, confirmEditMeasure, dialogTagCompare, showTagCompareResult, dialogAddFbaAddr, dialogAddOtherAddr, dialogAddPrivateAddr, dialogAddSku, dialogAddVat, dialogEditSkuDetail,
-                    pickBoxes, pickWarehouse, useCustomerData, pickSnapshot, openPickDialog, calcPickFields, onCustomerDataCheck, confirmPick, pickDataLabel, formatPickData, getBoxChargeableWeight,
+                    pickBoxes, pickWarehouse, useCustomerData, pickSnapshot, openPickDialog, calcPickFields, onCustomerDataCheck, confirmPick, pickDataLabel, formatPickData, getBoxChargeableWeightShipper,
                     dialogDeclInfo, declForm, declDialogTitle, openDeclDialog, saveDeclInfo,
-                    downloadTemplateSingle,
-                    dialogImport, importStep, importCustomer, importFileName, importLoading, importResult, resetImport, onImportFileChange, downloadTemplate, executeImport, downloadFailureList,
+                    dialogImport, importStep, importTemplateReady, importFileName, importLoading, resetImport, onImportFileChange, downloadTemplate, executeImport,
                     dialogWorkOrder, dialogUploadFile, dialogModifyFile,
-                    dialogExport, exportSelected, exportScope, exportTemplates, exportFileName, executeExport,
-                    openDialog, handlePrintCommand, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn, canFee,
-                    compareChecks, compareTableData, compareRefNos, compareSelected, compareMockData, onChannelCheck, handleRecompare, handleRecompareAll, onChannelSelect, handleConfirmCompare,
-                    printFormat, printFormatInv, printFormatSup, extractTypes, markType, insureType,
-                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeApFlows, feeTypeArOptions, feeTypeApOptions, handleFeeTypeChange, handleFeeCurrencyChange, newFeeRow,
-                    feeArNet, feeAmountText, pricingUnitOptions, handleFeeUnitPriceChange,
-                    feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, feeEditLocked, feeRowEditable, feeRowLockReason, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, generateNodeLabel, feeRuleTypeLabel, openFeeArDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, feeArKindLabel, handleFeeArTypeChange, handleFeeArRuleChange,
+                    dialogExport, exportSelected, exportScope, exportTemplates, executeExport,
+                    openPrintDialog, openDialog, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn, canFee,
+                    compareChecks, printFormat, printFormatInv, printFormatSup, extractTypes, markType, auditTypes, insureType,
+                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeArNet, feeAmountText,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,

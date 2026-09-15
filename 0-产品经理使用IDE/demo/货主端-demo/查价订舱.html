@@ -124,11 +124,7 @@
             <span class="label">计费方式</span><el-checkbox-group v-model="filter.billingUnits" size="small"><el-checkbox label="KG">KG</el-checkbox><el-checkbox label="CBM">m³</el-checkbox></el-checkbox-group>
         </div>
         <div class="result-scroll">
-            <el-alert type="warning" show-icon :closable="false" title="超重超长费用将在拣货实测后计算" style="margin-bottom:10px;">
-                <div style="font-size:12px;line-height:1.7">
-                    以下报价依据您填写的箱数 / 尺寸 / 重量<b>预估</b>得出。其中<b>超重、超长</b>类附加费需以<b>货物入仓后拣货实测的尺寸与重量</b>为最终判定依据，<b>实际费用以实测结果为准</b>（可能高于或低于此处预估值）。
-                </div>
-            </el-alert>
+
             <div v-for="grp in filteredGroups" :key="grp.mode" class="mode-section">
                 <div class="mode-header" @click="toggleMode(grp.mode)">
                     <div style="display:flex;align-items:center;gap:10px"><span class="title">{{ grp.mode }}</span><el-tag size="small" :type="grp.rows.length?'success':'info'">{{ grp.rows.length }} 个报价</el-tag></div>
@@ -150,6 +146,7 @@
                 </div>
             </div>
             <div v-if="filteredResultCount===0" style="text-align:center;padding:40px;color:#909399;background:#fff;border-radius:8px">当前筛选条件下无匹配报价</div>
+            <div v-if="searched" style="margin-top:10px;padding:8px 12px;font-size:12px;color:#909399;background:#fff;border-radius:6px">本报价为预估参考，不含成本底价和盈亏标识。实际结算以运单为准。</div>
         </div>
     </div>
 </div>
@@ -361,7 +358,7 @@
             else{h+='<tr><td colspan="2" style="color:#C0C4CC">未命中泡比优惠（实重÷体积 < 阈值）</td></tr>';}
             h+='</table>';
             var finalUnit=row._afterFreight+row._scTotal+row._ddVal;
-            h+='<table class="cost-detail-table"><tr><th colspan="2">⑤ 最终报价</th></tr><tr class="total-row"><td>最终报价（公布价-运费优惠+附加费-泡比优惠）</td><td><b>¥'+finalUnit.toFixed(2)+'/'+unit+'</b></td></tr><tr><td>计费量</td><td>'+qty.toFixed(qty%1===0?0:2)+' '+unit+'</td></tr><tr class="total-row"><td>估算运费</td><td><b>¥'+(finalUnit*qty).toFixed(0)+'</b></td></tr></table>';
+            h+='<table class="cost-detail-table"><tr><th colspan="2">⑤ 最终报价</th></tr><tr class="total-row"><td>最终报价（(公布价 + 运费优惠值 + 泡比优惠值) + 附加费优惠后合计）</td><td><b>¥'+finalUnit.toFixed(2)+'/'+unit+'</b></td></tr><tr><td>计费量</td><td>'+qty.toFixed(qty%1===0?0:2)+' '+unit+'</td></tr><tr class="total-row"><td>估算运费</td><td><b>¥'+(finalUnit*qty).toFixed(0)+'</b></td></tr></table>';
             h+='<p style="color:#909399;font-size:11px;margin-top:6px">*不含成本底价和盈亏标识，估算运费为演示参考，实际结算以运单为准</p></div>';
             ElementPlus.ElMessageBox.alert(h,'费用明细 — '+row.channel,{confirmButtonText:'关闭',dangerouslyUseHTMLString:true,customStyle:'max-width:460px'});
         },

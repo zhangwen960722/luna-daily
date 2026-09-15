@@ -202,14 +202,13 @@
                 <el-table :data="currentDetails" border style="width: 100%">
                     <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" min-width="120"></el-table-column>
-                    <el-table-column label="公布价" min-width="110" align="right">
-                        <template #default="scope">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(scope.row.publishPrice) }}</template>
+                    <el-table-column prop="kind" label="流水种类" width="100" align="center"></el-table-column>
+                    <el-table-column label="单价" min-width="90" align="right">
+                        <template #default="scope">{{ formatMoney(scope.row.unitPrice) }}</template>
                     </el-table-column>
-                    <el-table-column label="优惠" min-width="110" align="right">
-                        <template #default="scope">-{{ currencySymbol(currentBill.currency) }}{{ formatMoney(scope.row.discount) }}</template>
-                    </el-table-column>
-                    <el-table-column label="应收净额" min-width="120" align="right">
-                        <template #default="scope">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(scope.row.amount) }}</template>
+                    <el-table-column prop="quantity" label="计费量" width="90" align="center"></el-table-column>
+                    <el-table-column label="金额" min-width="120" align="right">
+                        <template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? '#F56C6C' : ''}">{{ currencySymbol(currentBill.currency) }}{{ formatSigned(scope.row.amount) }}</span></template>
                     </el-table-column>
                 </el-table>
 
@@ -242,9 +241,14 @@
                 const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
                 const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
                 const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                // 带符号展示：负数=减钱（红字由模板控制），正数=加价
+                const formatSigned = (val) => {
+                    const v = Number(val) || 0;
+                    return (v < 0 ? '-' : '') + formatMoney(Math.abs(v));
+                };
 
                 const allBills = reactive([
-                    { billNo: 'AR-GZ-202608-001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1280.50, receivedAmount: 0, unreceivedAmount: 1280.50, status: '待确认', sentAt: '2026-08-01 10:00' },
+                    { billNo: 'AR-GZ-202608-001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1320.00, receivedAmount: 0, unreceivedAmount: 1320.00, status: '待确认', sentAt: '2026-08-01 10:00' },
                     { billNo: 'AR-SZ-202608-001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 860.00, receivedAmount: 0, unreceivedAmount: 860.00, status: '待确认', sentAt: '2026-08-01 10:05' },
                     { billNo: 'AR-GZ-202607-001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 3500.00, receivedAmount: 2219.50, unreceivedAmount: 1280.50, status: '部分核销', sentAt: '2026-07-01 10:00', confirmedAt: '2026-07-02 09:30' },
                     { billNo: 'AR-SZ-202607-001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 1800.00, receivedAmount: 0, unreceivedAmount: 1800.00, status: '已确认', sentAt: '2026-07-01 10:00', confirmedAt: '2026-07-03 15:00' },
@@ -252,16 +256,19 @@
                     { billNo: 'AR-SZ-202606-001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 1500.00, receivedAmount: 1500.00, unreceivedAmount: 0, status: '已核销', sentAt: '2026-06-01 10:00', confirmedAt: '2026-06-03 14:00' }
                 ]);
 
+                // 费用明细 = 该账单聚合的应收流水行（一条费用项一行、优惠独立成行、金额带符号）
                 const billDetails = {
                     'AR-GZ-202608-001': [
-                        { waybillNo: 'WB20260728001', feeType: '运费', publishPrice: 1500.00, discount: 219.50, amount: 1280.50 }
+                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 12.50, quantity: 120, amount: 1500.00 },
+                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, quantity: 120, amount: -120.00 },
+                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, quantity: 120, amount: -60.00 }
                     ],
                     'AR-SZ-202608-001': [
-                        { waybillNo: 'WB20260729001', feeType: '运费', publishPrice: 860.00, discount: 0, amount: 860.00 }
+                        { waybillNo: 'WB20260729001', feeType: '运费', kind: '运费', unitPrice: 8.60, quantity: 100, amount: 860.00 }
                     ],
                     'AR-GZ-202607-001': [
-                        { waybillNo: 'WB20260628001', feeType: '运费', publishPrice: 3000.00, discount: 0, amount: 3000.00 },
-                        { waybillNo: 'WB20260628002', feeType: '附加费-燃油', publishPrice: 500.00, discount: 0, amount: 500.00 }
+                        { waybillNo: 'WB20260628001', feeType: '运费', kind: '运费', unitPrice: 10.00, quantity: 300, amount: 3000.00 },
+                        { waybillNo: 'WB20260628002', feeType: '周六派送费', kind: '附加费', unitPrice: 50.00, quantity: 10, amount: 500.00 }
                     ],
                     'AR-SZ-202607-001': [
                         { waybillNo: 'WB20260629001', feeType: '运费', publishPrice: 1800.00, discount: 0, amount: 1800.00 }
@@ -333,7 +340,7 @@
                 };
 
                 return {
-                    activeTab, currencyOptions, currencySymbol, currencyName, formatMoney,
+                    activeTab, currencyOptions, currencySymbol, currencyName, formatMoney, formatSigned,
                     pendingSearch, confirmedSearch,
                     pendingBills, confirmedBills, settledBills,
                     filteredPendingBills, filteredConfirmedBills,

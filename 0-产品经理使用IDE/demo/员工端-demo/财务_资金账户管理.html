@@ -340,7 +340,10 @@
                         <div class="detail-value balance">{{ currencySymbol(transferForm.toCurrency) }}{{ formatMoney(computedToAmount) }}</div>
                     </el-col>
                 </el-row>
-                <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
+                <div style="margin-top: 10px; font-size: 12px; color: #606266;">
+                    汇率来源：<b style="color: #303133;">{{ rateSourceLabel }}</b>
+                </div>
+                <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6; margin-top: 10px;">
                     汇率说明：汇率由阿里汇率接口实时获取并以「接口汇率」预填，可手工覆盖（接口超时/异常时手工填写，来源记为手工覆盖）；1 {{ currencyName(transferForm.toCurrency || '—') }} = {{ transferForm.rate || '—' }} {{ currencyName(transferForm.fromCurrency || '—') }}；转入金额 = 转出金额 ÷ 汇率。一期暂不记汇损。
                 </div>
             </el-form>
@@ -713,6 +716,13 @@
                         .filter(w => w.customerName === transferForm.customerName && w.entityName === transferForm.entityName && w.currency !== transferForm.fromCurrency)
                         .map(w => w.currency);
                 });
+                // 汇率来源：汇率与接口值一致 → 接口实时；手工改过 → 手工覆盖
+                const rateSourceLabel = computed(() => {
+                    const api = transferForm.realtimeRate;
+                    const used = transferForm.rate;
+                    if (!api) return '手工覆盖';
+                    return String(api) === String(used) ? '接口实时' : '手工覆盖';
+                });
                 const computedToAmount = computed(() => {
                     if (!transferForm.fromAmount || !transferForm.rate) return 0;
                     return transferForm.fromAmount / transferForm.rate;
@@ -822,7 +832,7 @@
                     addWalletVisible, addWalletFormRef, addWalletForm, addWalletRules, openAddWallet, submitAddWallet,
                     walletEntityOptions, walletCurrencyOptions, walletContractHint, onWalletCustomerChange, onWalletEntityChange,
                     transferVisible, transferFormRef, transferForm, transferRules,
-                    toCurrencyOptions, computedToAmount, onToCurrencyChange, openTransfer, submitTransfer,
+                    toCurrencyOptions, computedToAmount, rateSourceLabel, onToCurrencyChange, openTransfer, submitTransfer,
                     flowDialogVisible, currentWallet, currentWalletFlows, flowTypeTag, openWalletFlows,
                     handleExport, handleSearch, searchExpanded, handleReset, handleAdd
                 };
