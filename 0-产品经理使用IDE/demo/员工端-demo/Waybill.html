@@ -554,16 +554,6 @@
                         <el-table-column prop="carrierInfo" label="承运信息" width="120" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="site" label="交货站点" width="120"></el-table-column>
                         <el-table-column prop="curSite" label="所在站点" width="120"></el-table-column>
-                        <el-table-column label="费用审计" width="156" align="center">
-                            <template #default="scope">
-                                <el-tooltip :content="scope.row.arAuditStatus === '已审计' ? `应收已整票审计（${scope.row.arAuditBy} · ${scope.row.arAuditAt}）｜整票不允许新增应收费用` : '应收未审计｜可新增应收费用；已审计的单条流水不可变更、但可加新流水'" placement="top">
-                                    <el-tag size="small" :type="scope.row.arAuditStatus === '已审计' ? 'success' : 'info'">应收 {{ scope.row.arAuditStatus || '未审计' }}</el-tag>
-                                </el-tooltip>
-                                <el-tooltip content="应付方向审计（一期页面为占位，接口预留）" placement="top">
-                                    <el-tag size="small" type="info" effect="plain" style="margin-left:4px;">应付 {{ scope.row.apAuditStatus || '未审计' }}</el-tag>
-                                </el-tooltip>
-                            </template>
-                        </el-table-column>
                         <el-table-column prop="sales" label="销售代表" width="100"></el-table-column>
                         <el-table-column prop="csRep" label="客服代表" width="100"></el-table-column>
                         <el-table-column prop="declareValue" label="申报价值" width="100"></el-table-column>
@@ -573,15 +563,51 @@
                                 <span v-if="!(scope.row.surchargeMark || []).length" style="color:var(--el-text-color-secondary);">—</span>
                             </template>
                         </el-table-column>
-                        <el-table-column label="应收" width="120">
-                            <template #default>
-                                <div style="font-size: 12px; line-height: 1.2;">快递 20.00CNY</div>
-                            </template>
+                        <el-table-column label="应收" width="136" align="right">
+                        <template #default="scope">
+                            <el-popover v-if="rowDirFlows(scope.row, 'ar').length" placement="left" :width="600" trigger="hover">
+                                <template #reference>
+                                    <span style="font-weight:600;cursor:pointer;">{{ rowDirTotalText(scope.row, 'ar') }}</span>
+                                </template>
+                                <div style="font-weight:600;margin-bottom:8px;">{{ scope.row.orderNo }} · 应收明细（{{ rowDirFlows(scope.row, 'ar').length }} 条）</div>
+                                <el-table :data="rowDirFlows(scope.row, 'ar')" size="small" border max-height="300">
+                                    <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                    <el-table-column label="金额" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
+                                    <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
+                                    <el-table-column v-if="rowHasRate(scope.row, 'ar')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
+                                    <el-table-column v-if="rowHasRate(scope.row, 'ar')" label="折合 CNY" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
+                                </el-table>
+                                <div style="margin-top:8px;font-size:12px;color:var(--el-text-color-secondary);">
+                                    总额 <b style="color:var(--el-text-color-primary);">{{ rowDirTotalText(scope.row, 'ar') }}</b>
+                                    <span v-if="rowMultiCurrency(scope.row, 'ar')" style="margin-left:10px;">原币小计：{{ rowDirSubtotalText(scope.row, 'ar') }}</span>
+                                    <span v-if="rowHasRate(scope.row, 'ar')" style="margin-left:10px;">折合口径 = 金额 × 汇率</span>
+                                </div>
+                            </el-popover>
+                            <span v-else style="color:var(--el-text-color-secondary);">—</span>
+                        </template>
                         </el-table-column>
-                        <el-table-column label="应付" width="120">
-                            <template #default>
-                                <div style="font-size: 12px; line-height: 1.2;">装柜 180.00CNY</div>
-                            </template>
+                        <el-table-column label="应付" width="136" align="right">
+                        <template #default="scope">
+                            <el-popover v-if="rowDirFlows(scope.row, 'ap').length" placement="left" :width="600" trigger="hover">
+                                <template #reference>
+                                    <span style="font-weight:600;cursor:pointer;color:var(--el-color-danger);">{{ rowDirTotalText(scope.row, 'ap') }}</span>
+                                </template>
+                                <div style="font-weight:600;margin-bottom:8px;">{{ scope.row.orderNo }} · 应付明细（{{ rowDirFlows(scope.row, 'ap').length }} 条）</div>
+                                <el-table :data="rowDirFlows(scope.row, 'ap')" size="small" border max-height="300">
+                                    <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                    <el-table-column label="金额" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
+                                    <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
+                                    <el-table-column v-if="rowHasRate(scope.row, 'ap')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
+                                    <el-table-column v-if="rowHasRate(scope.row, 'ap')" label="折合 CNY" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
+                                </el-table>
+                                <div style="margin-top:8px;font-size:12px;color:var(--el-text-color-secondary);">
+                                    总额 <b style="color:var(--el-text-color-primary);">{{ rowDirTotalText(scope.row, 'ap') }}</b>
+                                    <span v-if="rowMultiCurrency(scope.row, 'ap')" style="margin-left:10px;">原币小计：{{ rowDirSubtotalText(scope.row, 'ap') }}</span>
+                                    <span v-if="rowHasRate(scope.row, 'ap')" style="margin-left:10px;">折合口径 = 金额 × 汇率</span>
+                                </div>
+                            </el-popover>
+                            <span v-else style="color:var(--el-text-color-secondary);">—</span>
+                        </template>
                         </el-table-column>
                         <el-table-column prop="declareWay" label="报关方式" width="120"></el-table-column>
                         <el-table-column prop="expressLabel" label="快递单" width="100">
@@ -2253,11 +2279,11 @@
                                     <el-tab-pane label="应收">
                                         <div class="fee-summary">
                                             <div class="fee-summary-metrics">
-                                                <span class="fee-metric"><span class="fee-metric-label">流水条数</span><b class="fee-metric-value" style="color:var(--el-color-primary);">{{ feeArFlows.length }}</b></span>
+                                                <span class="fee-metric"><span class="fee-metric-label">流水条数</span><b class="fee-metric-value" style="color:var(--el-color-primary);">{{ currentArFlows.length }}</b></span>
                                                 <span class="fee-metric"><span class="fee-metric-label">运单应收净额</span><b class="fee-metric-value" style="color:var(--el-color-danger);">¥{{ feeArNet.toFixed(2) }}</b></span>
                                             </div>
                                         </div>
-                                        <el-table :data="feeArFlows" border size="small" class="fee-flow-table">
+                                        <el-table :data="currentArFlows" border size="small" class="fee-flow-table">
                                             <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="kindLabel" label="流水种类" width="88" align="center"></el-table-column>
                                             <el-table-column label="审计状态" width="104" align="center">
@@ -2266,14 +2292,20 @@
                                                 </template>
                                             </el-table-column>
                                             <el-table-column label="币种" width="64" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
+                                            <el-table-column prop="rate" label="汇率" width="64" align="center"></el-table-column>
                                             <el-table-column label="单价" width="88" align="right"><template #default="scope"><span :style="{color: scope.row.unitPrice < 0 ? 'var(--el-color-danger)' : ''}">{{ scope.row.unitPrice }}</span></template></el-table-column>
                                             <el-table-column label="计价单位" width="76" align="center"><template #default="scope">{{ scope.row.unit || '—' }}</template></el-table-column>
                                             <el-table-column label="计费量" width="72" align="center"><template #default="scope">{{ scope.row.quantity }}</template></el-table-column>
                                             <el-table-column label="金额" width="100" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
-                                            <el-table-column prop="rate" label="汇率" width="64" align="center"></el-table-column>
                                             <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
                                             <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
+                                            <el-table-column label="关联账单" width="170" align="center">
+                                                <template #default="scope">
+                                                    <el-tag v-if="scope.row.billNo" size="small" type="warning">{{ scope.row.billNo }}</el-tag>
+                                                    <span v-else style="color:var(--el-text-color-secondary);">—</span>
+                                                </template>
+                                            </el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
                                             <el-table-column label="操作" width="70" align="center" class-name="fee-op-cell">
@@ -2285,13 +2317,13 @@
                                     </el-tab-pane>
                                     <el-tab-pane label="应付">
                                         <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-                                            <div><span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">{{ feeApFlows.length }}</span></div>
+                                            <div><span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">{{ currentApFlows.length }}</span></div>
                                         </div>
-                                        <el-table :data="feeApFlows" border size="small">
+                                        <el-table :data="currentApFlows" border size="small">
                                             <el-table-column prop="type" label="费用类型" min-width="110"></el-table-column>
                                             <el-table-column label="币种" width="80" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
-                                            <el-table-column label="金额" width="100" align="right"><template #default="scope">{{ scope.row.amount }}</template></el-table-column>
                                             <el-table-column prop="rate" label="汇率" width="70" align="center"></el-table-column>
+                                            <el-table-column label="金额" width="100" align="right"><template #default="scope">{{ scope.row.amount }}</template></el-table-column>
                                             <el-table-column prop="quantity" label="数量" width="70" align="center"></el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="110"></el-table-column>
                                             <el-table-column prop="time" label="业务时间" width="150"></el-table-column>
@@ -3550,7 +3582,7 @@
                     tabs.push({ name: '全部', count: tableData.value.length });
                     return tabs;
                 });
-                const activeStatusTab = ref('全部');
+                const activeStatusTab = ref('已收货');   // 进入菜单默认命中「已收货」
                 const isSearchExpanded = ref(false);
                 const search = reactive({
                     orderNo: '', customerNo: '', relNo: '', user: [], warehouseCode: '', zipCode: '',
@@ -3585,6 +3617,8 @@
                     supplierService: isFba ? 'UPS Ground' : 'FedEx Home',
                     csRep: '张三',
                     creator: 'Admin',
+                    // 该票运单自己的应收 / 应付流水（收货完成及之后才有；已下单 / 收货中为空）
+                    arFlows: [], apFlows: [],
                     // 运单级审计标记（**两态：未审计 / 已审计**，按费用方向各一条）—— 应收整票审计通过后，整票不允许新增应收费用
                     arAuditStatus: '未审计', arAuditBy: '', arAuditAt: '',
                     apAuditStatus: '未审计', apAuditBy: '', apAuditAt: '',
@@ -3596,8 +3630,8 @@
                 const tableData = ref([
                     mkRow('YD20260413001','已下单',false), mkRow('YD20260413002','已下单',true,'FBA-A001'),
                     mkRow('YD20260413003','收货中',false), mkRow('YD20260413004','收货中',true,'FBA-B002'),
-                    (()=>{ const r=mkRow('YD20260413005','已收货',false); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; r.surchargeMark=['超长']; return r; })(),
-                    (()=>{ const r=mkRow('YD20260413006','已收货',true,'FBA-C003'); r.billingType='cbm'; r.service='美森360-海运-卡派-按方包税'; return r; })(),
+                    (()=>{ const r=mkRow('YD20260413005','已收货',false); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; r.surchargeMark=['超长','出口查验']; r.exportInspectFirst='是'; return r; })(),
+                    (()=>{ const r=mkRow('YD20260413006','已收货',true,'FBA-C003'); r.billingType='cbm'; r.service='美森360-海运-卡派-按方包税'; r.exportInspectFirst='否'; return r; })(),
                     mkRow('YD20260413007','转运中',false), mkRow('YD20260413008','转运中',true,'FBA-E005'),
                     mkRow('YD20260413009','已到港',false), mkRow('YD20260413010','已到港',true,'FBA-F006'),
                     mkRow('YD20260413011','已清关',false), mkRow('YD20260413012','已清关',true,'FBA-G007'),
@@ -5629,9 +5663,10 @@
                     { id: 9005, auditStatus: '已审计', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
                     { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
                     { id: 9007, auditStatus: '待业务审计', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
+                    ,{ id: 9008, auditStatus: '待业务审计', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算，按 7.1000 折合', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
                 ]);
                 // 运单应收净额 = 各行金额的代数和（优惠已独立成行，不再逐行做「公布价 − 优惠」）
-                const feeArNet = computed(() => feeArFlows.value.reduce((s, r) => s + Number(r.amount || 0), 0));
+                const feeArNet = computed(() => currentArFlows.value.reduce((s, r) => s + Number(r.amount || 0), 0));
                 const feeAmountText = (row) => {
                     const v = Number((row && row.amount) || 0);
                     const abs = Math.abs(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -5640,6 +5675,34 @@
                 const feeApFlows = ref([
                     { type: '操作费', kindLabel: '手工新增', currency: 'CNY', amount: 80.00, rate: 1, quantity: 8, remark: '分拣操作', time: '2026-04-13 10:00', source: '李四' }
                 ]);
+
+                // 演示：把上面的流水挂到「已收货」那票运单（其余运单按各自状态自然为空）
+                (() => {
+                    const demoRow = tableData.value.find(r => r.orderNo === 'YD20260413005');
+                    if (demoRow) { demoRow.arFlows = feeArFlows.value; demoRow.apFlows = feeApFlows.value; }
+                })();
+                // 当前运单的流水（费用 tab 表绑定这些；已下单 / 收货中为空数组 → 页面无流水）
+                const currentArFlows = computed(() => (currentRow.value && currentRow.value.arFlows) || []);
+                const currentApFlows = computed(() => (currentRow.value && currentRow.value.apFlows) || []);
+                const rowArTotal = (row) => ((row && row.arFlows) || []).reduce((s, f) => s + Number(f.amount || 0), 0);
+                const rowApTotal = (row) => ((row && row.apFlows) || []).reduce((s, f) => s + Number(f.amount || 0), 0);
+                // ── 应收 / 应付 列展示：总额（金额 + 币种）+ 悬浮费用明细（费用类型 + 金额 + 币种 [+ 汇率 / 折合 CNY]）
+                const rowDirFlows = (r, dir) => ((dir === 'ap' ? (r && r.apFlows) : (r && r.arFlows)) || []);
+                const flowRate = (f) => { const v = Number(f && f.rate); return v > 0 ? v : 1; };
+                const flowCnyValue = (f) => Number(((Number(f && f.amount) || 0) * flowRate(f)).toFixed(2));
+                const cnyFormat = (v) => { const n = Number(v) || 0; const abs = Math.abs(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return (n < 0 ? '-' : '') + abs; };
+                const rowHasRate = (r, dir) => rowDirFlows(r, dir).some(f => flowRate(f) !== 1);
+                const rowCurrencySubtotals = (r, dir) => { const m = {}; rowDirFlows(r, dir).forEach(f => { const c = f.currency || 'CNY'; m[c] = Number(((m[c] || 0) + (Number(f.amount) || 0)).toFixed(2)); }); return m; };
+                const rowMultiCurrency = (r, dir) => Object.keys(rowCurrencySubtotals(r, dir)).length > 1;
+                const rowDirTotalText = (r, dir) => {
+                    const flows = rowDirFlows(r, dir);
+                    if (!flows.length) return '—';
+                    const subs = rowCurrencySubtotals(r, dir);
+                    const cs = Object.keys(subs);
+                    if (cs.length === 1 && !rowHasRate(r, dir)) return `${cs[0]} ${cnyFormat(subs[cs[0]])}`;
+                    return `≈ CNY ${cnyFormat(flows.reduce((s, f) => s + flowCnyValue(f), 0))}`;
+                };
+                const rowDirSubtotalText = (r, dir) => { const subs = rowCurrencySubtotals(r, dir); return Object.keys(subs).map(c => `${c} ${cnyFormat(subs[c])}`).join(' / '); };
 
                 const pricingUnitOptions = ['KG', 'm³', '票', '箱', '数量'];
 
@@ -5920,6 +5983,7 @@
                     printFormat, printFormatInv, printFormatSup, extractTypes, markType, insureType,
                     podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeApFlows, feeTypeArOptions, feeTypeApOptions, handleFeeTypeChange, handleFeeCurrencyChange, newFeeRow,
                     feeArNet, feeAmountText, pricingUnitOptions, handleFeeUnitPriceChange,
+                    currentArFlows, currentApFlows, rowArTotal, rowApTotal, rowDirFlows, flowRate, flowCnyValue, cnyFormat, rowHasRate, rowMultiCurrency, rowDirTotalText, rowDirSubtotalText,
                     feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, feeEditLocked, feeRowEditable, feeRowLockReason, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, generateNodeLabel, feeRuleTypeLabel, openFeeArDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, feeArKindLabel, handleFeeArTypeChange, handleFeeArRuleChange,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,

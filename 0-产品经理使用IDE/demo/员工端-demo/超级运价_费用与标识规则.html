@@ -63,6 +63,14 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       <el-table-column prop="pricing" label="计价" min-width="130"></el-table-column>
       <el-table-column prop="feeLabel" label="费用类型" width="90"></el-table-column>
       <el-table-column prop="direction" label="费用方向" width="90"></el-table-column>
+      <el-table-column label="附加费标识" width="150">
+        <template #default="s">
+          <span v-if="s.row._raw.tagId===null||s.row._raw.tagId===undefined" style="color:#C0C4CC;font-size:12px">—</span>
+          <span v-else style="display:inline-flex;align-items:center;gap:6px">
+            <span :style="{display:'inline-block',width:'10px',height:'10px',borderRadius:'50%',backgroundColor:tagColorOf(s.row._raw.tagId),flex:'0 0 auto'}"></span>{{ tagLabelOf(s.row._raw.tagId) }}
+          </span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" width="80" align="center">
         <template #default="s">
           <el-tag :type="s.row.status==='正常'?'success':'danger'" size="small">{{ s.row.status }}</el-tag>
@@ -126,6 +134,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
                     <el-select v-else-if="s2.row.dim==='isFba'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="是" value="yes"></el-option><el-option label="否" value="no"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='customsMode'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="普通报关" value="general"></el-option><el-option label="9710" value="9710"></el-option><el-option label="9810" value="9810"></el-option><el-option label="1010" value="1010"></el-option><el-option label="1039" value="1039"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='selfDelivery'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="是" value="yes"></el-option><el-option label="否" value="no"></el-option></el-select>
+                    <el-select v-else-if="s2.row.dim==='exportInspectFirst'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="是" value="yes"></el-option><el-option label="否" value="no"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='zip'" v-model="s2.row.val" size="small" style="width:100%"><el-option label="是（第三方接口判定）" value="remote"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='warehouse'" v-model="s2.row.val" multiple collapse-tags collapse-tags-tooltip filterable size="small" style="width:100%" placeholder="请选择交货站点（多选）"><el-option v-for="w in localWarehouses" :key="w" :label="w" :value="w"></el-option></el-select>
                     <el-select v-else-if="s2.row.dim==='combination'" v-model="s2.row.val" multiple collapse-tags collapse-tags-tooltip filterable size="small" style="width:100%" placeholder="请选择服务组合（多选）">
@@ -308,10 +317,10 @@ var typeLabel={field:'字段匹配',fieldFormula:'字段&公式',manual:'人工�
     actionLabel={charge:'加收',flag:'标识提醒'},
         dirLabel={r:'应收',p:'应付'},
     puLabel={ticket:'按票',box:'按箱',kg:'按KG',cbm:'按m³',unit:'按数量'},
-    dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送方式',warehouse:'交货站点',user:'用户',combination:'服务组合',isFba:'是否FBA运单',customsMode:'报关方式',selfDelivery:'自送标识'};
+    dimLabel={sku:'SKU属性',address:'地址类型',zip:'邮编',lastMile:'尾程派送方式',warehouse:'交货站点',user:'用户',combination:'服务组合',isFba:'是否FBA运单',customsMode:'报关方式',selfDelivery:'自送标识',exportInspectFirst:'出口先查后装模式'};
 var puShort={ticket:'票',box:'箱',kg:'KG',cbm:'m³',unit:'数量'};
 var enabledChannels=['美森360','美森432','EX456','洛杉矶600'];
-var surchargeTags=[{id:1,label:'超重费',color:'#FFC0CB'},{id:2,label:'粉末品名加收',color:'#FFA500'},{id:3,label:'易碎品',color:'#98FB98'},{id:4,label:'带电',color:'#87CEEB'},{id:5,label:'地址加收',color:'#DDA0DD'},{id:6,label:'贴标',color:'#F0E68C'},{id:7,label:'偏远邮编',color:'#FFB6C1'}];
+var surchargeTags=[{id:1,label:'超重费',color:'#FFC0CB'},{id:2,label:'粉末品名加收',color:'#FFA500'},{id:3,label:'易碎品',color:'#98FB98'},{id:4,label:'带电',color:'#87CEEB'},{id:5,label:'地址加收',color:'#DDA0DD'},{id:6,label:'贴标',color:'#F0E68C'},{id:7,label:'偏远邮编',color:'#FFB6C1'},{id:8,label:'出口查验',color:'#FF6B6B'}];
 var feeTypesAll=[{label:'海运费',dir:'r'},{label:'港杂费',dir:'r'},{label:'出口费用',dir:'r'},{label:'报关费',dir:'r'},{label:'派送费用',dir:'r'},{label:'增值服务',dir:'r'},{label:'国内存储费',dir:'r'},{label:'库内操作费',dir:'r'},{label:'干线运费',dir:'p'},{label:'尾程派送费',dir:'p'},{label:'清关服务费',dir:'p'},{label:'海外仓储费',dir:'p'}];
 var customerLevels=[{id:'SS',label:'SS'},{id:'S',label:'S'},{id:'A',label:'A'},{id:'B',label:'B'},{id:'C',label:'C'},{id:'D',label:'D'},{id:'E',label:'E'},{id:'F',label:'F'},{id:'G',label:'G'}];
 var customerList=[{id:'C001',name:'深圳市XX科技',level:'S'},{id:'C002',name:'广州YY贸易',level:'S'},{id:'C003',name:'杭州ZZ跨境',level:'A'}];
@@ -332,6 +341,10 @@ data:function(){
     customerLevels:customerLevels,customerList:customerList,surchargeTags:surchargeTags,localWarehouses:localWarehouses,combinationList:combinationList,puShort:puShort,
     q:{type:'',action:'',status:''},enabledChannels:enabledChannels,feeTypesAll:feeTypesAll,
     rules:[
+      {name:'出口先查后装加收（加收单价）',type:'字段匹配',action:'加收',node:'运单收货完成',cond:'出口先查后装模式=是',pricing:'按KG 1元',feeLabel:'出口费用',direction:'应收',status:'正常',
+        _raw:{id:'R008',type:'field',action:'charge',node:'receive',conditions:[{dim:'exportInspectFirst',val:'yes'}],formulas:[],ml:'',pricingRows:[{dir:'r',feeLabel:'出口费用',pu:'kg',price:1,currency:'rmb'}],tagId:8,status:'active'}},
+      {name:'出口先查后装加收（报关费）',type:'字段匹配',action:'加收',node:'运单收货完成',cond:'出口先查后装模式=是',pricing:'按票 150元',feeLabel:'报关费',direction:'应收',status:'正常',
+        _raw:{id:'R009',type:'field',action:'charge',node:'receive',conditions:[{dim:'exportInspectFirst',val:'yes'}],formulas:[],ml:'',pricingRows:[{dir:'r',feeLabel:'报关费',pu:'ticket',price:150,currency:'rmb'}],tagId:8,status:'active'}},
       {name:'欧洲-超重超长加收',type:'字段&公式',action:'加收',node:'拣货',cond:'服务组合=欧洲专线-海运-卡派-KG-包税-散货、欧洲专线-海运-卡派-m³-包税-散货 AND ((长+宽)*2+高 > 300 OR 长+宽*2+高*2 > 265)',pricing:'按箱 200元',feeLabel:'出口费用',direction:'应收',status:'正常',
         _raw:{id:'R006',type:'fieldFormula',action:'charge',node:'pick',conditions:[{dim:'combination',val:['欧洲专线-海运-卡派-KG-包税-散货','欧洲专线-海运-卡派-m³-包税-散货']}],formulas:[{expr:'(长+宽)*2+高 > 300'},{expr:'长+宽*2+高*2 > 265'}],ml:'',pricingRows:[{dir:'r',feeLabel:'出口费用',pu:'box',price:200,currency:'rmb'}],tagId:1,status:'active'}},
       {name:'带电品标识提醒',type:'字段匹配',action:'标识提醒',node:'运单收货完成',cond:'SKU属性=带电',pricing:'-',feeLabel:'',direction:'',status:'正常',
@@ -356,7 +369,7 @@ data:function(){
   }
 },
 computed:{
-  dimOptions:function(){if(this.f.type==='fieldFormula'){return [{label:'服务组合',value:'combination'}]}return [{label:'尾程派送方式',value:'lastMile'},{label:'地址类型（第三方查询）',value:'address'},{label:'SKU属性（取自商品管理）',value:'sku'},{label:'是否FBA运单',value:'isFba'},{label:'报关方式',value:'customsMode'},{label:'自送标识',value:'selfDelivery'},{label:'邮编（第三方查询）',value:'zip'},{label:'交货站点（取自仓库列表-本地仓）',value:'warehouse'},{label:'服务组合',value:'combination'},{label:'用户',value:'user'}]},
+  dimOptions:function(){if(this.f.type==='fieldFormula'){return [{label:'服务组合',value:'combination'}]}return [{label:'尾程派送方式',value:'lastMile'},{label:'地址类型（第三方查询）',value:'address'},{label:'SKU属性（取自商品管理）',value:'sku'},{label:'是否FBA运单',value:'isFba'},{label:'报关方式',value:'customsMode'},{label:'自送标识',value:'selfDelivery'},{label:'出口先查后装模式（取自运单）',value:'exportInspectFirst'},{label:'邮编（第三方查询）',value:'zip'},{label:'交货站点（取自仓库列表-本地仓）',value:'warehouse'},{label:'服务组合',value:'combination'},{label:'用户',value:'user'}]},
   pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'}]},
   receivablePrice:function(){var rows=this.f.pricingRows||[];for(var i=0;i<rows.length;i++){if(rows[i].dir==='r'&&rows[i].price!==null&&rows[i].price!==undefined)return Number(rows[i].price)}return null},
   isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status === '已冻结'; },
@@ -365,7 +378,7 @@ computed:{
     return this.rules.filter(function(r){
       if(self.q.type&&r.type!==typeLabel[self.q.type]) return false;
       if(self.q.action&&r.action!==actionLabel[self.q.action]) return false;
-      if(self.q.status){var s=self.q.status==='active'?'生效中':'已禁用';if(r.status!==s) return false;}
+      if(self.q.status){var s=self.q.status==='active'?'正常':'已冻结';if(r.status!==s) return false;}
       return true;
     });
   }
@@ -409,6 +422,9 @@ methods:{
   onDiscountModeChange:function(row){if(row.mode==='rate'){row.val=0.9}else{row.val=-0.5}},
   custNameById:function(id){var l=this.customerList||[];for(var i=0;i<l.length;i++){if(l[i].id===id)return l[i].name}return id},
   typeLabelOf:function(t){return typeLabel[t]||t||'-'},
+  // ★ 列表「附加费标识」列：按 id 取标识名与颜色
+  tagLabelOf:function(id){var l=this.surchargeTags||[];for(var i=0;i<l.length;i++){if(String(l[i].id)===String(id))return l[i].label}return (id===null||id===undefined||id==='')?'':('#'+id)},
+  tagColorOf:function(id){var l=this.surchargeTags||[];for(var i=0;i<l.length;i++){if(String(l[i].id)===String(id))return l[i].color}return '#C0C4CC'},
   // ★ 列表「优惠」列：统计该规则生效中的优惠条数（标识提醒型恒为 0）
   discountCountOf:function(row){
     var raw=row._raw||{};
@@ -496,7 +512,7 @@ methods:{
   },
   buildCond:function(){
     if(this.f.type==='field'||this.f.type==='fieldFormula'){
-      var dimValLabel={lastMile:{express:'快递派',truck:'卡派'},address:{commercial:'商业地址',residential:'私人地址'},sku:{powder:'粉末',liquid:'液体',battery:'带电'},isFba:{yes:'是',no:'否'},customsMode:{general:'普通报关','9710':'9710','9810':'9810','1010':'1010','1039':'1039'},selfDelivery:{yes:'是',no:'否'},zip:{remote:'是（第三方接口判定）'}};
+      var dimValLabel={lastMile:{express:'快递派',truck:'卡派'},address:{commercial:'商业地址',residential:'私人地址'},sku:{powder:'粉末',liquid:'液体',battery:'带电'},isFba:{yes:'是',no:'否'},customsMode:{general:'普通报关','9710':'9710','9810':'9810','1010':'1010','1039':'1039'},selfDelivery:{yes:'是',no:'否'},exportInspectFirst:{yes:'是',no:'否'},zip:{remote:'是（第三方接口判定）'}};
       var parts=this.f.conditions.map(function(c){
         var dimName=dimLabel[c.dim]||c.dim;
         var valName;
@@ -559,7 +575,7 @@ methods:{
       name:this.f.name,type:typeLabel[this.f.type],action:actionLabel[this.f.action],      cond:this.buildCond(),pricing:pricingDisplay,
       feeLabel:firstRow.feeLabel||'',direction:dirLabel[firstRow.dir]||'',
       status:this.editMode?this.rules[this.editIndex].status:'正常',
-      _raw:{id:ruleId,type:this.f.type,action:this.f.action,conditions:JSON.parse(JSON.stringify(this.f.conditions||[])),formulas:JSON.parse(JSON.stringify(this.f.formulas||[])),node:((this.f.type==='manual')?'人工触发':(((this.f.formulas||[]).length)?'拣货':'运单收货完成')),ml:this.f.ml,pricingRows:JSON.parse(JSON.stringify(this.f.pricingRows||[])),status:this.f.status}
+      _raw:{id:ruleId,type:this.f.type,action:this.f.action,conditions:JSON.parse(JSON.stringify(this.f.conditions||[])),formulas:JSON.parse(JSON.stringify(this.f.formulas||[])),node:((this.f.type==='manual')?'人工触发':(((this.f.formulas||[]).length)?'拣货':'运单收货完成')),ml:this.f.ml,pricingRows:JSON.parse(JSON.stringify(this.f.pricingRows||[])),tagId:(this.f.tagId===undefined?null:this.f.tagId),status:this.f.status}
     };
     if(this.editMode){this.rules.splice(this.editIndex,1,row);ElementPlus.ElMessage.success('已保存费用与标识规则及优惠')}
     else{this.rules.push(row);ElementPlus.ElMessage.success('已新增费用与标识规则及优惠')}

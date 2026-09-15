@@ -19,6 +19,7 @@
         .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
         .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
 
+        .reversal-row td { color: #C0C4CC !important; }
         .section-title {
             font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 16px; padding-bottom: 8px;
             border-bottom: 1px solid #E4E7ED; display: flex; align-items: center;
@@ -58,7 +59,7 @@
                     </el-button>
                 </template>
                 <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
-                    <span style="color: #909399; font-size: 13px;">运单收货生成的应收流水先进入账单草稿池；财务按 客户×主体×币种×账期 聚合已锁定的业务流水生成账单</span>
+                    <span style="color: #909399; font-size: 13px;">运单收货生成的应收流水先进入账单草稿池；财务按 客户 × 主体 × 币种 聚合已锁定的业务流水生成账单（按运单整票成账，不跨币种折合）</span>
                     <el-button type="primary" @click="openGenerate">
                         <el-icon style="margin-right: 4px;"><Plus /></el-icon>生成账单
                     </el-button>
@@ -68,34 +69,39 @@
             <el-tabs v-model="activeTab">
             <el-tab-pane :label="'草稿池 (' + filteredDraftPool.length + ')'" name="draft">
                 <div style="background:#f4f4f5; border-radius:4px; padding:10px 16px; color:#606266; font-size:13px; line-height:1.6; margin-bottom:12px;">
-                    运单收货完成生成的应收流水先进入<b>账单草稿池</b>（未关联账单即停留池内）。池内按 <b>客户 × 主体 × 币种 × 账期</b> 分组：<b>仅「已审计」流水可成账</b>，待业务审计的流水先完成审计再生成账单。
+                    运单收货完成生成的应收流水先进入<b>账单草稿池</b>（未关联账单即停留池内、已红冲的不在池内）。池内按 <b>客户 × 主体 × 币种</b> 分组（<b>账期不参与分组</b>，账单日默认取生成当月自然月末）：<b>只聚合与本账单币种一致的流水</b>（不跨币种折合 —— 混币种运单因此拆成多张账单），且<b>按运单整票成账</b> —— 同一运单还有待业务审计的流水时整票不可勾选（避免出现「运费未审、优惠已审」的负数账单）。
                 </div>
-                <el-table :data="filteredDraftPool" border style="width: 100%">
+                <el-table :data="filteredDraftPool" border style="width: 100%" @selection-change="onDraftSelectionChange">
+                    <el-table-column type="selection" width="46" :selectable="draftGroupSelectable"></el-table-column>
                     <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
                     <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
                     <el-table-column prop="currency" label="币种" min-width="80" align="center">
                         <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                     </el-table-column>
-                    <el-table-column label="账期" min-width="180">
-                        <template #default="scope">{{ scope.row.billingDate }} · {{ scope.row.paymentTermsDays ? scope.row.paymentTermsDays + ' 天' : '账期待补录' }}</template>
+                    <el-table-column prop="referenceBillingDate" label="参考账单日" width="110" align="center"></el-table-column>
+                    <el-table-column label="账期" min-width="150">
+                        <template #default="scope">{{ scope.row.paymentTermsDays ? scope.row.paymentTermsDays + ' 天（合同账期）' : '账期待补录' }}</template>
                     </el-table-column>
-                    <el-table-column prop="dueDate" label="到期日期" width="110" align="center"><template #default="scope">{{ scope.row.dueDate || '—' }}</template></el-table-column>
-                <el-table-column prop="flowCount" label="流水条数" width="100" align="center"></el-table-column>
+                    <el-table-column label="到期日预估" width="110" align="center">
+                        <template #default="scope">{{ scope.row.estimatedDueDate || '—' }}</template>
+                    </el-table-column>
+                    <el-table-column prop="waybillCount" label="运单数" width="80" align="center"></el-table-column>
+                    <el-table-column prop="flowCount" label="流水条数" width="90" align="center"></el-table-column>
                     <el-table-column label="可成账金额" min-width="130" align="right">
                         <template #default="scope"><span style="font-weight:600;">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.auditedAmount) }}</span></template>
                     </el-table-column>
                     <el-table-column label="待审计金额" min-width="120" align="right">
-                        <template #default="scope"><span :style="{color: scope.row.pendingAmount > 0 ? '#E6A23C' : '#909399'}">{{ scope.row.pendingAmount > 0 ? currencySymbol(scope.row.currency) + formatMoney(scope.row.pendingAmount) : '—' }}</span></template>
+                        <template #default="scope"><span :style="{color: scope.row.pendingAmount > 0 ? '#E6A23C' : '#909399'}">{{ scope.row.pendingAmount !== 0 ? currencySymbol(scope.row.currency) + formatSigned(scope.row.pendingAmount) : '—' }}</span></template>
                     </el-table-column>
                     <el-table-column label="操作" width="180" fixed="right" align="center">
                         <template #default="scope">
-                            <el-button link type="primary" size="small" @click="openDraftGenerate(scope.row)">生成账单</el-button>
+                            <el-button link type="primary" size="small" @click="openDraftGenerate(scope.row)">勾选运单成账</el-button>
                             <el-button link type="info" size="small" @click="openDraftFlows(scope.row)">查看流水</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
                 <div class="pagination-area">
-                    <el-pagination background layout="total, prev, pager, next" :total="filteredDraftPool.length"></el-pagination>
+                    <el-pagination background layout="total, prev, pager, next" :total="filteredDraftPool.length"></el-pagination>                <el-pagination background layout="total, prev, pager, next" :total="filteredDraftPool.length"></el-pagination>
                 </div>
             </el-tab-pane>
 
@@ -115,11 +121,12 @@
                             <template #default="scope">
                                 <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
                                 <el-button link type="success" size="small" @click="sendBill(scope.row)">发送客户</el-button>
+                                <el-button link type="danger" size="small" @click="voidBill(scope.row)">作废</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                     <div class="pagination-area">
-                        <el-pagination background layout="total, prev, pager, next" :total="filteredPendingSend.length"></el-pagination>
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredPendingSend.length"></el-pagination>                        <el-pagination background layout="total, prev, pager, next" :total="filteredPendingSend.length"></el-pagination>
                     </div>
                 </el-tab-pane>
 
@@ -143,14 +150,15 @@
                                 <el-tag :type="statusTag(scope.row.status)" size="small">{{ scope.row.status }}</el-tag>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="100" fixed="right" align="center">
+                        <el-table-column label="操作" width="140" fixed="right" align="center">
                             <template #default="scope">
                                 <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
+                                <el-button v-if="scope.row.receivedAmount === 0" link type="danger" size="small" @click="voidBill(scope.row)">作废</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                     <div class="pagination-area">
-                        <el-pagination background layout="total, prev, pager, next" :total="sent.length"></el-pagination>
+                        <el-pagination background layout="total, prev, pager, next" :total="sent.length"></el-pagination>                        <el-pagination background layout="total, prev, pager, next" :total="sent.length"></el-pagination>
                     </div>
                 </el-tab-pane>
 
@@ -181,6 +189,33 @@
                         <el-pagination background layout="total, prev, pager, next" :total="settled.length"></el-pagination>
                     </div>
                 </el-tab-pane>
+
+                <el-tab-pane :label="'已作废 (' + voided.length + ')'" name="voided">
+                    <div style="background:#f4f4f5; border-radius:4px; padding:10px 16px; color:#606266; font-size:13px; line-height:1.6; margin-bottom:12px;">
+                        已作废的账单<b>不下发货主端</b>、<b>不进账龄台账</b>；其下流水已释放回草稿池，可重新组账，<b>账单号不回收</b>（重新出账生成新账单号）。
+                    </div>
+                    <el-table :data="voided" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单号" min-width="170"></el-table-column>
+                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="billingDate" label="账单日" min-width="100"></el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.billAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="voidedAt" label="作废时间" min-width="140" align="center"></el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="voided.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
             </el-tabs>
         </div>
 
@@ -189,60 +224,54 @@
             <el-form label-position="top">
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-form-item label="客户" required>
-                            <el-select v-model="generateForm.customerName" placeholder="请选择客户" style="width: 100%" filterable>
-                                <el-option v-for="c in customers" :key="c" :label="c" :value="c"></el-option>
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item label="主体" required>
-                            <el-select v-model="generateForm.entityName" placeholder="请选择主体" style="width: 100%">
-                                <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <el-row :gutter="20">
-                    <el-col :span="12">
-                        <el-form-item label="币种" required>
-                            <el-select v-model="generateForm.currency" placeholder="请选择币种" style="width: 100%">
-                                <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
-                            </el-select>
+                        <el-form-item label="客户 / 主体 / 币种">
+                            <div class="detail-value">{{ scopeText }}</div>
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
                         <el-form-item label="账单日" required>
-                            <el-date-picker v-model="generateForm.billingDate" type="date" value-format="YYYY-MM-DD" placeholder="请选择账单日" style="width: 100%"></el-date-picker>
+                            <el-date-picker v-model="generateForm.billingDate" type="date" value-format="YYYY-MM-DD" placeholder="默认取生成当月自然月末" style="width: 100%"></el-date-picker>
                         </el-form-item>
                     </el-col>
+                </el-row>
+                <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item label="账期天数" :required="!contractTermsDays">
                             <div v-if="contractTermsDays" class="detail-value">{{ contractTermsDays }} 天（来自合同账期）</div>
                             <el-input-number v-else v-model="generateForm.paymentTermsDays" :min="1" :max="365" :precision="0" :controls="false" style="width: 100%" placeholder="合同账期未完善，请补录账期天数"></el-input-number>
                         </el-form-item>
                     </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="到期日（最后支付日）">
+                            <div class="detail-value">{{ dueDatePreview }}</div>
+                        </el-form-item>
+                    </el-col>
                 </el-row>
 
-                <div v-if="generateForm.customerName && generateForm.entityName && !contractTermsDays" style="background: #fdf6ec; border-radius: 4px; padding: 10px 16px; color: #E6A23C; font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
+                <div v-if="generateForm.billingDate && !contractTermsDays" style="background: #fdf6ec; border-radius: 4px; padding: 10px 16px; color: #E6A23C; font-size: 13px; line-height: 1.6; margin-bottom: 16px;">
                     该客户在该主体下的合同账期未完善（账期主数据在客商中心「客户管理 → 合同/账期」维护）。此处补录的账期天数仅用于本账单的账龄计算，账单将标记为「账期手工补录」。
                 </div>
 
-                <div class="section-title">可聚合业务流水</div>
-                <el-table :data="generatableFlows" border style="width: 100%" max-height="240">
-                    <el-table-column prop="waybillNo" label="运单号" min-width="140"></el-table-column>
-                    <el-table-column prop="feeType" label="费用类型" min-width="110"></el-table-column>
-                    <el-table-column prop="kindLabel" label="流水种类" width="100" align="center"></el-table-column>
-                    <el-table-column label="金额" min-width="120" align="right">
-                        <template #default="scope"><span :style="{color: scope.row.amount < 0 ? '#F56C6C' : ''}">{{ currencySymbol(generateForm.currency) }}{{ formatSigned(scope.row.amount) }}</span></template>
+                <div class="section-title">可成账运单（<span style="font-weight:400;font-size:13px;color:#909399;">按运单整票成账 —— 该票仍有待业务审计的流水时整票不可勾选</span>）</div>
+                <el-table :data="generatableWaybills" border style="width: 100%" max-height="240" row-key="key" @selection-change="onWaybillSelection">
+                    <el-table-column type="selection" width="46" :selectable="waybillSelectable" reserve-selection></el-table-column>
+                    <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
+                    <el-table-column prop="flowCount" label="流水条数" width="90" align="center"></el-table-column>
+                    <el-table-column label="可成账金额" min-width="130" align="right">
+                        <template #default="scope"><span :style="{color: scope.row.auditedAmount < 0 ? '#F56C6C' : ''}">{{ currencySymbol(scope.row.currency) }}{{ formatSigned(scope.row.auditedAmount) }}</span></template>
                     </el-table-column>
-                    <el-table-column prop="sourceRule" label="来源规则" min-width="180"></el-table-column>
+                    <el-table-column label="审计状态" min-width="160" align="center">
+                        <template #default="scope">
+                            <el-tag v-if="scope.row.pendingCount > 0" type="warning" size="small">尚有 {{ scope.row.pendingCount }} 条未审计</el-tag>
+                            <el-tag v-else type="success" size="small">已整票审计</el-tag>
+                        </template>
+                    </el-table-column>
                 </el-table>
                 <div style="text-align: right; margin-top: 12px; font-size: 14px;">
-                    聚合流水 <span style="color: #303133;">{{ generatableFlows.length }}</span> 条，账单总额：
-                    <span style="font-weight: bold; color: #303133;">{{ currencySymbol(generateForm.currency) }}{{ formatMoney(totalGeneratable) }}</span>
+                    已选 <span style="color: #303133;">{{ selectedWaybillKeys.length }}</span> 票运单 / <span style="color: #303133;">{{ selectedFlowCount }}</span> 条流水，账单总额：
+                    <span style="font-weight: bold; color: #303133;">{{ currencySymbol(generateForm.currency) }}{{ formatMoney(selectedTotal) }}</span>
                 </div>
-            </el-form>
+                <div v-if="scopeCurrencyCount > 1" style="text-align: right; margin-top: 4px; font-size: 12px; color: #909399;">已选流水跨 {{ scopeCurrencyCount }} 个币种，确认后按币种各生成一张账单（不跨币种折合）</div>            </el-form>
             <template #footer>
                 <span class="dialog-footer">
                     <el-button @click="generateVisible = false">取消</el-button>
@@ -275,10 +304,26 @@
                             <el-tag v-if="currentBill.termSource === '手工补录'" type="warning" size="small" style="margin-left: 8px;">账期手工补录</el-tag>
                         </div>
                     </el-col>
+                    <el-col :span="12"><span class="detail-label">到期日（最后支付日）</span><div class="detail-value">{{ dueDateOf(currentBill) }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <span class="detail-label">账单状态</span>
+                        <div class="detail-value">
+                            <el-tag :type="statusTag(currentBill.status)" size="small">{{ currentBill.status }}</el-tag>
+                            <el-tooltip v-if="billHasReversal" content="本账单下有流水已红冲，原金额不追溯调整，差额计入下一期账单" placement="top">
+                                <el-tag type="info" size="small" style="margin-left: 8px;">含红冲流水</el-tag>
+                            </el-tooltip>
+                        </div>
+                    </el-col>
                     <el-col :span="12"><span class="detail-label">账期来源</span><div class="detail-value">{{ currentBill.termSource || '合同账期' }}</div></el-col>
                 </el-row>
+                <el-row v-if="currentBill.status === '已作废'" :gutter="20">
+                    <el-col :span="12"><span class="detail-label">作废时间</span><div class="detail-value">{{ currentBill.voidedAt || '—' }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">作废原因</span><div class="detail-value">{{ currentBill.voidReason || '—' }}</div></el-col>
+                </el-row>
                 <div class="section-title" style="margin-top: 20px;">费用明细</div>
-                <el-table :data="currentBillDetails" border style="width: 100%">
+                <el-table :data="currentBillDetails" border style="width: 100%" :row-class-name="detailRowClass">
                     <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" min-width="110"></el-table-column>
                     <el-table-column prop="kind" label="流水种类" width="100" align="center"></el-table-column>
@@ -288,11 +333,26 @@
                     <el-table-column prop="pricingUnit" label="计价单位" width="90" align="center"></el-table-column>
                     <el-table-column prop="quantity" label="计费量" width="90" align="center"></el-table-column>
                     <el-table-column label="金额" min-width="110" align="right">
-                        <template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? '#F56C6C' : ''}">{{ currencySymbol(currentBill.currency) }}{{ formatSigned(scope.row.amount) }}</span></template>
+                        <template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? '#F56C6C' : '', textDecoration: scope.row.auditStatus === '已红冲' ? 'line-through' : 'none'}">{{ currencySymbol(currentBill.currency) }}{{ formatSigned(scope.row.amount) }}</span></template>
+                    </el-table-column>
+                    <el-table-column label="审计状态" width="110" align="center">
+                        <template #default="scope">
+                            <el-tooltip v-if="scope.row.auditStatus === '已红冲'" :content="'红冲时间：' + (scope.row.reversedAt || '—')" placement="top">
+                                <el-tag type="info" size="small">已红冲</el-tag>
+                            </el-tooltip>
+                            <el-tag v-else type="success" size="small">{{ scope.row.auditStatus }}</el-tag>
+                        </template>
                     </el-table-column>
                     <el-table-column prop="source" label="来源" min-width="170"></el-table-column>
                 </el-table>
-                <div style="text-align: right; margin-top: 12px; font-size: 13px; color: #909399;">账单金额 = Σ 各行金额（代数和，优惠独立成行、带符号）</div>
+                <div style="text-align: right; margin-top: 12px; font-size: 13px; line-height: 1.9;">
+                    正数行合计 {{ currencySymbol(currentBill.currency) }}{{ formatMoney(billPosSum) }}
+                    ｜ 负数行合计 <span style="color:#F56C6C;">{{ currencySymbol(currentBill.currency) }}{{ formatSigned(billNegSum) }}</span>
+                    ｜ 账单总额（净额） <b style="color:#303133;">{{ currencySymbol(currentBill.currency) }}{{ formatMoney(currentBill.billAmount) }}</b>
+                </div>
+                <div v-if="billHasReversal" style="text-align: right; margin-top: 4px; font-size: 12px; color: #909399;">
+                    本账单下有 {{ reversalCount }} 条流水已红冲，原金额不追溯调整，差额计入下一期账单
+                </div>
             </div>
             <template #footer>
                 <span class="dialog-footer">
@@ -304,7 +364,7 @@
         <!-- 账单草稿池 · 流水明细弹窗 -->
         <el-dialog v-model="draftFlowsVisible" title="账单草稿池 · 流水明细" width="1000px" destroy-on-close>
             <div v-if="currentDraftGroup" style="margin-bottom: 12px; color: #606266; font-size: 13px;">
-                {{ currentDraftGroup.customerName }} · {{ currentDraftGroup.entityName }} · {{ currencyName(currentDraftGroup.currency) }} · 账单日 {{ currentDraftGroup.billingDate }} · 账期 {{ currentDraftGroup.paymentTermsDays ? currentDraftGroup.paymentTermsDays + ' 天' : '待补录' }}
+                {{ currentDraftGroup.customerName }} · {{ currentDraftGroup.entityName }} · {{ currencyName(currentDraftGroup.currency) }} · 参考账单日 {{ currentDraftGroup.referenceBillingDate }} · 账期 {{ currentDraftGroup.paymentTermsDays ? currentDraftGroup.paymentTermsDays + ' 天' : '待补录' }} · 到期日预估 {{ currentDraftGroup.estimatedDueDate || '—' }}
             </div>
             <el-table :data="currentDraftFlows" border style="width: 100%" max-height="420">
                 <el-table-column prop="waybillNo" label="运单号" min-width="140"></el-table-column>
@@ -361,31 +421,48 @@
                 const pendingSearch = reactive({ billNo: '' });
 
                 const bills = reactive([
-                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', billAmount: 1095.00, receivedAmount: 0, status: '已生成', paymentTermsDays: 15, termSource: '合同账期' },
-                    { billNo: 'AR-SZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'USD', billingDate: '2026-08-15', billAmount: 1200.00, receivedAmount: 0, status: '已生成', paymentTermsDays: 30, termSource: '合同账期' },
-                    { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', billAmount: 3500.00, receivedAmount: 2219.50, status: '部分核销', paymentTermsDays: 15, termSource: '合同账期' },
-                    { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', billAmount: 2800.00, receivedAmount: 2800.00, status: '已核销', paymentTermsDays: 20, termSource: '手工补录' }
+                    // 已发送（同一票混币种运单的 CNY 部分；运单 YD20260413005 的 USD 报关费在另一张 USD 账单）
+                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-31', billAmount: 1145.00, receivedAmount: 0, status: '已发送', paymentTermsDays: 15, termSource: '合同账期', sentAt: '2026-09-01 09:30' },
+                    // 已生成：本期含上期红冲费用的负数冲抵行（运单 YD20260628002 超重费 -100.00）
+                    { billNo: 'AR-GZ-202608-004', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-31', billAmount: 760.00, receivedAmount: 0, status: '已生成', paymentTermsDays: 15, termSource: '合同账期' },
+                    // 部分核销：明细里有 1 条已红冲流水（原金额不追溯）
+                    { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-31', billAmount: 3600.00, receivedAmount: 2219.50, status: '部分核销', paymentTermsDays: 15, termSource: '合同账期', sentAt: '2026-08-01 10:00' },
+                    { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-30', billAmount: 2800.00, receivedAmount: 2800.00, status: '已核销', paymentTermsDays: 20, termSource: '手工补录', sentAt: '2026-07-01 09:00' },
+                    // 已作废：客户异议 → 作废后重新出账（账单号不回收、流水已释放回草稿池）
+                    { billNo: 'AR-GD-202608-002', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', billingDate: '2026-08-31', billAmount: 820.00, receivedAmount: 0, status: '已作废', paymentTermsDays: 30, termSource: '合同账期', voidedAt: '2026-08-20 15:10', voidReason: '客户异议：清关费用重复计价，作废后重新出账' }
                 ]);
-
                 // 账单费用明细 = 该账单聚合的应收流水行（优惠独立成行、金额带符号）
                 const billDetailsMap = {
+                    // 1,145.00 = 运单 014 的 5 条（1,095.00）+ 运单 005 的库内贴标费 50.00
                     'AR-GZ-202608-001': [
-                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: '按KG', quantity: 120, amount: 1200.00, source: '报价' },
-                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: '按KG', quantity: 120, amount: -120.00, source: '运费优惠 · S级特批' },
-                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: '按KG', quantity: 120, amount: -60.00, source: '泡比优惠 · 阈值300' },
-                        { waybillNo: 'WB20260728001', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: '按KG', quantity: 5, amount: 100.00, source: '超重超长规则' },
-                        { waybillNo: 'WB20260728001', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: '按KG', quantity: 5, amount: -25.00, source: '附加费优惠 · A级' }
+                        { waybillNo: 'YD20260413014', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: '按KG', quantity: 120, amount: 1200.00, source: '运价行 · 美森360/ONT8', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260413014', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: '按KG', quantity: 120, amount: -120.00, source: '运费优惠 · S级客户特批', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260413014', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: '按KG', quantity: 120, amount: -60.00, source: '泡比优惠 · 密度阈值300', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260413014', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: '按KG', quantity: 5, amount: 100.00, source: '超重超长（字段&公式）', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260413014', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: '按KG', quantity: 5, amount: -25.00, source: '附加费优惠 · A级客户', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260413005', feeType: '库内贴标费', kind: '附加费', unitPrice: 0.50, pricingUnit: '按张', quantity: 100, amount: 50.00, source: '库内贴标费（字段匹配）· 0.50/张', auditStatus: '已审计' }
                     ],
-                    'AR-SZ-202608-001': [{ waybillNo: 'WB20260801001', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: '按KG', quantity: 100, amount: 1200.00, source: '报价' }],
+                    // 760.00 = 本期运费 860.00 + 上期已红冲超重费的负数冲抵 -100.00（红冲流水归下一期账单）
+                    'AR-GZ-202608-004': [
+                        { waybillNo: 'YD20260801002', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: '按KG', quantity: 100, amount: 860.00, source: '运价行 · 美森360/ORD2', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260628002', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: '按KG', quantity: 5, amount: -100.00, source: '红冲冲抵 · 原 AR-GZ-202607-001 超重费', auditStatus: '已审计' }
+                    ],
+                    // 3,600.00 含 1 条已红冲行：原账单金额不追溯，冲抵行进下一期账单
                     'AR-GZ-202607-001': [
-                        { waybillNo: 'WB20260628001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: '按KG', quantity: 300, amount: 3000.00, source: '报价' },
-                        { waybillNo: 'WB20260628002', feeType: '周六派送费', kind: '附加费', unitPrice: 50.00, pricingUnit: '按票', quantity: 10, amount: 500.00, source: '周六派送规则' }
+                        { waybillNo: 'YD20260628001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: '按KG', quantity: 300, amount: 3000.00, source: '运价行 · 美森360/ORD2', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260628002', feeType: '周六派送费', kind: '附加费', unitPrice: 50.00, pricingUnit: '按票', quantity: 10, amount: 500.00, source: '周六派送规则', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260628002', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: '按KG', quantity: 5, amount: 100.00, source: '超重超长（字段&公式）', auditStatus: '已红冲', reversedAt: '2026-07-20 10:30', reversedBy: '财务-王五' }
                     ],
-                    'AR-GZ-202606-001': [{ waybillNo: 'WB20260528001', feeType: '运费', kind: '运费', unitPrice: 8.00, pricingUnit: '按KG', quantity: 350, amount: 2800.00, source: '报价' }]
+                    'AR-GZ-202606-001': [{ waybillNo: 'YD20260528001', feeType: '运费', kind: '运费', unitPrice: 8.00, pricingUnit: '按KG', quantity: 350, amount: 2800.00, source: '运价行 · 美森360/ONT8', auditStatus: '已审计' }],
+                    'AR-GD-202608-002': [
+                        { waybillNo: 'YD20260810001', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: '按KG', quantity: 40, amount: 480.00, source: '运价行 · 美森432/LAX9', auditStatus: '已审计' },
+                        { waybillNo: 'YD20260810001', feeType: '清关服务费', kind: '附加费', unitPrice: 340.00, pricingUnit: '按票', quantity: 1, amount: 340.00, source: '清关服务费（字段匹配）', auditStatus: '已审计' }
+                    ]
                 };
 
+                const voided = computed(() => bills.filter(b => b.status === '已作废'));
                 const pendingSend = computed(() => bills.filter(b => b.status === '已生成'));
-                const sent = computed(() => bills.filter(b => b.status === '已发送' || b.status === '已确认' || b.status === '部分核销'));
+                const sent = computed(() => bills.filter(b => ['已发送', '已确认', '部分核销', '已反核销'].indexOf(b.status) !== -1));
                 const settled = computed(() => bills.filter(b => b.status === '已核销'));
 
                 const filteredPendingSend = computed(() => {
@@ -395,13 +472,13 @@
                 });
 
                 const filteredDraftPool = computed(() => {
-                    let data = draftGroups;
+                    let data = draftGroups.value;
                     if (draftSearch.customerName) data = data.filter(g => g.customerName.includes(draftSearch.customerName));
                     return data;
                 });
 
                 const statusTag = (status) => {
-                    const map = { '已发送': 'primary', '已确认': 'primary', '部分核销': 'warning' };
+                    const map = { '已发送': 'primary', '已确认': 'primary', '部分核销': 'warning', '已反核销': 'warning', '已作废': 'info', '已核销': 'success', '已生成': 'info' };
                     return map[status] || 'info';
                 };
                 const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
@@ -425,75 +502,124 @@
                     if (!generateForm.customerName || !generateForm.entityName) return 0;
                     return contractTerms[generateForm.customerName + '|' + generateForm.entityName] || 0;
                 });
-                // 可聚合业务流水 = 已审计且未关联账单的应收流水（逐行，优惠独立成行、金额带符号）
-                const lockedFlows = [
-                    { waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '运费', kindLabel: '运费', amount: 1200.00, sourceRule: '运价行 · 美森360/ONT8' },
-                    { waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '运费优惠', kindLabel: '运费优惠', amount: -120.00, sourceRule: '运费优惠 · S级客户特批' },
-                    { waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '泡比优惠', kindLabel: '泡比优惠', amount: -60.00, sourceRule: '泡比优惠 · 密度阈值300' },
-                    { waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '超重费', kindLabel: '附加费', amount: 100.00, sourceRule: '超重超长（字段&公式）' },
-                    { waybillNo: 'WB20260728001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '附加费优惠', kindLabel: '附加费优惠', amount: -25.00, sourceRule: '附加费优惠 · A级客户' },
-                    { waybillNo: 'WB20260729001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', feeType: '运费', kindLabel: '运费', amount: 860.00, sourceRule: '运价行 · 美森360/ORD2' }
-                ];
-                // 账单草稿池：收货生成的应收流水（未关联账单即停留在池内），按 客户 × 主体 × 币种 × 账期 分组
-                const draftGroups = [
-                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, dueDate: '2026-08-15', flowCount: 6, auditedAmount: 1095.00, pendingAmount: 1032.00 },
-                    { customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, dueDate: '2026-08-15', flowCount: 1, auditedAmount: 860.00, pendingAmount: 0 },
-                    { customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', billingDate: '2026-08-15', paymentTermsDays: 0, dueDate: '', flowCount: 1, auditedAmount: 0, pendingAmount: 480.00 }
-                ];
-                const draftFlowsMap = {
-                    '深圳市华美科技有限公司|广州飞点|CNY': [
-                        { waybillNo: 'WB20260728001', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: 'KG', quantity: 120, amount: 1200.00, dueDate: '2026-08-15', sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: 'KG', quantity: 120, amount: -120.00, dueDate: '2026-08-15', sourceRule: '运费优惠 · S级客户特批 -1.00/KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: 'KG', quantity: 120, amount: -60.00, dueDate: '2026-08-15', sourceRule: '泡比优惠 · 密度阈值300 -0.50/KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: 'KG', quantity: 5, amount: 100.00, dueDate: '2026-08-15', sourceRule: '超重超长（字段&公式）· 按箱实测', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260728001', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: 'KG', quantity: 5, amount: -25.00, dueDate: '2026-08-15', sourceRule: '附加费优惠 · A级客户 -5.00/KG', auditStatus: '已审计' },
-                        { waybillNo: 'WB20260729001', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 120, amount: 1032.00, dueDate: '2026-08-15', sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '待业务审计' }
-                    ],
-                    '广州迅达贸易有限公司|广州飞点|CNY': [
-                        { waybillNo: 'WB20260730001', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 100, amount: 860.00, dueDate: '2026-08-15', sourceRule: '运价行 · 美森360/ORD2/100-500KG', auditStatus: '已审计' }
-                    ],
-                    '东莞新锐电子有限公司|广东飞点|USD': [
-                        { waybillNo: 'WB20260810001', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: 'KG', quantity: 40, amount: 480.00, dueDate: '', sourceRule: '运价行 · 美森432/LAX9/50-100KG', auditStatus: '待业务审计' }
-                    ]
-                };
-                const generatableFlows = computed(() => {
-                    if (!generateForm.customerName || !generateForm.entityName || !generateForm.currency) return [];
-                    return lockedFlows.filter(f => f.customerName === generateForm.customerName && f.entityName === generateForm.entityName && f.currency === generateForm.currency);
+                // 账单草稿池 = bill_id 为空且未红冲的应收流水（同一票混币种 → 分币种各成一组，不折合）
+                const draftFlows = ref([
+                    // 深圳市华美科技 / 广州飞点 / CNY —— 运单 YD20260413005 已整票审计，整票可成账 1,215.00
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413005', feeType: '运费', kind: '运费', unitPrice: 10.00, pricingUnit: 'KG', quantity: 120, amount: 1200.00, sourceRule: '运价行 · 美森360/ONT8/100-500KG', auditStatus: '已审计' },
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413005', feeType: '运费优惠', kind: '运费优惠', unitPrice: -1.00, pricingUnit: 'KG', quantity: 120, amount: -120.00, sourceRule: '运费优惠 · S级客户特批 -1.00/KG', auditStatus: '已审计' },
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413005', feeType: '泡比优惠', kind: '泡比优惠', unitPrice: -0.50, pricingUnit: 'KG', quantity: 120, amount: -60.00, sourceRule: '泡比优惠 · 密度阈值300 -0.50/KG', auditStatus: '已审计' },
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413005', feeType: '超重费', kind: '附加费', unitPrice: 20.00, pricingUnit: 'KG', quantity: 5, amount: 100.00, sourceRule: '超重超长（字段&公式）· 按箱实测', auditStatus: '已审计' },
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413005', feeType: '附加费优惠', kind: '附加费优惠', unitPrice: -5.00, pricingUnit: 'KG', quantity: 5, amount: -25.00, sourceRule: '附加费优惠 · A级客户 -5.00/KG', auditStatus: '已审计' },
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413005', feeType: '报关费', kind: '人工添加', unitPrice: 120.00, pricingUnit: '票', quantity: 1, amount: 120.00, sourceRule: '人工添加 · 李四', auditStatus: '已审计' },
+                    // 同一票的 USD 报关费 —— 单独成 USD 组，账单不折合
+                    { customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', waybillNo: 'YD20260413005', feeType: '报关费', kind: '人工添加', unitPrice: 100.00, pricingUnit: '票', quantity: 1, amount: 100.00, sourceRule: '人工添加 · 李四（USD 结算）', auditStatus: '已审计' },
+                    // 广州迅达 / 广州飞点 / CNY —— 该票仍有待业务审计流水 → 整票不可勾选（演示 R11）
+                    { customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', waybillNo: 'YD20260413007', feeType: '运费', kind: '运费', unitPrice: 8.60, pricingUnit: 'KG', quantity: 100, amount: 860.00, sourceRule: '运价行 · 美森360/ORD2/100-500KG', auditStatus: '待业务审计' },
+                    // 东莞新锐 / 广东飞点 / USD —— 合同账期未完善，生成账单时补录
+                    { customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', waybillNo: 'YD20260413010', feeType: '运费', kind: '运费', unitPrice: 12.00, pricingUnit: 'KG', quantity: 40, amount: 480.00, sourceRule: '运价行 · 美森432/LAX9/50-100KG', auditStatus: '待业务审计' }
+                ]);
+
+                // 参考账单日 = 生成当月自然月末（账单日可在生成弹窗改）；账期取合同账期快照
+                const REF_BILLING_DATE = '2026-09-30';
+                const fmtDate = (dt) => dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+                const addDays = (d, n) => { const dt = new Date(d + 'T00:00:00'); dt.setDate(dt.getDate() + n); return fmtDate(dt); };
+
+                const draftGroups = computed(() => {
+                    const map = {};
+                    draftFlows.value.forEach(f => {
+                        const key = f.customerName + '|' + f.entityName + '|' + f.currency;
+                        if (!map[key]) {
+                            const days = contractTerms[f.customerName + '|' + f.entityName] || 0;
+                            map[key] = { key, customerName: f.customerName, entityName: f.entityName, currency: f.currency,
+                                referenceBillingDate: REF_BILLING_DATE, paymentTermsDays: days,
+                                estimatedDueDate: days ? addDays(REF_BILLING_DATE, days - 1) : '',
+                                waybillMap: {}, flowCount: 0, auditedAmount: 0, pendingAmount: 0 };
+                        }
+                        const g = map[key];
+                        if (!g.waybillMap[f.waybillNo]) g.waybillMap[f.waybillNo] = { waybillNo: f.waybillNo, key: key + '::' + f.waybillNo, flowCount: 0, auditedAmount: 0, pendingAmount: 0, pendingCount: 0 };
+                        const w = g.waybillMap[f.waybillNo];
+                        w.flowCount++; g.flowCount++;
+                        if (f.auditStatus === '已审计') { w.auditedAmount += f.amount; g.auditedAmount += f.amount; }
+                        else { w.pendingAmount += f.amount; w.pendingCount++; g.pendingAmount += f.amount; }
+                    });
+                    return Object.values(map).map(g => {
+                        const waybills = Object.values(g.waybillMap).map(w => Object.assign({}, w, { billable: w.pendingCount === 0 && w.auditedAmount !== 0 }));
+                        return Object.assign({}, g, { waybills, waybillCount: waybills.length, billableWaybills: waybills.filter(w => w.billable) });
+                    });
                 });
-                const totalGeneratable = computed(() => generatableFlows.value.reduce((sum, f) => sum + f.amount, 0));
+
+                const generateScope = ref([]);
+                const selectedWaybillKeys = ref([]);
+                const generatableWaybills = computed(() => {
+                    const rows = [];
+                    generateScope.value.forEach(g => g.waybills.forEach(w => rows.push(Object.assign({}, w, { customerName: g.customerName, entityName: g.entityName, currency: g.currency }))));
+                    return rows;
+                });
+                const waybillSelectable = (row) => row.pendingCount === 0 && row.auditedAmount !== 0;
+                const onWaybillSelection = (rows) => { selectedWaybillKeys.value = rows; };
+                const selectedFlowCount = computed(() => selectedWaybillKeys.value.reduce((s, w) => s + w.flowCount, 0));
+                const selectedTotal = computed(() => selectedWaybillKeys.value.reduce((s, w) => s + w.auditedAmount, 0));
+                const scopeCurrencyCount = computed(() => [...new Set(selectedWaybillKeys.value.map(w => w.currency))].length);
+                const scopeText = computed(() => {
+                    if (!generateScope.value.length) return '—';
+                    const g = generateScope.value[0];
+                    return g.customerName + ' · ' + g.entityName + ' · ' + [...new Set(generateScope.value.map(x => currencyName(x.currency)))].join(' / ');
+                });
+                const dueDatePreview = computed(() => {
+                    const days = contractTermsDays.value || generateForm.paymentTermsDays;
+                    if (!generateForm.billingDate || !days) return '—';
+                    return addDays(generateForm.billingDate, days - 1) + '（账单日 + 账期天数 − 1 天）';
+                });
+                const draftGroupSelectable = (row) => row.billableWaybills.length > 0;
+                const onDraftSelectionChange = (rows) => { generateScope.value = rows; };
 
                 const openGenerate = () => {
-                    generateForm.customerName = ''; generateForm.entityName = ''; generateForm.currency = ''; generateForm.billingDate = ''; generateForm.paymentTermsDays = null;
+                    if (!generateScope.value.length) { ElMessage.warning('请先勾选需要成账的运单'); return; }
+                    prepareGenerate();
+                };
+                const prepareGenerate = () => {
+                    const g = generateScope.value[0];
+                    generateForm.customerName = g.customerName;
+                    generateForm.entityName = g.entityName;
+                    generateForm.currency = g.currency;
+                    generateForm.billingDate = REF_BILLING_DATE;
+                    generateForm.paymentTermsDays = null;
+                    selectedWaybillKeys.value = [];
                     generateVisible.value = true;
                 };
+                const openDraftGenerate = (row) => { generateScope.value = [row]; prepareGenerate(); };
                 const submitGenerate = () => {
-                    if (!generateForm.customerName || !generateForm.entityName || !generateForm.currency || !generateForm.billingDate) {
-                        ElMessage.warning('请填写完整的账单信息'); return;
-                    }
-                    if (!contractTermsDays.value && !generateForm.paymentTermsDays) {
-                        ElMessage.warning('该主体合同账期未完善，请补录账期天数'); return;
-                    }
-                    if (generatableFlows.value.length === 0) {
-                        ElMessage.warning('该条件下没有可聚合的已锁定业务流水'); return;
-                    }
+                    if (!generateScope.value.length) { ElMessage.warning('请先勾选需要成账的运单'); return; }
+                    const custs = [...new Set(generateScope.value.map(g => g.customerName))];
+                    const ents = [...new Set(generateScope.value.map(g => g.entityName))];
+                    if (custs.length > 1 || ents.length > 1) { ElMessage.warning('请按同一客户 + 同一主体分别成账'); return; }
+                    if (!generateForm.billingDate) { ElMessage.warning('请填写完整的账单信息'); return; }
+                    const terms = contractTermsDays.value || generateForm.paymentTermsDays;
+                    if (!terms) { ElMessage.warning('该主体合同账期未完善，请补录账期天数'); return; }
+                    if (!selectedWaybillKeys.value.length) { ElMessage.warning('请先勾选需要成账的运单'); return; }
                     const datePart = generateForm.billingDate.substring(0, 7).replace('-', '');
                     const entityCodeMap = { '广州飞点': 'GZ', '深圳飞点': 'SZ', '广东飞点': 'GD', '香港富力顿': 'HK', '墨链': 'ML' };
                     const entityCode = entityCodeMap[generateForm.entityName] || 'GZ';
-                    const seq = String(bills.length + 1).padStart(3, '0');
-                    bills.unshift({
-                        billNo: `AR-${entityCode}-${datePart}-${seq}`,
-                        customerName: generateForm.customerName,
-                        entityName: generateForm.entityName,
-                        currency: generateForm.currency,
-                        billingDate: generateForm.billingDate,
-                        billAmount: Number(totalGeneratable.value.toFixed(2)),
-                        receivedAmount: 0,
-                        status: '已生成',
-                        paymentTermsDays: contractTermsDays.value || generateForm.paymentTermsDays,
-                        termSource: contractTermsDays.value ? '合同账期' : '手工补录'
+                    // 按币种各生成一张账单（不跨币种折合）
+                    const byCurrency = {};
+                    selectedWaybillKeys.value.forEach(w => { (byCurrency[w.currency] = byCurrency[w.currency] || []).push(w); });
+                    let created = 0;
+                    const seqBase = bills.length + 1;
+                    Object.keys(byCurrency).forEach(cur => {
+                        const rows = byCurrency[cur];
+                        const amount = Number(rows.reduce((s, w) => s + w.auditedAmount, 0).toFixed(2));
+                        const billNo = 'AR-' + entityCode + '-' + datePart + '-' + String(seqBase + created).padStart(3, '0');
+                        bills.unshift({ billNo, customerName: rows[0].customerName, entityName: rows[0].entityName, currency: cur, billingDate: generateForm.billingDate, billAmount: amount, receivedAmount: 0, status: '已生成', paymentTermsDays: terms, termSource: contractTermsDays.value ? '合同账期' : '手工补录' });
+                        billDetailsMap[billNo] = draftFlows.value.filter(f => f.currency === cur && rows.some(w => w.waybillNo === f.waybillNo)).map(f => ({ waybillNo: f.waybillNo, feeType: f.feeType, kind: f.kind, unitPrice: f.unitPrice, pricingUnit: f.pricingUnit, quantity: f.quantity, amount: f.amount, source: f.sourceRule, auditStatus: f.auditStatus }));
+                        created++;
                     });
+                    // 已进账单的流水离开草稿池
+                    const keys = selectedWaybillKeys.value.map(w => w.key);
+                    draftFlows.value = draftFlows.value.filter(f => keys.indexOf(f.customerName + '|' + f.entityName + '|' + f.currency + '::' + f.waybillNo) === -1);
                     generateVisible.value = false;
-                    ElMessage.success(contractTermsDays.value ? '账单已生成' : '账单已生成（账期手工补录）');
+                    selectedWaybillKeys.value = [];
+                    generateScope.value = [];
+                    ElMessage.success(created > 1 ? ('已生成 ' + created + ' 张账单（按币种拆分，不跨币种折合）') : (contractTermsDays.value ? '账单已生成' : '账单已生成（账期手工补录）'));
                 };
 
                 // === 账单详情 ===
@@ -513,34 +639,48 @@
                     }).catch(() => {});
                 };
 
-                // === 账单草稿池 ===
-                const openDraftGenerate = (row) => {
-                    generateForm.customerName = row.customerName;
-                    generateForm.entityName = row.entityName;
-                    generateForm.currency = row.currency;
-                    generateForm.billingDate = row.billingDate;
-                    generateForm.paymentTermsDays = row.pendingAmount > 0 ? null : null;
-                    generateVisible.value = true;
+                // === 账单作废（未核销可作废；流水释放回草稿池） ===
+                const voidBill = (row) => {
+                    if (row.receivedAmount > 0) { ElMessage.warning('已核销的账单请先反核销后再作废'); return; }
+                    const details = (billDetailsMap[row.billNo] || []).filter(d => d.auditStatus !== '已红冲');
+                    ElMessageBox.confirm('确认作废账单 ' + row.billNo + '？作废后其下 ' + details.length + ' 条流水将释放回草稿池，账单不可恢复。', '作废账单', { confirmButtonText: '作废', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        details.forEach(d => draftFlows.value.push({ customerName: row.customerName, entityName: row.entityName, currency: row.currency, waybillNo: d.waybillNo, feeType: d.feeType, kind: d.kind, unitPrice: d.unitPrice, pricingUnit: d.pricingUnit, quantity: d.quantity, amount: d.amount, sourceRule: d.source, auditStatus: d.auditStatus }));
+                        row.status = '已作废';
+                        row.voidedAt = '2026-09-14 15:20';
+                        ElMessage.success('账单已作废，' + details.length + ' 条流水已释放回草稿池');
+                    }).catch(() => {});
                 };
+
+                const dueDateOf = (bill) => (bill.billingDate && bill.paymentTermsDays) ? addDays(bill.billingDate, bill.paymentTermsDays - 1) : '—';
+                const billPosSum = computed(() => (currentBillDetails.value || []).filter(d => d.amount > 0).reduce((s, d) => s + d.amount, 0));
+                const billNegSum = computed(() => (currentBillDetails.value || []).filter(d => d.amount < 0).reduce((s, d) => s + d.amount, 0));
+                const reversalCount = computed(() => (currentBillDetails.value || []).filter(d => d.auditStatus === '已红冲').length);
+                const billHasReversal = computed(() => reversalCount.value > 0);
+                const detailRowClass = ({ row }) => (row.auditStatus === '已红冲' ? 'reversal-row' : '');
+
+                // === 账单草稿池 · 流水明细 ===
                 const draftFlowsVisible = ref(false);
                 const currentDraftGroup = ref(null);
                 const currentDraftFlows = ref([]);
                 const openDraftFlows = (row) => {
                     currentDraftGroup.value = row;
-                    currentDraftFlows.value = draftFlowsMap[row.customerName + '|' + row.entityName + '|' + row.currency] || [];
+                    currentDraftFlows.value = draftFlows.value.filter(f => f.customerName === row.customerName && f.entityName === row.entityName && f.currency === row.currency);
                     draftFlowsVisible.value = true;
                 };
 
                 return {
                     activeTab, currencyOptions, entities, customers,
                     currencySymbol, currencyName, formatMoney, formatSigned,
-                    pendingSearch, pendingSend, sent, settled, filteredPendingSend,
+                    pendingSearch, pendingSend, sent, settled, voided, filteredPendingSend,
                     draftSearch, draftGroups, filteredDraftPool, resetDraftSearch,
                     statusTag, handleExport, handleSearch, resetPendingSearch,
-                    generateVisible, generateForm, generatableFlows, totalGeneratable, contractTermsDays,
-                    openGenerate, submitGenerate, openDraftGenerate,
+                    generateVisible, generateForm, generatableWaybills, waybillSelectable, onWaybillSelection,
+                    selectedWaybillKeys, selectedFlowCount, selectedTotal, scopeText, scopeCurrencyCount,
+                    dueDatePreview, contractTermsDays, openGenerate, openDraftGenerate, submitGenerate,
+                    draftGroupSelectable, onDraftSelectionChange,
                     draftFlowsVisible, currentDraftGroup, currentDraftFlows, openDraftFlows,
-                    detailVisible, currentBill, currentBillDetails, openDetail, sendBill
+                    detailVisible, currentBill, currentBillDetails, openDetail, sendBill, voidBill,
+                    dueDateOf, billPosSum, billNegSum, billHasReversal, reversalCount, detailRowClass
                 };
             }
         });
