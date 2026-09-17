@@ -67,14 +67,14 @@
                 </div>
                 <div style="display: flex; gap: 12px; flex-shrink: 0;">
                     <el-button class="btn-search-primary" @click="handleSearch">
-                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
                     </el-button>
                     <el-button class="btn-search-reset" @click="handleReset">
-                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
                     </el-button>
                     <el-button v-if="activeTab === 'bank'" @click="searchExpanded = !searchExpanded">
-                        <el-icon v-if="searchExpanded" style="margin-right: 4px;"><ArrowUp /></el-icon>
-                        <el-icon v-else style="margin-right: 4px;"><ArrowDown /></el-icon>{{ searchExpanded ? '收起' : '更多' }}
+                        <el-icon v-if="searchExpanded" style="margin-right: 4px;"><arrow-up></arrow-up></el-icon>
+                        <el-icon v-else style="margin-right: 4px;"><arrow-down></arrow-down></el-icon>{{ searchExpanded ? '收起' : '更多' }}
                     </el-button>
                     <el-button @click="handleExport">
                         <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
@@ -135,7 +135,7 @@
                 <!-- ============ Tab 2：客户资金账户 ============ -->
                 <el-tab-pane :label="'客户资金账户 (' + wallets.length + ')'" name="wallet">
                     <div class="hint-bar">
-                        客户资金账户 = 客户 × 主体 × 币种，一行一个钱包。「实际金额 = 余额 − 待核销欠款」；客户敞口 = 待核销欠款 + 待确认账单。钱包余额不可透支；跨币种结算请先在行内做「币种互转」。
+                        客户资金账户 = 客户 × 主体 × 币种，一行一个钱包。「实际金额 = 余额 − 未核销金额」；客户敞口 = 未核销金额 + 待确认账单。钱包余额不可透支；跨币种结算请先在行内做「币种互转」。
                     </div>
 
                     <el-table :data="filteredWallets" border style="width: 100%">
@@ -148,7 +148,7 @@
                         <el-table-column label="余额" min-width="130" align="right">
                             <template #default="scope"><span class="balance">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.balance) }}</span></template>
                         </el-table-column>
-                        <el-table-column label="待核销欠款" min-width="130" align="right">
+                        <el-table-column label="未核销金额" min-width="130" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.pendingWriteoff) }}</template>
                         </el-table-column>
                         <el-table-column label="待确认账单" min-width="130" align="right">
@@ -384,7 +384,7 @@
                     <div class="detail-value balance">{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(currentWallet.balance) }}</div>
                 </el-col>
                 <el-col :span="8">
-                    <span class="detail-label">待核销欠款</span>
+                    <span class="detail-label">未核销金额</span>
                     <div class="detail-value">{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(currentWallet.pendingWriteoff) }}</div>
                 </el-col>
                 <el-col :span="8">
@@ -577,21 +577,31 @@
                 };
 
                 // ==================== Tab 2：客户资金账户（钱包） ====================
+                // 「未核销金额」= Σ 该客户「已确认且未核销」账单的未核销金额；「待确认账单」= Σ 该客户「已发送未确认」账单的账单金额
+                // 与「账单管理」逐笔同源（例：华美·广州飞点·CNY = 1,330.50 + 750.00 = 2,080.50）
+                // 演示：迅达·广州飞点·CNY 余额 800.00 < 未核销 2,560.50（1,280.50 + 980.00 + 300.00）→ 点「核销」时上限被钱包卡住，天然走部分核销；该行实际金额 = 800.00 − 2,560.50 = −1,760.50（负数红字）
                 const wallets = reactive([
-                    { id: 1, customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', accountName: '1000001 CNY', balance: 3719.50, pendingWriteoff: 1280.50, pendingConfirm: 800.00, openSource: '系统自动' },
-                    { id: 2, customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', accountName: '1000002 USD', balance: 1200.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' },
-                    { id: 3, customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', accountName: '1000003 CNY', balance: 3200.00, pendingWriteoff: 3500.00, pendingConfirm: 200.00, openSource: '系统自动' },
-                    { id: 4, customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', accountName: '1000004 CNY', balance: 5800.00, pendingWriteoff: 2219.50, pendingConfirm: 0.00, openSource: '系统自动' },
+                    { id: 1, customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', accountName: '1000001 CNY', balance: 3719.50, pendingWriteoff: 2080.50, pendingConfirm: 0.00, openSource: '系统自动' },
+                    { id: 2, customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', accountName: '1000002 USD', balance: 1200.00, pendingWriteoff: 620.00, pendingConfirm: 380.00, openSource: '财务手工' },
+                    { id: 3, customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', accountName: '1000003 CNY', balance: 3200.00, pendingWriteoff: 880.00, pendingConfirm: 1000.00, openSource: '系统自动' },
+                    // id 9 / 10 为后补（与货主端资金账户对齐）：id 不参与展示，插在此处只为让「华美」5 本钱包在列表里连在一起
+                    { id: 9, customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', accountName: '1000008 CNY', balance: 1100.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '系统自动' },
+                    { id: 10, customerName: '深圳市华美科技有限公司', entityName: '香港富力顿', currency: 'HKD', accountName: '1000009 HKD', balance: 15000.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' },
+                    { id: 4, customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', accountName: '1000004 CNY', balance: 800.00, pendingWriteoff: 2560.50, pendingConfirm: 0.00, openSource: '系统自动' },
                     { id: 5, customerName: '广州迅达贸易有限公司', entityName: '香港富力顿', currency: 'HKD', accountName: '1000005 HKD', balance: 25000.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' },
-                    { id: 6, customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', accountName: '1000006 CNY', balance: 12000.00, pendingWriteoff: 8000.00, pendingConfirm: 3000.00, openSource: '系统自动' },
-                    { id: 7, customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', accountName: '1000007 USD', balance: 0.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' }
+                    { id: 6, customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', accountName: '1000006 CNY', balance: 12000.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '系统自动' },
+                    { id: 7, customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'USD', accountName: '1000007 USD', balance: 0.00, pendingWriteoff: 0.00, pendingConfirm: 0.00, openSource: '财务手工' },
+                    // 已停用客户（存量欠款）：客户停用只影响新单，钱包照收照核 —— 演示「禁用客户但还有账单」
+                    { id: 8, customerName: '东莞市宏泰五金制品有限公司', entityName: '广东飞点', currency: 'CNY', accountName: '1000010 CNY', balance: 5000.00, pendingWriteoff: 1860.00, pendingConfirm: 0.00, openSource: '系统自动' }
                 ]);
 
                 // 客户签约过的主体（含已过期/已解约）：手工开通钱包的主体边界
                 const customerContracts = {
                     '深圳市华美科技有限公司': [
                         { entityName: '广州飞点', status: '已签署' },
-                        { entityName: '深圳飞点', status: '已解约' }
+                        { entityName: '深圳飞点', status: '已解约' },
+                        { entityName: '广东飞点', status: '已签署' },
+                        { entityName: '香港富力顿', status: '已签署' }
                     ],
                     '广州迅达贸易有限公司': [
                         { entityName: '广州飞点', status: '已解约' },
@@ -766,35 +776,52 @@
                 // 资金流水弹窗
                 const walletFlowsMap = {
                     1: [
-                        { time: '2026-08-27 10:25', flowType: '充值', amount: 5000.00, balanceAfter: 5000.00, relatedNo: 'FD20260827001' },
-                        { time: '2026-08-26 09:30', flowType: '账单核销', amount: -1280.50, balanceAfter: 3719.50, relatedNo: 'WO20260826001' }
+                        { time: '2026-08-27 10:25', flowType: '充值', amount: 3000.00, balanceAfter: 3719.50, relatedNo: 'FD20260827001' },
+                        { time: '2026-08-24 10:00', flowType: '转汇', amount: -8640.00, balanceAfter: 719.50, relatedNo: 'TR20260824001' },
+                        { time: '2026-08-20 11:00', flowType: '提现', amount: -500.00, balanceAfter: 9359.50, relatedNo: 'WD20260820001' },
+                        { time: '2026-07-09 15:00', flowType: '收款核销', amount: -700.00, balanceAfter: 9859.50, relatedNo: 'WO20260709001' }
                     ],
                     2: [
-                        { time: '2026-08-20 14:10', flowType: '充值', amount: 1200.00, balanceAfter: 1200.00, relatedNo: 'FD20260820002' }
+                        { time: '2026-08-24 10:00', flowType: '转汇', amount: 1200.00, balanceAfter: 1200.00, relatedNo: 'TR20260824001' }
                     ],
                     3: [
                         { time: '2026-08-25 14:15', flowType: '充值', amount: 3200.00, balanceAfter: 3200.00, relatedNo: 'FD20260825004' }
                     ],
                     4: [
-                        { time: '2026-08-24 09:00', flowType: '转汇', amount: -8640.00, balanceAfter: 5800.00, relatedNo: 'TR20260824001' },
-                        { time: '2026-08-18 11:20', flowType: '充值', amount: 14440.00, balanceAfter: 14440.00, relatedNo: 'FD20260818001' }
+                        { time: '2026-08-26 09:30', flowType: '收款核销', amount: -719.50, balanceAfter: 800.00, relatedNo: 'WO20260826001' },
+                        { time: '2026-07-20 11:00', flowType: '收款核销', amount: -1500.00, balanceAfter: 1519.50, relatedNo: 'WO20260720001' },
+                        { time: '2026-07-08 09:30', flowType: '收款核销撤销', amount: 400.00, balanceAfter: 3019.50, relatedNo: 'WO20260708001' },
+                        { time: '2026-07-06 14:00', flowType: '收款核销', amount: -400.00, balanceAfter: 2619.50, relatedNo: 'WO20260706001' },
+                        { time: '2026-06-05 10:00', flowType: '收款核销', amount: -2800.00, balanceAfter: 3019.50, relatedNo: 'WO20260605001' },
+                        { time: '2026-06-04 09:10', flowType: '充值', amount: 2000.00, balanceAfter: 5819.50, relatedNo: 'FD20260604002' }
                     ],
                     5: [
                         { time: '2026-08-22 17:00', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, relatedNo: 'FD20260822005' }
                     ],
                     6: [
                         { time: '2026-08-26 15:45', flowType: '充值', amount: 8000.00, balanceAfter: 12000.00, relatedNo: 'FL20260826001' },
-                        { time: '2026-08-21 10:05', flowType: '账单核销', amount: -4000.00, balanceAfter: 4000.00, relatedNo: 'WO20260821002' }
+                        { time: '2026-08-21 10:05', flowType: '提现', amount: -4000.00, balanceAfter: 4000.00, relatedNo: 'WD20260821001' }
                     ],
                     7: [
-                        { time: '2026-08-19 16:30', flowType: '充值', amount: 0.00, balanceAfter: 0.00, relatedNo: 'FD20260819003' }
+                        { time: '2026-08-19 16:30', flowType: '转汇', amount: -820.00, balanceAfter: 0.00, relatedNo: 'TR20260819001' }
+                    ],
+                    // 8 = 东莞市宏泰五金（已停用客户，存量钱包照收照核）/ 9 = 华美·广东飞点 / 10 = 华美·香港富力顿（有钱、但名下无账单）
+                    8: [
+                        { time: '2026-08-18 10:00', flowType: '充值', amount: 5000.00, balanceAfter: 5000.00, relatedNo: 'FD20260818002' }
+                    ],
+                    9: [
+                        { time: '2026-09-07 09:00', flowType: '赔付入账', amount: 300.00, balanceAfter: 1100.00, relatedNo: 'AR-GD-202608-00003' },
+                        { time: '2026-08-15 10:00', flowType: '充值', amount: 800.00, balanceAfter: 800.00, relatedNo: 'FD20260815001' }
+                    ],
+                    10: [
+                        { time: '2026-08-24 09:50', flowType: '充值', amount: 15000.00, balanceAfter: 15000.00, relatedNo: 'FD20260824003' }
                     ]
                 };
                 const flowDialogVisible = ref(false);
                 const currentWallet = reactive({ customerName: '', entityName: '', currency: '', accountName: '', balance: 0, pendingWriteoff: 0, pendingConfirm: 0 });
                 const currentWalletFlows = ref([]);
                 const flowTypeTag = (t) => {
-                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '账单核销': 'danger', '账单核销撤销': 'success', '转汇': 'primary' };
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '赔付入账': 'success' };
                     return map[t] || 'info';
                 };
                 const openWalletFlows = (row) => {

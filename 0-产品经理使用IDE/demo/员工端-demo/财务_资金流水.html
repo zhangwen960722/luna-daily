@@ -18,6 +18,8 @@
         .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
         .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
         .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .bill-link { color: #409EFF; cursor: pointer; }
+        .bill-link:hover { text-decoration: underline; }
 
         .amount-in { color: #67C23A; font-weight: 500; }
         .amount-out { color: #F56C6C; font-weight: 500; }
@@ -52,14 +54,14 @@
                 </div>
                 <div style="display: flex; gap: 12px; flex-shrink: 0;">
                     <el-button class="btn-search-primary" @click="handleSearch">
-                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
                     </el-button>
                     <el-button class="btn-search-reset" @click="resetSearch">
-                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
                     </el-button>
                     <el-button @click="searchExpanded = !searchExpanded">
-                        <el-icon v-if="searchExpanded" style="margin-right: 4px;"><ArrowUp /></el-icon>
-                        <el-icon v-else style="margin-right: 4px;"><ArrowDown /></el-icon>{{ searchExpanded ? '收起' : '更多' }}
+                        <el-icon v-if="searchExpanded" style="margin-right: 4px;"><arrow-up></arrow-up></el-icon>
+                        <el-icon v-else style="margin-right: 4px;"><arrow-down></arrow-down></el-icon>{{ searchExpanded ? '收起' : '更多' }}
                     </el-button>
                     <el-button @click="handleExport">
                         <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
@@ -70,13 +72,19 @@
             <el-table :data="filteredFlows" border style="width: 100%">
                 <el-table-column prop="time" label="流水时间" min-width="150"></el-table-column>
                 <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                <el-table-column prop="entityName" label="账户主体" min-width="110"></el-table-column>
                 <el-table-column prop="currency" label="币种" min-width="80" align="center">
                     <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                 </el-table-column>
+                <el-table-column label="账户名称" min-width="130">
+                    <template #default="scope">{{ accountNameOf(scope.row) }}</template>
+                </el-table-column>
                 <el-table-column prop="flowType" label="流水类型" min-width="110" align="center">
                     <template #default="scope">
+                        <el-tooltip :disabled="scope.row.flowType !== '赔付入账'" content="贷记单结转（我司应付客户）：入客户钱包后即终态、不可撤销；如需冲正请在运单侧新增反向流水、于下一期账单抵扣" placement="top">
                         <el-tag :type="flowTypeTag(scope.row.flowType)" size="small">{{ scope.row.flowType }}</el-tag>
+                    </el-tooltip>
+                    <el-tag v-if="scope.row.status === '已撤销'" type="info" size="small" style="margin-left: 4px;">已撤销</el-tag>
                     </template>
                 </el-table-column>
                 <el-table-column label="变动金额" min-width="120" align="right">
@@ -90,7 +98,13 @@
                     <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.balanceAfter) }}</template>
                 </el-table-column>
                 <el-table-column prop="operator" label="操作人" min-width="110"></el-table-column>
-                <el-table-column prop="relatedNo" label="关联单号" min-width="150"></el-table-column>
+                <el-table-column label="关联单号" min-width="150">
+                    <template #default="scope">
+                        <el-tooltip :disabled="scope.row.flowType !== '赔付入账'" content="点击打开「贷记单」菜单并定位该单据" placement="top">
+                            <span :class="scope.row.flowType === '赔付入账' ? 'bill-link' : ''" @click="openCreditBill(scope.row)">{{ scope.row.relatedNo }}</span>
+                        </el-tooltip>
+                    </template>
+                </el-table-column>
             </el-table>
             <div class="pagination-area">
                 <el-pagination background layout="total, prev, pager, next" :total="filteredFlows.length"></el-pagination>
@@ -100,7 +114,7 @@
 
     <script>
         const { createApp, ref, reactive, computed } = Vue;
-        const { ElMessage } = ElementPlus;
+        const { ElMessage, ElMessageBox } = ElementPlus;
 
         const app = createApp({
             setup() {
@@ -116,20 +130,59 @@
                 const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
                 const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
-                const flowTypes = ['充值', '充值退回', '提现', '账单核销', '账单核销撤销', '转汇'];
+                const flowTypes = ['充值', '充值退回', '提现', '收款核销', '收款核销撤销', '转汇', '赔付入账'];   // 「赔付入账」= 贷记单（负数账单）结转钱包；**结转即终态、没有对向的撤销流水**
 
                 const searchForm = reactive({ customerName: '', entityName: '', currency: '', flowType: '', dateRange: [] });
 
-                const allFlows = [
-                    { time: '2026-08-27 10:25', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '充值', amount: 5000.00, balanceAfter: 5000.00, operator: '张珊', relatedNo: 'FD20260827001' },
-                    { time: '2026-08-27 09:10', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '充值', amount: 2000.00, balanceAfter: 5800.00, operator: '张珊', relatedNo: 'FD20260827002' },
-                    { time: '2026-08-26 09:30', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '账单核销', amount: -1280.50, balanceAfter: 3719.50, operator: '李伟', relatedNo: 'WO20260826001' },
+                // 账户名称（= 钱包账号编号 + 币种代码）：按「客户 × 账户主体 × 币种」反查钱包，与「资金账户管理 → 客户资金账户」同一份数据
+                // 本页是跨客户跨账户流水，必须标明是哪本账户
+                const walletAccounts = {
+                    '深圳市华美科技有限公司|广州飞点|CNY': '1000001 CNY',
+                    '深圳市华美科技有限公司|广州飞点|USD': '1000002 USD',
+                    '深圳市华美科技有限公司|深圳飞点|CNY': '1000003 CNY',
+                    '深圳市华美科技有限公司|广东飞点|CNY': '1000008 CNY',
+                    '深圳市华美科技有限公司|香港富力顿|HKD': '1000009 HKD',
+                    '广州迅达贸易有限公司|广州飞点|CNY': '1000004 CNY',
+                    '广州迅达贸易有限公司|香港富力顿|HKD': '1000005 HKD',
+                    '东莞新锐电子有限公司|广东飞点|CNY': '1000006 CNY',
+                    '东莞新锐电子有限公司|广东飞点|USD': '1000007 USD',
+                    '东莞市宏泰五金制品有限公司|广东飞点|CNY': '1000010 CNY'
+                };
+                const accountNameOf = (row) => walletAccounts[`${row.customerName}|${row.entityName}|${row.currency}`] || '—';
+
+                // 钱包余额（与「资金账户管理 → 客户资金账户」同值）：核销时校验够不够扣
+                const walletBalances = reactive({
+                    '深圳市华美科技有限公司|广州飞点|CNY': 3719.50,
+                    '深圳市华美科技有限公司|广州飞点|USD': 1200.00,
+                    '深圳市华美科技有限公司|深圳飞点|CNY': 3200.00,
+                    '深圳市华美科技有限公司|广东飞点|CNY': 800.00,
+                    '深圳市华美科技有限公司|香港富力顿|HKD': 15000.00,
+                    '广州迅达贸易有限公司|广州飞点|CNY': 800.00,
+                    '广州迅达贸易有限公司|香港富力顿|HKD': 25000.00,
+                    '东莞新锐电子有限公司|广东飞点|CNY': 12000.00,
+                    '东莞市宏泰五金制品有限公司|广东飞点|CNY': 5000.00,
+                    '东莞新锐电子有限公司|广东飞点|USD': 0.00
+                });
+                const walletKeyOf = (row) => row.customerName + '|' + row.entityName + '|' + row.currency;
+
+                const allFlows = reactive([
+                    { time: '2026-09-07 09:00', customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', flowType: '赔付入账', amount: 300.00, balanceAfter: 1100.00, operator: '财务-李伟', relatedNo: 'AR-GD-202608-00003', status: '正常' },
+                    { time: '2026-08-27 10:25', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '充值', amount: 3000.00, balanceAfter: 3719.50, operator: '张珊', relatedNo: 'FD20260827001' },
+                    { time: '2026-08-26 09:30', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '收款核销', amount: -719.50, balanceAfter: 800.00, operator: '李伟', relatedNo: 'WO20260826001' },
                     { time: '2026-08-25 14:12', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', flowType: '充值', amount: 3200.00, balanceAfter: 3200.00, operator: '张珊', relatedNo: 'FD20260825003' },
                     { time: '2026-08-24 10:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', flowType: '转汇', amount: 1200.00, balanceAfter: 1200.00, operator: '王强', relatedNo: 'TR20260824001' },
-                    { time: '2026-08-24 10:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '转汇', amount: -8640.00, balanceAfter: 3719.50, operator: '王强', relatedNo: 'TR20260824001' },
+                    { time: '2026-08-24 10:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '转汇', amount: -8640.00, balanceAfter: 719.50, operator: '王强', relatedNo: 'TR20260824001' },
+                    { time: '2026-08-24 09:50', customerName: '深圳市华美科技有限公司', entityName: '香港富力顿', currency: 'HKD', flowType: '充值', amount: 15000.00, balanceAfter: 15000.00, operator: '张珊', relatedNo: 'FD20260824003' },
                     { time: '2026-08-22 17:00', customerName: '广州迅达贸易有限公司', entityName: '香港富力顿', currency: 'HKD', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, operator: '张珊', relatedNo: 'FD20260822005' },
-                    { time: '2026-08-20 11:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '提现', amount: -500.00, balanceAfter: 4219.50, operator: '李伟', relatedNo: 'WD20260820001' }
-                ];
+                    { time: '2026-08-20 11:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '提现', amount: -500.00, balanceAfter: 9359.50, operator: '李伟', relatedNo: 'WD20260820001' },
+                    { time: '2026-08-15 10:00', customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', flowType: '充值', amount: 800.00, balanceAfter: 800.00, operator: '张珊', relatedNo: 'FD20260815001' },
+                    { time: '2026-07-20 11:00', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '收款核销', amount: -1500.00, balanceAfter: 1519.50, operator: '李伟', relatedNo: 'WO20260720001' },
+                    { time: '2026-07-09 15:00', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '收款核销', amount: -700.00, balanceAfter: 9859.50, operator: '李伟', relatedNo: 'WO20260709001' },
+                    { time: '2026-07-08 09:30', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '收款核销撤销', amount: 400.00, balanceAfter: 3019.50, operator: '李伟', relatedNo: 'WO20260708001' },
+                    { time: '2026-07-06 14:00', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '收款核销', amount: -400.00, balanceAfter: 2619.50, operator: '李伟', relatedNo: 'WO20260706001' },
+                    { time: '2026-06-05 10:00', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '收款核销', amount: -2800.00, balanceAfter: 3019.50, operator: '李伟', relatedNo: 'WO20260605001' },
+                    { time: '2026-06-04 09:10', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', flowType: '充值', amount: 2000.00, balanceAfter: 5819.50, operator: '张珊', relatedNo: 'FD20260604002' }
+                ]);
 
                 const filteredFlows = computed(() => {
                     let data = allFlows;
@@ -149,19 +202,29 @@
                 });
 
                 const flowTypeTag = (type) => {
-                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '账单核销': 'danger', '账单核销撤销': 'success', '转汇': 'primary' };
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '赔付入账': 'success' };
                     return map[type] || 'info';
                 };
+                // 「赔付入账」（贷记单结转）**没有撤销动作**：钱进了客户可用额度就是终态 —— 它可能已被用来核销别的账单，
+                // 反悔要靠"对冲凭证"而不是回滚流水：运单侧新增一条反向流水 → 下期账单里作为应收费抵扣。
+                // 同理，一条已经发生的核销也不再从本页撤销（反核销在「核销记录」菜单）。
+                const pad = (n) => String(n).padStart(2, '0');
+                const nowStamp = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
                 const searchExpanded = ref(false);
+                // 「赔付入账」的关联单号 = 贷记单号 → 可点开「贷记单」菜单并定位该单据（两页互查：贷记单详情的时间线里反过来给出资金流水号）
+                const openCreditBill = (row) => {
+                    if (row.flowType !== '赔付入账') return;
+                    window.open('财务_贷记单.html?billNo=' + encodeURIComponent(row.relatedNo), '_blank');
+                };
                 const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetSearch = () => { searchForm.customerName = ''; searchForm.entityName = ''; searchForm.currency = ''; searchForm.flowType = ''; searchForm.dateRange = []; };
 
                 return {
                     currencyOptions, entities, flowTypes,
-                    currencySymbol, currencyName, formatMoney,
+                    currencySymbol, currencyName, formatMoney, accountNameOf,
                     searchForm, searchExpanded, filteredFlows, flowTypeTag,
-                    handleExport, handleSearch, resetSearch
+                    handleExport, handleSearch, resetSearch, openCreditBill
                 };
             }
         });

@@ -131,10 +131,17 @@
                 </div>
                 <div style="display: flex; gap: 10px;">
                     <el-button class="btn-search-primary" @click="handleSearch">
-                        <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                        <!-- 图标写法见 style-guide §原型图标写法（2026-09-16 立规）；本仓库踩过两类坑：
+                             ① 自闭合的 Search 图标会被 HTML 解析器小写化并当成原生 search 元素；
+                             ② 曾经被一个批量脚本换成「纯数字标签名」的占位符 —— 以数字开头的标签名是非法 HTML，
+                                解析器把它降级成纯文本，于是按钮上就直接显示那几个字符（本次修的正是这个）。
+                             故统一用 zoom-in（不与任何 HTML / SVG 元素撞名的放大镜图标）。 -->
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
                     </el-button>
                     <el-button class="btn-search-reset" @click="resetSearch">
-                        <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                        <!-- 多词图标名在浏览器内联模板里必须写 kebab-case：PascalCase 自闭合写法会被小写化成 refreshright，
+                             Vue 按 camelize / capitalize 找不到 RefreshRight 组件 → 图标静默丢失（并报 resolve 警告） -->
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
                     </el-button>
                 </div>
             </div>
@@ -154,9 +161,12 @@
                             </el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column label="任务结果" min-width="200" align="center">
+                    <el-table-column label="任务结果" min-width="260" align="center">
                         <template #default="scope">
-                            <span v-if="scope.row.taskStatus === '完成'">
+                            <span v-if="scope.row.taskStatus === '完成' && scope.row.taskType === '导出'">
+                                导出 {{ scope.row.totalCount }} 张账单（{{ scope.row.templateType }}），成功 {{ scope.row.successCount }} 张，失败 {{ scope.row.failCount }} 张
+                            </span>
+                            <span v-else-if="scope.row.taskStatus === '完成'">
                                 导入{{ scope.row.totalCount }}条，失败{{ scope.row.failCount }}条，成功{{ scope.row.successCount }}条
                             </span>
                             <span v-else style="color: #909399;">—</span>
@@ -169,10 +179,17 @@
                             <span>{{ scope.row.finishedAt || '—' }}</span>
                         </template>
                     </el-table-column>
-                    <el-table-column label="操作" width="140" align="center" fixed="right">
+                    <el-table-column label="操作" width="150" align="center" fixed="right">
                         <template #default="scope">
+                            <!-- 导出任务：完成后给「下载导出结果」（一次导出 = N 个账单 Excel，打包成一个文件下载）；
+                                 导出任务没有「错误数据重导」语义，故不显示「下载错误数据」 -->
                             <el-button
-                                v-if="scope.row.taskStatus === '完成' && scope.row.failCount > 0"
+                                v-if="scope.row.taskStatus === '完成' && scope.row.taskType === '导出'"
+                                link type="primary" size="small" @click="downloadResult(scope.row)">
+                                下载导出结果
+                            </el-button>
+                            <el-button
+                                v-else-if="scope.row.taskStatus === '完成' && scope.row.failCount > 0"
                                 link type="primary" size="small" @click="downloadError(scope.row)">
                                 下载错误数据
                             </el-button>
@@ -206,12 +223,37 @@
                 });
 
                 const tableData = ref([
+                    { taskNo: 'EXP20260916143210521', moduleName: '账单管理', taskType: '导出', templateType: '常规模板', taskStatus: '完成', totalCount: 12, successCount: 12, failCount: 0, creator: '张三', createdAt: '2026-09-16 14:32:10', finishedAt: '2026-09-16 14:32:26' },
+                    { taskNo: 'EXP20260916141000876', moduleName: '账单管理', taskType: '导出', templateType: '出口退税模板', taskStatus: '完成', totalCount: 3, successCount: 2, failCount: 1, creator: '李四', createdAt: '2026-09-16 14:10:00', finishedAt: '2026-09-16 14:10:19' },
                     { taskNo: 'EXP20260828143052123', moduleName: '商品管理', taskType: '导入', taskStatus: '完成', totalCount: 100, successCount: 70, failCount: 30, creator: '张三', createdAt: '2026-08-28 14:30:52', finishedAt: '2026-08-28 14:32:10' },
                     { taskNo: 'EXP20260828150012345', moduleName: '地址管理', taskType: '导入', taskStatus: '处理中', totalCount: 0, successCount: 0, failCount: 0, creator: '李四', createdAt: '2026-08-28 15:00:12', finishedAt: '' },
                     { taskNo: 'EXP20260827103000678', moduleName: '商品管理', taskType: '导入', taskStatus: '完成', totalCount: 50, successCount: 50, failCount: 0, creator: '张三', createdAt: '2026-08-27 10:30:00', finishedAt: '2026-08-27 10:31:05' },
                     { taskNo: 'EXP20260827110000912', moduleName: '港口管理', taskType: '导入', taskStatus: '完成', totalCount: 200, successCount: 195, failCount: 5, creator: '王五', createdAt: '2026-08-27 11:00:00', finishedAt: '2026-08-27 11:05:30' },
                     { taskNo: 'EXP20260826140000456', moduleName: '仓库列表', taskType: '导入', taskStatus: '完成', totalCount: 80, successCount: 80, failCount: 0, creator: '赵六', createdAt: '2026-08-26 14:00:00', finishedAt: '2026-08-26 14:02:15' }
                 ]);
+
+                // ===== 导出任务跨页联动（原型内）=====
+                // 「财务中心 → 账单管理 → 已发送 → 导出」提交的任务写在本机 localStorage，
+                // 进本页即合并进列表；导出是异步任务，进页 3 秒后把「处理中」置为「完成」（模拟后台跑完），并写回。
+                const EXPORT_TASK_KEY = 'luna_export_tasks';
+                const readExportTasks = () => {
+                    try { return JSON.parse(localStorage.getItem(EXPORT_TASK_KEY) || '[]'); } catch (e) { return []; }
+                };
+                const writeExportTasks = (list) => {
+                    try { localStorage.setItem(EXPORT_TASK_KEY, JSON.stringify(list)); } catch (e) { /* 本地存储不可用时忽略 */ }
+                };
+                const liveExportTasks = readExportTasks();
+                if (liveExportTasks.length) tableData.value = [...liveExportTasks, ...tableData.value];
+                if (liveExportTasks.some(t => t.taskStatus === '处理中')) {
+                    setTimeout(() => {
+                        const d = new Date();
+                        const p = (v) => String(v).padStart(2, '0');
+                        const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+                        const done = (t) => (t.taskStatus === '处理中' ? { ...t, taskStatus: '完成', successCount: t.totalCount, finishedAt: stamp } : t);
+                        writeExportTasks(readExportTasks().map(done));
+                        tableData.value = tableData.value.map(t => (t.taskType === '导出' ? done(t) : t));
+                    }, 3000);
+                }
 
                 const currentPage = ref(1);
                 const pageSize = ref(20);
@@ -239,6 +281,16 @@
                     ElementPlus.ElMessage.success('开始下载错误数据：' + row.taskNo);
                 };
 
+                // 下载导出结果：一次导出**只给一个下载入口** —— 结果是**一个 zip**（内含每张账单一个 Excel）；
+                // 只勾 1 张时不打包、直出 xlsx；有失败时包内另附「导出失败清单.xlsx」（口径见财务 PRD §5.11 / 后台任务 PRD §5.2 R09）
+                const downloadResult = (row) => {
+                    const what = row.totalCount === 1
+                        ? row.taskNo + '.xlsx（只导出 1 张，直接给 Excel、不打包）'
+                        : '账单导出_' + row.templateType + '.zip（内含 ' + row.successCount + ' 个账单 Excel'
+                          + (row.failCount ? ' + 导出失败清单.xlsx（' + row.failCount + ' 条）' : '') + '）';
+                    ElementPlus.ElMessage.success('开始下载：' + what);
+                };
+
                 return {
                     searchForm,
                     tableData,
@@ -247,7 +299,8 @@
                     pageSize,
                     handleSearch,
                     resetSearch,
-                    downloadError
+                    downloadError,
+                    downloadResult
                 };
             }
         });

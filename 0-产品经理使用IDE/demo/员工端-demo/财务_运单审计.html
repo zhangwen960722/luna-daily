@@ -31,7 +31,14 @@
         .nav-tools { display: flex; align-items: center; gap: 20px; color: var(--el-text-color-regular); font-size: 18px; }
         .content-area { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         .card { background: #FFFFFF; border-radius: 4px; padding: 16px; border: 1px solid var(--el-border-color); }
-        .search-area { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+        /* 查询区：外层不换行 —— 右侧按钮组（查询 / 重置 / 更多 / 导出）永远与「第一行条件」同排；14 个条件在 .search-conditions 内部自行换行 */
+        .search-area { display: flex; flex-wrap: nowrap; gap: 16px; align-items: flex-start; }
+        .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
+        .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+        /* 日期区间要完整显示两个日期，不允许被压窄 */
+        .search-conditions .el-date-editor.el-input__wrapper,
+        .search-conditions .el-date-editor--daterange { flex: 0 0 240px; min-width: 240px; max-width: 240px; }
+        .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
         .search-item { display: flex; align-items: center; }
         .search-label { width: 70px; text-align: right; margin-right: 8px; color: var(--el-text-color-regular); white-space: nowrap; font-size: 14px; }
         .search-control { width: 240px; }
@@ -289,6 +296,9 @@
         .fee-add-amount { font-weight: 600; font-size: 15px; line-height: 32px; }
         .fee-add-tag { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 12px; color: var(--el-text-color-secondary); }
         .fee-add-tag-note { color: var(--el-text-color-placeholder); }
+        /* 关联账单号：可点击跳「账单管理」（hover 手型 + 下划线） */
+        .bill-link { cursor: pointer; display: inline-block; }
+        .bill-link:hover, .bill-link:hover .el-tag { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -298,8 +308,10 @@
             <div class="content-area" style="padding: 0;">
                 <!-- Search & Tabs -->
                 <div class="card" style="border-bottom: 1px solid var(--el-border-color); border-radius: 4px 4px 0 0;">
-                    <!-- 第一层：查询区（条件文字在框内；默认 3 个条件 + 更多查询条件；点击查询后收起） -->
+                    <!-- 第一层：查询区（条件文字在框内；默认 3 个条件 + 更多查询条件；点击查询后收起）
+                         布局：外层 .search-area 不换行，条件在 .search-conditions 内部自行换行 → 右侧按钮组永远与第一行条件同排 -->
                     <div class="search-area">
+                        <div class="search-conditions">
                         <el-input v-model="search.orderNo" placeholder="运单号" class="search-control" clearable></el-input>
                         <el-select v-model="search.user" placeholder="客户昵称" class="search-control" multiple clearable collapse-tags collapse-tags-tooltip>
                             <el-option label="szcross" value="szcross"></el-option>
@@ -310,7 +322,7 @@
                         <el-date-picker v-model="search.pickTime" type="daterange" class="search-control" start-placeholder="拣货开始" end-placeholder="拣货结束"></el-date-picker>
                         <template v-if="isSearchExpanded">
                             <el-input v-model="search.customerNo" placeholder="客户单号" class="search-control" clearable></el-input>
-                            <el-input v-model="search.relNo" placeholder="关联单号" class="search-control" clearable></el-input>
+                            <el-input v-model="search.fbaNo" placeholder="FBA 单号" class="search-control" clearable></el-input>
                             <el-input v-model="search.blNo" placeholder="提单号" class="search-control" clearable></el-input>
                             <el-select v-model="search.service" placeholder="服务组合" class="search-control" multiple clearable collapse-tags collapse-tags-tooltip>
                                 <el-option label="美森360-海运-卡派-KG-包税" value="美森360-海运-卡派-KG-包税"></el-option>
@@ -350,6 +362,8 @@
                                 <el-option label="FedEx" value="FedEx"></el-option>
                             </el-select>
                         </template>
+                            </div>
+
                         <div class="search-actions">
                             <el-button type="primary" @click="handleSearch">查询</el-button>
                             <el-button @click="resetSearch">重置</el-button>
@@ -395,7 +409,7 @@
                     <template #default="scope"><span style="color:var(--el-color-primary);cursor:pointer;font-weight:600;" @click="openDetail(scope.row)">{{ scope.row.orderNo }}</span></template>
                     </el-table-column>
                     <el-table-column prop="customerNo" label="客户单号" width="130" show-overflow-tooltip></el-table-column>
-                    <el-table-column prop="relNo" label="关联单号" width="120" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="FBA 单号" width="200" show-overflow-tooltip><template #default="scope">{{ fbaNosText(scope.row) }}</template></el-table-column>
                     <el-table-column prop="cusNo" label="客户编号" width="110" align="center"></el-table-column>
                     <el-table-column prop="user" label="客户昵称" width="110" show-overflow-tooltip></el-table-column>
                     <el-table-column prop="sales" label="销售代表" width="100" align="center"></el-table-column>
@@ -418,13 +432,16 @@
                     <el-table-column prop="declareWay" label="报关方式" width="110" align="center"></el-table-column>
                     <el-table-column label="应收" width="136" align="right">
                     <template #default="scope">
-                        <el-popover v-if="rowDirFlows(scope.row, 'ar').length" placement="left" :width="600" trigger="hover">
+                        <el-popover v-if="rowDirFlows(scope.row, 'ar').length" placement="left" :width="720" trigger="hover">
                             <template #reference>
                                 <span style="font-weight:600;cursor:pointer;">{{ rowDirTotalText(scope.row, 'ar') }}</span>
                             </template>
                             <div style="font-weight:600;margin-bottom:8px;">{{ scope.row.orderNo }} · 应收明细（{{ rowDirFlows(scope.row, 'ar').length }} 条）</div>
                             <el-table :data="rowDirFlows(scope.row, 'ar')" size="small" border max-height="300">
                                 <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                <el-table-column label="审计状态" width="104" align="center">
+                                    <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : (s.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
+                                </el-table-column>
                                 <el-table-column label="金额" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
                                 <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
                                 <el-table-column v-if="rowHasRate(scope.row, 'ar')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
@@ -441,13 +458,16 @@
                     </el-table-column>
                     <el-table-column label="应付" width="136" align="right">
                     <template #default="scope">
-                        <el-popover v-if="rowDirFlows(scope.row, 'ap').length" placement="left" :width="600" trigger="hover">
+                        <el-popover v-if="rowDirFlows(scope.row, 'ap').length" placement="left" :width="720" trigger="hover">
                             <template #reference>
                                 <span style="font-weight:600;cursor:pointer;color:var(--el-color-danger);">{{ rowDirTotalText(scope.row, 'ap') }}</span>
                             </template>
                             <div style="font-weight:600;margin-bottom:8px;">{{ scope.row.orderNo }} · 应付明细（{{ rowDirFlows(scope.row, 'ap').length }} 条）</div>
                             <el-table :data="rowDirFlows(scope.row, 'ap')" size="small" border max-height="300">
                                 <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                <el-table-column label="审计状态" width="104" align="center">
+                                    <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : (s.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
+                                </el-table-column>
                                 <el-table-column label="金额" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
                                 <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
                                 <el-table-column v-if="rowHasRate(scope.row, 'ap')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
@@ -497,9 +517,11 @@
                     <el-table-column prop="site" label="交货站点" width="110" align="center"></el-table-column>
                     <el-table-column prop="importDeclareMode" label="进口申报模式" width="130" align="center"></el-table-column>
                     <el-table-column prop="exportInspectFirst" label="出口先查后装模式" width="150" align="center"></el-table-column>
-                    <el-table-column label="关联账单" width="170" align="center">
+                    <el-table-column label="关联账单" width="200" align="center">
                     <template #default="scope">
-                        <el-tag v-if="((scope.row.arFlows || []).concat(scope.row.apFlows || []).find(f => f.billNo) || {}).billNo" size="small" type="warning">{{ ((scope.row.arFlows || []).concat(scope.row.apFlows || []).find(f => f.billNo) || {}).billNo }}</el-tag>
+                        <el-tooltip v-if="primaryBillNo(scope.row)" :content="billLinkTooltip(scope.row)" placement="top">
+                            <span class="bill-link" @click="jumpToBill(primaryBillNo(scope.row))"><el-tag size="small" type="warning">{{ primaryBillNo(scope.row) }}</el-tag></span>
+                        </el-tooltip>
                         <span v-else style="color:var(--el-text-color-secondary);">—</span>
                     </template>
                     </el-table-column>
@@ -1308,7 +1330,7 @@
             <!-- Step 2: 上传文件 -->
             <div v-if="importStep === 1" style="padding: 32px 24px;">
                 <el-upload class="upload-demo" drag action="#" :auto-upload="false" :on-change="onImportFileChange" :limit="1" accept=".xlsx,.xls">
-                    <el-icon style="font-size: 48px; color: #c0c4cc;"><UploadFilled /></el-icon>
+                    <el-icon style="font-size: 48px; color: #c0c4cc;"><upload-filled></upload-filled></el-icon>
                     <div style="margin-top: 12px; color: #606266;">
                         将填好的 Excel 文件拖到此处，或 <em style="color: var(--el-color-primary);">点击上传</em>
                     </div>
@@ -2174,10 +2196,13 @@
                                         <el-table :data="currentArFlows" @selection-change="handleFeeArSelectionChange" border size="small" class="fee-flow-table">
                                         <el-table-column type="selection" width="46" align="center"></el-table-column>
                                             <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                <el-table-column label="审计状态" width="104" align="center">
+                                    <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : (s.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
+                                </el-table-column>
                                             <el-table-column prop="kindLabel" label="流水种类" width="88" align="center"></el-table-column>
                                             <el-table-column label="审计状态" width="104" align="center">
                                                 <template #default="scope">
-                                                    <el-tag size="small" :type="scope.row.auditStatus === '已审计' ? 'success' : (scope.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
+                                                    <el-tag size="small" :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
                                                 </template>
                                             </el-table-column>
                                             <el-table-column label="币种" width="64" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
@@ -2189,9 +2214,11 @@
                                             <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
                                             <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
-                                            <el-table-column label="关联账单" width="170" align="center">
+                                            <el-table-column label="关联账单" width="200" align="center">
                                                 <template #default="scope">
-                                                    <el-tag v-if="scope.row.billNo" size="small" type="warning">{{ scope.row.billNo }}</el-tag>
+                                                    <el-tooltip v-if="scope.row.billNo" content="在账单管理中查看" placement="top">
+                                                        <span class="bill-link" @click="jumpToBill(scope.row.billNo)"><el-tag size="small" type="warning">{{ scope.row.billNo }}</el-tag></span>
+                                                    </el-tooltip>
                                                     <span v-else style="color:var(--el-text-color-secondary);">—</span>
                                                 </template>
                                             </el-table-column>
@@ -2231,7 +2258,7 @@
                                             <el-table-column prop="source" label="数据来源" width="90" align="center"></el-table-column>
                                             <el-table-column label="审计状态" width="104" align="center">
                                             <template #default="scope">
-                                                <el-tag size="small" :type="scope.row.auditStatus === '已审计' ? 'success' : (scope.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
+                                                <el-tag size="small" :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
                                             </template>
                                             </el-table-column>
                                             <el-table-column label="操作" width="120" align="center">
@@ -2308,7 +2335,7 @@
                                     <div style="font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 8px;">司机已出发。 国家：中国 城市：广州</div>
                                     <div>
                                         <el-button :disabled="waybillOpsReadonly" type="text" size="small" @click="dialogRouteAdd = true">编辑</el-button>
-                                        <el-button :disabled="waybillOpsReadonly" type="text" size="small" title="复制"><el-icon><DocumentCopy /></el-icon></el-button>
+                                        <el-button :disabled="waybillOpsReadonly" type="text" size="small" title="复制"><el-icon><document-copy></document-copy></el-icon></el-button>
                                         <el-button :disabled="waybillOpsReadonly" type="text" class="is-danger" size="small" @click="handleDelete('确认删除该条路由信息吗？')">删除</el-button>
                                     </div>
                                 </div>
@@ -2319,7 +2346,7 @@
                                     <div style="font-size: 13px; color: var(--el-text-color-regular); margin-bottom: 8px;">运单创建成功。 国家：中国 城市：广州</div>
                                     <div>
                                         <el-button :disabled="waybillOpsReadonly" type="text" size="small" @click="dialogRouteAdd = true">编辑</el-button>
-                                        <el-button :disabled="waybillOpsReadonly" type="text" size="small" title="复制"><el-icon><DocumentCopy /></el-icon></el-button>
+                                        <el-button :disabled="waybillOpsReadonly" type="text" size="small" title="复制"><el-icon><document-copy></document-copy></el-icon></el-button>
                                         <el-button :disabled="waybillOpsReadonly" type="text" class="is-danger" size="small" @click="handleDelete('确认删除该条路由信息吗？')">删除</el-button>
                                     </div>
                                 </div>
@@ -2664,7 +2691,9 @@
                 <el-descriptions-item label="拣货时间">{{ feeArDetail.pickTime || '—' }}</el-descriptions-item>
                 <el-descriptions-item label="内部备注" :span="2">{{ feeArDetail.remark || '—' }}</el-descriptions-item>
                 <el-descriptions-item label="关联账单" :span="2">
-                    <el-tag v-if="feeArDetail.billNo" size="small" type="warning">{{ feeArDetail.billNo }}</el-tag>
+                    <el-tooltip v-if="feeArDetail.billNo" content="在账单管理中查看" placement="top">
+                        <span class="bill-link" @click="jumpToBill(feeArDetail.billNo)"><el-tag size="small" type="warning">{{ feeArDetail.billNo }}</el-tag></span>
+                    </el-tooltip>
                     <span v-else style="color:var(--el-text-color-secondary);">未关联账单（仍在账单草稿池）</span>
                 </el-descriptions-item>
             </el-descriptions>
@@ -2916,28 +2945,6 @@
             </template>
         </el-dialog>
 
-        <!-- 运单级审计 / 反审计（按费用方向整票） -->
-        <el-dialog v-model="waybillAuditVisible" :title="waybillAuditMode === 'audit' ? '运单审计' : '运单反审计'" width="560px" append-to-body>
-            <div style="background:#F7F8FA; border:1px solid #EBEEF5; border-radius:6px; padding:8px 14px; margin-bottom:14px; font-size:13px; color:#606266;">
-                <span style="color:#909399; margin-right:6px;">运单</span><b style="color:#303133;">{{ waybillAuditSummary }}</b>
-            </div>
-            <el-form label-width="96px">
-                <el-form-item :label="waybillAuditMode === 'audit' ? '审计范围' : '反审计范围'">
-                    <el-checkbox-group v-model="waybillAuditDirs">
-                        <el-checkbox label="应收" value="ar" :disabled="!waybillAuditDirUsable('ar')">应收（该运单全部应收流水统一{{ waybillAuditMode === 'audit' ? '审计' : '反审计' }}）</el-checkbox>
-                        <el-checkbox label="应付" value="ap" :disabled="!waybillAuditDirUsable('ap')">应付（该运单全部应付流水统一{{ waybillAuditMode === 'audit' ? '审计' : '反审计' }}）</el-checkbox>
-                    </el-checkbox-group>
-                </el-form-item>
-            </el-form>
-            <div style="color:#606266; font-size:13px; line-height:1.7; padding-left:96px;">
-                <template v-if="waybillAuditMode === 'audit'">审计通过后：运单该方向标记置「已审计」，<b>整票不允许再新增该方向费用</b>，该方向流水全部冻结。</template>
-                <template v-else>反审计后：运单该方向标记回到「未审计」，该方向流水回到「待业务审计」，业务可再次修改并重新审计。</template>
-            </div>
-            <template #footer>
-                <el-button @click="waybillAuditVisible = false">取消</el-button>
-                <el-button :type="waybillAuditMode === 'audit' ? 'primary' : 'danger'" @click="submitWaybillAudit">{{ waybillAuditMode === 'audit' ? '确认审计' : '确认反审计' }}</el-button>
-            </template>
-        </el-dialog>
 
         <!-- 添加应收（卡片式逐条录入；选中来源规则按规则带出单价并自动打标） -->
         <el-dialog v-model="dialogFeeAr" title="新增应收流水" width="900px" append-to-body>
@@ -3380,7 +3387,7 @@
                         <div style="width: 100%;">
                             <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
                                 <el-input placeholder="搜索箱号..." size="small" style="width: 200px;">
-                                    <template #prefix><el-icon><search /></el-icon></template>
+                                    <template #prefix><el-icon><zoom-in></zoom-in></el-icon></template>
                                 </el-input>
                                 <span style="font-size: 12px; color: var(--el-text-color-secondary); line-height: 24px;">已自动隐藏已比价货箱（如BOX-001）</span>
                             </div>
@@ -3602,11 +3609,11 @@
                     tabs.push({ name: '全部', count: tableData.value.length });
                     return tabs;
                 });
-                const activeStatusTab = ref('已收货');   // 进入菜单默认命中「已收货」
+                const activeStatusTab = ref('全部');   // 进入菜单默认命中「全部」状态 Tab
                 // 查询 / 重置：**点击查询后查询条件默认收起**（只留 运单号 / 客户昵称 / 拣货时间 三个）
                 const handleSearch = () => { isSearchExpanded.value = false; ElMessage.success('执行查询'); };
                 const resetSearch = () => {
-                    search.orderNo = ''; search.user = []; search.pickTime = []; search.customerNo = ''; search.relNo = ''; search.blNo = '';
+                    search.orderNo = ''; search.user = []; search.pickTime = []; search.customerNo = ''; search.fbaNo = ''; search.blNo = '';
                     search.service = []; search.cusNo = ''; search.sales = []; search.exportInspectFirst = '';
                     search.customMark = []; search.linkedBill = ''; search.auditStatus = ''; search.supplier = '';
                     isSearchExpanded.value = false;
@@ -3623,11 +3630,23 @@
                     orderTime: [], pickTime: [], expressPickTime: [], sailTime: [], portTime: [], cabinetTime: [], signTime: []
                 });
                 
-                const mkRow = (no, status, isFba, fbaNo) => ({
+                // 仓库代码：不再随机 —— 按运单号确定性取值，且与「财务_账单管理」同一票完全同值（两页互跳时对得上）
+                // 口径：FBA 票 = ONT8；非 FBA 票 = WH001 起顺序编号（YD20260413015 未进账单管理，固定 WH007）
+                const warehouseCodeMap = {
+                    'YD20260413005': 'WH001', 'YD20260413006': 'ONT8', 'YD20260413007': 'WH002', 'YD20260413008': 'ONT8',
+                    'YD20260413009': 'WH003', 'YD20260413010': 'ONT8', 'YD20260413011': 'WH004', 'YD20260413012': 'ONT8',
+                    'YD20260413013': 'WH005', 'YD20260413014': 'WH006', 'YD20260413015': 'WH007',
+                    'YD20260413016': 'ONT8', 'YD20260413017': 'WH008', 'YD20260413018': 'ONT8'
+                };
+                const warehouseCodeOf = (no, isFba) => warehouseCodeMap[no] || (isFba ? 'ONT8' : 'WH008');
+                // FBA 单号展示：多货件拼成 A / B；非 FBA 票显示「—」
+                const fbaNosText = (row) => ((row && row.fbaNos && row.fbaNos.length) ? row.fbaNos.join(' / ') : '—');
+                // FBA 单号：一个运单可能对应多个 FBA 货件号 → 存数组，展示时 join(' / ')（按运单汇总、不落库，与「产品数量」同处理）
+                const mkRow = (no, status, isFba, fbaNos) => ({
                     orderNo: no, customerNo: 'CUS'+String(Math.floor(Math.random()*900+100)),
-                    fbaNo: isFba ? (fbaNo||'FBA'+String(Math.floor(Math.random()*900+100))) : '', isFba,
+                    fbaNos: isFba ? (Array.isArray(fbaNos) ? fbaNos : [(fbaNos||'FBA'+String(Math.floor(Math.random()*900+100)))]) : [], isFba,
                     relNo: 'REL'+no.slice(-3), blNo: 'BL'+no.slice(-3),
-                    warehouseCode: isFba ? 'ONT8' : 'WH00'+Math.floor(Math.random()*9+1),
+                    warehouseCode: warehouseCodeOf(no, isFba),
                     source:'API', user:'szcross',
                     service: isFba ? '美森360-海运-卡派-KG-包税' : '空派-包税-DPD',
                     addressShort: isFba ? '美西1仓' : '洛杉矶1号仓',
@@ -3662,14 +3681,17 @@
                 });
                 const tableData = ref([
                     // 运单审计范围 = 已收货及之后（已下单 / 收货中 / 已取消 无费用可审，不进本页）
-                    (()=>{ const r=mkRow('YD20260413005','已收货',false); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; r.surchargeMark=['超长','出口查验']; r.exportInspectFirst='是'; return r; })(),
-                    (()=>{ const r=mkRow('YD20260413006','已收货',true,'FBA-C003'); r.billingType='cbm'; r.service='美森360-海运-卡派-按方包税'; r.exportInspectFirst='否'; return r; })(),
-                    mkRow('YD20260413007','转运中',false), mkRow('YD20260413008','转运中',true,'FBA-E005'),
-                    mkRow('YD20260413009','已到港',false), mkRow('YD20260413010','已到港',true,'FBA-F006'),
-                    mkRow('YD20260413011','已清关',false), mkRow('YD20260413012','已清关',true,'FBA-G007'),
+                    (()=>{ const r=mkRow('YD20260413005','已收货',true,['FBA19GM2GSBX', 'FBA19KH7TPQ4']); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; r.surchargeMark=['超长','出口查验']; r.exportInspectFirst='是'; return r; })(),
+                    (()=>{ const r=mkRow('YD20260413006','已收货',true,'FBA18XK3MNPQ'); r.billingType='cbm'; r.service='美森360-海运-卡派-按方包税'; r.exportInspectFirst='否'; return r; })(),
+                    mkRow('YD20260413007','转运中',false), mkRow('YD20260413008','转运中',true,'FBA17TR9WQ2L'),
+                    mkRow('YD20260413009','已到港',false), mkRow('YD20260413010','已到港',true,'FBA16HD5CJ8V'),
+                    mkRow('YD20260413011','已清关',false), mkRow('YD20260413012','已清关',true,'FBA15PL4ZR6T'),
                     (()=>{ const r=mkRow('YD20260413013','已到仓',false); r.surchargeMark=['加急件']; return r; })(),
                     (()=>{ const r=mkRow('YD20260413014','已签收',false); r.arAuditStatus='已审计'; r.arAuditBy='财务-王五'; r.arAuditAt='2026-04-15 10:20'; return r; })(),
                     mkRow('YD20260413015','退件',false),
+                    (()=>{ const r=mkRow('YD20260413016','已签收',true,'FBA14KQ8WN3D'); r.billingType='kg'; r.service='空派-包税-DPD'; r.exportInspectFirst='否'; r.arAuditStatus='已审计'; r.arAuditBy='财务-王五'; r.arAuditAt='2026-04-16 10:00'; return r; })(),
+                    (()=>{ const r=mkRow('YD20260413017','已清关',false); r.arAuditStatus='已审计'; r.arAuditBy='财务-王五'; r.arAuditAt='2026-04-16 10:05'; return r; })(),
+                    (()=>{ const r=mkRow('YD20260413018','已到仓',true,'FBA13MR6VB2K'); r.billingType='kg'; r.exportInspectFirst='否'; r.arAuditStatus='已审计'; r.arAuditBy='财务-王五'; r.arAuditAt='2026-04-16 10:10'; return r; })(),
                 ]);
                 // 审计状态：运单级 = 该方向整票标记；部分审计 = 该方向未整票审计但已有条流水审计通过（流水级审计不动运单标记）
                 const rowArPartialAudited = (r) => !waybillFeeAudited(r, 'ar') && (r.arFlows || []).some(f => f.auditStatus === '已审计');
@@ -3701,7 +3723,7 @@
                 if (activeStatusTab.value !== '全部') rows = rows.filter(row => row.status === activeStatusTab.value);
                 if (search.orderNo) rows = rows.filter(r => (r.orderNo || '').includes(search.orderNo));
                 if (search.customerNo) rows = rows.filter(r => (r.customerNo || '').includes(search.customerNo));
-                if (search.relNo) rows = rows.filter(r => (r.relNo || '').includes(search.relNo));
+                if (search.fbaNo) rows = rows.filter(r => (r.fbaNos || []).join(' / ').includes(search.fbaNo));
                 if (search.cusNo) rows = rows.filter(r => (r.cusNo || '').includes(search.cusNo));
                 if (search.blNo) rows = rows.filter(r => ((r.blNo || '') + (r.containerNo || '')).includes(search.blNo));
                 if (search.user && search.user.length) rows = rows.filter(r => search.user.includes(r.user));
@@ -3714,6 +3736,21 @@
                 if (search.linkedBill) { const has = (r) => ((r.arFlows || []).some(f => f.billNo) || (r.apFlows || []).some(f => f.billNo)); rows = rows.filter(r => search.linkedBill === 'linked' ? has(r) : !has(r)); }
                 return rows;
             });
+                // ── 账单归属：关联账单列可点击跳到「账单管理」并自动打开该账单详情（内部侧互跳；同一运单的不同流水可拆到不同账单）──
+                const billNosOfWaybill = (row) => {
+                    const nos = ((row && row.arFlows) || []).concat((row && row.apFlows) || []).map(f => f && f.billNo).filter(Boolean);
+                    return [...new Set(nos)];
+                };
+                const primaryBillNo = (row) => billNosOfWaybill(row)[0] || '';
+                const billLinkTooltip = (row) => {
+                    const n = billNosOfWaybill(row).length;
+                    return n > 1 ? `在账单管理中查看 · 本票关联 ${n} 张账单` : '在账单管理中查看';
+                };
+                const jumpToBill = (billNo) => {
+                    if (!billNo) return;
+                    const url = '财务_账单管理.html?billNo=' + encodeURIComponent(billNo);
+                    try { window.open(url, '_blank'); } catch (e) { ElMessage.warning('无法打开账单管理页：' + url); }
+                };
                 const selection = ref([]);
                 const hasSelection = computed(() => selection.value.length > 0);
                 const selectedOrderNos = computed(() => selection.value.map(item => item.orderNo));
@@ -3762,7 +3799,7 @@
                 };
 
                 const allTableColumns = ref([
-                    { field: '运单号', show: true }, { field: '客户单号', show: true }, { field: 'FBA单号', show: true }, { field: '仓库代码', show: true }, { field: '邮编', show: true }, { field: '关联单号', show: true },
+                    { field: '运单号', show: true }, { field: '客户单号', show: true }, { field: 'FBA单号', show: true }, { field: '仓库代码', show: true }, { field: '邮编', show: true },
                     { field: '提单号', show: true }, { field: '渠道来源', show: true },
                     { field: '客户昵称', show: true }, { field: '服务', show: true }, { field: '地址简称', show: true },
                     { field: '国家', show: true }, { field: '客户备注', show: true }, { field: '内部备注', show: true }, { field: '标识', show: true },
@@ -5139,7 +5176,7 @@
                     return selection.value.every(s => ['收货中','已收货','转运中'].includes(s.status));
                 });
                 // 费用操作允许的运单状态（列表入口与详情入口共用同一份口径）：
-                // 已下单 / 收货中 尚未产生计费；已取消 / 退件 须走赔付或红冲，一律不允许费用操作
+                // 已下单 / 收货中 尚未产生计费；已取消 / 退件 须走赔付或新增负数流水，一律不允许费用操作
                 const FEE_ALLOWED_STATES = ['已收货','转运中','已到港','已清关','已到仓','已签收','退件'];   // 审计页：退件放开（货退客户，但收货产生的成本仍应收）
                 const canFee = computed(() => {
                     if (selection.value.length === 0) return false;
@@ -5164,7 +5201,7 @@
                 });
                 // 两层审计标签：
                 //   ① 运单审计标签（waybill.feeAuditStatus）= 待审计 / 已审计 —— 「整单审计通过」写在运单上，**已审计 → 整票不允许新增费用**
-                //   ② 流水审计标签（ar_flow.auditStatus）= 待业务审计 / 已审计 / 已红冲 —— **运单未审计但该条已审计 → 该条不可变更，只能加新流水**
+                //   ② 流水审计标签（ar_flow.auditStatus）= 待业务审计 / 已审计 —— **运单未审计但该条已审计 → 该条不可变更，只能加新流水（要冲减已出账的钱 → 手工新增负数流水，进下一期账单抵扣）**
                 // 运单在该方向是否已整票审计（dir: 'ar' 应收 / 'ap' 应付）
                 const waybillFeeAudited = (w, dir) => !!w && (dir === 'ap' ? w.apAuditStatus : w.arAuditStatus) === '已审计';
                 // 行级冻结边界（优先级：运单状态 → 运单级审计 → 账单关联 → 流水级审计）
@@ -5172,9 +5209,8 @@
                     const cur = currentRow.value || {};
                     if (!FEE_ALLOWED_STATES.includes(cur.status || '')) return `运单状态「${cur.status}」不支持费用操作`;
                     if (waybillFeeAudited(cur, 'ar')) return `运单「应收」已整票审计（${cur.arAuditBy || '财务'} · ${cur.arAuditAt || ''}），应收流水全部冻结；如需变更请到「财务中心 → 运单审计」反审计应收`;
-                    if (row && row.billNo) return `已生成账单（${row.billNo}），彻底冻结；如需调整请反审计整票运单后红冲`;
+                    if (row && row.billNo) return `已生成账单（${row.billNo}），彻底冻结；如需调整请在运单上新增一条负数流水，于下一期账单抵扣`;
                     if (row && row.auditStatus === '已审计') return '该条流水已审计，不可变更；如需补收请新增流水';
-                    if (row && row.auditStatus === '已红冲') return '已红冲流水，只读';
                     return '';
                 };
                 const feeRowEditable = (row) => feeRowLockReason(row) === '';
@@ -5732,14 +5768,14 @@
                 // 收货完成时由系统生成：运费（预置费用类型）→ 运费优惠 / 泡比优惠（费用类型取优惠规则配置的）→ 附加费（匹配动作类型=加收费用的规则）→ 附加费优惠
                 // 每条流水留痕来源规则，供运单审计下钻「这笔钱是哪条规则给的」；生成后进入账单草稿池（未关联账单即停留池内）
                 const feeArFlows = ref([
-                    { id: 9001, auditStatus: '待业务审计', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', remark: '当周公布价 × 计费重量', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
-                    { id: 9002, auditStatus: '已审计', type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', remark: '客户特批（S 级客户）', pickTime: '2026-04-14 16:20', source: '特批规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 20, sourceRuleId: 5021, sourceRuleName: 'S级客户运费特批 -1.00/KG' },
-                    { id: 9003, auditStatus: '已审计', type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', remark: '泡比 360 ≥ 阈值 300', pickTime: '2026-04-14 16:20', source: '泡比规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 30, sourceRuleId: 6012, sourceRuleName: '密度阈值300 泡比优惠 -0.50/KG' },
-                    { id: 9004, auditStatus: '已审计', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', remark: '拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
-                    { id: 9005, auditStatus: '已审计', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
-                    { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
-                    { id: 9007, auditStatus: '待业务审计', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
-                    ,{ id: 9008, auditStatus: '待业务审计', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算，按 7.1000 折合', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
+                    { id: 9001, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', remark: '当周公布价 × 计费重量；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
+                    { id: 9002, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', remark: '客户特批（S 级客户）', pickTime: '2026-04-14 16:20', source: '特批规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 20, sourceRuleId: 5021, sourceRuleName: 'S级客户运费特批 -1.00/KG' },
+                    { id: 9003, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', remark: '泡比 360 ≥ 阈值 300', pickTime: '2026-04-14 16:20', source: '泡比规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 30, sourceRuleId: 6012, sourceRuleName: '密度阈值300 泡比优惠 -0.50/KG' },
+                    { id: 9004, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', remark: '拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
+                    { id: 9005, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
+                    { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-00001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）；本行 8 月已随当期账单出账（同票其余流水 9 月成账）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
+                    { id: 9007, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
+                    ,{ id: 9008, auditStatus: '已审计', billNo: 'AR-GZ-202609-00002', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算，按 7.1000 折合；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
                 ]);
                 // 运单应收净额 = 各行金额的代数和（优惠已独立成行，不再逐行做「公布价 − 优惠」）
                 const feeArNet = computed(() => currentArFlows.value.reduce((s, r) => s + flowCnyValue(r), 0));
@@ -5762,13 +5798,17 @@
                     const clone = (arr, idBase, patch) => arr.map((f, i) => Object.assign({}, f, { id: idBase + i }, patch || {}));
                     const r06 = tableData.value.find(r => r.orderNo === 'YD20260413006');
                     if (r06) {
-                        // 应收部分审计：运单应收标记仍是「未审计」，但已有流水审计通过（流水级审计不动运单标记）
-                        r06.arFlows = clone(feeArFlows.value.slice(0, 3), 9201);
+                        // 006 票自己的应收流水（与「账单管理」里本票 8 月账单 AR-SZ-202608-00001 的明细逐行一致：¥8.00×100 + ¥20.00×10 = ¥1,000.00）
+                        // 应收部分审计：运单应收标记仍是「未审计」，但该票 2 条流水已审计通过（流水级审计不动运单标记）
+                        r06.arFlows = [
+                            { id: 9201, auditStatus: '已审计', billNo: 'AR-SZ-202608-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 8.00, unit: 'KG', quantity: 100, amount: 800.00, rate: 1, description: '运单应收运费（美森360 · 按方包税）', remark: '当周公布价 × 计费量；08-01 随当期账单出账，客户待确认', pickTime: '2026-04-11 14:00', source: '当周公布价' },
+                            { id: 9202, auditStatus: '已审计', billNo: 'AR-SZ-202608-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 10, amount: 200.00, rate: 1, description: '单件超 30KG 的 10 件，加收 ¥20.00/KG', remark: '拣货实测触发；08-01 随当期账单出账', pickTime: '2026-04-11 14:00', source: '附加费规则' }
+                        ];
                         r06.apFlows = clone(feeApFlows.value, 8201, { type: '提货费', unitPrice: 30.00, quantity: 4, amount: 120.00, remark: '提货 4 票' });
                     }
                     const r14 = tableData.value.find(r => r.orderNo === 'YD20260413014');
                     if (r14) {
-                        r14.arFlows = clone(feeArFlows.value.slice(0, 5), 9301, { auditStatus: '已审计' });
+                        r14.arFlows = clone(feeArFlows.value.slice(0, 5), 9301, { auditStatus: '已审计', billNo: '' });
                         r14.apFlows = clone(feeApFlows.value, 8301, { auditStatus: '已审计' });
                         r14.apAuditStatus = '已审计'; r14.apAuditBy = '财务-王五'; r14.apAuditAt = '2026-04-15 10:20';
                     }
@@ -5777,6 +5817,28 @@
                         // 应付部分审计：应付标记未整票审计，但已有一条应付流水审计通过
                         r09.apFlows = [
                             Object.assign({}, feeApFlows.value[0], { id: 8401, auditStatus: '已审计', remark: '拖车费已核对（流水级审计，未整票）' }),
+                        ];
+                    }
+                    // 016 / 017 / 018 三票：各挂自己的应收流水（金额与「账单管理」里对应账单的明细逐行一致），并写上账单号（关联账单列可点击跳转）
+                    const r16 = tableData.value.find(r => r.orderNo === 'YD20260413016');
+                    if (r16) {
+                        r16.arFlows = [
+                            { id: 9401, auditStatus: '已审计', billNo: 'AR-GZ-202608-00002', type: '运费', kindLabel: '运费', currency: 'USD', unitPrice: 6.00, unit: 'KG', quantity: 60, amount: 360.00, rate: 7.1000, description: '运单应收运费（空派 · 按KG · 包税）', remark: 'USD 结算，不折合人民币；08-01 随当期账单出账', pickTime: '2026-04-12 14:00', source: '当周公布价' },
+                            { id: 9402, auditStatus: '已审计', billNo: 'AR-GZ-202608-00002', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 20.00, unit: '票', quantity: 1, amount: 20.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算', pickTime: '2026-04-12 14:00', source: '业务手工新增' }
+                        ];
+                    }
+                    const r17 = tableData.value.find(r => r.orderNo === 'YD20260413017');
+                    if (r17) {
+                        r17.arFlows = [
+                            { id: 9501, auditStatus: '已审计', billNo: 'AR-SZ-202607-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 7.50, unit: 'KG', quantity: 240, amount: 1800.00, rate: 1, description: '运单应收运费（美森360 · 按KG · 包税）', remark: '当周公布价 × 计费重量；07-01 随当期账单出账', pickTime: '2026-04-12 14:00', source: '当周公布价' },
+                            { id: 9502, auditStatus: '已审计', billNo: 'AR-SZ-202607-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 18, amount: 360.00, rate: 1, description: '单件超 30KG 的 18 件，加收 ¥20.00/KG', remark: '拣货实测触发', pickTime: '2026-04-12 14:00', source: '附加费规则' }
+                        ];
+                    }
+                    const r18 = tableData.value.find(r => r.orderNo === 'YD20260413018');
+                    if (r18) {
+                        r18.arFlows = [
+                            { id: 9601, auditStatus: '已审计', billNo: 'AR-GZ-202607-00002', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 7.50, unit: 'KG', quantity: 180, amount: 1350.00, rate: 1, description: '运单应收运费（美森360 · 按KG · 包税）', remark: '当周公布价 × 计费重量；07-01 随当期账单出账', pickTime: '2026-04-12 14:00', source: '当周公布价' },
+                            { id: 9602, auditStatus: '已审计', billNo: 'AR-GZ-202607-00002', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 1, description: '报关费（人工补录，单票）', remark: '—', pickTime: '2026-04-12 14:00', source: '业务手工新增' }
                         ];
                     }
                 })();
@@ -5928,7 +5990,7 @@
                     formCreate.hasFbaOrder = row.isFba || false;
                     if (row.isFba) {
                         formCreate.fbaOrders = [
-                            { fbaNo: row.fbaNo||'FBA-A001', poNo: 'PO-'+String(Math.floor(Math.random()*9000+1000)), boxCount: 8, boxes: genTestBoxes(8, row.status) },
+                            { fbaNo: (row.fbaNos || [])[0] || 'FBA-A001', poNo: 'PO-'+String(Math.floor(Math.random()*9000+1000)), boxCount: 8, boxes: genTestBoxes(8, row.status) },
                             { fbaNo: 'FBA-B002', poNo: 'PO-'+String(Math.floor(Math.random()*9000+1000)), boxCount: 8, boxes: genTestBoxes(8, row.status) }
                         ];
                         formCreate.boxes = [];
@@ -6106,7 +6168,7 @@
                     waybillAuditTargets.value = row ? [row] : selection.value.slice();
                     if (!waybillAuditTargets.value.length) { ElMessage.warning('请先勾选运单'); return; }
                     const usable = ['ar', 'ap'].filter(d => waybillAuditTargets.value.some(w => mode === 'audit' ? !waybillFeeAudited(w, d) : waybillFeeAudited(w, d)));
-                    waybillAuditDirs.value = usable.length ? [usable[0]] : [];
+                    waybillAuditDirs.value = usable.length ? [(usable[0] === 'ar' ? '应收' : '应付')] : [];
                     waybillAuditVisible.value = true;
                 };
                 const auditStamp = () => {
@@ -6116,8 +6178,10 @@
                 const submitWaybillAudit = () => {
                     if (!waybillAuditDirs.value.length) { ElMessage.warning('请至少选择一个费用方向'); return; }
                     const isAudit = waybillAuditMode.value === 'audit';
+                    // 方向取值归一化：本仓 Element Plus 的 el-checkbox 以 label 为值（value="ar" 不生效），勾选后拿到的是「应收 / 应付」中文
+                    const dirKeys = waybillAuditDirs.value.map(d => (d === 'ar' || d === '应收') ? 'ar' : 'ap');
                     waybillAuditTargets.value.forEach(w => {
-                        waybillAuditDirs.value.forEach(dir => {
+                        dirKeys.forEach(dir => {
                             if (isAudit === waybillFeeAudited(w, dir)) return;
                             if (isAudit) {
                                 if (dir === 'ar') { w.arAuditStatus = '已审计'; w.arAuditBy = '陈晓'; w.arAuditAt = auditStamp(); }
@@ -6128,11 +6192,11 @@
                             }
                             if (currentRow.value && currentRow.value.orderNo === w.orderNo) {
                                 const flows = dir === 'ar' ? feeArFlows.value : feeApFlows.value;
-                                flows.forEach(f => { if (f.auditStatus !== '已红冲') f.auditStatus = isAudit ? '已审计' : '待业务审计'; });
+                                flows.forEach(f => { f.auditStatus = isAudit ? '已审计' : '待业务审计'; });
                             }
                         });
                     });
-                    ElMessage.success(`${isAudit ? '已审计' : '已反审计'} ${waybillAuditTargets.value.length} 票运单的${waybillAuditDirs.value.map(d => d === 'ar' ? '应收' : '应付').join(' / ')}流水`);
+                    ElMessage.success(`${isAudit ? '已审计' : '已反审计'} ${waybillAuditTargets.value.length} 票运单的${dirKeys.map(d => d === 'ar' ? '应收' : '应付').join(' / ')}流水`);
                     waybillAuditVisible.value = false;
                 };
 
@@ -6143,17 +6207,17 @@
                 const handleFeeApSelectionChange = (v) => { feeApSelection.value = v || []; };
                 const rowAuditLockReason = (dir) => `运单「${dir === 'ap' ? '应付' : '应收'}」已整票审计，流水级审计 / 反审计不可用；请用列表「反审计」按方向整票反审计`;
                 const rowAuditUsable = (dir) => !!currentRow.value && auditStateOk(currentRow.value) && !waybillFeeAudited(currentRow.value, dir);
-                const canRowAudit = computed(() => rowAuditUsable('ar') && feeArSelection.value.some(f => f.auditStatus !== '已审计' && f.auditStatus !== '已红冲'));
+                const canRowAudit = computed(() => rowAuditUsable('ar') && feeArSelection.value.some(f => f.auditStatus !== '已审计'));
                 const canRowReverseAudit = computed(() => rowAuditUsable('ar') && feeArSelection.value.some(f => f.auditStatus === '已审计'));
-                const canRowAuditAp = computed(() => rowAuditUsable('ap') && feeApSelection.value.some(f => (f.auditStatus || '待业务审计') !== '已审计' && f.auditStatus !== '已红冲'));
+                const canRowAuditAp = computed(() => rowAuditUsable('ap') && feeApSelection.value.some(f => (f.auditStatus || '待业务审计') !== '已审计'));
                 const canRowReverseAuditAp = computed(() => rowAuditUsable('ap') && feeApSelection.value.some(f => f.auditStatus === '已审计'));
                 const submitRowAudit = (mode, dir) => {
                     const d = dir || 'ar';
                     if (!rowAuditUsable(d)) { ElMessage.warning(rowAuditLockReason(d)); return; }
                     const sel = d === 'ap' ? feeApSelection.value : feeArSelection.value;
-                    const targets = sel.filter(f => mode === 'audit' ? ((f.auditStatus || '待业务审计') !== '已审计' && f.auditStatus !== '已红冲') : f.auditStatus === '已审计');
+                    const targets = sel.filter(f => mode === 'audit' ? ((f.auditStatus || '待业务审计') !== '已审计') : f.auditStatus === '已审计');
                     if (!targets.length) { ElMessage.warning(mode === 'audit' ? '请勾选待业务审计的流水' : '请勾选已审计的流水'); return; }
-                    if (mode === 'reverse' && targets.some(f => f.billNo)) { ElMessage.warning('所选流水已关联账单，不可反审计；请整票反审计后以新流水（红冲）调整'); return; }
+                    if (mode === 'reverse' && targets.some(f => f.billNo)) { ElMessage.warning('所选流水已关联账单，不可反审计；如需冲减请在该运单上新增一条负数流水，于下一期账单抵扣'); return; }
                     targets.forEach(f => { f.auditStatus = mode === 'audit' ? '已审计' : '待业务审计'; });
                     ElMessage.success(`${mode === 'audit' ? '已审计' : '已反审计'} ${targets.length} 条流水`);
                     if (d === 'ap') { feeApSelection.value = []; } else { feeArSelection.value = []; }
@@ -6190,6 +6254,7 @@
                     statusTabs, activeStatusTab, filteredTableData, isSearchExpanded, search, allTableColumns,
                     handleSearch, resetSearch, handleExport, currentArFlows, currentApFlows, rowArTotal, rowApTotal, rowGrossProfit,
                     tableData, handleSelectionChange, hasSelection, selectedOrderNos,
+                    billNosOfWaybill, primaryBillNo, billLinkTooltip, jumpToBill, fbaNosText,
                     drawerCreate, activeFbaTab, dialogBatchSku, submitLoading, batchSelectedSkus, getActiveBoxes, toggleAllFba, toggleAllNonFba, getSelectedBoxesCount, handleBatchSkuChange, handleBatchAddSkuSubmit, formCreate, handleSaveCreate, handlePiecesChange, handleAddrChange, handleAddrChangeEdit, handleVatChange, addBoxDetail, removeBoxDetail,
                     boxInputMode, boxModes, dialogBoxTemplate, dialogBoxEdit, boxTemplates, templateTotalBoxes, templateTotalWeight, templateTotalVolume, templateValid, applyTemplates, applyTemplatesFromDialog, onDialogBoxTemplateOpen, openBoxEditDialog, beginDialogBoxEdit, saveBoxEditAndClose, cancelBoxEditAndClose, addBoxManual, addFbaBoxSmart, addBoxTemplate, resetTemplates, copyTemplate, onTemplateSkuChange, removeBox, addFbaOrder, addFbaOrderForDetail, syncFbaTemplateFromOrder, incompleteBoxes, modifiedBoxes, boxPhase, boxViewMode, beginBoxEdit, saveBoxEdit, cancelBoxEdit, getBoxFbaNo, copyBox,
                     generateFbaOrders, generateFbaBoxes, generateFbaBoxesNative, getFbaRowspan, addSku, removeSku, handleSkuChange, totalBoxes, totalSkus, totalDeclareValue, listBoxes, boxPage, boxPageSize, fbaBoxPage, boxTotalPages, pagedBoxes, activeFbaBoxes, fbaBoxTotalPages, pagedFbaBoxes,

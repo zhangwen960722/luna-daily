@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>核销记录 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
+
+        /* 查询区：外层不换行，条件用「弹性宽度」占满剩余空间（与「财务_账单管理」「财务_运单审计」同一套规范） */
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start; flex-wrap: nowrap; }
+        .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
+        .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+        .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .bill-link { color: #409EFF; cursor: pointer; }
+        .bill-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 上层卡片：查询区（6 个条件，全部是核销记录自身的属性 —— 不 join 账单 / 钱包的实时值；默认露前 3 个，其余进「更多查询条件」） -->
+        <div class="content-card" style="height: auto; margin-bottom: 16px;">
+            <div class="search-area">
+                <div class="search-conditions">
+                    <el-input v-model="search.writeoffNo" placeholder="核销单号" class="search-control" clearable></el-input>
+                    <el-input v-model="search.billNo" placeholder="账单编号" class="search-control" clearable></el-input>
+                    <el-input v-model="search.customerNick" placeholder="客户昵称" class="search-control" clearable></el-input>
+                    <template v-if="searchExpanded">
+                        <el-input v-model="search.cusNo" placeholder="客户编号" class="search-control" clearable></el-input>
+                        <el-select v-model="search.entityName" placeholder="我司主体" class="search-control" clearable>
+                            <el-option v-for="e in entityOptions" :key="e" :label="e" :value="e"></el-option>
+                        </el-select>
+                        <el-select v-model="search.type" placeholder="类型" class="search-control" clearable>
+                            <el-option v-for="t in typeOptions" :key="t" :label="t" :value="t"></el-option>
+                        </el-select>
+                    </template>
+                </div>
+                <div class="search-actions">
+                    <el-button type="primary" @click="handleSearch">查询</el-button>
+                    <el-button @click="resetSearch">重置</el-button>
+                    <el-button type="primary" link @click="searchExpanded = !searchExpanded">
+                        更多查询条件<el-icon class="el-icon--right"><ArrowDown v-if="!searchExpanded"></ArrowDown><ArrowUp v-else></ArrowUp></el-icon>
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：核销记录列表（一行一条核销单 = 一次核销动作的事实快照，「核销」与「已反核销」同一张表按类型区分） -->
+        <div class="content-card" style="height: calc(100vh - 128px);">
+            <el-table :data="filteredRecords" border style="width: 100%;">
+                <el-table-column prop="writeoffNo" label="核销单号" width="160"></el-table-column>
+                <el-table-column label="账单编号" width="200">
+                    <template #default="scope">
+                        <el-tooltip :content="recordBillTip(scope.row)" placement="top">
+                            <span class="bill-link" @click="jumpToBillDetail(scope.row.billNo)">{{ scope.row.billNo }}</span>
+                        </el-tooltip>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="customerName" label="客户名称" width="190" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="entityName" label="我司主体" width="110"></el-table-column>
+                <el-table-column label="币种" width="80" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column label="核销金额" width="120" align="right">
+                    <template #default="scope"><span style="font-weight: 600;">{{ moneySigned(scope.row.currency, scope.row.amount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="未核销金额（前 → 后）" width="180" align="right">
+                    <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.billBefore) }} <span style="color: #909399;">→</span> {{ formatMoney(scope.row.billAfter) }}</template>
+                </el-table-column>
+                <el-table-column label="类型" width="110" align="center">
+                    <template #default="scope"><el-tag :type="scope.row.type === '核销' ? 'success' : 'warning'" size="small">{{ scope.row.type }}</el-tag></template>
+                </el-table-column>
+                <el-table-column prop="operator" label="操作人" width="100" align="center"></el-table-column>
+                <el-table-column prop="time" label="操作时间" width="150" align="center"></el-table-column>
+                <el-table-column label="操作" width="110" fixed="right" align="center">
+                    <template #default="scope">
+                        <el-button v-if="scope.row.type === '核销'" link type="danger" size="small" @click="reverseWriteoff(scope.row)">反核销</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="filteredRecords.length"></el-pagination>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const DEMO_TODAY = '2026-09-15';
+
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyName = (c) => (currencyMap[c] ? currencyMap[c].name : c);
+                const currencySymbol = (c) => (currencyMap[c] ? currencyMap[c].symbol : c);
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatSigned = (val) => { const v = Number(val) || 0; return (v < 0 ? '-' : '') + formatMoney(Math.abs(v)); };
+                const moneySigned = (cur, val) => currencySymbol(cur) + formatSigned(val);
+                const entityOptions = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
+                const typeOptions = ['核销', '已反核销'];
+                const nowStamp = () => DEMO_TODAY + ' 16:40';
+                const pad = (n) => String(n).padStart(2, '0');
+                const fmtDate = (dt) => dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate());
+
+                // ===== 账单静态属性快照（核销记录只 join 账单「生成即固定」的属性：编号 / 客户 / 主体 / 币种 / 账单日期 / 账期 / 到期日期 / 账单金额）=====
+                // 核销状态 / 已核销金额 / 未核销金额 / 钱包余额 这些**实时值不进本页** —— 它们是「账单管理」与「资金账户管理」的当前值，本页是历史事实
+                const billSnapshots = {
+                    'AR-GZ-202606-00001': { customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', termText: '月结+5', dueDate: '2026-06-05', billAmount: 2800.00 },
+                    'AR-GZ-202607-00001': { customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+5', dueDate: '2026-07-05', billAmount: 3500.00 },
+                    'AR-GZ-202607-00002': { customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+15', dueDate: '2026-07-15', billAmount: 1450.00 },
+                    'AR-SZ-202607-00001': { customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+30', dueDate: '2026-07-30', billAmount: 2160.00 }
+                };
+
+                // ===== 核销记录 = 事实快照表（一行一条核销单）：核销前 / 后「未核销金额」+ 核销前 / 后「钱包余额」（钱包侧两列只留痕、不上表）=====
+                const writeoffs = reactive([
+                    { writeoffNo: 'WO20260605001', billNo: 'AR-GZ-202606-00001', amount: 2800.00, billBefore: 2800.00, billAfter: 0.00, walletBefore: 5819.50, walletAfter: 3019.50, type: '核销', operator: '李伟', time: '2026-06-05 10:00' },
+                    { writeoffNo: 'WO20260703001', billNo: 'AR-SZ-202607-00001', amount: 1000.00, billBefore: 2160.00, billAfter: 1160.00, walletBefore: 5360.00, walletAfter: 4360.00, type: '核销', operator: '李伟', time: '2026-07-03 10:20' },
+                    { writeoffNo: 'WO20260705001', billNo: 'AR-SZ-202607-00001', amount: 1160.00, billBefore: 1160.00, billAfter: 0.00, walletBefore: 4360.00, walletAfter: 3200.00, type: '核销', operator: '李伟', time: '2026-07-05 10:20' },
+                    { writeoffNo: 'WO20260706001', billNo: 'AR-GZ-202607-00001', amount: 400.00, billBefore: 3500.00, billAfter: 3100.00, walletBefore: 3019.50, walletAfter: 2619.50, type: '核销', operator: '李伟', time: '2026-07-06 14:00' },
+                    // 反核销链路演示：同一笔 400.00 一条「核销」+ 一条「已反核销」，净影响 0；已反核销的记录不再显示「反核销」按钮（R23）
+                    { writeoffNo: 'WO20260708001', billNo: 'AR-GZ-202607-00001', amount: 400.00, billBefore: 3100.00, billAfter: 3500.00, walletBefore: 2619.50, walletAfter: 3019.50, type: '已反核销', operator: '李伟', time: '2026-07-08 09:30' },
+                    { writeoffNo: 'WO20260709001', billNo: 'AR-GZ-202607-00002', amount: 700.00, billBefore: 1450.00, billAfter: 750.00, walletBefore: 4419.50, walletAfter: 3719.50, type: '核销', operator: '李伟', time: '2026-07-09 15:00' },
+                    { writeoffNo: 'WO20260720001', billNo: 'AR-GZ-202607-00001', amount: 1500.00, billBefore: 3500.00, billAfter: 2000.00, walletBefore: 3019.50, walletAfter: 1519.50, type: '核销', operator: '李伟', time: '2026-07-20 11:00' },
+                    { writeoffNo: 'WO20260826001', billNo: 'AR-GZ-202607-00001', amount: 719.50, billBefore: 2000.00, billAfter: 1280.50, walletBefore: 1519.50, walletAfter: 800.00, type: '核销', operator: '李伟', time: '2026-08-26 09:30' }
+                ]);
+                // 核销单号规则 = `WO + YYYYMMDD + 3 位序号`
+
+                const search = reactive({ writeoffNo: '', billNo: '', customerNick: '', cusNo: '', entityName: '', type: '' });
+                const searchExpanded = ref(false);
+                const handleSearch = () => { searchExpanded.value = false; ElMessage.success('执行查询'); };
+                const resetSearch = () => {
+                    search.writeoffNo = ''; search.billNo = ''; search.customerNick = '';
+                    search.cusNo = ''; search.entityName = ''; search.type = '';
+                    searchExpanded.value = false;
+                    ElMessage.success('已重置查询条件');
+                };
+
+                // 行 = 核销单（四个快照字段）+ 其所属账单的静态属性（按 billNo 回查）
+                const recordRows = computed(() => writeoffs.map(w => {
+                    const b = billSnapshots[w.billNo] || {};
+                    return Object.assign({}, b, {
+                        // ★ billNo 必须显式带出：billSnapshots 存的是账单「生成即固定」的属性、本身不含 billNo；
+                        //   漏了它 → 列表「账单编号」列空白 + 跳转带 ?billNo=undefined + 「账单编号」查询条件抛错 + 反核销文案与新增记录丢单号
+                        billNo: w.billNo,
+                        writeoffNo: w.writeoffNo, type: w.type, amount: w.amount, billBefore: w.billBefore, billAfter: w.billAfter,
+                        walletBefore: w.walletBefore, walletAfter: w.walletAfter, operator: w.operator, time: w.time, _rec: w
+                    });
+                }).slice().sort((a, b) => {
+                    if (a.time !== b.time) return a.time < b.time ? 1 : -1;
+                    return a.writeoffNo < b.writeoffNo ? 1 : -1;
+                }));
+                const filteredRecords = computed(() => {
+                    let d = recordRows.value;
+                    if (search.writeoffNo) d = d.filter(r => r.writeoffNo.includes(search.writeoffNo));
+                    if (search.billNo) d = d.filter(r => r.billNo.includes(search.billNo));
+                    if (search.customerNick) d = d.filter(r => (r.customerNick || '').includes(search.customerNick));
+                    if (search.cusNo) d = d.filter(r => (r.customerNo || '').includes(search.cusNo));
+                    if (search.entityName) d = d.filter(r => r.entityName === search.entityName);
+                    if (search.type) d = d.filter(r => r.type === search.type);
+                    return d;
+                });
+                const recordBillTip = (r) => `客户编号 ${r.customerNo} ｜ 客户昵称 ${r.customerNick} ｜ 账单日期 ${r.billingDate} ｜ 账期 ${r.termText} ｜ 到期日期 ${r.dueDate} ｜ 账单金额 ${moneySigned(r.currency, r.billAmount)}`;
+
+                // 关联跳转：点账单编号 → 新标签页打开「账单管理」并定位该账单（账单详情在那页，本页不重复摆账单字段）
+                const jumpToBillDetail = (billNo) => {
+                    window.open('财务_账单管理.html?billNo=' + encodeURIComponent(billNo), '_blank');
+                };
+
+                // 反核销（R23）：写一条「已反核销」记录、账单未核销金额回补、钱包余额回补；已反核销的记录不再显示入口
+                const reverseWriteoff = (row) => {
+                    if (row.type !== '核销') { ElMessage.warning('该记录已反核销'); return; }
+                    ElMessageBox.confirm(
+                        '确认对核销单 ' + row.writeoffNo + ' 执行反核销？反核销后：账单 ' + row.billNo + ' 的未核销金额由 '
+                        + moneySigned(row.currency, row.billAfter) + ' 回补为 ' + moneySigned(row.currency, row.billBefore)
+                        + '、客户钱包余额回补 ' + moneySigned(row.currency, row.amount) + '；本页会新增一条「已反核销」记录（原记录保留、不删除）。',
+                        '反核销', { confirmButtonText: '确认反核销', cancelButtonText: '取消', type: 'warning' }
+                    ).then(() => {
+                        row._rec.type = '已反核销';
+                        writeoffs.unshift({
+                            writeoffNo: 'WO' + nowStamp().slice(0, 10).replace(/-/g, '') + String(writeoffs.filter(w => w.time.slice(0, 10) === DEMO_TODAY).length + 1).padStart(3, '0'),
+                            billNo: row.billNo, amount: row.amount, billBefore: row.billAfter, billAfter: row.billBefore,
+                            walletBefore: row.walletAfter, walletAfter: row.walletBefore, type: '已反核销', operator: '李伟', time: nowStamp()
+                        });
+                        ElMessage.success('反核销成功，已新增一条「已反核销」记录');
+                    }).catch(() => {});
+                };
+
+                return {
+                    currencyName, formatMoney, moneySigned, entityOptions, typeOptions,
+                    writeoffs, search, searchExpanded, handleSearch, resetSearch,
+                    recordRows, filteredRecords, recordBillTip, jumpToBillDetail, reverseWriteoff
+                };
+            }
+        });
+        app.use(ElementPlus);
+        for (const [key, comp] of Object.entries(ElementPlusIconsVue)) { app.component(key, comp); }
+        app.mount('#app');
+    </script>
+</body>
+</html>

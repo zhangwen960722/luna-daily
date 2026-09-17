@@ -63,10 +63,10 @@
                     </div>
                     <div style="display: flex; gap: 12px; flex-shrink: 0;">
                         <el-button class="btn-search-primary" @click="handleFlowSearch">
-                            <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                            <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
                         </el-button>
                         <el-button class="btn-search-reset" @click="resetFlowSearch">
-                            <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                            <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
                         </el-button>
                     </div>
                 </template>
@@ -92,7 +92,7 @@
                         <el-table-column label="余额" min-width="130" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.balance) }}</template>
                         </el-table-column>
-                        <el-table-column label="待核销欠款" min-width="130" align="right">
+                        <el-table-column label="未核销金额" min-width="130" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.pendingWriteoff) }}</template>
                         </el-table-column>
                         <el-table-column label="待确认账单" min-width="130" align="right">
@@ -116,9 +116,12 @@
                                 <el-tag :type="flowTypeTag(scope.row.type)" size="small">{{ scope.row.type }}</el-tag>
                             </template>
                         </el-table-column>
-                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="entityName" label="账户主体" min-width="110"></el-table-column>
                         <el-table-column prop="currency" label="币种" min-width="80" align="center">
                             <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账户名称" min-width="130">
+                            <template #default="scope">{{ accountNameOf(scope.row.entityName, scope.row.currency) }}</template>
                         </el-table-column>
                         <el-table-column label="变动金额" min-width="120" align="right">
                             <template #default="scope">
@@ -142,9 +145,12 @@
                     <el-table :data="rechargeRecords" border style="width: 100%">
                         <el-table-column prop="applyNo" label="充值单号" min-width="140"></el-table-column>
                         <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
-                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
+                        <el-table-column prop="entityName" label="账户主体" min-width="110"></el-table-column>
                         <el-table-column prop="currency" label="币种" min-width="80" align="center">
                             <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账户名称" min-width="130">
+                            <template #default="scope">{{ accountNameOf(scope.row.entityName, scope.row.currency) }}</template>
                         </el-table-column>
                         <el-table-column label="充值金额" min-width="120" align="right">
                             <template #default="scope">
@@ -156,33 +162,6 @@
                             <template #default="scope">
                                 <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')" size="small">{{ scope.row.status }}</el-tag>
                             </template>
-                        </el-table-column>
-                    </el-table>
-                </el-tab-pane>
-
-                <el-tab-pane :label="'入账记录 (' + creditRecords.length + ')'" name="credit">
-                    <el-table :data="creditRecords" border style="width: 100%">
-                        <el-table-column prop="recordNo" label="记录编号" min-width="140"></el-table-column>
-                        <el-table-column prop="creditType" label="赔付类型" min-width="100" align="center"></el-table-column>
-                        <el-table-column prop="waybillNo" label="关联运单号" min-width="130"></el-table-column>
-                        <el-table-column prop="entityName" label="主体" min-width="100"></el-table-column>
-                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
-                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
-                        </el-table-column>
-                        <el-table-column label="赔付金额" min-width="110" align="right">
-                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
-                        </el-table-column>
-                        <el-table-column prop="status" label="状态" min-width="90" align="center">
-                            <template #default="scope">
-                                <el-tag :type="scope.row.status === '已入账' ? 'success' : 'warning'" size="small">{{ scope.row.status }}</el-tag>
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="createdAt" label="产生时间" min-width="150"></el-table-column>
-                        <el-table-column label="入账时间" min-width="150" align="center">
-                            <template #default="scope">{{ scope.row.bookedAt || '—' }}</template>
-                        </el-table-column>
-                        <el-table-column label="关联账单号" min-width="150">
-                            <template #default="scope">{{ scope.row.billNo || '—' }}</template>
                         </el-table-column>
                     </el-table>
                 </el-tab-pane>
@@ -272,16 +251,27 @@
                 const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
 
                 // === 资金账户（客户×主体×币种）；默认钱包=入驻/签约自动开人民币，余额 0 也展示 ===
+                // 账户名称 = `账号编号 币种代码`，账号**按钱包全局唯一**（同一客户在我司各主体下是各不相同的账号）：
+                // 1000001~1000003 = 华美 · 广州飞点CNY / 广州飞点USD / 深圳飞点CNY；1000008 = 华美 · 广东飞点CNY；1000009 = 华美 · 香港富力顿HKD
+                // 未核销金额 = Σ 本企业「已确认且未核销」账单的未核销金额；待确认账单 = Σ 本企业「已发送未确认」账单的账单金额
+                // 与「账单管理」逐笔同源（例：广州飞点·CNY = 1,330.50 + 750.00 = 2,080.50）
                 const wallets = reactive([
-                    { id: 1, entityName: '广州飞点', currency: 'CNY', accountName: '1000001 CNY', balance: 3719.50, pendingWriteoff: 1280.50, pendingConfirm: 800.00 },
-                    { id: 2, entityName: '广州飞点', currency: 'USD', accountName: '1000002 USD', balance: 1200.00, pendingWriteoff: 0.00, pendingConfirm: 500.00 },
-                    { id: 3, entityName: '深圳飞点', currency: 'CNY', accountName: '1000003 CNY', balance: 3200.00, pendingWriteoff: 3500.00, pendingConfirm: 200.00 },
-                    { id: 4, entityName: '广东飞点', currency: 'CNY', accountName: '1000004 CNY', balance: 800.00, pendingWriteoff: 1200.00, pendingConfirm: 0.00 },
-                    { id: 5, entityName: '香港富力顿', currency: 'HKD', accountName: '1000005 HKD', balance: 0.00, pendingWriteoff: 0.00, pendingConfirm: 0.00 }
+                    { id: 1, entityName: '广州飞点', currency: 'CNY', accountName: '1000001 CNY', balance: 3719.50, pendingWriteoff: 2080.50, pendingConfirm: 0.00 },
+                    { id: 2, entityName: '广州飞点', currency: 'USD', accountName: '1000002 USD', balance: 1200.00, pendingWriteoff: 620.00, pendingConfirm: 380.00 },
+                    { id: 3, entityName: '深圳飞点', currency: 'CNY', accountName: '1000003 CNY', balance: 3200.00, pendingWriteoff: 880.00, pendingConfirm: 1000.00 },
+                    { id: 4, entityName: '广东飞点', currency: 'CNY', accountName: '1000008 CNY', balance: 1100.00, pendingWriteoff: 0.00, pendingConfirm: 0.00 },
+                    { id: 5, entityName: '香港富力顿', currency: 'HKD', accountName: '1000009 HKD', balance: 15000.00, pendingWriteoff: 0.00, pendingConfirm: 0.00 }
                 ]);
 
-                // 实际金额 = 余额 - 待核销欠款（负数红色带负号，正数正常色）
+                // 实际金额 = 余额 - 未核销金额（负数红色带负号，正数正常色）
                 const actualAmount = (row) => row.balance - row.pendingWriteoff;
+
+                // 账户名称（= 钱包账号编号 + 币种代码）：流水 / 充值记录按「账户主体 × 币种」反查钱包，与「账户余额」Tab 同一份数据
+                // 一个钱包 = 客户 × 账户主体 × 币种，「账户名称」是该钱包对客户可见的唯一标识
+                const accountNameOf = (entityName, currency) => {
+                    const w = wallets.find(x => x.entityName === entityName && x.currency === currency);
+                    return w ? w.accountName : '—';
+                };
 
                 // === 我方银行账户（充值时选择，仅展示「用户是否可见=是」且「启用」的账户） ===
                 const bankAccounts = [
@@ -294,16 +284,19 @@
                 ];
 
                 // === 资金流水 ===
-                const flowTypes = ['充值', '充值退回', '提现', '账单核销', '账单核销撤销', '转汇'];
+                const flowTypes = ['充值', '充值退回', '提现', '收款核销', '收款核销撤销', '转汇', '赔付入账'];
                 const flowSearch = reactive({ type: '', currency: '', entityName: '' });
 
                 const allFlows = [
-                    { time: '2026-08-27 10:25', type: '充值', entityName: '广州飞点', currency: 'CNY', amount: 5000.00, balance: 5000.00 },
-                    { time: '2026-08-26 09:30', type: '账单核销', entityName: '广州飞点', currency: 'CNY', amount: -1280.50, balance: 3719.50 },
+                    { time: '2026-08-27 10:25', type: '充值', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, balance: 3719.50 },
                     { time: '2026-08-25 14:12', type: '充值', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, balance: 3200.00 },
                     { time: '2026-08-24 10:00', type: '转汇', entityName: '广州飞点', currency: 'USD', amount: 1200.00, balance: 1200.00 },
-                    { time: '2026-08-22 17:00', type: '充值', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, balance: 15000.00 },
-                    { time: '2026-08-20 11:00', type: '提现', entityName: '广州飞点', currency: 'CNY', amount: -500.00, balance: 4219.50 }
+                    { time: '2026-08-24 10:00', type: '转汇', entityName: '广州飞点', currency: 'CNY', amount: -8640.00, balance: 719.50 },
+                    { time: '2026-08-24 09:50', type: '充值', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, balance: 15000.00 },
+                    { time: '2026-08-20 11:00', type: '提现', entityName: '广州飞点', currency: 'CNY', amount: -500.00, balance: 9359.50 },
+                    { time: '2026-09-07 09:00', type: '赔付入账', entityName: '广东飞点', currency: 'CNY', amount: 300.00, balance: 1100.00 },
+                    { time: '2026-08-15 10:00', type: '充值', entityName: '广东飞点', currency: 'CNY', amount: 800.00, balance: 800.00 },
+                    { time: '2026-07-09 15:00', type: '收款核销', entityName: '广州飞点', currency: 'CNY', amount: -700.00, balance: 9859.50 }
                 ];
 
                 const filteredFlows = computed(() => {
@@ -315,7 +308,7 @@
                 });
 
                 const flowTypeTag = (type) => {
-                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '账单核销': 'danger', '账单核销撤销': 'success', '转汇': 'primary' };
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '赔付入账': 'success' };
                     return map[type] || 'info';
                 };
                 const handleFlowSearch = () => { ElMessage.success('执行查询'); };
@@ -323,18 +316,11 @@
 
                 // === 充值记录 ===
                 const rechargeRecords = reactive([
-                    { applyNo: 'FD20260827001', time: '2026-08-27 10:23', entityName: '广州飞点', currency: 'CNY', amount: 5000.00, bankAccount: '广州飞点-招商银行深圳分行(7559 1234 5678)', status: '已通过' },
+                    { applyNo: 'FD20260827001', time: '2026-08-27 10:23', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, bankAccount: '广州飞点-招商银行深圳分行(7559 1234 5678)', status: '已通过' },
+                    { applyNo: 'FD20260815001', time: '2026-08-15 09:58', entityName: '广东飞点', currency: 'CNY', amount: 800.00, bankAccount: '广东飞点-工商银行(4000 1111 2222)', status: '已通过' },
                     { applyNo: 'FD20260825002', time: '2026-08-25 14:10', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', status: '已通过' },
                     { applyNo: 'FD20260824003', time: '2026-08-24 09:45', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, bankAccount: '香港富力顿-汇丰银行(HSBC 123-456-789)', status: '已通过' },
                     { applyNo: 'FD20260822004', time: '2026-08-22 16:30', entityName: '广州飞点', currency: 'USD', amount: 1200.00, bankAccount: '广州飞点-中国银行美元户(6217 8888 6666)', status: '已通过' }
-                ]);
-
-                // === 入账记录（我司退款/赔偿，待入账→已入账，入账时归最新一期账单抵扣） ===
-                const creditRecords = reactive([
-                    { id: 1, recordNo: 'CR20260829001', creditType: '超时赔付', waybillNo: 'WB20260812001', entityName: '广州飞点', currency: 'CNY', amount: 120.00, status: '待入账', createdAt: '2026-08-29 10:00', bookedAt: '', billNo: '' },
-                    { id: 2, recordNo: 'CR20260829002', creditType: '货损赔偿', waybillNo: 'WB20260815002', entityName: '广州飞点', currency: 'CNY', amount: 350.00, status: '待入账', createdAt: '2026-08-29 11:00', bookedAt: '', billNo: '' },
-                    { id: 3, recordNo: 'CR20260818001', creditType: '超时赔付', waybillNo: 'WB20260805003', entityName: '深圳飞点', currency: 'CNY', amount: 80.00, status: '已入账', createdAt: '2026-08-18 09:00', bookedAt: '2026-08-20 15:00', billNo: 'AR-SZ-202608-001' },
-                    { id: 4, recordNo: 'CR20260815001', creditType: '丢件赔付', waybillNo: 'WB20260801004', entityName: '香港富力顿', currency: 'HKD', amount: 500.00, status: '已入账', createdAt: '2026-08-15 14:00', bookedAt: '2026-08-16 10:00', billNo: 'AR-HK-202608-001' }
                 ]);
 
                 // === 充值弹窗 ===
@@ -419,10 +405,10 @@
 
                 return {
                     activeTab, wallets, currencyOptions, entities,
-                    currencySymbol, currencyName, formatMoney, actualAmount,
+                    currencySymbol, currencyName, formatMoney, actualAmount, accountNameOf,
                     flowTypes, flowSearch, filteredFlows, flowTypeTag,
                     handleFlowSearch, resetFlowSearch,
-                    rechargeRecords, creditRecords,
+                    rechargeRecords,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRules,
                     voucherList, availableBankAccounts,
                     rechargeEntityOptions, rechargeCurrencyOptions,

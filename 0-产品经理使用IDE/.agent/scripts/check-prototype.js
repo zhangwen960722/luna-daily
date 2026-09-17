@@ -122,6 +122,48 @@ function balance(html, tag) {
   return { open, close, selfClose, ok };
 }
 
+/**
+ * HTML 元素同名冲突检测（2026-09-15 立规，实际踩过惨案）：
+ * 页面是**浏览器内联模板**，HTML 解析器先于 Vue 工作 —— 自闭合组件 \`<Select />\` 会被解析成真实元素 \`<select>\`，
+ * 而 \`select/table/tr/td/textarea/title/style/script/li/p/a ...\` 会让解析器进入**特殊插入模式**，
+ * **把它后面的全部内容吞掉**（症状：某个 Tab 的数据整块消失、后面的弹窗全部不见、控制台还伴随
+ * 「Failed to resolve component」告警）。判据：
+ *   ① 标签名小写后**是 HTML 元素** → 报错；
+ *   ② 其中属于「特殊插入模式」的（会吞内容）→ 判为致命错误，其余为告警；
+ *   ③ 写法上：与 HTML 元素同名的组件**必须用显式闭合标签**（\`<Check></Check>\`），不要自闭合。
+ */
+const HTML_TAGS = new Set(('a abbr address area article aside audio b base bdi bdo blockquote body br button canvas caption cite code col colgroup data datalist dd del details dfn dialog div dl dt em embed fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd label legend li link main map mark menu meta meter nav noscript object ol optgroup option output p param picture pre progress q rp rt ruby s samp script search section select slot small source span strong style sub summary sup table tbody td template textarea tfoot th thead time title tr track u ul var video wbr').split(' '));
+const HTML_SWALLOW = new Set(['select', 'table', 'tbody', 'thead', 'tfoot', 'tr', 'td', 'th', 'caption', 'colgroup', 'col', 'option', 'optgroup', 'textarea', 'title', 'style', 'script', 'iframe', 'noembed', 'noframes', 'xmp', 'plaintext', 'frameset', 'frame', 'head', 'body', 'html', 'li', 'p', 'a', 'dd', 'dt']);
+function htmlTagCollision(tpl) {
+  const fatal = [];
+  const warn = [];
+  const lines = tpl.split('\n');
+  lines.forEach((line, i) => {
+    // ① 自闭合的 PascalCase 组件：<Select /> / <Picture /> / <Search />
+    const re = /<([A-Z][A-Za-z0-9]*)(\s[^>]*?)?\/>/g;   // 允许带属性：<Picture v-if="…" /> 也是自闭合
+    let m;
+    while ((m = re.exec(line)) !== null) {
+      const low = m[1].toLowerCase();
+      if (!HTML_TAGS.has(low)) continue;
+      const msg = '<' + m[1] + ' /> 会被 HTML 解析器当成 <' + low + '> 元素（第 ' + (i + 1) + ' 行）';
+      if (HTML_SWALLOW.has(low)) fatal.push(msg + ' —— **该元素会进入特殊插入模式、吞掉后续全部内容**；请改用不与 HTML 元素同名的图标，或用显式闭合标签 <' + m[1] + '></' + m[1] + '>');
+      else warn.push(msg + '；建议改用不与 HTML 元素同名的图标，或 <component is="' + m[1] + '"></component>');
+    }
+    // ② 显式闭合但**撞原生元素名**的 PascalCase 组件：<Picture></Picture> —— 不会吞内容，但 Vue 把"与原生元素同名"的
+    //    标签一律当普通元素处理（isNativeTag），组件**静默不渲染**（症状：图标/子内容无故消失、控制台无报错）
+    const re2 = /<([A-Z][A-Za-z0-9]*)(\s[^>]*)?>/g;
+    while ((m = re2.exec(line)) !== null) {
+      const low = m[1].toLowerCase();
+      if (!HTML_TAGS.has(low)) continue;
+      // 跳过紧跟着的结尾形式 </X>（说明是标准配对的显式闭合标签）
+      const rest = line.slice(m.index + m[0].length);
+      if (!new RegExp('</' + m[1] + '\\s*>').test(rest)) continue;
+      warn.push('<' + m[1] + '></' + m[1] + '> 与 HTML 元素 <' + low + '> 同名，Vue 会把它当**普通元素**处理、组件不渲染（第 ' + (i + 1) + ' 行）；请改用不与原生元素同名的图标，或写 <component is="' + m[1] + '"></component>');
+    }
+  });
+  return { fatal, warn: [...new Set(warn)] };
+}
+
 /** 构建一个最小 Vue 运行时，捕获 createApp 的 options 并实例化 */
 function bootstrap(script) {
   let captured = null;
@@ -247,6 +289,12 @@ for (const file of process.argv.slice(2)) {
     const b = balance(tpl, tag);
     if (!b.ok) { console.log('  [ERR]  ' + tag + ' 标签不平衡: 开 ' + b.open + '（其中自闭 ' + b.selfClose + '） / 闭 ' + b.close); failed++; }
   }
+
+  // 1.5 HTML 元素同名冲突（自闭合组件被解析成真实元素 → 吞掉后续内容）
+  const col = htmlTagCollision(tpl);
+  col.fatal.forEach((e) => { console.log('  [ERR]  ' + e); failed++; });
+  col.warn.forEach((e) => console.log('  [WARN] ' + e));
+  if (!col.fatal.length) console.log('  [OK]   HTML 元素同名冲突检查通过' + (col.warn.length ? '（' + col.warn.length + ' 条告警）' : ''));
 
   // 2. 语法：检查**每一个**内联 <script> 块（原先只取第一个，多块页面会漏检/误检）
   const blocks = inlineScripts(html);

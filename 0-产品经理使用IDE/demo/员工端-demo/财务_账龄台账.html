@@ -40,14 +40,14 @@
                     <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
                 </el-select>
                 <el-button class="btn-search-primary" @click="handleSearch">
-                    <el-icon style="margin-right: 4px;"><Search /></el-icon>查询
+                    <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
                 </el-button>
                 <el-button class="btn-search-reset" @click="resetSearch">
-                    <el-icon style="margin-right: 4px;"><RefreshRight /></el-icon>重置
+                    <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
                 </el-button>
-                    <el-button @click="handleExport">
-                        <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
-                    </el-button>
+                <el-button @click="handleExport">
+                    <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
+                </el-button>
                 <span style="margin-left: auto; color: #909399; font-size: 13px;">账龄口径：账单日 + 账期天数（含首日），分币种不折算</span>
             </div>
 
@@ -57,7 +57,7 @@
                 <el-table-column prop="currency" label="币种" min-width="80" align="center">
                     <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                 </el-table-column>
-                <el-table-column label="未收总额" min-width="130" align="right">
+                <el-table-column label="未核销总额" min-width="130" align="right">
                     <template #default="scope"><span class="total-amount">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.total) }}</span></template>
                 </el-table-column>
                 <el-table-column label="未到期" min-width="110" align="right">
@@ -98,7 +98,7 @@
                     <el-table-column label="账期" min-width="120">
                         <template #default="scope">{{ scope.row.paymentTermsDays }} 天</template>
                     </el-table-column>
-                    <el-table-column label="未收金额" min-width="120" align="right">
+                    <el-table-column label="未核销金额" min-width="120" align="right">
                         <template #default="scope">{{ currencySymbol(currentRow.currency) }}{{ formatMoney(scope.row.unreceivedAmount) }}</template>
                     </el-table-column>
                     <el-table-column prop="age" label="账龄段" min-width="110" align="center">
@@ -138,14 +138,21 @@
 
                 const searchForm = reactive({ customerName: '', entityName: '', currency: '' });
 
+                // 账龄明细 = 未作废且未核销金额 > 0 的账单；账单号 / 账单日 / 未核销金额与「账单管理」逐字段一致
+                // 账期天数 = 到期日 − 账单日 + 1（当月类账期按「签约账期 + 天数/号」推导：华美 × 广州飞点 = 月结+15 → 15 天；华美 × 深圳飞点 = 月结+30 → 30 天；迅达 × 广州飞点 = 月结+5 → 5 天）
+                // 账龄明细 = **已发送** + 未作废 + 未核销金额 > 0 的账单（**「待发送」账单不计入账龄** —— 还没发给客户、客户不知道这笔钱，说它「逾期」不成立；作废账单同样不计入）
+                // 账单号 / 账单日 / 未核销金额与「账单管理」逐字段一致；账期天数 = 到期日 − 账单日 + 1（月结+15 → 15 天；月结+月末 → 31 天 / 9 月为 30 天；月结+5 → 5 天）
                 const bills = [
-                    { billNo: 'AR-GZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, unreceivedAmount: 1280.50 },
-                    { billNo: 'AR-GZ-202608-002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-25', paymentTermsDays: 30, unreceivedAmount: 2000.00 },
-                    { billNo: 'AR-GZ-202607-001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', paymentTermsDays: 15, unreceivedAmount: 800.00 },
-                    { billNo: 'AR-SZ-202608-001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'USD', billingDate: '2026-08-15', paymentTermsDays: 30, unreceivedAmount: 1200.00 },
-                    { billNo: 'AR-GZ-202607-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', paymentTermsDays: 30, unreceivedAmount: 1280.50 },
-                    { billNo: 'AR-GZ-202606-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', paymentTermsDays: 15, unreceivedAmount: 1500.00 },
-                    { billNo: 'AR-GZ-202604-001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-04-01', paymentTermsDays: 15, unreceivedAmount: 600.00 }
+                    { billNo: 'AR-GZ-202608-00001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 15, unreceivedAmount: 1330.50 },
+                    { billNo: 'AR-GZ-202608-00002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', billingDate: '2026-08-01', paymentTermsDays: 15, unreceivedAmount: 380.00 },
+                    { billNo: 'AR-GZ-202607-00003', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', billingDate: '2026-07-01', paymentTermsDays: 15, unreceivedAmount: 620.00 },
+                    { billNo: 'AR-GZ-202607-00002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', paymentTermsDays: 15, unreceivedAmount: 750.00 },
+                    { billNo: 'AR-GZ-202608-00003', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 5, unreceivedAmount: 980.00 },
+                    { billNo: 'AR-SZ-202608-00001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 30, unreceivedAmount: 1000.00 },
+                    { billNo: 'AR-SZ-202608-00002', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 30, unreceivedAmount: 880.00 },
+                    { billNo: 'AR-GZ-202607-00001', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', paymentTermsDays: 5, unreceivedAmount: 1280.50 },
+                    { billNo: 'AR-GZ-202606-00002', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', paymentTermsDays: 5, unreceivedAmount: 300.00 },
+                    { billNo: 'AR-GD-202608-00001', customerName: '东莞市宏泰五金制品有限公司', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-01', paymentTermsDays: 20, unreceivedAmount: 1860.00 }
                 ];
 
                 const calcAge = (bill) => {

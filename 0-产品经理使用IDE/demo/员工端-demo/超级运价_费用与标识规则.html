@@ -99,6 +99,9 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
   <el-dialog v-model="showDialog" :title="editMode?(isReadonly?'查看费用与标识规则':'编辑费用与标识规则'):'新增费用与标识规则'" width="1200px" top="5vh" :close-on-click-modal="false" destroy-on-close>
     <div :class="{'is-readonly': isReadonly}">
     <el-form :model="f" label-width="110px">
+      <div v-if="identityLocked && !isReadonly" style="margin:0 0 12px 0;padding:6px 12px;background:#F4F4F5;border-radius:4px;font-size:12px;color:var(--text-secondary)">
+        编辑已有规则时，<b>规则类型 / 动作类型 / 维度</b> 属规则骨架、<b>置灰不可修改</b> —— 改动它们等于换成另一条规则，会让已配的取值 / 计价明细 / 优惠与已生成的费用流水失去对应关系。如需变更请<b>新建规则</b>。
+      </div>
 
       <div class="form-section">
         <span class="form-section-title">规则信息</span>
@@ -109,7 +112,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       <div class="form-section">
         <span class="form-section-title">① 触发条件 — 什么情况下触发</span>
         <el-form-item label="规则类型" required>
-          <el-radio-group v-model="f.type" @change="onTypeChange">
+          <el-radio-group v-model="f.type" @change="onTypeChange" :disabled="identityLocked">
             <el-radio value="field">字段匹配</el-radio>
             <el-radio value="fieldFormula">字段&amp;公式</el-radio>
             <el-radio value="manual">人工添加</el-radio>
@@ -119,11 +122,11 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <template v-if="f.type==='field'||f.type==='fieldFormula'">
           <el-form-item label="条件组合">
             <div style="width:100%; overflow-x:auto;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:12px;color:var(--text-secondary)">以下条件为「且」关系，全部满足时触发</span><el-button size="small" type="primary" plain @click="addCondition" :disabled="f.type==='fieldFormula'&&f.conditions.length>=1">+ 添加条件</el-button></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:12px;color:var(--text-secondary)">以下条件为「且」关系，全部满足时触发</span><el-tooltip :disabled="!identityLocked" content="编辑已有规则时不可增删条件（维度属规则骨架）；如需变更请新建规则" placement="top"><span><el-button size="small" type="primary" plain @click="addCondition" :disabled="identityLocked||(f.type==='fieldFormula'&&f.conditions.length>=1)">+ 添加条件</el-button></span></el-tooltip></div>
               <el-table :data="f.conditions" border size="small" style="width:100%;min-width:600px;table-layout:fixed;">
                 <el-table-column min-width="190">
                   <template #header><span style="color:#E6A23C">* </span>维度</template>
-                  <template #default="s2"><el-select v-model="s2.row.dim" size="small" style="width:100%" @change="onCondDimChange(s2.row)"><el-option v-for="d in dimOptions" :key="d.value" :label="d.label" :value="d.value"></el-option></el-select></template>
+                  <template #default="s2"><el-select v-model="s2.row.dim" size="small" style="width:100%" @change="onCondDimChange(s2.row)" :disabled="identityLocked"><el-option v-for="d in dimOptions" :key="d.value" :label="d.label" :value="d.value"></el-option></el-select></template>
                 </el-table-column>
                 <el-table-column min-width="200">
                   <template #header><span style="color:#E6A23C">* </span>取值</template>
@@ -153,7 +156,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
                     <el-input v-else v-model="s2.row.val" size="small" placeholder="输入匹配值"></el-input>
                   </template>
                 </el-table-column>
-          <el-table-column width="50" align="center"><template #default="s2"><el-button link type="danger" size="small" @click="removeCondition(s2.$index)" :disabled="f.conditions.length<=1">✕</el-button></template></el-table-column>
+          <el-table-column width="50" align="center"><template #default="s2"><el-tooltip :disabled="!identityLocked" content="编辑已有规则时不可增删条件（维度属规则骨架）；如需变更请新建规则" placement="top"><span><el-button link type="danger" size="small" @click="removeCondition(s2.$index)" :disabled="f.conditions.length<=1||identityLocked">✕</el-button></span></el-tooltip></template></el-table-column>
               </el-table>
             </div>
           </el-form-item>
@@ -190,7 +193,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
       <div class="form-section">
         <span class="form-section-title">② 执行动作 — 触发后做什么</span>
         <el-form-item label="动作类型" required>
-          <el-radio-group v-model="f.action">
+          <el-radio-group v-model="f.action" :disabled="identityLocked">
             <el-radio value="charge">加收费用</el-radio>
             <el-radio value="flag">标识提醒</el-radio>
           </el-radio-group>
@@ -373,6 +376,9 @@ computed:{
   pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'}]},
   receivablePrice:function(){var rows=this.f.pricingRows||[];for(var i=0;i<rows.length;i++){if(rows[i].dir==='r'&&rows[i].price!==null&&rows[i].price!==undefined)return Number(rows[i].price)}return null},
   isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status === '已冻结'; },
+  // 规则骨架锁定（编辑态）：规则类型 / 动作类型 / 维度 一旦落库即不可改 —— 改它们等于换成另一条规则，
+  // 会让已配的取值、计价明细、优惠与已生成的费用流水全部失去对应关系；要变更请新建规则。新增态不锁（否则建不出规则）。
+  identityLocked: function(){ return this.editMode; },
   filteredRules:function(){
     var self=this;
     return this.rules.filter(function(r){
