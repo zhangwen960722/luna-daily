@@ -17,26 +17,27 @@
 <span>数据设计</span>
 </div>
 <div class="layout">
-<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-实体清单-x-表映射">一、实体清单 x 表映射</a></li><li class="toc-lv2"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#2-1-导入任务表">2.1 导入任务表</a></li><li class="toc-lv2"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv2"><a href="#四-关键设计说明">四、关键设计说明</a></li><li class="toc-lv3"><a href="#任务编号生成规则">任务编号生成规则</a></li><li class="toc-lv3"><a href="#状态说明">状态说明</a></li><li class="toc-lv3"><a href="#任务结果展示">任务结果展示</a></li><li class="toc-lv3"><a href="#数据隔离">数据隔离</a></li><li class="toc-lv2"><a href="#五-枚举字典">五、枚举字典</a></li><li class="toc-lv2"><a href="#六-状态机">六、状态机</a></li><li class="toc-lv3"><a href="#6-1-导入任务状态流转">6.1 导入任务状态流转</a></li></ul></nav>
-<div class="content"><div class="doc-content"><p><h1 id="数据设计-后台任务">数据设计 — 后台任务</h1></p><p><blockquote><strong>文档版本</strong>: v1.0 | <strong>日期</strong>: 2026-08-28 | <strong>作者</strong>: AI PM
-<strong>上游文档</strong>: [2026-08-28-用户需求.md](./2026-08-28-用户需求.md)</blockquote></p><p><hr></p><p><h2 id="一-实体清单-x-表映射">一、实体清单 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-实体清单-x-表映射">一、实体清单 x 表映射</a></li><li class="toc-lv2"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#2-1-导入任务表">2.1 导入任务表</a></li><li class="toc-lv2"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv2"><a href="#四-关键设计说明">四、关键设计说明</a></li><li class="toc-lv3"><a href="#任务编号生成规则">任务编号生成规则</a></li><li class="toc-lv3"><a href="#状态说明">状态说明</a></li><li class="toc-lv3"><a href="#任务结果展示">任务结果展示</a></li><li class="toc-lv3"><a href="#数据隔离">数据隔离</a></li><li class="toc-lv2"><a href="#五-枚举字典">五、枚举字典</a></li><li class="toc-lv2"><a href="#六-状态机">六、状态机</a></li><li class="toc-lv3"><a href="#6-1-任务状态流转-导入-导出共用">6.1 任务状态流转（导入 / 导出共用）</a></li></ul></nav>
+<div class="content"><div class="doc-content"><p><h1 id="数据设计-后台任务">数据设计 — 后台任务</h1></p><p><blockquote><strong>文档版本</strong>: v1.1 | <strong>日期</strong>: 2026-09-16 | <strong>作者</strong>: AI PM
+<strong>上游文档</strong>: [2026-09-16-用户需求.md](./2026-09-16-用户需求.md)</blockquote></p><p><hr></p><p><h2 id="一-实体清单-x-表映射">一、实体清单 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
-<tr><td>ImportTask</td><td><code>import_task</code></td><td>独立表</td><td>导入任务，公共模块，各子应用导入任务统一记录</td></tr>
+<tr><td>ImportTask</td><td><code>import_task</code></td><td>独立表</td><td><strong>任务</strong>（导入 + 导出），公共模块，各子应用任务统一记录 —— <strong>导出任务由财务「账单导出」写入</strong></td></tr>
 <tr><td>Tenant/User</td><td><code>tenant</code> / <code>user</code></td><td>外部引用</td><td>货主租户和用户数据，不在本模块管理</td></tr>
 </table></div>
-<hr></p><p><h2 id="二-逐表字段清单">二、逐表字段清单</h2></p><p><h3 id="2-1-导入任务表">2.1 导入任务表</h3></p><p><strong>表名</strong>: <code>import_task</code> | <strong>对应实体</strong>: ImportTask</p><p><blockquote><strong>设计说明</strong>: 公共导入任务监控表。各子应用模块发起导入时写入任务记录，导入完成后更新任务状态和结果。任务编号 EXP + 年月日 + 时间戳（精确到毫秒）保证全局唯一。错误数据通过 error_file_url 指向错误结果文件。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<hr></p><p><h2 id="二-逐表字段清单">二、逐表字段清单</h2></p><p><h3 id="2-1-导入任务表">2.1 导入任务表</h3></p><p><strong>表名</strong>: <code>import_task</code> | <strong>对应实体</strong>: ImportTask</p><p><blockquote><strong>设计说明</strong>: 公共任务监控表（<strong>导入 + 导出</strong>）。导入：各子应用模块发起导入时写入任务记录，导入完成后更新状态和结果，错误数据通过 <code>error_file_url</code> 指向错误结果文件。导出：财务「账单管理 → 已发送 → 导出」提交时写入（<code>task_type = 20</code>），完成后 <code>result_file_url</code> 指向打包结果文件（<strong>一个 zip，内含 N 个账单 Excel</strong>；只导出 1 张时直出 xlsx）。任务编号 EXP + 年月日 + 时间戳（精确到毫秒）保证全局唯一，两类任务共用。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String(32)</td><td>Yes</td><td><strong>Index</strong></td><td>SaaS数据隔离，货主端按此过滤</td></tr>
 <tr><td><code>task_no</code></td><td>任务编号</td><td>String(32)</td><td>Yes</td><td><strong>Unique</strong></td><td>EXP + 年月日 + 时间戳，全局唯一</td></tr>
 <tr><td><code>module_name</code></td><td>模块名称</td><td>String(50)</td><td>Yes</td><td>—</td><td>各菜单名，如"商品管理""地址管理"</td></tr>
-<tr><td><code>task_type</code></td><td>任务类型</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:导入</td></tr>
+<tr><td><code>task_type</code></td><td>任务类型</td><td>TinyInt</td><td>Yes</td><td><strong>Index</strong></td><td>10:导入 / <strong>20:导出</strong>（导出只在员工端展示）</td></tr>
 <tr><td><code>task_status</code></td><td>任务状态</td><td>TinyInt</td><td>Yes</td><td><strong>Index</strong></td><td>10:处理中, 20:完成</td></tr>
-<tr><td><code>total_count</code></td><td>导入总数</td><td>Int</td><td>Yes</td><td>—</td><td>默认0</td></tr>
+<tr><td><code>total_count</code></td><td>总数</td><td>Int</td><td>Yes</td><td>—</td><td>默认0；导入 = 导入条数，<strong>导出 = 账单张数</strong></td></tr>
 <tr><td><code>success_count</code></td><td>成功数</td><td>Int</td><td>Yes</td><td>—</td><td>默认0</td></tr>
 <tr><td><code>fail_count</code></td><td>失败数</td><td>Int</td><td>Yes</td><td>—</td><td>默认0</td></tr>
-<tr><td><code>error_file_url</code></td><td>错误文件URL</td><td>String(512)</td><td>No</td><td>—</td><td>仅 fail_count > 0 时有值</td></tr>
-<tr><td><code>creator</code></td><td>创建人</td><td>String(64)</td><td>Yes</td><td>—</td><td>员工端=本公司员工姓名；货主端=客户公司名称</td></tr>
+<tr><td><code>error_file_url</code></td><td>错误文件URL</td><td>String(512)</td><td>No</td><td>—</td><td>仅<strong>导入</strong>任务且 <code>fail_count > 0</code> 时有值</td></tr>
+<tr><td><code>result_file_url</code></td><td><strong>结果文件URL</strong></td><td>String(512)</td><td>No</td><td>—</td><td>仅<strong>导出</strong>任务完成时有值（<strong>一个 zip，内含 N 个账单 Excel</strong>；1 张时直出 xlsx）；与 <code>error_file_url</code> 互斥使用。<strong>物理文件保留 7 天</strong>（任务记录长期保留）—— 过期清理后本字段置空或保留 URL 但下载返回 400</td></tr>
+<tr><td><code>creator</code></td><td>创建人</td><td>String(64)</td><td>Yes</td><td>—</td><td>员工端=本公司员工姓名；货主端=客户公司名称；<strong>导出任务 = 提交导出的财务专员</strong></td></tr>
 <tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td><strong>Index</strong></td><td>任务开始时间</td></tr>
 <tr><td><code>finished_at</code></td><td>完成时间</td><td>DateTime</td><td>No</td><td>—</td><td>任务完成时间，处理中为空</td></tr>
 <tr><td><code>updated_at</code></td><td>更新时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>自动维护</td></tr>
@@ -58,6 +59,7 @@
         Int success_count
         Int fail_count
         String error_file_url
+        String result_file_url
         String creator
         DateTime created_at
         DateTime finished_at
@@ -75,34 +77,35 @@
 </ul>
 <h3 id="状态说明">状态说明</h3>
 <ul><li>任务状态仅两态：处理中(10) / 完成(20)</li>
-<li>只要导入流程结束（无论是否有失败数据），状态即为"完成"</li>
-<li>失败信息通过 fail_count 和 error_file_url 承载，不单独设"部分失败"状态</li>
+<li>导入：只要流程结束（无论是否有失败数据）即为"完成"；导出：全部账单处理完毕（成功 + 失败 = 总数）即为"完成"</li>
+<li>失败信息通过 <code>fail_count</code> 与文件字段承载，不单独设"部分失败"状态 —— 导入落 <code>error_file_url</code>（可修正后重导），导出落 <code>result_file_url</code>（<strong>失败清单是包内的「导出失败清单.xlsx」</strong>，<strong>无重导链路</strong>）</li>
 </ul>
 <h3 id="任务结果展示">任务结果展示</h3>
-<ul><li>由 total_count / success_count / fail_count 拼接展示："导入X条，失败Y条，成功Z条"</li>
+<ul><li>由 total_count / success_count / fail_count 拼接展示 —— 导入：<code>导入X条，失败Y条，成功Z条</code>；导出：<code>导出X张账单（{模板分类}），成功Y张，失败Z张</code>（模板分类取自任务的 templateType 快照，仅导出任务有值）</li>
 </ul>
 <h3 id="数据隔离">数据隔离</h3>
 <ul><li>员工端：不过滤 tenant_id，查看所有任务</li>
-<li>货主端：按 tenant_id 过滤，仅查看本租户任务</li>
+<li>货主端：按 tenant_id 过滤，仅查看本租户<strong>导入</strong>任务 —— <strong>导出类任务（<code>task_type = 20</code>）不下发货主端</strong>（导出是内部动作）</li>
 </ul>
 <hr></p><p><h2 id="五-枚举字典">五、枚举字典</h2></p><p><strong>任务类型 (import_task.task_type)</strong>：
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td><td>说明</td></tr>
 <tr><td>----</td><td>--------</td><td>------</td><td>------</td></tr>
-<tr><td>10</td><td>IMPORT</td><td>导入</td><td>当前唯一类型，导出暂不监控</td></tr>
+<tr><td>10</td><td>IMPORT</td><td>导入</td><td>—</td></tr>
+<tr><td>20</td><td>EXPORT</td><td>导出</td><td>财务「账单导出」发起；<strong>只在员工端展示</strong>，结果文件打包下载</td></tr>
 </table></div>
 <strong>任务状态 (import_task.task_status)</strong>：
 <div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>中文</td><td>说明</td></tr>
 <tr><td>----</td><td>--------</td><td>------</td><td>------</td></tr>
 <tr><td>10</td><td>PROCESSING</td><td>处理中</td><td>任务进行中</td></tr>
-<tr><td>20</td><td>COMPLETED</td><td>完成</td><td>导入流程结束（无论是否有失败数据）</td></tr>
+<tr><td>20</td><td>COMPLETED</td><td>完成</td><td>导入：流程结束（无论是否有失败数据）；导出：全部账单处理完毕</td></tr>
 </table></div>
-<hr></p><p><h2 id="六-状态机">六、状态机</h2></p><p><h3 id="6-1-导入任务状态流转">6.1 导入任务状态流转</h3></p><p><pre><code>[处理中(10)] ──{导入流程结束}──&gt; [完成(20)]
+<hr></p><p><h2 id="六-状态机">六、状态机</h2></p><p><h3 id="6-1-任务状态流转-导入-导出共用">6.1 任务状态流转（导入 / 导出共用）</h3></p><p><pre><code>[处理中(10)] ──{导入流程结束}──&gt; [完成(20)]
 </code></pre></p><p><div class="table-wrapper"><table><tr><td>当前状态</td><td>操作</td><td>目标状态</td><td>触发角色</td><td>校验条件</td></tr>
 <tr><td>---------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td></tr>
-<tr><td>(新建)</td><td>发起导入</td><td>处理中(10)</td><td>系统</td><td>—</td></tr>
-<tr><td>处理中(10)</td><td>导入完成</td><td>完成(20)</td><td>系统</td><td>导入流程结束（无论是否有失败数据）</td></tr>
+<tr><td>(新建)</td><td>发起任务（导入 / 导出）</td><td>处理中(10)</td><td>系统 / 财务提交导出</td><td>—</td></tr>
+<tr><td>处理中(10)</td><td>任务处理结束</td><td>完成(20)</td><td>系统</td><td>导入：流程结束；导出：成功 + 失败 = 总数</td></tr>
 </table></div>
-<blockquote><strong>说明</strong>：状态仅单向流转（处理中→完成），不支持回退。失败数据通过 fail_count + error_file_url 承载，不影响任务状态。</blockquote></p><p><hr>
+<blockquote><strong>说明</strong>：状态仅单向流转（处理中→完成），不支持回退，<strong>导入与导出共用</strong>。失败数据通过 <code>fail_count</code> + 文件字段承载，不影响任务状态。<strong>导出不新增任何业务表</strong> —— 导出范围（财务账单管理的查询结果）与结果文件都挂在任务的 <code>total_count</code> / <code>result_file_url</code> 上。</blockquote></p><p><hr>
 </p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
