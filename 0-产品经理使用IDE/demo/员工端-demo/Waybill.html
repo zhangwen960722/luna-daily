@@ -5071,43 +5071,12 @@
                 // 费用操作允许的运单状态（列表入口与详情入口共用同一份口径）：
                 // 已下单 / 收货中 尚未产生计费；已取消 / 退件 须走赔付或红冲，一律不允许费用操作
                 const FEE_ALLOWED_STATES = ['已收货','转运中','已到港','已清关','已到仓','已签收'];
-                const canFee = computed(() => {
-                    if (selection.value.length === 0) return false;
-                    return selection.value.every(s => FEE_ALLOWED_STATES.includes(s.status));
-                });
-                // 新增费用许可（按方向）：运单状态允许 + 至少有一票在该方向未整票审计
-                const canAddFeeByDir = (dir) => {
-                    if (!canFee.value) return false;
-                    return selection.value.some(s => !waybillFeeAudited(s, dir || 'ar'));
-                };
-                const canAddFeeAr = computed(() => canAddFeeByDir('ar'));
-                const canAddFeeAp = computed(() => canAddFeeByDir('ap'));
 
-                // 详情抽屉：当前运单是否允许「新增」费用（运单已整单审计则整票不允许加）
-                const feeWaybillOperable = computed(() => !!currentRow.value && FEE_ALLOWED_STATES.includes(currentRow.value.status) && !waybillFeeAudited(currentRow.value, 'ar'));
-                const feeWaybillLockReason = computed(() => {
-                    const cur = currentRow.value || {};
-                    const st = cur.status || '';
-                    if (!FEE_ALLOWED_STATES.includes(st)) return `运单状态「${st}」不支持费用操作` + (['已取消','退件'].includes(st) ? '，赔付类费用请走赔付流程' : '，收货完成后才产生计费');
-                    if (waybillFeeAudited(cur, 'ar')) return `运单「应收」已整票审计（${cur.arAuditBy || '财务'} · ${cur.arAuditAt || ''}），整票不允许新增应收费用；如需补收请先到「财务中心 → 运单审计」反审计应收`;
-                    return '';
-                });
                 // 两层审计标签：
                 //   ① 运单审计标签（waybill.feeAuditStatus）= 待审计 / 已审计 —— 「整单审计通过」写在运单上，**已审计 → 整票不允许新增费用**
                 //   ② 流水审计标签（ar_flow.auditStatus）= 待业务审计 / 已审计 / 已红冲 —— **运单未审计但该条已审计 → 该条不可变更，只能加新流水**
                 // 运单在该方向是否已整票审计（dir: 'ar' 应收 / 'ap' 应付）
                 const waybillFeeAudited = (w, dir) => !!w && (dir === 'ap' ? w.apAuditStatus : w.arAuditStatus) === '已审计';
-                // 行级冻结边界（优先级：运单状态 → 运单级审计 → 账单关联 → 流水级审计）
-                const feeRowLockReason = (row) => {
-                    const cur = currentRow.value || {};
-                    if (!FEE_ALLOWED_STATES.includes(cur.status || '')) return `运单状态「${cur.status}」不支持费用操作`;
-                    if (waybillFeeAudited(cur, 'ar')) return `运单「应收」已整票审计（${cur.arAuditBy || '财务'} · ${cur.arAuditAt || ''}），应收流水全部冻结；如需变更请到「财务中心 → 运单审计」反审计应收`;
-                    if (row && row.billNo) return `已生成账单（${row.billNo}），彻底冻结；如需调整请反审计整票运单后红冲`;
-                    if (row && row.auditStatus === '已审计') return '该条流水已审计，不可变更；如需补收请新增流水';
-                    if (row && row.auditStatus === '已红冲') return '已红冲流水，只读';
-                    return '';
-                };
-                const feeRowEditable = (row) => feeRowLockReason(row) === '';
 
                 // 资料修改弹窗 — 按权限矩阵控制字段显隐
                 const editPermChecks = computed(() => {
@@ -5134,9 +5103,6 @@
                 const dialogSupPrint = ref(false);
                 const dialogSupPod = ref(false);
 
-                // Fee
-                const dialogFeeAr = ref(false);
-                const dialogFeeAp = ref(false);
                 const dialogStatusAdj = ref(false);
                 
                 const dialogAddFbaAddr = ref(false);
@@ -5482,178 +5448,6 @@
                 const podVisible = ref('否');
                 const buyInsurance = ref('是');
                 const fileVisible = ref('是');
-                // 入口上下文：'detail' = 运单详情的费用 tab（该运单）；'list' = 运单列表工具栏（勾选的运单，可多票）
-                const feeAddContext = ref({ source: 'detail', waybills: [] });
-                const newFeeRow = () => ({
-                    waybillNos: (feeAddContext.value.waybills || []).filter(w => !waybillFeeAudited(w, 'ar')).map(w => w.orderNo),
-                    type: '', rules: [], ruleId: null, autoHint: '', ruleTag: '',
-                    unitPrice: null, unit: '', currency: 'CNY', rate: 1, quantity: 1, amount: 0,
-                    description: '', remark: ''
-                });
-                const feeArList = ref([newFeeRow()]);
-                const feeApList = ref([newFeeRow()]);
-
-                // 费用类型字典（引用头程管理 fee_type，unitPrice=null 表示直接填金额）
-                const feeTypeArOptions = [
-                    { name: '运费', unitPrice: null, unit: '' },
-                    { name: '周六派送费', unitPrice: 50, unit: '票' },
-                    { name: '超重费', unitPrice: 20, unit: 'kg' },
-                    { name: '地址附加费', unitPrice: 15, unit: '票' },
-                    { name: '商品附加费', unitPrice: 5, unit: '件' },
-                    { name: '报关费', unitPrice: 120, unit: '票' },
-                    { name: '库内贴标费', unitPrice: 0.5, unit: '张' },
-                    { name: '运费优惠' }, { name: '泡比优惠' }, { name: '附加费优惠' }
-                ];
-
-                // 费用类型 × 规则绑定（反查：某费用类型下有哪些**可选的**来源规则）
-                //   有 rules ：该费用类型被「人工添加型」附加费规则（surcharge_rule.rule_type=30）的计价明细「应收」行引用
-                //              → 「来源规则」列出现且**选填**：选了 → 币种 / 单价 / 计价单位按规则带出并置灰、流水种类=附加费；不选 → 自由填写、流水种类=手工新增
-                //   有 autoHint：该费用类型通常由系统自动生成（运价行 / 字段匹配 / 字段&公式 / 优惠规则）
-                //              → **仍然允许手工新增**（业务认为自动行不对时，先删除原行再手工新增），仅在「流水种类」标签上给悬浮提示
-                const feeTypeArBindings = {
-                    '运费': { autoHint: '运费通常由运价行在收货完成时自动生成；手工新增的行不参与重算，若原自动行有误请先删除再补录' },
-                    '周六派送费': { rules: [{ id: 7021, name: '周六派送费（人工添加 · 按票）', unit: '票', unitPrice: 50, currency: 'CNY', tagId: 4021, tagName: '周六派送' }] },
-                    '超重费': { rules: [
-                        { id: 7012, name: '超重超长（人工添加 · 按箱）', unit: '箱', unitPrice: 20, currency: 'CNY', tagId: 4001, tagName: '超长' },
-                        { id: 7013, name: '超重费（人工添加 · 按 KG）', unit: 'KG', unitPrice: 12, currency: 'CNY', tagId: 4001, tagName: '超长' }
-                    ] },
-                    '地址附加费': { autoHint: '地址附加费通常由字段匹配型规则在收货完成时自动生成；手工新增的行不参与重算' },
-                    '商品附加费': { autoHint: '商品附加费通常由字段匹配型规则在收货完成时自动生成；手工新增的行不参与重算' },
-                    '库内贴标费': { rules: [{ id: 7002, name: '库内贴标费（人工添加 · 按张）', unit: '张', unitPrice: 0.5, currency: 'CNY', tagId: 4002, tagName: '库内贴标' }] },
-                    '报关费': {},
-                    '运费优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' },
-                    '泡比优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' },
-                    '附加费优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' }
-                };
-
-                // 弹窗顶部与逐行：单票 = 主运单号（从详情或列表单选进入）；多票 = 逐行指定运单
-                const feeAddWaybillOptions = computed(() => (feeAddContext.value.waybills || []).map(w => w.orderNo));
-                // 已整单审计的票在「适用运单」里不可选（整票不允许加费用）
-                const feeAddWaybillDisabled = (no) => {
-                    const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
-                    return waybillFeeAudited(w, 'ar');
-                };
-                const feeAddWaybillText = computed(() => {
-                    const opts = feeAddWaybillOptions.value;
-                    if (!opts.length) return '—';
-                    if (opts.length === 1) return opts[0] + '（主运单号）';
-                    return `已选 ${opts.length} 票：${opts.slice(0, 3).join(' / ')}${opts.length > 3 ? ' …' : ''}`;
-                });
-                const feeAddCustomerText = computed(() => {
-                    const ws = feeAddContext.value.waybills || [];
-                    return ws.length === 1 ? (ws[0].user || '—') : (ws.length ? '多票 · 见各流水' : '—');
-                });
-                const feeAddServiceText = computed(() => {
-                    const ws = feeAddContext.value.waybills || [];
-                    return ws.length === 1 ? (ws[0].service || '—') : (ws.length ? '多票 · 见各流水' : '—');
-                });
-                // 该行实际适用的运单：多票上下文取行上多选；单票上下文即唯一样本
-                const feeRowWaybills = (row) => (feeAddWaybillOptions.value.length > 1 ? (row.waybillNos || []) : feeAddWaybillOptions.value).filter(Boolean);
-                // 批量合计 = 单价 × 计费量 × 票数
-                const feeBatchAmountText = (row) => feeAmountText({ amount: Number(((row.unitPrice || 0) * (row.quantity || 0) * feeRowWaybills(row).length).toFixed(2)) });
-                // 流水种类：选了来源规则 = 附加费；否则 = 手工新增
-                const feeArKindLabel = (row) => (row && row.ruleId ? '附加费' : '手工新增');
-                // 选了来源规则 → 币种 / 单价 / 计价单位 / 汇率按规则带出，不允许改
-                const feeArRowLocked = (row) => !!(row && row.ruleId);
-
-                // 选费用类型 → 带出可选来源规则（选填）与「通常自动生成」提示；带不出规则即自由填写
-                const handleFeeArTypeChange = (row) => {
-                    row.ruleId = null; row.rules = []; row.autoHint = '';
-                    if (!row.type) { row.kindLabel = '手工新增'; return; }
-                    const b = feeTypeArBindings[row.type] || {};
-                    row.rules = b.rules || [];
-                    row.autoHint = b.autoHint || '';
-                    if (row.rules.length === 1) { row.ruleId = row.rules[0].id; handleFeeArRuleChange(row); return; }
-                    const opt = feeTypeArOptions.find(t => t.name === row.type) || {};
-                    if (opt.unit != null) row.unit = opt.unit;
-                    if (opt.unitPrice != null) row.unitPrice = opt.unitPrice;
-                    row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
-                };
-
-                // 选 / 清空来源规则：清空后回到自由填写（按费用类型字典带出默认单价）
-                const handleFeeArRuleChange = (row) => {
-                    const r = (row.rules || []).find(x => x.id === row.ruleId);
-                    if (!r) {
-                        const opt = feeTypeArOptions.find(t => t.name === row.type) || {};
-                        row.unit = opt.unit || ''; row.unitPrice = (opt.unitPrice != null ? opt.unitPrice : null);
-                        row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
-                        row.ruleTag = '';
-                        return;
-                    }
-                    row.currency = r.currency; row.unit = r.unit; row.unitPrice = r.unitPrice;
-                    row.ruleTag = r.tagName || '';   // 规则上绑定的「附加费标识」，保存后自动打在运单上
-                    row.rate = r.currency === 'CNY' ? 1 : (row.rate || 1);
-                    row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
-                };
-
-                // 保存：校验 → 落库（source_type=20 / generate_node=30；拣货时间与创建日期由后台赋值）
-                const saveFeeAr = () => {
-                    const feeRows = feeArList.value.filter(r => r.type);
-                    if (!feeRows.length) { ElMessage.warning('请先选择费用类型'); return; }
-                    for (const r of feeRows) {
-                        if (!feeRowWaybills(r).length) { ElMessage.warning(`「${r.type}」请至少选择一票适用运单`); return; }
-                        const audited = feeRowWaybills(r).filter(no => feeAddWaybillDisabled(no));
-                        if (audited.length) { ElMessage.warning(`运单 ${audited.join('、')} 已整单审计，不允许新增费用；如需补收请先反审计`); return; }
-                        if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.type}」请填写计费量`); return; }
-                        if (/优惠$/.test(r.type) && !r.description) { ElMessage.warning(`「${r.type}」为优惠类手工新增，请在「描述」中说明原因`); return; }
-                    }
-                    // 一条费用 × 每票运单 = 一条流水（批量铺费用）
-                    const rows = [];
-                    feeRows.forEach(r => feeRowWaybills(r).forEach(no => rows.push(Object.assign({}, r, { waybillNo: no }))));
-                    const now = new Date();
-                    const pad = n => String(n).padStart(2, '0');
-                    const createdAt = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-                    let seq = 9100;
-                    // 选中来源规则的流水 → 按规则绑定的「附加费标识」为运单打标（与自动命中口径一致；重复标识不重复打）
-                    const tagNames = [];
-                    rows.forEach(r => {
-                        const rl = (r.rules || []).find(x => x.id === r.ruleId);
-                        if (rl && rl.tagName && !tagNames.includes(rl.tagName)) tagNames.push(rl.tagName);
-                    });
-                    rows.forEach(r => {
-                        const rule = (r.rules || []).find(x => x.id === r.ruleId) || null;
-                        feeArFlows.value.push({
-                            id: seq++,
-                            type: r.type, kindLabel: rule ? '附加费' : '手工新增', currency: r.currency,
-                            unitPrice: r.unitPrice, unit: r.unit, quantity: r.quantity,
-                            amount: Number(((r.unitPrice || 0) * (r.quantity || 0)).toFixed(2)),
-                            rate: r.rate, description: r.description || '', remark: r.remark || '',
-                            pickTime: '2026-04-14 16:20',
-                            source: rule ? '附加费规则' : '李四',
-                            sourceType: 20, createdBy: '李四', createdAt, generateNode: 30,
-                            sourceRuleType: rule ? 40 : undefined,
-                            sourceRuleId: rule ? rule.id : undefined,
-                            sourceRuleName: rule ? rule.name : undefined
-                        });
-                    });
-                    // 打标按「该行所属运单」执行（详情进入 = 该运单；列表多选进入 = 行上所选运单），同一标识不重复打
-                    if (tagNames.length) {
-                        const tagByWaybill = {};
-                        rows.forEach(r => {
-                            const rl = (r.rules || []).find(x => x.id === r.ruleId);
-                            if (!rl || !rl.tagName) return;
-                            const key = r.waybillNo || '';
-                            (tagByWaybill[key] = tagByWaybill[key] || []).push(rl.tagName);
-                        });
-                        Object.keys(tagByWaybill).forEach(no => {
-                            const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
-                            if (!w) return;
-                            const marks = w.surchargeMark || (w.surchargeMark = []);
-                            tagByWaybill[no].forEach(t => { if (!marks.includes(t)) marks.push(t); });
-                        });
-                    }
-                    const waybillCount = [...new Set(rows.map(r => r.waybillNo).filter(Boolean))].length;
-                    const batchNote = feeRows.length !== rows.length ? `${feeRows.length} 条费用 × ${waybillCount} 票 = ` : '';
-                    ElMessage.success(`已添加 ${batchNote}${rows.length} 条应收流水` + (tagNames.length ? `，并按规则为运单打标：${tagNames.join('、')}` : ''));
-                    dialogFeeAr.value = false;
-                    feeArList.value = [newFeeRow()];
-                };
-                const feeTypeApOptions = [
-                    { name: '操作费', unitPrice: 10, unit: '票' },
-                    { name: '提货费', unitPrice: 30, unit: '票' },
-                    { name: '拖车费', unitPrice: null, unit: '' },
-                    { name: '干线运输费', unitPrice: null, unit: '' }
-                ];
 
                 // 费用 tab 展示的业务流水（粒度=运单 × 费用项；一条费用项一行、优惠独立成行）
                 // 收货完成时由系统生成：运费（预置费用类型）→ 运费优惠 / 泡比优惠（费用类型取优惠规则配置的）→ 附加费（匹配动作类型=加收费用的规则）→ 附加费优惠
@@ -5756,8 +5550,6 @@
                 };
                 const rowDirSubtotalText = (r, dir) => { const subs = rowCurrencySubtotals(r, dir); return Object.keys(subs).map(c => `${c} ${cnyFormat(subs[c])}`).join(' / '); };
 
-                const pricingUnitOptions = ['KG', 'm³', '票', '箱', '数量'];
-
                 // 生成节点 / 来源规则类型标签（行详情用）
                 const generateNodeLabel = (row) => ({ 10: '收货完成', 20: '拣货完成', 30: '人工添加' }[row && row.generateNode] || '—');
                 const feeRuleTypeLabel = (t) => ({ 10: '运价行', 20: '运费优惠规则', 30: '泡比优惠规则', 40: '附加费规则', 50: '附加费优惠规则' }[t] || '—');
@@ -5765,47 +5557,6 @@
                 // 行详情：来源规则 / 数据来源 / 创建人 / 创建时间 / 生成节点 —— 运单审计下钻「这笔钱是哪条规则给的」
                 const feeArDetail = ref(null);
                 const openFeeArDetail = (row) => { feeArDetail.value = row; };
-
-                // 编辑：人工添加行可改金额口径；系统自动行仅可改「描述 + 内部备注」（其余字段由重算维护）
-                const feeArEdit = ref(null);
-                const openFeeArEdit = (row) => {
-                    const reason = feeRowLockReason(row);
-                    if (reason) { ElMessage.warning(reason); return; }
-                    feeArEdit.value = Object.assign({}, row);
-                };
-                const feeEditLocked = computed(() => !!feeArEdit.value && feeArEdit.value.sourceType === 10);
-                const saveFeeArEdit = () => {
-                    if (!feeArEdit.value) return;
-                    if (!feeRowEditable(feeArEdit.value)) { ElMessage.warning(feeRowLockReason(feeArEdit.value)); feeArEdit.value = null; return; }
-                    const idx = feeArFlows.value.findIndex(r => r.id === feeArEdit.value.id);
-                    if (idx > -1) feeArFlows.value[idx] = Object.assign({}, feeArEdit.value);
-                    ElMessage.success('已保存');
-                    feeArEdit.value = null;
-                };
-
-                // 选费用类型：带出单价与计价单位，并按 单价×计费量 自动算金额
-                const handleFeeTypeChange = (row, direction) => {
-                    const opts = direction === 'ar' ? feeTypeArOptions : feeTypeApOptions;
-                    const opt = opts.find(o => o.name === row.type);
-                    if (opt) {
-                        if (opt.unitPrice != null) row.unitPrice = opt.unitPrice;
-                        if (opt.unit) row.unit = opt.unit;
-                    }
-                    if (opt && opt.unitPrice != null && row.quantity) {
-                        row.amount = Number((opt.unitPrice * row.quantity).toFixed(2));
-                    }
-                };
-                // 手工改单价：金额 = 单价 × 计费量（可再手工覆盖）
-                const handleFeeUnitPriceChange = (row) => {
-                    if (row.unitPrice != null && row.quantity) {
-                        row.amount = Number((row.unitPrice * row.quantity).toFixed(2));
-                    }
-                };
-                // 选币种：人民币默认1，外币自动取实时汇率（mock）
-                const handleFeeCurrencyChange = (row) => {
-                    const rateMap = { CNY: 1, USD: 7.25, HKD: 0.92, EUR: 7.85 };
-                    row.rate = rateMap[row.currency] || 1;
-                };
 
                 const handleSelectionChange = (val) => { selection.value = val; };
                 const isEditMode = ref(false);
@@ -5903,22 +5654,6 @@
                     if(dialogs[dialogRef]) dialogs[dialogRef].value = true;
                 };
 
-                const openFeeArDialog = (source) => {
-                    let ways = [];
-                    if (source === 'list') {
-                        ways = (selection.value || []).slice();
-                        if (!ways.length) { ElMessage.warning('请先勾选需要添加应收的运单'); return; }
-                    } else if (currentRow.value && currentRow.value.orderNo) {
-                        ways = [currentRow.value];
-                    } else {
-                        ways = (selection.value || []).slice();
-                        if (!ways.length) { ElMessage.warning('请先勾选需要添加应收的运单'); return; }
-                    }
-                    feeAddContext.value = { source: source || 'detail', waybills: ways };
-                    feeArList.value = [newFeeRow()];
-                    dialogFeeAr.value = true;
-                };
-
                 // ===== 运单级审计（**业务侧**：按费用方向整票审计）=====
                 // 口径（头程管理 PRD 权限矩阵）：业务专员可做「审计」；**反审计仅财务角色**，入口在「财务中心 → 运单审计」。
                 // 审计通过 → ① 运单该方向标记置「已审计」（写审计人 / 时间）② 该方向全部流水置「已审计」→ 整票不允许再新增该方向费用（见费用新增校验）。
@@ -5975,16 +5710,13 @@
                 };
 
                 const handleCommand = (command) => {
-                    if (command === 'feeAr') { openFeeArDialog('list'); return; }
                     // 权限拦截
                     if (command === 'cancelOrder' && !canCancel.value) { ElMessage.warning('所选运单状态不支持取消操作'); return; }
                     if (command === 'returnGoods' && !canReturn.value) { ElMessage.warning('所选运单状态不支持退件操作'); return; }
-                    if (['feeAp','feeAr'].includes(command) && !canFee.value) { ElMessage.warning('所选运单状态不支持费用操作'); return; }
                     if (['routeAdd','routeDel'].includes(command) && !canMarkOrRoute.value) { ElMessage.warning('所选运单状态不支持路由操作'); return; }
                     const map = {
                         'routeAdd': dialogRouteAdd, 'routeDel': dialogRouteDel,
                         'supPush': dialogSupPush, 'supExtract': dialogSupExtract, 'supPrint': dialogSupPrint, 'supPod': dialogSupPod,
-                        'feeAp': dialogFeeAp, 'feeAr': dialogFeeAr,
                         'statusAdj': dialogStatusAdj, 'showStat': dialogStat
                     };
                     if (map[command]) {
@@ -6077,7 +5809,7 @@
                     dialogListConfig, dialogPickup, dialogCompare, showCompareResult, dialogPrint, dialogExpressPrint, dialogRouteInfo, dialogStat,
                     dialogRouteAdd, dialogRouteDel, dialogEdit, dialogMark,
                     dialogSupPush, dialogSupExtract, dialogSupPrint, dialogSupPod,
-                    dialogFeeAr, dialogFeeAp, dialogStatusAdj,
+                    dialogStatusAdj,
                     waybillAuditVisible, waybillAuditDirs, waybillAuditSummary, waybillAuditDirUsable, waybillAuditBlockReason, openWaybillAudit, submitWaybillAudit,
                     dialogPick, dialogTransferNo, dialogAddBoxDetail, boxData, productActiveTab, isEditProduct, isEditBox, productData, nameData, brandOptions, attrOptions, boxLogisticsMap, boxLogisticsTag, getBoxStatusLabel, canRemoveBox, canReturnBox, canOperateBox, dialogEditFbaBox, dialogEditNonFbaBox, dialogEditMeasure, editMeasureBoxes, openEditMeasureDialog, confirmEditMeasure, dialogTagCompare, showTagCompareResult, dialogAddFbaAddr, dialogAddOtherAddr, dialogAddPrivateAddr, dialogAddSku, dialogAddVat, dialogEditSkuDetail,
                     pickBoxes, pickWarehouse, useCustomerData, pickSnapshot, openPickDialog, calcPickFields, onCustomerDataCheck, confirmPick, pickDataLabel, formatPickData, getBoxChargeableWeight,
@@ -6086,13 +5818,13 @@
                     dialogImport, importStep, importCustomer, importFileName, importLoading, importResult, resetImport, onImportFileChange, downloadTemplate, executeImport, downloadFailureList,
                     dialogWorkOrder, dialogUploadFile, dialogModifyFile,
                     dialogExport, exportSelected, exportScope, exportTemplates, exportFileName, executeExport,
-                    openDialog, handlePrintCommand, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn, canFee,
+                    openDialog, handlePrintCommand, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn,
                     compareChecks, compareTableData, compareRefNos, compareSelected, compareMockData, onChannelCheck, handleRecompare, handleRecompareAll, onChannelSelect, handleConfirmCompare,
                     printFormat, printFormatInv, printFormatSup, extractTypes, markType, insureType,
-                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeApFlows, feeTypeArOptions, feeTypeApOptions, handleFeeTypeChange, handleFeeCurrencyChange, newFeeRow,
-                    feeArNet, feeAmountText, pricingUnitOptions, handleFeeUnitPriceChange,
+                    podStatus, podVisible, buyInsurance, fileVisible, feeArFlows, feeApFlows,
+                    feeArNet, feeAmountText,
                     currentArFlows, currentApFlows, rowArTotal, rowApTotal, rowDirFlows, flowRate, flowCnyValue, cnyFormat, rowHasRate, rowMultiCurrency, rowDirTotalText, rowDirSubtotalText,
-                    feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, feeEditLocked, feeRowEditable, feeRowLockReason, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, generateNodeLabel, feeRuleTypeLabel, openFeeArDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, feeArKindLabel, handleFeeArTypeChange, handleFeeArRuleChange,
+                    feeArDetail, openFeeArDetail, FEE_ALLOWED_STATES, generateNodeLabel, feeRuleTypeLabel, waybillFeeAudited,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,
