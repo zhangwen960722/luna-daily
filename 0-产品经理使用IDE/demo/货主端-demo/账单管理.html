@@ -12,14 +12,14 @@
         :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
         body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
         .content-card { background-color: #fff; border-radius: 4px; padding: 16px; height: calc(100vh - 32px); display: flex; flex-direction: column; box-sizing: border-box; }
-        /* 「待确认」Tab 里主列表上方的自动确认提示：**一行纯文字** ——
+        /* 「待确认」筛选态里主列表上方的自动确认提示：**一行纯文字** ——
            不要 el-alert 的边框 / 底色 / 内边距，也**不要它自带的左侧信息图标**
            （那个图标固定贴在最左边缘，正好落在主列表左上角，看着像一个图标单独杵在列表前面）；
            口径见 PRD §5.9 */
         .auto-confirm-note { font-size: 13px; line-height: 20px; color: #909399; margin-bottom: 12px; }
 
         /* 查询区：外层不换行 —— 右侧按钮组永远与「第一行条件」同排；条件在 .search-conditions 内部自行换行 */
-        .search-area { display: flex; gap: 16px; align-items: flex-start; flex-wrap: nowrap; }
+        .search-area { display: flex; gap: 16px; align-items: flex-start; flex-wrap: nowrap; margin-bottom: 12px; }
         .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
         .search-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
         /* 条件弹性宽度：宽屏 240px 统一，窄屏等比收窄（不折成「一行一个」） */
@@ -39,6 +39,7 @@
         .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
         .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
         .amount { color: #303133; font-weight: 600; }
+        .unreceived { color: #F56C6C; font-weight: 600; }
 
         .amount-summary { display: flex; justify-content: flex-end; gap: 24px; margin-top: 12px; padding: 10px 12px; background-color: #FAFAFA; border: 1px solid #EBEEF5; border-radius: 4px; font-size: 13px; color: #606266; }
         .amount-summary b { color: #303133; font-weight: 600; margin-left: 4px; }
@@ -50,7 +51,7 @@
 </head>
 <body>
     <div id="app">
-        <!-- 查询区（上层独立卡片，位于 Tab 上方）：两个 Tab 共用同一套条件 —— 账单编号 / 所属主体 / 币种 -->
+        <!-- 查询区（tab 页签上方，共用）：账单编号 / 所属主体 / 币种 / 确认状态 -->
         <div class="content-card" style="height: auto; margin-bottom: 16px;">
             <div class="search-area">
                 <div class="search-conditions">
@@ -60,6 +61,10 @@
                 </el-select>
                 <el-select v-model="search.currency" placeholder="币种" class="search-control" clearable>
                     <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                </el-select>
+                <el-select v-model="search.confirmStatus" placeholder="确认状态" class="search-control" clearable>
+                    <el-option label="待确认" value="待确认"></el-option>
+                    <el-option label="已确认" value="已确认"></el-option>
                 </el-select>
                 </div>
 
@@ -74,15 +79,14 @@
             </div>
         </div>
 
-        <!-- 内容区（下层卡片：Tab + 表格） -->
+        <!-- 内容区（两个 Tab：应收账单 / 贷记单） -->
         <div class="content-card" style="height: calc(100vh - 106px);">
             <el-tabs v-model="activeTab">
-                <el-tab-pane :label="'待确认 (' + pendingBills.length + ')'" name="pending">
-                    <!-- 主列表上方的自动确认提示：**一行纯文字**（无图标、无边框、无底色）——
-                         图标去掉的原因：el-alert 自带的左侧信息图标固定贴在最左边缘，正好压在主列表左上角，观感像图标单独杵在列表前面。
+                <el-tab-pane :label="'应收账单 (' + arBills.length + ')'" name="ar">
+                    <!-- 自动确认提示：**一行纯文字**（无图标、无边框、无底色），只在「确认状态 = 待确认」时显示。
                          逐单的自动确认时间另在「账单详情 → 确认信息」里给出（见 PRD §5.9 / R16）。 -->
-                    <div class="auto-confirm-note">账单自发送日起 7 个自然日内未确认的，系统将在第 8 天 00:30 自动确认（与您手动确认等效）。如对账单有疑问，请在自动确认前联系您的对账专员。</div>
-                    <el-table :data="filteredPendingBills" border style="width: 100%">
+                    <div v-if="search.confirmStatus === '待确认'" class="auto-confirm-note">账单自发送日起 7 个自然日内未确认的，系统将在第 8 天 00:30 自动确认（与您手动确认等效）。如对账单有疑问，请在自动确认前联系您的对账专员。</div>
+                    <el-table :data="filteredArBills" border style="width: 100%">
                         <el-table-column prop="billNo" label="账单编号" min-width="200"></el-table-column>
                         <el-table-column prop="billingDate" label="账单日期" min-width="120"></el-table-column>
                         <el-table-column prop="dueDate" label="到期日期" min-width="120"></el-table-column>
@@ -93,66 +97,66 @@
                         <el-table-column label="账单金额" min-width="140" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.billAmount) }}</template>
                         </el-table-column>
-                        <el-table-column label="核销状态" width="110" align="center">
+                        <el-table-column label="确认状态" width="100" align="center">
+                            <template #default="scope"><el-tag :type="confirmStatusTagType(scope.row)" size="small">{{ confirmStatusText(scope.row) }}</el-tag></template>
+                        </el-table-column>
+                        <el-table-column label="核销状态" width="120" align="center">
                             <template #default="scope">
-                                <el-tooltip v-if="isCreditBill(scope.row)" content="贷记单：我司应付您的款项，不参与收款核销；已由财务结转至您的资金账户余额" placement="top">
-                                    <el-tag type="warning" size="small">贷记单</el-tag>
-                                </el-tooltip>
-                                <el-tag v-else :type="writeoffStatusTag(scope.row.writeoffStatus)" size="small">{{ scope.row.writeoffStatus }}</el-tag>
+                                <el-tag :type="writeoffStatusTag(scope.row.writeoffStatus)" size="small">{{ scope.row.writeoffStatus }}</el-tag>
                             </template>
                         </el-table-column>
                         <el-table-column label="已核销金额" min-width="120" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.receivedAmount) }}</template>
                         </el-table-column>
-                        <el-table-column label="未核销金额" min-width="120" align="right">
+                        <el-table-column label="已冲账金额" min-width="120" align="right">
+                            <template #default="scope"><span v-if="Number(scope.row.writtenOffAmount) > 0">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.writtenOffAmount) }}</span><span v-else>—</span></template>
+                        </el-table-column>
+                        <el-table-column label="未结清金额" min-width="120" align="right">
                             <template #default="scope"><span class="unreceived">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.unreceivedAmount) }}</span></template>
                         </el-table-column>
                         <el-table-column label="操作" width="150" fixed="right" align="center">
                             <template #default="scope">
                                 <el-button link type="primary" size="small" @click="openDetail(scope.row)">查看详情</el-button>
-                                <el-button link type="success" size="small" @click="openConfirm(scope.row)">确认账单</el-button>
+                                <el-button v-if="scope.row.confirmStatus === '未确认'" link type="success" size="small" @click="openConfirm(scope.row)">确认账单</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                     <div class="pagination-area">
-                        <el-pagination background layout="total, prev, pager, next" :total="filteredPendingBills.length"></el-pagination>
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredArBills.length"></el-pagination>
                     </div>
                 </el-tab-pane>
 
-                <el-tab-pane :label="'已确认 (' + confirmedBills.length + ')'" name="confirmed">
-                    <el-table :data="filteredConfirmedBills" border style="width: 100%">
+                <el-tab-pane name="credit">
+                    <template #label>
+                        <span>贷记单 ({{ creditBills.length }})<span v-if="pendingCreditCount > 0" style="color:#F56C6C;"> · {{ pendingCreditCount }} 待确认</span></span>
+                    </template>
+                    <!-- 自动确认提示（贷记单同样有 7 天自动确认兜底）：只在「确认状态 = 待确认」时显示 -->
+                    <div v-if="search.confirmStatus === '待确认'" class="auto-confirm-note">账单自发送日起 7 个自然日内未确认的，系统将在第 8 天 00:30 自动确认（与您手动确认等效）。如对账单有疑问，请在自动确认前联系您的对账专员。</div>
+                    <el-table :data="filteredCreditBills" border style="width: 100%">
                         <el-table-column prop="billNo" label="账单编号" min-width="200"></el-table-column>
                         <el-table-column prop="billingDate" label="账单日期" min-width="120"></el-table-column>
-                        <el-table-column prop="dueDate" label="到期日期" min-width="120"></el-table-column>
                         <el-table-column prop="entityName" label="所属主体" min-width="120"></el-table-column>
                         <el-table-column label="币种" min-width="90" align="center">
                             <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                         </el-table-column>
                         <el-table-column label="账单金额" min-width="140" align="right">
-                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.billAmount) }}</template>
+                            <template #default="scope"><span style="color:#F56C6C;font-weight:600;">{{ moneySigned(scope.row.currency, scope.row.billAmount) }}</span></template>
                         </el-table-column>
-                        <el-table-column label="核销状态" width="110" align="center">
-                            <template #default="scope">
-                                <el-tooltip v-if="isCreditBill(scope.row)" content="贷记单：我司应付您的款项，不参与收款核销；已由财务结转至您的资金账户余额" placement="top">
-                                    <el-tag type="warning" size="small">贷记单</el-tag>
-                                </el-tooltip>
-                                <el-tag v-else :type="writeoffStatusTag(scope.row.writeoffStatus)" size="small">{{ scope.row.writeoffStatus }}</el-tag>
-                            </template>
+                        <el-table-column label="确认状态" width="100" align="center">
+                            <template #default="scope"><el-tag :type="confirmStatusTagType(scope.row)" size="small">{{ confirmStatusText(scope.row) }}</el-tag></template>
                         </el-table-column>
-                        <el-table-column label="已核销金额" min-width="120" align="right">
-                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.receivedAmount) }}</template>
+                        <el-table-column label="结转状态" width="100" align="center">
+                            <template #default="scope"><el-tag :type="carryForwardStatusTag(scope.row)" size="small">{{ carryForwardStatusText(scope.row) }}</el-tag></template>
                         </el-table-column>
-                        <el-table-column label="未核销金额" min-width="120" align="right">
-                            <template #default="scope"><span class="unreceived">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.unreceivedAmount) }}</span></template>
-                        </el-table-column>
-                        <el-table-column label="操作" width="110" fixed="right" align="center">
+                        <el-table-column label="操作" width="150" fixed="right" align="center">
                             <template #default="scope">
                                 <el-button link type="primary" size="small" @click="openDetail(scope.row)">查看详情</el-button>
+                                <el-button v-if="scope.row.confirmStatus === '未确认'" link type="success" size="small" @click="openConfirm(scope.row)">确认账单</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                     <div class="pagination-area">
-                        <el-pagination background layout="total, prev, pager, next" :total="filteredConfirmedBills.length"></el-pagination>
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredCreditBills.length"></el-pagination>
                     </div>
                 </el-tab-pane>
             </el-tabs>
@@ -167,7 +171,7 @@
                     <el-col :span="12"><span class="detail-label">账单日期</span><div class="detail-value">{{ currentBill.billingDate }}</div></el-col>
                 </el-row>
                 <el-row :gutter="24">
-                    <el-col :span="12"><span class="detail-label">到期日期</span><div class="detail-value">{{ currentBill.dueDate }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">到期日期</span><div class="detail-value">{{ isCreditBill(currentBill) ? '—' : currentBill.dueDate }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">客户名称</span><div class="detail-value">{{ currentBill.customerName }}</div></el-col>
                 </el-row>
                 <el-row :gutter="24">
@@ -175,7 +179,7 @@
                     <el-col :span="12"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(currentBill.currency) }}</div></el-col>
                 </el-row>
                 <el-row :gutter="24">
-                    <el-col :span="12"><span class="detail-label">账单金额</span><div class="detail-value amount">{{ moneySigned(currentBill.currency, currentBill.billAmount) }}<el-tooltip v-if="isCreditBill(currentBill)" content="贷记单：我司应付您的款项，不参与收款核销；已由财务结转至您的资金账户余额" placement="top"><el-tag type="warning" size="small" style="margin-left: 8px;">贷记单</el-tag></el-tooltip></div></el-col>
+                    <el-col :span="12"><span class="detail-label">账单金额</span><div class="detail-value amount">{{ moneySigned(currentBill.currency, currentBill.billAmount) }}<el-tooltip v-if="isCreditBill(currentBill)" content="贷记单：我司应付您的款项，不参与收款核销；结清方式为财务结转至您的资金账户余额" placement="top"><el-tag type="warning" size="small" style="margin-left: 8px;">贷记单</el-tag></el-tooltip></div></el-col>
                     <el-col :span="12"><span class="detail-label">确认信息</span><div class="detail-value">{{ confirmInfo(currentBill) }}</div></el-col>
                 </el-row>
 
@@ -239,7 +243,8 @@
                 </div>
 
                 <div v-if="isConfirmMode" class="confirm-note">
-                    确认后视为认可本账单金额，财务将据此账单收款。如对账单有异议，请线下联系业务或提交工单，由财务作废账单后重新出账（新账单号）。
+                    <template v-if="isCreditBill(currentBill)">确认后视为认可我司应付您的这笔款项，财务将在您确认后结转至您的资金账户余额。如对金额有异议，请线下联系业务或提交工单。</template>
+                    <template v-else>确认后视为认可本账单金额，财务将据此账单收款。如对账单有异议，请线下联系业务或提交工单，由财务作废账单后重新出账（新账单号）。</template>
                 </div>
             </div>
             <template #footer>
@@ -296,20 +301,25 @@
 
                 // ===== 账单 =====
                 // 客户侧只看到「已发送」的账单：待发送账单尚未发送给客户，不出现在本页
-                // 状态拆 4 个维度：发送状态 / 确认状态 / 核销状态 / 作废状态；核销维度一律不在客户侧展示
-                // Tab 归属：待确认 = 已发送 + 未确认；已确认 = 已确认（之后进入部分核销 / 已核销的仍留在本 Tab）
+                // 状态拆 4 个维度：发送状态 / 确认状态 / 核销状态 / 作废状态；核销维度只在「应收账单」Tab 只读展示
+                // Tab 归属按「单据类型」拆（见财务 PRD §5.9 / 数据设计 ar_bill.bill_type）：应收账单 = bill_type 应收(10)、贷记单 = bill_type 贷记(20)
+                //   演示用「账单金额符号」代理 bill_type（应收 = 正数、贷记 = 负数）
                 // 已作废（voidStatus = 已作废）的账单不下发客户 → 不出现在任何 Tab
                 const allBills = reactive([
-                    // 贷记单（负数账单 · 已发送已确认）：我司应付客户的赔付抵扣 → 金额为负；不参与收款核销，由财务结转至您的资金账户余额
-                    { billNo: 'AR-GD-202608-00003', customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-31', dueDate: '2026-09-20', paymentTermsType: 101, daysOrDate: 20, billAmount: -300.00, receivedAmount: 0.00, unreceivedAmount: -300.00, writeoffStatus: '未核销', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-08-31 16:30', confirmedAt: '2026-09-07 00:30', confirmType: '系统自动确认' },
+                    // 贷记单（负数账单 · 已发送已确认 · **已结转**）：我司应付客户的赔付，已由财务结转至客户钱包
+                    { billNo: 'AR-GD-202608-00003', customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-31', billAmount: -300.00, sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-08-31 16:30', confirmedAt: '2026-09-07 00:30', confirmType: '系统自动确认', settled: true },
+                    // 贷记单（负数账单 · 已发送已确认 · **待结转**）：客户已确认，财务尚未结转至钱包
+                    { billNo: 'AR-GD-202609-00002', customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', billAmount: -180.00, sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-09-15 14:00', confirmedAt: '2026-09-15 15:20', confirmType: '客户确认', settled: false },
+                    // 贷记单（负数账单 · 已发送 · **待确认**）：客户未确认（「贷记单」Tab 的「待确认」演示案例，结转前置 = 客户确认）
+                    { billNo: 'AR-GD-202609-00003', customerName: '深圳市华美科技有限公司', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', billAmount: -150.00, sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', sentAt: '2026-09-16 10:00', settled: false },
                     // 待确认：华美 × 深圳飞点，月结+月末（合同天数/号 = 0）、账单日 08-01 → 到期日 2026-08-31
                     { billNo: 'AR-SZ-202608-00001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-08-01', dueDate: '2026-08-30', paymentTermsType: 101, daysOrDate: 30, billAmount: 1000.00, receivedAmount: 0.00, unreceivedAmount: 1000.00, writeoffStatus: '未核销', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', sentAt: '2026-09-10 10:00' },
                     // 待确认：华美 × 广州飞点 × USD（混币种拆单不折合），月结+15、账单日 08-01 → 到期日 2026-08-15
                     { billNo: 'AR-GZ-202608-00002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'USD', billingDate: '2026-08-01', dueDate: '2026-08-15', paymentTermsType: 101, daysOrDate: 15, billAmount: 380.00, receivedAmount: 0.00, unreceivedAmount: 380.00, writeoffStatus: '未核销', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', sentAt: '2026-09-10 10:10' },
-                    // 已确认 · **已核销（全额核销的演示案例，未核销金额为 0）**：华美 × 深圳飞点，月结+月末、账单日 07-01 → 到期日 2026-07-31
+                    // 已确认 · **已核销（全额核销的演示案例，未结清金额为 0）**：华美 × 深圳飞点，月结+月末、账单日 07-01 → 到期日 2026-07-31
                     { billNo: 'AR-SZ-202607-00001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', dueDate: '2026-07-30', paymentTermsType: 101, daysOrDate: 30, billAmount: 2160.00, receivedAmount: 2160.00, unreceivedAmount: 0.00, writeoffStatus: '已核销', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-07-01 10:00', confirmedAt: '2026-07-02 09:30', confirmType: '客户确认' },
                     // 已确认：华美 × 广州飞点，月结+15、账单日 07-01 → 到期日 2026-07-15
-                    { billNo: 'AR-GZ-202607-00002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', dueDate: '2026-07-15', paymentTermsType: 101, daysOrDate: 15, billAmount: 1450.00, receivedAmount: 700.00, unreceivedAmount: 750.00, writeoffStatus: '部分核销', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-07-01 10:05', confirmedAt: '2026-07-08 00:30', confirmType: '系统自动确认' },
+                    { billNo: 'AR-GZ-202607-00002', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', dueDate: '2026-07-15', paymentTermsType: 101, daysOrDate: 15, billAmount: 1450.00, receivedAmount: 700.00, writtenOffAmount: 750.00, unreceivedAmount: 0.00, writeoffStatus: '已核销', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-07-01 10:05', confirmedAt: '2026-07-08 00:30', confirmType: '系统自动确认' },
                     // 已确认：华美 × 广州飞点，月结+15、账单日 08-01 → 到期日 2026-08-15
                     { billNo: 'AR-GZ-202608-00001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-08-01', dueDate: '2026-08-15', paymentTermsType: 101, daysOrDate: 15, billAmount: 1330.50, receivedAmount: 0.00, unreceivedAmount: 1330.50, writeoffStatus: '未核销', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', sentAt: '2026-08-01 10:05', confirmedAt: '2026-08-02 09:30', confirmType: '客户确认' },
                     // 多币种：华美 在「广州飞点 · USD」的账单（客户侧同样只看得到自己企业的账单）
@@ -321,9 +331,17 @@
                 // ===== 费用明细 = 该账单聚合的应收流水（一条费用项一行、优惠独立成行、金额带符号） =====
                 const isCreditBill = (bill) => !!bill && Number(bill.billAmount) < 0;
                 const billDetails = {
-                    // 贷记单：赔付抵扣一条 −300.00
+                    // 贷记单：赔付抵扣一条 −300.00（已结转）
                     'AR-GD-202608-00003': [
                 { waybillNo: 'YD20260413018', feeType: '超时赔付', currency: 'CNY', unitPrice: -300.00, amount: -300.00, description: '派送超时赔付（我司应付，已结转至您的资金账户余额）' }
+                    ],
+                    // 贷记单：货物丢失赔付一条 −180.00（待结转）
+                    'AR-GD-202609-00002': [
+                { waybillNo: 'YD20260413017', feeType: '货物丢失赔付', currency: 'CNY', unitPrice: -180.00, amount: -180.00, description: '货物部分丢失赔付（我司应付，待财务结转至您的资金账户余额）' }
+                    ],
+                    // 贷记单：破损赔付一条 −150.00（待确认）
+                    'AR-GD-202609-00003': [
+                { waybillNo: 'YD20260413014', feeType: '破损赔付', currency: 'CNY', unitPrice: -150.00, amount: -150.00, description: '货物破损赔付（我司应付，待您确认后财务结转至您的资金账户余额）' }
                     ],
                     // 待确认：800.00 + 200.00 = 1000.00
                     'AR-SZ-202608-00001': [
@@ -366,15 +384,34 @@
                 // 明细行 = 运单级属性 + 流水行自身字段（同运单多条流水共用一组运单级值）
                 const buildDetails = (billNo) => (billDetails[billNo] || []).map(row => Object.assign({}, waybillAttrs[row.waybillNo] || {}, row));
 
-                const activeTab = ref('pending');
-                // 两个 Tab 共用同一套查询条件：账单编号 / 所属主体 / 币种
-                const search = reactive({ billNo: '', entityName: '', currency: '' });
+                const activeTab = ref('ar');
+                // 应收账单 Tab 查询条件：账单编号 / 所属主体 / 币种 / 确认状态 / 核销状态（确认状态默认「全部」）
+                const search = reactive({ billNo: '', entityName: '', currency: '', confirmStatus: '' });
+                // 确认状态展示：账单 confirmStatus = 未确认/已确认 → 页面显示 待确认/已确认
+                const confirmStatusText = (b) => (b.confirmStatus === '已确认' ? '已确认' : '待确认');
+                const confirmStatusTagType = (b) => (b.confirmStatus === '已确认' ? 'success' : 'warning');
+                // 贷记单「结转状态」：待确认 → —，已确认+未结转 → 待结转，已结转 → 已结转
+                const carryForwardStatusText = (b) => (b.confirmStatus === '未确认' ? '—' : (b.settled ? '已结转' : '待结转'));
+                const carryForwardStatusTag = (b) => ({ '已结转': 'success', '待结转': 'info', '—': 'info' }[carryForwardStatusText(b)] || 'info');
 
                 // 核销状态 tag：未核销=info / 部分核销=warning / 已核销=success / 已反核销=danger
                 const writeoffStatusTag = (s) => ({ '未核销': 'info', '部分核销': 'warning', '已核销': 'success', '已反核销': 'danger' }[s] || 'info');
 
+                // 贷记单「状态」= 待确认 → 待结转 → 已结转（线性流转；结转前置 = 客户已确认，见财务 PRD R70）
+                const creditStatus = (bill) => {
+                    if (!bill) return '—';
+                    if (bill.confirmStatus === '未确认') return '待确认';
+                    return bill.settled ? '已结转' : '待结转';
+                };
+                const creditStatusTag = (s) => ({ '待确认': 'warning', '待结转': 'info', '已结转': 'success' }[s] || 'info');
+
                 const visibleBills = computed(() => allBills.filter(b => b.voidStatus !== '已作废'));
-                // 自动确认（财务 PRD R67）：账单发送日（含）起满 7 个自然日仍未确认 → 第 8 天 00:30 由系统自动确认，与客户手动确认等效
+                // 按单据类型拆两个 Tab（演示用金额符号代理 ar_bill.bill_type）
+                const arBills = computed(() => visibleBills.value.filter(b => !isCreditBill(b)));
+                const creditBills = computed(() => visibleBills.value.filter(b => isCreditBill(b)));
+                const pendingCreditCount = computed(() => creditBills.value.filter(b => b.confirmStatus === '未确认').length);
+
+                // 自动确认（财务 PRD R16）：账单发送日（含）起满 7 个自然日仍未确认 → 第 8 天 00:30 由系统自动确认，与客户手动确认等效
                 const AUTO_CONFIRM_DAYS = 7;
                 const autoConfirmAt = (bill) => {
                     if (!bill || !bill.sentAt) return '—';
@@ -390,20 +427,20 @@
                     return `待确认 · 将于 ${autoConfirmAt(bill)} 自动确认`;
                 };
 
-                const pendingBills = computed(() => visibleBills.value.filter(b => b.sendStatus === '已发送' && b.confirmStatus === '未确认'));
-                const confirmedBills = computed(() => visibleBills.value.filter(b => b.confirmStatus === '已确认'));
-                const filterBills = (data) => {
-                    let d = data;
-                    if (search.billNo) d = d.filter(b => b.billNo.includes(search.billNo));
-                    if (search.entityName) d = d.filter(b => b.entityName === search.entityName);
-                    if (search.currency) d = d.filter(b => b.currency === search.currency);
-                    return d;
+                // 共享筛选（确认状态 待确认/已确认 映射到账单的 未确认/已确认）
+                const matchSearch = (b) => {
+                    if (search.billNo && !b.billNo.includes(search.billNo)) return false;
+                    if (search.entityName && b.entityName !== search.entityName) return false;
+                    if (search.currency && b.currency !== search.currency) return false;
+                    if (search.confirmStatus === '待确认' && b.confirmStatus !== '未确认') return false;
+                    if (search.confirmStatus === '已确认' && b.confirmStatus !== '已确认') return false;
+                    return true;
                 };
-                const filteredPendingBills = computed(() => filterBills(pendingBills.value));
-                const filteredConfirmedBills = computed(() => filterBills(confirmedBills.value));
+                const filteredArBills = computed(() => arBills.value.filter(matchSearch));
+                const filteredCreditBills = computed(() => creditBills.value.filter(matchSearch));
 
                 const handleSearch = () => { ElMessage.success('执行查询'); };
-                const resetSearch = () => { search.billNo = ''; search.entityName = ''; search.currency = ''; };
+                const resetSearch = () => { search.billNo = ''; search.entityName = ''; search.currency = ''; search.confirmStatus = ''; };
 
                 const detailVisible = ref(false);
                 const currentBill = ref(null);
@@ -428,7 +465,10 @@
                     detailVisible.value = true;
                 };
                 const confirmBill = () => {
-                    ElMessageBox.confirm('确认后视为认可本账单金额，财务将据此账单收款。', '确认账单', {
+                    const msg = isCreditBill(currentBill.value)
+                        ? '确认后视为认可我司应付您的这笔款项，财务将在您确认后结转至您的资金账户余额。'
+                        : '确认后视为认可本账单金额，财务将据此账单收款。';
+                    ElMessageBox.confirm(msg, '确认账单', {
                         confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning'
                     }).then(() => {
                         const now = new Date();
@@ -444,9 +484,11 @@
                 return {
                     currencyOptions, entityOptions, currencySymbol, currencyName, formatMoney, formatSigned,
                     formatWeight, formatVolume, formatDensity, moneySigned, fbaNosText,
-                    activeTab, search, visibleBills, pendingBills, confirmedBills, confirmInfo, autoConfirmAt,
-                    filteredPendingBills, filteredConfirmedBills,
-                    writeoffStatusTag, isCreditBill, handleSearch, resetSearch,
+                    activeTab, search, visibleBills, arBills, creditBills, pendingCreditCount,
+                    confirmInfo, autoConfirmAt, filteredArBills, filteredCreditBills,
+                    writeoffStatusTag, creditStatus, creditStatusTag, isCreditBill,
+                    confirmStatusText, confirmStatusTagType, carryForwardStatusText, carryForwardStatusTag,
+                    handleSearch, resetSearch,
                     detailVisible, currentBill, currentDetails, isConfirmMode,
                     positiveTotal, negativeTotal, netTotal, amountStyle,
                     openDetail, openConfirm, confirmBill

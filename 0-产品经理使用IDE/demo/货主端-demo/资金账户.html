@@ -110,7 +110,11 @@
 
                 <el-tab-pane label="资金流水" name="flow">
                     <el-table :data="filteredFlows" border style="width: 100%">
-                        <el-table-column prop="time" label="时间" min-width="150"></el-table-column>
+                        <el-table-column prop="time" label="创建时间" min-width="150"></el-table-column>
+                        <el-table-column label="支付时间" min-width="150">
+                            <template #default="scope">{{ payTimeOf(scope.row) }}</template>
+                        </el-table-column>
+                        <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
                         <el-table-column prop="type" label="流水类型" min-width="110" align="center">
                             <template #default="scope">
                                 <el-tag :type="flowTypeTag(scope.row.type)" size="small">{{ scope.row.type }}</el-tag>
@@ -123,7 +127,7 @@
                         <el-table-column label="账户名称" min-width="130">
                             <template #default="scope">{{ accountNameOf(scope.row.entityName, scope.row.currency) }}</template>
                         </el-table-column>
-                        <el-table-column label="变动金额" min-width="120" align="right">
+                        <el-table-column label="入账金额" min-width="120" align="right">
                             <template #default="scope">
                                 <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">
                                     {{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}
@@ -201,11 +205,19 @@
                         </el-form-item>
                     </el-col>
                 </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="支付时间" prop="payTime">
+                            <el-date-picker v-model="rechargeForm.payTime" type="date" value-format="YYYY-MM-DD" placeholder="请选择支付时间" style="width: 100%"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
                 <el-form-item label="打款凭证" prop="voucher">
                     <el-upload
                         action="#"
                         :auto-upload="false"
                         :limit="1"
+                        v-model:file-list="voucherList"
                         :on-change="onVoucherChange"
                         :on-remove="onVoucherRemove"
                         accept="image/*,.pdf">
@@ -213,7 +225,7 @@
                             <el-icon style="margin-right: 4px;"><Upload /></el-icon>上传打款凭证
                         </el-button>
                         <template #tip>
-                            <div class="el-upload__tip">请上传银行转账回单截图或 PDF，单个文件不超过 5MB</div>
+                            <div class="el-upload__tip">请上传银行转账回单截图或 PDF，单个文件不超过 5MB；支持截图后直接 Ctrl+V 粘贴</div>
                         </template>
                     </el-upload>
                 </el-form-item>
@@ -231,7 +243,7 @@
     </div>
 
     <script>
-        const { createApp, ref, reactive, computed } = Vue;
+        const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
         const { ElMessage } = ElementPlus;
 
         const app = createApp({
@@ -284,19 +296,19 @@
                 ];
 
                 // === 资金流水 ===
-                const flowTypes = ['充值', '充值退回', '提现', '收款核销', '收款核销撤销', '转汇', '赔付入账'];
+                const flowTypes = ['充值', '充值退回', '提现', '收款核销', '收款核销撤销', '转汇', '贷记单入账'];
                 const flowSearch = reactive({ type: '', currency: '', entityName: '' });
 
                 const allFlows = [
-                    { time: '2026-08-27 10:25', type: '充值', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, balance: 3719.50 },
-                    { time: '2026-08-25 14:12', type: '充值', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, balance: 3200.00 },
-                    { time: '2026-08-24 10:00', type: '转汇', entityName: '广州飞点', currency: 'USD', amount: 1200.00, balance: 1200.00 },
-                    { time: '2026-08-24 10:00', type: '转汇', entityName: '广州飞点', currency: 'CNY', amount: -8640.00, balance: 719.50 },
-                    { time: '2026-08-24 09:50', type: '充值', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, balance: 15000.00 },
-                    { time: '2026-08-20 11:00', type: '提现', entityName: '广州飞点', currency: 'CNY', amount: -500.00, balance: 9359.50 },
-                    { time: '2026-09-07 09:00', type: '赔付入账', entityName: '广东飞点', currency: 'CNY', amount: 300.00, balance: 1100.00 },
-                    { time: '2026-08-15 10:00', type: '充值', entityName: '广东飞点', currency: 'CNY', amount: 800.00, balance: 800.00 },
-                    { time: '2026-07-09 15:00', type: '收款核销', entityName: '广州飞点', currency: 'CNY', amount: -700.00, balance: 9859.50 }
+                    { time: '2026-08-27 10:25', flowNo: 'WF20260827001', type: '充值', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, payTime: '2026-08-26 15:40', balance: 3719.50 },
+                    { time: '2026-08-25 14:12', flowNo: 'WF20260825001', type: '充值', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, payTime: '2026-08-25 10:05', balance: 3200.00 },
+                    { time: '2026-08-24 10:00', flowNo: 'WF20260824003', type: '转汇', entityName: '广州飞点', currency: 'USD', amount: 1200.00, balance: 1200.00 },
+                    { time: '2026-08-24 10:00', flowNo: 'WF20260824002', type: '转汇', entityName: '广州飞点', currency: 'CNY', amount: -8640.00, balance: 719.50 },
+                    { time: '2026-08-24 09:50', flowNo: 'WF20260824001', type: '充值', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, payTime: '2026-08-23 18:20', balance: 15000.00 },
+                    { time: '2026-08-20 11:00', flowNo: 'WF20260820001', type: '提现', entityName: '广州飞点', currency: 'CNY', amount: -500.00, balance: 9359.50 },
+                    { time: '2026-09-07 09:00', flowNo: 'WF20260907001', type: '贷记单入账', entityName: '广东飞点', currency: 'CNY', amount: 300.00, balance: 1100.00 },
+                    { time: '2026-08-15 10:00', flowNo: 'WF20260815001', type: '充值', entityName: '广东飞点', currency: 'CNY', amount: 800.00, payTime: '2026-08-14 16:00', balance: 800.00 },
+                    { time: '2026-07-09 15:00', flowNo: 'WF20260709001', type: '收款核销', entityName: '广州飞点', currency: 'CNY', amount: -700.00, balance: 9859.50 }
                 ];
 
                 const filteredFlows = computed(() => {
@@ -308,9 +320,11 @@
                 });
 
                 const flowTypeTag = (type) => {
-                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '赔付入账': 'success' };
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '贷记单入账': 'success' };
                     return map[type] || 'info';
                 };
+                // 支付时间：仅充值有独立「客户实际打款时间」（payTime，可早于流水入池时间）；其余类型支付时间 = 创建时间（动作发生即入账）
+                const payTimeOf = (row) => row.payTime || row.time;
                 const handleFlowSearch = () => { ElMessage.success('执行查询'); };
                 const resetFlowSearch = () => { flowSearch.type = ''; flowSearch.currency = ''; flowSearch.entityName = ''; };
 
@@ -332,14 +346,16 @@
                     currency: '',
                     amount: null,
                     bankAccountId: null,
-                    voucher: ''
+                    voucher: '',
+                    payTime: ''
                 });
                 const rechargeRules = {
                     entityName: [{ required: true, message: '请选择充值主体', trigger: 'change' }],
                     currency: [{ required: true, message: '请选择充值币种', trigger: 'change' }],
                     amount: [{ required: true, message: '请输入充值金额', trigger: 'blur' }],
                     bankAccountId: [{ required: true, message: '请选择打款账户', trigger: 'change' }],
-                    voucher: [{ required: true, message: '请上传打款凭证', trigger: 'change' }]
+                    voucher: [{ required: true, message: '请上传打款凭证', trigger: 'change' }],
+                    payTime: [{ required: true, message: '请选择支付时间', trigger: 'change' }]
                 };
 
                 const availableBankAccounts = computed(() => {
@@ -366,18 +382,55 @@
                     rechargeForm.voucher = '';
                 };
 
+                // 粘贴截图上传（Ctrl+V）：把剪贴板里的截图直接作为打款凭证，免去「截图→存桌面→再选文件」
+                const voucherMimeExt = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/bmp': 'bmp' };
+                const onVoucherPaste = (e) => {
+                    if (!rechargeVisible.value) return;
+                    const cd = e.clipboardData || window.clipboardData;
+                    const items = cd && cd.items;
+                    if (!items) return;
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        if (item.kind === 'file' && item.type && item.type.indexOf('image/') === 0) {
+                            const blob = item.getAsFile();
+                            if (!blob) continue;
+                            if (blob.size > 5 * 1024 * 1024) {
+                                ElMessage.warning('截图大小超过 5MB，请压缩后重试');
+                                e.preventDefault();
+                                return;
+                            }
+                            const ext = voucherMimeExt[item.type] || 'png';
+                            const name = '充值凭证截图.' + ext;
+                            voucherList.value = [{
+                                name: name,
+                                size: blob.size,
+                                status: 'ready',
+                                raw: blob,
+                                uid: Date.now()
+                            }];
+                            rechargeForm.voucher = name;
+                            ElMessage.success('截图已粘贴，可继续填写后提交');
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                };
+                onMounted(() => document.addEventListener('paste', onVoucherPaste));
+                onBeforeUnmount(() => document.removeEventListener('paste', onVoucherPaste));
+
                 const openRecharge = () => {
                     rechargeForm.entityName = '';
                     rechargeForm.currency = '';
                     rechargeForm.amount = null;
                     rechargeForm.bankAccountId = null;
                     rechargeForm.voucher = '';
+                    rechargeForm.payTime = '';
                     voucherList.value = [];
                     rechargeVisible.value = true;
                 };
 
                 const submitRecharge = () => {
-                    if (!rechargeForm.entityName || !rechargeForm.currency || !rechargeForm.amount || !rechargeForm.bankAccountId || !rechargeForm.voucher) {
+                    if (!rechargeForm.entityName || !rechargeForm.currency || !rechargeForm.amount || !rechargeForm.bankAccountId || !rechargeForm.voucher || !rechargeForm.payTime) {
                         ElMessage.warning('请填写完整的充值信息并上传凭证');
                         return;
                     }
@@ -394,6 +447,7 @@
                         currency: rechargeForm.currency,
                         amount: rechargeForm.amount,
                         bankAccount: bank ? bank.name : '',
+                        payTime: rechargeForm.payTime,
                         status: '待审核'
                     });
                     ElMessage.success('充值申请已提交，等待财务审核');
@@ -406,14 +460,14 @@
                 return {
                     activeTab, wallets, currencyOptions, entities,
                     currencySymbol, currencyName, formatMoney, actualAmount, accountNameOf,
-                    flowTypes, flowSearch, filteredFlows, flowTypeTag,
+                    flowTypes, flowSearch, filteredFlows, flowTypeTag, payTimeOf,
                     handleFlowSearch, resetFlowSearch,
                     rechargeRecords,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRules,
                     voucherList, availableBankAccounts,
                     rechargeEntityOptions, rechargeCurrencyOptions,
                     onRechargeEntityChange, onRechargeCurrencyChange,
-                    onVoucherChange, onVoucherRemove,
+                    onVoucherChange, onVoucherRemove, onVoucherPaste,
                     openRecharge, submitRecharge
                 };
             }

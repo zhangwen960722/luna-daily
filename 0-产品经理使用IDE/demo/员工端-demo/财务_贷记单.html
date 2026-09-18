@@ -147,7 +147,7 @@
                     </div>
                 </el-tab-pane>
 
-                <!-- Tab 3：已结转（派生：存在活跃的「赔付入账」资金流水）—— 终态，不可撤销；要冲正在运单侧新增反向流水、下期账单抵扣 -->
+                <!-- Tab 3：已结转（派生：存在活跃的「贷记单入账」资金流水）—— 终态，不可撤销；要冲正在运单侧新增反向流水、下期账单抵扣 -->
                 <el-tab-pane :label="'已结转 (' + settledBills.length + ')'" name="settled">
                     <el-table :data="settledBills" border style="width: 100%;">
                         <el-table-column prop="billNo" label="贷记单编号" width="200"></el-table-column>
@@ -267,7 +267,6 @@
                 <el-table :data="currentFlows" border style="width: 100%;" max-height="260">
                     <el-table-column prop="waybillNo" label="运单号" width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" width="120"></el-table-column>
-                    <el-table-column prop="flowKind" label="流水种类" width="100" align="center"></el-table-column>
                     <el-table-column label="币种" width="80" align="center">
                         <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                     </el-table-column>
@@ -294,12 +293,13 @@
                 </div>
 
                 <div class="section-title" style="margin-top: 20px;">操作时间线</div>
-                <el-table :data="currentTimeline" border style="width: 100%;" max-height="200">
-                    <el-table-column prop="time" label="时间" width="170" align="center"></el-table-column>
-                    <el-table-column prop="operator" label="操作人" width="120" align="center"></el-table-column>
-                    <el-table-column prop="action" label="动作" width="180"></el-table-column>
-                    <el-table-column prop="detail" label="说明" min-width="260"></el-table-column>
-                </el-table>
+                <el-timeline style="padding-left: 2px;">
+                    <el-timeline-item v-for="(t, i) in currentTimeline" :key="i" :timestamp="t.time" :type="t.type" placement="top">
+                        <span style="font-weight: 600;">{{ t.action }}</span>
+                        <span style="color: #606266; margin-left: 8px;">{{ t.detail }}</span>
+                        <span style="color: #909399; margin-left: 8px;">{{ t.operator }}</span>
+                    </el-timeline-item>
+                </el-timeline>
                 <div v-if="currentBill.voidReason" class="void-block" style="margin-top: 12px;">
                     作废原因：{{ currentBill.voidReason }}（{{ currentBill.voidedBy || '财务-李伟' }} · {{ currentBill.voidedAt || '—' }}）
                 </div>
@@ -324,7 +324,6 @@
                     <el-table-column type="selection" width="46"></el-table-column>
                     <el-table-column prop="waybillNo" label="运单号" width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" width="120"></el-table-column>
-                    <el-table-column prop="flowKind" label="流水种类" width="100" align="center"></el-table-column>
                     <el-table-column label="币种" width="80" align="center">
                         <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                     </el-table-column>
@@ -398,6 +397,8 @@
                     { billNo: 'AR-GD-202609-00001', generatedAt: '2026-09-15 11:20', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '系统自动', sendStatus: '未发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -450.00 },
                     // 已发送 · 待客户确认：迅达 09 月一笔超时赔付；结转前置 = 客户已确认（发送满 7 天未确认由系统自动确认，R16）
                     { billNo: 'AR-GZ-202609-00001', generatedAt: '2026-09-15 10:05', customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -260.00, sentAt: '2026-09-15 10:30' },
+                    // 已发送 · 待客户确认：华美 09 月第二笔赔付（破损赔付）—— 货主端「贷记单」Tab「待确认」态的演示案例
+                    { billNo: 'AR-GD-202609-00003', generatedAt: '2026-09-16 09:30', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -150.00, sentAt: '2026-09-16 10:00' },
                     // 已发送 · 已确认 · 未结转（★ 演示「结转钱包」按钮）：客户当天就确认了这笔赔付金额 → 财务可在「已发送」Tab 行末点「结转钱包」把钱计入客户可用额度
                     { billNo: 'AR-GD-202609-00002', generatedAt: '2026-09-15 13:40', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', billAmount: -180.00, sentAt: '2026-09-15 14:00', confirmedAt: '2026-09-15 15:20', confirmType: '客户确认' },
                     // 已发送 · 已确认 · 已结转（终态）：8 月那张 —— 客户未确认、满 7 天由系统自动确认 → 财务结转钱包 → 客户可用额度 +300
@@ -414,6 +415,9 @@
                     ],
                     'AR-GD-202609-00002': [
                         { waybillNo: 'YD20260413017', feeType: '货物丢失赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -180.00, pricingUnit: '按票', amount: -180.00, description: '货物部分丢失赔付（赔付行金额为负）', createdAt: '2026-09-15 13:30' }
+                    ],
+                    'AR-GD-202609-00003': [
+                        { waybillNo: 'YD20260413014', feeType: '破损赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -150.00, pricingUnit: '按票', amount: -150.00, description: '货物破损赔付（赔付行金额为负）', createdAt: '2026-09-16 09:30' }
                     ],
                     'AR-GZ-202609-00001': [
                         { waybillNo: 'YD20260413010', feeType: '超时赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -260.00, pricingUnit: '按票', amount: -260.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-09-13 09:40' }
@@ -435,15 +439,15 @@
                 ]);
                 const nextFlowKey = () => { flowSeq += 1; return 'CK' + String(flowSeq).padStart(2, '0'); };
 
-                // ===== 已结转 = 派生状态（存在活跃的「赔付入账」wallet_flow；撤销入账已下线，故结转即终态）=====
+                // ===== 已结转 = 派生状态（存在活跃的「贷记单入账」wallet_flow；撤销入账已下线，故结转即终态）=====
                 const settlements = reactive([
-                    { flowNo: 'PE20260907001', billNo: 'AR-GD-202608-00003', amount: 300.00, walletBefore: 800.00, walletAfter: 1100.00, operator: '财务-李伟', time: '2026-09-07 09:00' }
+                    { flowNo: 'WF20260907001', billNo: 'AR-GD-202608-00003', amount: 300.00, walletBefore: 800.00, walletAfter: 1100.00, operator: '财务-李伟', time: '2026-09-07 09:00' }
                 ]);
                 const isSettled = (bill) => !!bill && settlements.some(x => x.billNo === bill.billNo);
                 const settledAtOf = (bill) => { const s = settlements.find(x => x.billNo === bill.billNo); return s ? s.time.slice(0, 10) : '—'; };
                 const nextSettleNo = () => {
                     const ds = DEMO_TODAY.replace(/-/g, '');
-                    const prefix = 'PE' + ds;
+                    const prefix = 'WF' + ds;
                     const used = settlements.filter(x => x.flowNo.indexOf(prefix) === 0).map(x => Number(x.flowNo.slice(prefix.length)) || 0);
                     return prefix + String((used.length ? Math.max.apply(null, used) : 0) + 1).padStart(3, '0');
                 };
@@ -612,7 +616,7 @@
                     }).catch(() => {});
                 };
 
-                // ===== 结转钱包（结清动作 = 写一条「赔付入账」资金流水；**入钱包即终态、不可撤销**）=====
+                // ===== 结转钱包（结清动作 = 写一条「贷记单入账」资金流水；**入钱包即终态、不可撤销**）=====
                 // 结转闸口（按钮置灰原因走 tooltip）：客户已确认才能结转；已结转是终态
                 const settleGuard = (row) => {
                     if (!row) return '';
@@ -630,7 +634,7 @@
                     const after = Number((before + amount).toFixed(2));
                     ElMessageBox.confirm(
                         '确认将贷记单 ' + row.billNo + ' 的 ' + moneySigned(row.currency, amount) + ' 结转至客户钱包（' + row.customerName + ' · ' + row.entityName + ' · ' + currencyName(row.currency) + '）？'
-                        + '钱包余额 ' + moneySigned(row.currency, before) + ' → ' + moneySigned(row.currency, after) + '，写一条「赔付入账」资金流水；'
+                        + '钱包余额 ' + moneySigned(row.currency, before) + ' → ' + moneySigned(row.currency, after) + '，写一条「贷记单入账」资金流水；'
                         + '这笔钱计入客户的可用额度后，本单即结清（我司欠款兑付完毕）；之后客户可抵扣他其他账单，也可申请提现。「结转不可撤销」—— 如需冲正，请在运单侧新增反向流水、于下一期账单抵扣。',
                         '结转钱包', { confirmButtonText: '确认结转', cancelButtonText: '取消', type: 'warning' }
                     ).then(() => {
@@ -692,17 +696,17 @@
                     const b = currentBill.value;
                     if (!b) return [];
                     const list = [];
-                    list.push({ time: b.generatedAt || b.billingDate, operator: '系统 / 财务-李伟', action: '生成贷记单', detail: '净额 ' + moneySigned(b.currency, b.billAmount) + ' < 0 → 单据类型 = 贷记单（我司应付客户）' });
-                    if (b.editedAt) list.push({ time: b.editedAt, operator: b.editedBy || '财务-李伟', action: '编辑单据', detail: b.editAction || '—' });
-                    if (b.sentAt) list.push({ time: b.sentAt, operator: '财务-李伟', action: '发送客户', detail: '单据进入「已发送」，客户在货主端可见' });
-                    if (b.confirmStatus === '已确认') list.push({ time: b.confirmedAt || '—', operator: b.confirmType === '系统自动确认' ? '系统' : '客户', action: '客户确认', detail: b.confirmType || '客户确认' });
+                    list.push({ time: b.generatedAt || b.billingDate, operator: '系统 / 财务-李伟', action: '生成贷记单', detail: '净额 ' + moneySigned(b.currency, b.billAmount) + ' < 0 → 单据类型 = 贷记单（我司应付客户）', type: 'primary' });
+                    if (b.editedAt) list.push({ time: b.editedAt, operator: b.editedBy || '财务-李伟', action: '编辑单据', detail: b.editAction || '—', type: 'warning' });
+                    if (b.sentAt) list.push({ time: b.sentAt, operator: '财务-李伟', action: '发送客户', detail: '单据进入「已发送」，客户在货主端可见', type: 'primary' });
+                    if (b.confirmStatus === '已确认') list.push({ time: b.confirmedAt || '—', operator: b.confirmType === '系统自动确认' ? '系统' : '客户', action: '客户确认', detail: b.confirmType || '客户确认', type: 'success' });
                     const s = settlements.find(x => x.billNo === b.billNo);
-                    if (s) list.push({ time: s.time, operator: s.operator, action: '结转钱包', detail: '贷记金额 ' + moneySigned(b.currency, s.amount) + ' 入客户可用额度 · 钱包余额 ' + moneySigned(b.currency, s.walletBefore) + ' → ' + moneySigned(b.currency, s.walletAfter) + ' · 资金流水 ' + s.flowNo });
-                    if (b.voidStatus === '已作废') list.push({ time: b.voidedAt || '—', operator: b.voidedBy || '财务-李伟', action: '作废单据', detail: b.voidReason || '—' });
+                    if (s) list.push({ time: s.time, operator: s.operator, action: '结转钱包', detail: '贷记金额 ' + moneySigned(b.currency, s.amount) + ' 入客户可用额度 · 钱包余额 ' + moneySigned(b.currency, s.walletBefore) + ' → ' + moneySigned(b.currency, s.walletAfter) + ' · 资金流水 ' + s.flowNo, type: 'success' });
+                    if (b.voidStatus === '已作废') list.push({ time: b.voidedAt || '—', operator: b.voidedBy || '财务-李伟', action: '作废单据', detail: b.voidReason || '—', type: 'danger' });
                     return list.sort((x, y) => (x.time < y.time ? -1 : 1));
                 });
 
-                // 深链：从「资金流水」的赔付入账行 / 「账单管理」的 ?billNo= 进入时，自动切到该单所在 Tab 并打开详情
+                // 深链：从「资金流水」的贷记单入账行 / 「账单管理」的 ?billNo= 进入时，自动切到该单所在 Tab 并打开详情
                 const initDeepLink = () => {
                     const m = /[?&]billNo=([^&]+)/.exec(window.location.search || '');
                     if (!m) return;

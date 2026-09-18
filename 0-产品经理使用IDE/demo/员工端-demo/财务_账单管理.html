@@ -161,7 +161,6 @@
                         <el-table-column prop="entityName" label="我司主体" width="110"></el-table-column>
                         <el-table-column prop="waybillStatus" label="运单状态" width="90" align="center"></el-table-column>
                         <el-table-column prop="feeType" label="费用类型" width="120"></el-table-column>
-                        <el-table-column prop="flowKind" label="流水种类" width="90" align="center"></el-table-column>
                         <el-table-column label="币种" width="80" align="center">
                             <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                         </el-table-column>
@@ -232,7 +231,7 @@
                     </div>
                 </el-tab-pane>
 
-                <!-- Tab 3：已发送（sendStatus = 已发送 且 未作废）—— 靠「发送状态 / 确认状态」两列区分确认维度；核销维度以「核销状态 / 已核销金额 / 未核销金额」三列**只读**展示（另两个 Tab 这三列恒为「未核销 / 0 / 全额」，故不加） -->
+                <!-- Tab 3：已发送（sendStatus = 已发送 且 未作废）—— 靠「发送状态 / 确认状态」两列区分确认维度；核销维度以「核销状态 / 已核销金额 / 已冲账金额 / 未结清金额」四列**只读**展示（另两个 Tab 这些列恒为「未核销 / 0 / — / 全额」，故不加） -->
                 <el-tab-pane :label="'已发送 (' + filteredSentBills.length + ')'" name="sent">
                     <!-- 操作工具栏（本 Tab 两个动作）：**导出**（次要动作，靠左）+ **批量核销**（主操作，靠右）—— 与「生成账单」同一套位置规则：只在本 Tab 显示、右对齐、不占表格宽度。
                          导出放本 Tab 的理由：**导出对象就是「已发送」这批账单**（草稿池是流水、待发送尚未形成对客承诺且还可改、已作废不该交付；核销记录与贷记单都是独立菜单）。
@@ -247,7 +246,7 @@
                                 </el-button>
                             </span>
                         </el-tooltip>
-                        <el-tooltip :content="walletGroups.length ? '按钱包批量核销：打开后先逐级选 客户 → 我司主体 → 币种，主动锁定要核的那一本钱包（不预选），再核它名下的可核销账单' : '当前没有可核销的账单（需「客户已确认 + 未核销金额 > 0」）'" placement="top">
+                        <el-tooltip :content="walletGroups.length ? '按钱包批量核销：打开后先逐级选 客户 → 我司主体 → 币种，主动锁定要核的那一本钱包（不预选），再核它名下的可核销账单' : '当前没有可核销的账单（需「客户已确认 + 未结清金额 > 0」）'" placement="top">
                             <span>
                                 <el-button type="primary" :disabled="!walletGroups.length" @click="openBatchWriteoff">
                                     <!-- 注意：这里必须用非 HTML 元素同名的图标 + 显式闭合标签（<Select /> 会被解析成 <select>、吞掉后续整个页面） -->
@@ -295,15 +294,18 @@
                         <el-table-column label="已核销金额" width="120" align="right">
                             <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.receivedAmount) }}</template>
                         </el-table-column>
-                        <el-table-column label="未核销金额" width="120" align="right">
+                        <el-table-column label="已冲账金额" width="120" align="right">
+                            <template #default="scope"><span v-if="Number(scope.row.writtenOffAmount) > 0" style="color:#E6A23C;font-weight:600;">{{ moneySigned(scope.row.currency, scope.row.writtenOffAmount) }}</span><span v-else>—</span></template>
+                        </el-table-column>
+                        <el-table-column label="未结清金额" width="120" align="right">
                             <template #default="scope"><span :class="Number(scope.row.unreceivedAmount) > 0 ? 'unreceived' : ''">{{ moneySigned(scope.row.currency, scope.row.unreceivedAmount) }}</span></template>
                         </el-table-column>
-                        <el-table-column label="操作" width="200" fixed="right" align="center">
+                        <el-table-column label="操作" width="290" fixed="right" align="center">
                             <template #default="scope">
                                 <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
                                 <el-tooltip v-if="Number(scope.row.unreceivedAmount) > 0" :content="writeoffBtnTip(scope.row)" placement="top">
                                     <span>
-                                        <el-button link type="primary" size="small" :disabled="scope.row.confirmStatus !== '已确认' || walletBalance(scope.row) <= 0" @click="openWriteoff(scope.row)">核销</el-button>
+                                        <el-button link type="primary" size="small" :disabled="scope.row.confirmStatus !== '已确认' || Number(scope.row.unreceivedAmount) <= 0" @click="openWriteoff(scope.row)">核销</el-button>
                                     </span>
                                 </el-tooltip>
                                 <el-tooltip :disabled="!voidGuard(scope.row)" :content="voidGuard(scope.row)" placement="top">
@@ -433,7 +435,6 @@
                     <el-table-column type="selection" width="46"></el-table-column>
                     <el-table-column prop="waybillNo" label="运单号" width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" width="110"></el-table-column>
-                    <el-table-column prop="flowKind" label="流水种类" width="100" align="center"></el-table-column>
                     <el-table-column label="币种" width="80" align="center">
                         <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                     </el-table-column>
@@ -608,7 +609,6 @@
                     <el-table-column type="selection" width="46"></el-table-column>
                     <el-table-column prop="waybillNo" label="运单号" width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" width="110"></el-table-column>
-                    <el-table-column prop="flowKind" label="流水种类" width="100" align="center"></el-table-column>
                     <el-table-column label="单价" width="100" align="right">
                         <template #default="scope">{{ formatSigned(scope.row.unitPrice) }}</template>
                     </el-table-column>
@@ -673,16 +673,31 @@
                     <el-col :span="12"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(writeoffForm.currency) }}</div></el-col>
                 </el-row>
                 <el-row :gutter="20">
-                    <el-col :span="12"><span class="detail-label">未核销金额</span><div class="detail-value unreceived">{{ moneySigned(writeoffForm.currency, writeoffForm.unreceivedAmount) }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">未结清金额</span><div class="detail-value unreceived">{{ moneySigned(writeoffForm.currency, writeoffForm.unreceivedAmount) }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">钱包余额</span><div class="detail-value">{{ moneySigned(writeoffForm.currency, writeoffForm.walletBalance) }}</div></el-col>
+                </el-row>
+                <el-row :gutter="20" style="margin-top: 8px;">
+                    <el-col :span="24"><span class="detail-label">扣款钱包账户</span><div class="detail-value">{{ writeoffForm.walletAccountName }}（{{ writeoffForm.customerName }} · {{ writeoffForm.entityName }} · {{ currencyName(writeoffForm.currency) }}）</div></el-col>
                 </el-row>
 
                 <div class="section-title" style="margin-top: 20px;">核销金额</div>
                 <el-form-item label="本次核销金额" required>
-                    <el-input-number v-model="writeoffForm.amount" :min="0.01" :max="writeoffForm.maxAmount" :precision="2" :step="100" style="width: 100%" :controls="false" placeholder="请输入核销金额"></el-input-number>
+                    <el-input-number v-model="writeoffForm.amount" :min="0" :max="writeoffForm.maxAmount" :precision="2" :step="100" style="width: 100%" :controls="false" placeholder="请输入核销金额"></el-input-number>
                 </el-form-item>
+
+                <!-- 尾款冲账：本次核销金额 < 未结清金额时才可勾选；勾选后自动算尾款金额 + 原因必填 -->
+                <el-checkbox v-model="writeoffForm.tailWriteoff" :disabled="writeoffTailDisabled" style="margin-top: 4px;">尾款冲账（收不上来的剩余金额一并作坏账冲销）</el-checkbox>
+                <div v-if="writeoffForm.tailWriteoff" style="margin-top: 12px;">
+                    <el-form-item label="尾款冲账金额（自动算）">
+                        <div class="detail-value">{{ moneySigned(writeoffForm.currency, writeoffTailAmount) }}</div>
+                    </el-form-item>
+                    <el-form-item label="冲账原因" required>
+                        <el-input v-model="writeoffForm.writeoffReason" type="textarea" :rows="3" maxlength="200" show-word-limit placeholder="请说明为什么冲账（客户不付 / 尾款拖欠 / 其他）"></el-input>
+                    </el-form-item>
+                </div>
+
                 <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
-                    核销金额 = min(未核销金额, 钱包余额)，钱包不可透支。可部分核销；本次最多可核销 {{ moneySigned(writeoffForm.currency, writeoffForm.maxAmount) }}。
+                    核销金额 = min(未结清金额, 钱包余额)，钱包不可透支。可部分核销；本次最多可核销 {{ moneySigned(writeoffForm.currency, writeoffForm.maxAmount) }}。<span v-if="writeoffForm.walletBalance <= 0">当前钱包余额为 0，无法扣款核销；如需整单认亏，请勾选「尾款冲账」。</span><span v-else>勾选「尾款冲账」后，收不上来的剩余金额一并作坏账冲销（不动钱包、出账龄）。</span>
                 </div>
             </el-form>
             <template #footer>
@@ -760,7 +775,7 @@
                 </el-select>
             </div>
             <div class="wo-summary">
-                <span>钱包<b>{{ walletLocked ? (batchScope.customerName + ' · ' + batchScope.entityName + ' · ' + currencyName(batchScope.currency)) : '未选定' }}</b></span>
+                <span>钱包<b>{{ walletLocked ? (batchScope.customerName + ' · ' + batchScope.entityName + ' · ' + currencyName(batchScope.currency) + '（' + batchScope.accountName + '）') : '未选定' }}</b></span>
                 <span>钱包余额<b>{{ walletLocked ? moneySigned(batchScope.currency, batchScope.wallet) : '—' }}</b></span>
                 <span>可核销<b>{{ walletLocked ? batchWalletBills.length + ' 张' : '—' }}</b></span>
                 <span v-if="walletLocked && batchScope.wallet <= 0" style="color: #F56C6C;">⚠️ 钱包余额为 0，暂不可核销</span>
@@ -783,7 +798,7 @@
                     </el-table-column>
                     <el-table-column prop="billNo" label="账单编号" width="200"></el-table-column>
                     <el-table-column prop="dueDate" label="到期日期" width="110" align="center"></el-table-column>
-                    <el-table-column label="未核销金额" width="130" align="right">
+                    <el-table-column label="未结清金额" width="130" align="right">
                         <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.unreceivedAmount) }}</template>
                     </el-table-column>
                     <el-table-column label="钱包可用余额（本单核销前）" width="210" align="right">
@@ -818,12 +833,13 @@
             </template>
         </el-dialog>
 
-        <!-- 抽屉：核销明细（该账单的核销单 = 「核销记录」菜单的子集视图，**只读** —— 反核销在「核销记录」菜单里做）—— 只留账单侧的「未核销金额（前 → 后）」 -->
+        <!-- 抽屉：核销明细（该账单的核销单 = 「核销记录」菜单的子集视图，**只读** —— 反核销在「核销记录」菜单里做）—— 只留账单侧的「未结清金额（前 → 后）」 -->
         <el-drawer v-model="writeoffDetailVisible" :title="'核销明细 · ' + writeoffDetailBillNo" size="1020px">
             <div class="wo-summary">
                 <span>账单金额<b>{{ writeoffDetailSummary.billAmount }}</b></span>
                 <span>已核销金额<b>{{ writeoffDetailSummary.received }}</b></span>
-                <span>未核销金额<b class="unreceived">{{ writeoffDetailSummary.unreceived }}</b></span>
+                <span>已冲账金额<b>{{ writeoffDetailSummary.writtenOff }}</b></span>
+                <span>未结清金额<b class="unreceived">{{ writeoffDetailSummary.unreceived }}</b></span>
                 <span>钱包余额<b>{{ writeoffDetailSummary.wallet }}</b></span>
             </div>
             <el-table :data="writeoffDetailRows" border style="width: 100%;">
@@ -831,7 +847,7 @@
                 <el-table-column label="核销金额" width="120" align="right">
                     <template #default="scope"><span style="font-weight: 600;">{{ moneySigned(scope.row.currency, scope.row.amount) }}</span></template>
                 </el-table-column>
-                <el-table-column label="未核销金额（前 → 后）" width="180" align="right">
+                <el-table-column label="未结清金额（前 → 后）" width="180" align="right">
                     <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.billBefore) }} <span style="color: #909399;">→</span> {{ formatMoney(scope.row.billAfter) }}</template>
                 </el-table-column>
                 <el-table-column label="类型" width="110" align="center">
@@ -1055,7 +1071,7 @@
                     // 已发送 · 已确认 · **已核销（全额核销的演示案例）**：华美 × 深圳飞点，月结+月末、账单日 07-01 → 到期日 2026-07-31；已核销 2,160.00 / 未核销 0.00
                     { billNo: 'AR-SZ-202607-00001', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', dueDate: '2026-07-30', paymentTermsDays: 30, paymentTermsType: 101, daysOrDate: 30, generateSource: '系统自动', sendStatus: '已发送', confirmStatus: '已确认', writeoffStatus: '已核销', voidStatus: '正常', billAmount: 2160.00, receivedAmount: 2160.00, unreceivedAmount: 0.00, sentAt: '2026-07-01 10:00', confirmedAt: '2026-07-02 09:30', confirmType: '客户确认' },
                     // 已发送 · 已确认：华美 × 广州飞点，月结+15、账单日 07-01 → 到期日 2026-07-15
-                    { billNo: 'AR-GZ-202607-00002', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', dueDate: '2026-07-15', paymentTermsDays: 15, paymentTermsType: 101, daysOrDate: 15, generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', writeoffStatus: '部分核销', voidStatus: '正常', billAmount: 1450.00, receivedAmount: 700.00, unreceivedAmount: 750.00, sentAt: '2026-07-01 10:05', confirmedAt: '2026-07-08 00:30', confirmType: '系统自动确认' },
+                    { billNo: 'AR-GZ-202607-00002', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', dueDate: '2026-07-15', paymentTermsDays: 15, paymentTermsType: 101, daysOrDate: 15, generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', writeoffStatus: '已核销', voidStatus: '正常', billAmount: 1450.00, receivedAmount: 700.00, writtenOffAmount: 750.00, unreceivedAmount: 0.00, sentAt: '2026-07-01 10:05', confirmedAt: '2026-07-08 00:30', confirmType: '系统自动确认' },
                     // 多币种演示：华美 在「广州飞点 · USD」也有一张可核销账单（钱包 1,200.00 够全额核销）
                     { billNo: 'AR-GZ-202607-00003', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广州飞点', currency: 'USD', billingDate: '2026-07-01', dueDate: '2026-07-15', paymentTermsDays: 15, paymentTermsType: 101, daysOrDate: 15, generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', writeoffStatus: '未核销', voidStatus: '正常', billAmount: 620.00, receivedAmount: 0.00, unreceivedAmount: 620.00, sentAt: '2026-07-01 10:10', confirmedAt: '2026-07-02 14:00', confirmType: '客户确认' },
                     // 已作废：其下 2 条流水已释放回草稿池（R63）；新锐有合同账期（月结 + 10）→ 账期列显示「月结+10」（账单日 08-31 → 08-10 已过 → 顺延 2026-09-10）
@@ -1187,7 +1203,7 @@
                 // 「已发送」多一个「核销状态」条件（未核销 / 部分核销 / 已核销）—— 用来一眼筛出「待核销」那批（原「收款核销 → 待核销」Tab 的等价能力）
                 const sentSearch = reactive({ billNo: '', customerNick: '', cusNo: '', entityName: '', writeoffStatus: '' });
                 const voidedSearch = reactive({ billNo: '', customerNick: '', cusNo: '', entityName: '' });
-                const writeoffStatusOptions = ['未核销', '部分核销', '已核销'];
+                const writeoffStatusOptions = ['未核销', '部分核销', '已核销', '已反核销'];
                 const hasMoreCondition = computed(() => true);   // 四个 Tab 都带「更多查询条件」组（草稿池 5 项 / 账单三个 Tab 1-2 项）
 
                 // ===== 导出账单（「已发送」Tab 工具栏）=====
@@ -1301,7 +1317,20 @@
                     '东莞市宏泰五金制品有限公司|广东飞点|CNY': 5000.00,
                     '东莞新锐电子有限公司|广东飞点|USD': 300.00
                 });
-                // 单据类型（`bill_type`，PRD R72）：负数净额（< 0）生成的单是「贷记单」，落在「**贷记单**」菜单 —— 本页只管应收账单（不参与核销 / 账龄 / 未核销金额的是贷记单）
+                // 钱包账户名称（= 账号编号 + 币种代码，货主端资金账户的唯一标识）—— 与钱包余额同一份 key，核销弹窗展示「扣款目标账户」用
+                const walletAccountNames = {
+                    '深圳市华美科技有限公司|广州飞点|CNY': '1000001 CNY',
+                    '深圳市华美科技有限公司|广州飞点|USD': '1000002 USD',
+                    '深圳市华美科技有限公司|深圳飞点|CNY': '1000003 CNY',
+                    '深圳市华美科技有限公司|广东飞点|CNY': '1000008 CNY',
+                    '深圳市华美科技有限公司|香港富力顿|HKD': '1000009 HKD',
+                    '广州迅达贸易有限公司|广州飞点|CNY': '1000004 CNY',
+                    '广州迅达贸易有限公司|香港富力顿|HKD': '1000005 HKD',
+                    '东莞新锐电子有限公司|广东飞点|CNY': '1000006 CNY',
+                    '东莞市宏泰五金制品有限公司|广东飞点|CNY': '1000010 CNY',
+                    '东莞新锐电子有限公司|广东飞点|USD': '1000007 USD'
+                };
+                // 单据类型（`bill_type`，PRD R72）：负数净额（< 0）生成的单是「贷记单」，落在「**贷记单**」菜单 —— 本页只管应收账单（不参与核销 / 账龄 / 未结清金额的是贷记单）
                 const isCreditBill = (bill) => !!bill && Number(bill.billAmount) < 0;
 
                 // 作废前置：已核销 / 部分核销 → 须先反核销。（贷记单不在本页；其「客户已确认后不可作废」的闸门在「贷记单」菜单里）
@@ -1327,10 +1356,11 @@
 
                 const walletKey = (bill) => `${bill.customerName}|${bill.entityName}|${bill.currency}`;
                 const walletBalance = (bill) => walletBalances[walletKey(bill)] || 0;
+                const walletAccountName = (bill) => walletAccountNames[walletKey(bill)] || '—';
 
                 // 核销单（ar_writeoff）：一行一条核销单 = 核销动作的操作日志、**事实快照表**
-                // 四个快照字段 = 数据设计 ar_writeoff 的 bill_before / bill_after / wallet_before / wallet_after（记该笔发生时账单未核销金额与钱包余额）
-                // 页面只展示账单侧（「未核销金额（前 → 后）」）；钱包侧两列作留痕与对账闭合校验用，不上表
+                // 四个快照字段 = 数据设计 ar_writeoff 的 bill_before / bill_after / wallet_before / wallet_after（记该笔发生时账单未结清金额与钱包余额）
+                // 页面只展示账单侧（「未结清金额（前 → 后）」）；钱包侧两列作留痕与对账闭合校验用，不上表
                 // 演示：AR-GZ-202607-00001 有 4 条（含 1 条已反核销）；有效核销合计 = 1,500.00 + 719.50 = 2,219.50 = 该账单当前已核销金额
                 const writeoffs = reactive([
                     // 迅达 · 广州飞点 · CNY 钱包链：5,819.50 → 3,019.50 → 2,619.50 →（反核销回补）3,019.50 → 1,519.50 → 800.00 = 该钱包当前余额 ✅
@@ -1348,10 +1378,10 @@
                 // 演示口径：**核销单号 = WO + YYYYMMDD + 3 位序号**（同一天内按发生顺序编号）；核销一定发生在「账单已发送且客户已确认」之后 */
 
                 // ===== 核销动作（收款核销）与账龄台账（只读看板）的背景数据 =====
-                // 账龄台账读的是账单当前值（未核销金额 / 账单日 / 账期天数），与「账单管理」逐笔同源 */
-                // 说明：核销单不落库在账单上，账单侧只保留「已核销金额 / 未核销金额 / 核销状态」三个结果值（快照 + 累计） */
+                // 账龄台账读的是账单当前值（未结清金额 / 账单日 / 账期天数），与「账单管理」逐笔同源 */
+                // 说明：核销单不落库在账单上，账单侧只保留「已核销金额 / 未结清金额 / 核销状态」三个结果值（快照 + 累计） */
                 // 账龄台账（§5.4）与资金账户（§5.5-§5.8）另行取数，本页只负责「核销动作」的呈现（核销记录与反核销在独立菜单）*/
-                // 快照闭合（探针逐条校验）：① 账单侧 —— 每个账单「时间最新一条」的 billAfter = 该账单当前未核销金额；
+                // 快照闭合（探针逐条校验）：① 账单侧 —— 每个账单「时间最新一条」的 billAfter = 该账单当前未结清金额；
                 //           ② 钱包侧（**不上表、仅校验**）—— 每个钱包「时间最新一条」的 walletAfter = 该钱包当前余额；③ 单笔自洽 —— |amount| = |billBefore − billAfter|
                 // 核销记录行 = 该核销单（含四个快照字段）+ 其所属账单的**静态属性**（账单编号 / 客户 / 主体 / 币种 / 账单日期 / 账期 / 到期日期 / 账单金额 —— 生成即固定，按 billNo 回查）
                 const recordRows = computed(() => writeoffs.map(w => {
@@ -1370,8 +1400,8 @@
                 const writeoffBtnTip = (row) => (row.confirmStatus !== '已确认'
                     ? '客户未确认，暂不能核销；账单发送满 7 个自然日自动确认后可核销'
                     : (walletBalance(row) <= 0
-                        ? '该客户在这本钱包（主体 × 币种）的余额为 0，无法核销；请先等客户充值或走币种互转'
-                        : '从客户钱包扣款冲抵本账单（单笔上限 = min(未核销金额, 钱包余额)）'));
+                        ? '该客户这本钱包余额为 0，无法扣款核销；可勾选「尾款冲账」整单认亏'
+                        : '从客户钱包扣款冲抵本账单（单笔上限 = min(未结清金额, 钱包余额)）'));
 
 
                 // 自动确认（R67）：账单发送日（含）起满 7 个自然日仍未确认 → 第 8 天 00:30 由系统自动确认（确认方式 = 系统自动确认），与客户手动确认等效
@@ -1610,13 +1640,24 @@
                 const writeoffVisible = ref(false);
                 const writeoffForm = reactive({
                     billRef: null, billNo: '', customerName: '', entityName: '', currency: '',
-                    unreceivedAmount: 0, walletBalance: 0, maxAmount: 0, amount: null
+                    unreceivedAmount: 0, walletBalance: 0, walletAccountName: '', maxAmount: 0, amount: null,
+                    tailWriteoff: false, writeoffReason: ''
+                });
+                // 尾款冲账金额 = 未结清金额 − 本次核销金额（本次核销金额 >= 未结清金额时无尾款可冲）
+                const writeoffTailAmount = computed(() => {
+                    const a = Number(writeoffForm.amount) || 0;
+                    const u = Number(writeoffForm.unreceivedAmount) || 0;
+                    return Number(Math.max(0, u - a).toFixed(2));
+                });
+                const writeoffTailDisabled = computed(() => {
+                    const a = Number(writeoffForm.amount) || 0;
+                    const u = Number(writeoffForm.unreceivedAmount) || 0;
+                    return a >= u;
                 });
 
                 const openWriteoff = (row) => {
                     if (row.confirmStatus !== '已确认') { ElMessage.warning('客户未确认，暂不能核销；账单发送满 7 个自然日自动确认后可核销'); return; }
-                    if (Number(row.unreceivedAmount) <= 0) { ElMessage.warning('该账单已核销结清'); return; }
-                    if (walletBalance(row) <= 0) { ElMessage.warning('该客户在这本钱包的余额为 0，无法核销'); return; }
+                    if (Number(row.unreceivedAmount) <= 0) { ElMessage.warning('该账单已结清'); return; }
                     const wb = walletBalance(row);
                     writeoffForm.billRef = row;
                     writeoffForm.billNo = row.billNo;
@@ -1625,8 +1666,11 @@
                     writeoffForm.currency = row.currency;
                     writeoffForm.unreceivedAmount = row.unreceivedAmount;
                     writeoffForm.walletBalance = wb;
+                    writeoffForm.walletAccountName = walletAccountName(row);
                     writeoffForm.maxAmount = Number(Math.min(row.unreceivedAmount, wb).toFixed(2));
                     writeoffForm.amount = writeoffForm.maxAmount;
+                    writeoffForm.tailWriteoff = false;
+                    writeoffForm.writeoffReason = '';
                     writeoffVisible.value = true;
                 };
 
@@ -1638,35 +1682,54 @@
                 };
 
                 const submitWriteoff = () => {
-                    if (!writeoffForm.amount || writeoffForm.amount <= 0) { ElMessage.warning('请输入核销金额'); return; }
-                    if (writeoffForm.amount > writeoffForm.maxAmount) { ElMessage.warning('核销金额不能超过 min(未核销金额, 钱包余额)'); return; }
+                    const amount = Number(writeoffForm.amount) || 0;
+                    if (amount < 0) { ElMessage.warning('核销金额不能为负'); return; }
+                    if (amount > writeoffForm.maxAmount) { ElMessage.warning('核销金额不能超过 min(未结清金额, 钱包余额)'); return; }
+                    const tailAmount = Number(writeoffTailAmount.value);
+                    if (amount <= 0 && !writeoffForm.tailWriteoff) { ElMessage.warning('钱包余额为 0，无法核销；请勾选「尾款冲账」整单认亏'); return; }
+                    if (writeoffForm.tailWriteoff && (!writeoffForm.writeoffReason || !writeoffForm.writeoffReason.trim())) { ElMessage.warning('请填写冲账原因'); return; }
                     ElMessageBox.confirm(
-                        '确认从客户钱包（' + writeoffForm.customerName + ' · ' + writeoffForm.entityName + '）扣款 ' + moneySigned(writeoffForm.currency, writeoffForm.amount) + ' 核销账单 ' + writeoffForm.billNo + '？'
-                        + '核销后：本单未核销金额 ' + moneySigned(writeoffForm.currency, writeoffForm.unreceivedAmount) + ' → ' + moneySigned(writeoffForm.currency, Number((writeoffForm.unreceivedAmount - writeoffForm.amount).toFixed(2)))
-                        + '，钱包余额 ' + moneySigned(writeoffForm.currency, writeoffForm.walletBalance) + ' → ' + moneySigned(writeoffForm.currency, Number((writeoffForm.walletBalance - writeoffForm.amount).toFixed(2)))
-                        + '。核销不可逆，如需撤回请到「核销记录」菜单做反核销。',
+                        (amount > 0 ? '确认从客户钱包（' + writeoffForm.customerName + ' · ' + writeoffForm.entityName + '）扣款 ' + moneySigned(writeoffForm.currency, amount) + ' 核销账单 ' + writeoffForm.billNo + '？' : '确认将账单 ' + writeoffForm.billNo + ' 整单作坏账冲销？')
+                        + (writeoffForm.tailWriteoff ? '尾款冲账金额 ' + moneySigned(writeoffForm.currency, tailAmount) + '。' : '')
+                        + '处理前本单未结清金额 ' + moneySigned(writeoffForm.currency, writeoffForm.unreceivedAmount) + ' → ' + moneySigned(writeoffForm.currency, Number((writeoffForm.unreceivedAmount - amount - (writeoffForm.tailWriteoff ? tailAmount : 0)).toFixed(2)))
+                        + '，钱包余额 ' + moneySigned(writeoffForm.currency, writeoffForm.walletBalance) + ' → ' + moneySigned(writeoffForm.currency, Number((writeoffForm.walletBalance - amount).toFixed(2)))
+                        + '。核销 / 冲账不可逆，如需撤回请到「核销/冲账管理」菜单做反核销' + (writeoffForm.tailWriteoff ? ' / 反冲账' : '') + '。',
                         '确认核销', { confirmButtonText: '确认核销', cancelButtonText: '取消', type: 'warning' }
                     ).then(() => {
                         const bill = writeoffForm.billRef;
-                        const amount = Number(writeoffForm.amount);
-                        const billBefore = Number(bill.unreceivedAmount);
-                        const billAfter = Number((billBefore - amount).toFixed(2));
-                        const walletBefore = walletBalance(bill);
-                        const walletAfter = Number((walletBefore - amount).toFixed(2));
-                        bill.receivedAmount = Number((bill.receivedAmount + amount).toFixed(2));
-                        bill.unreceivedAmount = billAfter;
-                        bill.writeoffStatus = billAfter > 0 ? '部分核销' : '已核销';
-                        walletBalances[walletKey(bill)] = walletAfter;
-                        writeoffs.unshift({
-                            writeoffNo: nextWriteoffNo(), billNo: bill.billNo, amount: amount,
-                            billBefore: billBefore, billAfter: billAfter, walletBefore: walletBefore, walletAfter: walletAfter,
-                            type: '核销', operator: '李伟', time: nowStamp()
-                        });
+                        // 核销（本次核销金额 > 0 才写核销单）
+                        if (amount > 0) {
+                            const billBefore = Number(bill.unreceivedAmount);
+                            const billAfter = Number((billBefore - amount).toFixed(2));
+                            const walletBefore = walletBalance(bill);
+                            const walletAfter = Number((walletBefore - amount).toFixed(2));
+                            bill.receivedAmount = Number((bill.receivedAmount + amount).toFixed(2));
+                            bill.unreceivedAmount = billAfter;
+                            walletBalances[walletKey(bill)] = walletAfter;
+                            writeoffs.unshift({
+                                writeoffNo: nextWriteoffNo(), billNo: bill.billNo, amount: amount,
+                                billBefore: billBefore, billAfter: billAfter, walletBefore: walletBefore, walletAfter: walletAfter,
+                                type: '核销', operator: '李伟', time: nowStamp()
+                            });
+                        }
+                        // 尾款冲账（勾选且尾款 > 0 才写冲账单；不动钱包，不改变核销状态）
+                        if (writeoffForm.tailWriteoff && tailAmount > 0) {
+                            const tailBefore = Number(bill.unreceivedAmount);
+                            bill.writtenOffAmount = Number(((bill.writtenOffAmount || 0) + tailAmount).toFixed(2));
+                            bill.unreceivedAmount = Number((bill.unreceivedAmount - tailAmount).toFixed(2));
+                            writeoffs.unshift({
+                                writeoffNo: nextWriteoffNo(), billNo: bill.billNo, amount: tailAmount,
+                                billBefore: tailBefore, billAfter: bill.unreceivedAmount,
+                                walletBefore: walletBalance(bill), walletAfter: walletBalance(bill),
+                                type: '冲账', operator: '李伟', time: nowStamp(), reason: writeoffForm.writeoffReason.trim()
+                            });
+                        }
+                        // 核销状态 = 看未结清金额是否归零（冲账也清减未结清金额，故冲账后未结清归零同样算「已核销」）
+                        bill.writeoffStatus = Number(bill.unreceivedAmount) <= 0 ? '已核销' : (Number(bill.receivedAmount) > 0 ? '部分核销' : '未核销');
                         writeoffVisible.value = false;
-                        ElMessage.success('核销成功');
+                        ElMessage.success(writeoffForm.tailWriteoff ? '核销并冲账成功' : '核销成功');
                     }).catch(() => {});
                 };
-
 
                 // ===== 批量核销（「已发送」Tab 工具栏 · **先按条件选钱包**）=====
                 // ===== 「待发送」Tab：批量发送（按客户一次发一批 —— 同一客户名下可能有多张待发送账单：多主体 / 多币种） =====
@@ -1740,10 +1803,10 @@
                 // 设计：一次批量 = **一本钱包**（客户 × 我司主体 × 币种）。钱包由**三个逐级联动的条件**选定
                 //      （客户 → 我司主体 → 币种，选齐即锁定），选定后**下面实时列出该钱包下的可核销账单**。
                 //      之所以不用"一个长下拉"：客户可能有多本钱包，拼接成一行 label 既难扫也难做。
-                // 规则（R68）：① 可核销 = 客户已确认 + 未核销金额 > 0 + 未作废；选项只列"有可核销账单"的组合；
+                // 规则（R68）：① 可核销 = 客户已确认 + 未结清金额 > 0 + 未作废；选项只列"有可核销账单"的组合；
                 //      ② **不预选钱包**（打开即空态，须由财务主动锁定；唯一例外 = 当前只有一本可核销钱包）；
                 //         锁定后**默认全选该钱包下全部可核销账单**，可逐张取消；③ 顺序 = 到期日期从早到晚（同日按账单号）；
-                //      ④ 逐单从同一本钱包扣：每张 = min(本单未核销金额, 钱包可用余额)，不够则部分核销、扣完后的单本次不核销。
+                //      ④ 逐单从同一本钱包扣：每张 = min(本单未结清金额, 钱包可用余额)，不够则部分核销、扣完后的单本次不核销。
                 const batchVisible = ref(false);
                 const batchCustomer = ref('');
                 const batchEntity = ref('');
@@ -1859,8 +1922,8 @@
                 };
                 const batchScope = computed(() => {
                     const w = walletGroup.value;
-                    if (!w) return { customerName: '', entityName: '', currency: '', wallet: 0 };
-                    return { customerName: w.customerName, entityName: w.entityName, currency: w.currency, wallet: walletBalance(w) };
+                    if (!w) return { customerName: '', entityName: '', currency: '', wallet: 0, accountName: '—' };
+                    return { customerName: w.customerName, entityName: w.entityName, currency: w.currency, wallet: walletBalance(w), accountName: walletAccountNames[w.key] || '—' };
                 });
                 const batchCounts = computed(() => {
                     const rows = Object.keys(batchPlan.value).map(k => batchPlan.value[k]);
@@ -1880,7 +1943,7 @@
 
                 const openBatchWriteoff = () => {
                     const groups = walletGroups.value;
-                    if (!groups.length) { ElMessage.warning('当前没有可核销的账单（需「客户已确认 + 未核销金额 > 0」）'); return; }
+                    if (!groups.length) { ElMessage.warning('当前没有可核销的账单（需「客户已确认 + 未结清金额 > 0」）'); return; }
                     // **不预选任何钱包**：核销不可逆（直接扣钱包余额、撤销要走反核销），"默认为哪一本"没有正确答案 ——
                     // 列表第一本只是排序的偶然结果，预选后再默认全选 = 手快点两下就执行了一笔没人明确决定过的扣款。
                     // **一律空态**：不预选、也不代填，三级条件全部由财务手动选（当前只有一本可核销钱包时，
@@ -1900,7 +1963,7 @@
                     if (!todo.length) { ElMessage.warning('本次没有可核销的账单（未勾选或钱包可用余额为 0）'); return; }
                     ElMessageBox.confirm(
                         '确认按到期日期从早到晚核销 ' + todo.length + ' 张账单（全额 ' + c.full + ' 张 / 部分 ' + c.partial + ' 张'
-                        + (c.none ? ' / 本次不核销 ' + c.none + ' 张（钱包余额不足）' : '') + '）？核销从「' + batchCustomer.value + ' · ' + batchEntity.value + ' · ' + currencyName(batchCurrency.value) + '」这本钱包逐张扣款，账单未核销金额减少、钱包余额扣减；核销不可逆，如需撤回请到「核销记录」菜单逐笔反核销。',
+                        + (c.none ? ' / 本次不核销 ' + c.none + ' 张（钱包余额不足）' : '') + '）？核销从「' + batchCustomer.value + ' · ' + batchEntity.value + ' · ' + currencyName(batchCurrency.value) + '」这本钱包逐张扣款，账单未结清金额减少、钱包余额扣减；核销不可逆，如需撤回请到「核销记录」菜单逐笔反核销。',
                         '批量核销', { confirmButtonText: '确认核销', cancelButtonText: '取消', type: 'warning' }
                     ).then(() => {
                         let done = 0;
@@ -1946,10 +2009,11 @@
                 }));
                 const writeoffDetailSummary = computed(() => {
                     const b = writeoffDetailBill.value;
-                    if (!b) return { billAmount: '—', received: '—', unreceived: '—', wallet: '—' };
+                    if (!b) return { billAmount: '—', received: '—', writtenOff: '—', unreceived: '—', wallet: '—' };
                     return {
                         billAmount: moneySigned(b.currency, b.billAmount),
                         received: moneySigned(b.currency, b.receivedAmount),
+                        writtenOff: (Number(b.writtenOffAmount) > 0 ? moneySigned(b.currency, b.writtenOffAmount) : '—'),
                         unreceived: moneySigned(b.currency, b.unreceivedAmount),
                         wallet: moneySigned(b.currency, walletBalance(b))
                     };
@@ -2008,9 +2072,13 @@
                         return a.writeoffNo < b.writeoffNo ? -1 : 1;
                     }).forEach(w => {
                         // 时间线只讲「账单」这一侧（钱包侧的进出另有「资金流水」页专管，不在这里重复）
-                        const delta = '未核销金额 ' + formatMoney(w.billBefore) + ' → ' + formatMoney(w.billAfter) + '（' + w.writeoffNo + '）';
+                        const delta = '未结清金额 ' + formatMoney(w.billBefore) + ' → ' + formatMoney(w.billAfter) + '（' + w.writeoffNo + '）';
                         if (w.type === '核销') {
                             items.push({ time: w.time, action: '核销 ' + moneySigned(cur, w.amount), detail: delta, operator: w.operator, type: 'success' });
+                        } else if (w.type === '冲账') {
+                            items.push({ time: w.time, action: '冲账 ' + moneySigned(cur, w.amount), detail: delta + '；原因：' + (w.reason || '—') + '（坏账冲销、不动钱包）', operator: w.operator, type: 'danger' });
+                        } else if (w.type === '已反冲账') {
+                            items.push({ time: w.time, action: '反冲账 ' + moneySigned(cur, w.amount), detail: delta + '；该笔已撤销', operator: w.operator, type: 'danger' });
                         } else {
                             items.push({ time: w.time, action: '反核销 ' + moneySigned(cur, w.amount), detail: delta + '；该笔已撤销', operator: w.operator, type: 'danger' });
                         }
@@ -2198,8 +2266,8 @@
                     selectedFlows, selectedTotal, genIsCredit, contractTermDerivable, contractTermText, derivedTermsDays, dueDatePreview, submitGenerate,
                     // 账单动作
                     sendBill, openVoid, submitVoid, voidVisible, voidForm, removeBillFlow,
-                    // 核销 / 反核销（原「收款核销」菜单并入）
-                    writeoffVisible, writeoffForm, openWriteoff, submitWriteoff, walletBalance, walletBalances, writeoffs,
+                    // 核销（含尾款冲账）/ 反核销（原「收款核销」菜单并入）
+                    writeoffVisible, writeoffForm, writeoffTailAmount, writeoffTailDisabled, openWriteoff, submitWriteoff, walletBalance, walletBalances, writeoffs,
                     writeoffDetailVisible, writeoffDetailBillNo, writeoffDetailRows, writeoffDetailSummary, openWriteoffDetail,
                     // 批量核销（已发送 Tab 工具栏）
                     billWritable, walletGroups, walletGroup, walletLocked, batchVisible, batchWalletBills, batchPicked, batchPickedBills,

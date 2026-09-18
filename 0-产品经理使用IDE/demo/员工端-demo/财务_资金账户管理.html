@@ -93,7 +93,7 @@
                 <el-tab-pane :label="'我司账户 (' + bankAccounts.length + ')'" name="bank">
 
                     <div class="hint-bar">
-                        我司账户按主体维护，一主体可多账户（单币种）。「用户是否可见」= 是 时，客户在货主端充值时可将该账户作为打款账户；默认打款账户必须可见。「余额」为财务手工维护的账面余额，非银行实时余额。
+                        我司账户按主体维护，一主体可多账户（单币种）。「用户是否可见」= 是 时，客户在货主端充值时可将该账户作为打款账户；默认打款账户必须可见。「余额」为系统自动核算（充值/代充 +、提现/充值退回 −，核销/冲账/转汇/贷记单结转不动），初始余额财务新建账户时录入。
                     </div>
 
                     <el-table :data="filteredBankAccounts" border style="width: 100%" :row-class-name="bankRowClass">
@@ -121,6 +121,7 @@
                         </el-table-column>
                         <el-table-column label="操作" width="140" fixed="right" align="center">
                             <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openBankFlows(scope.row)">流水</el-button>
                                 <el-button link type="primary" size="small" @click="openEditBank(scope.row)">编辑</el-button>
                                 <el-button v-if="scope.row.status === '启用'" link type="danger" size="small" @click="toggleBankStatus(scope.row)">停用</el-button>
                                 <el-button v-else link type="primary" size="small" @click="toggleBankStatus(scope.row)">启用</el-button>
@@ -221,8 +222,8 @@
                         </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label="账面余额" prop="balance">
-                            <el-input-number v-model="bankForm.balance" :min="0" :precision="2" :controls="false" style="width: 100%" placeholder="财务手工维护"></el-input-number>
+                        <el-form-item label="账面余额（初始）" prop="balance">
+                            <el-input-number v-model="bankForm.balance" :min="0" :precision="2" :controls="false" :disabled="isEdit" style="width: 100%" placeholder="新建时录入初始余额，之后随流水自动核算"></el-input-number>
                         </el-form-item>
                     </el-col>
                 </el-row>
@@ -280,7 +281,7 @@
                     {{ walletContractHint }}
                 </div>
                 <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
-                    系统已在合同签约完成时自动开通该主体的人民币钱包，此处用于补开其他币种（如美元、港币）。主体仅可选择该客户<strong>签约过</strong>的主体（含已过期/已解约，用于存量账单结算与赔付入账）；未签约主体请先前往客商中心完成合同签约。
+                    系统已在合同签约完成时自动开通该主体的人民币钱包，此处用于补开其他币种（如美元、港币）。主体仅可选择该客户<strong>签约过</strong>的主体（含已过期/已解约，用于存量账单结算与贷记单入账）；未签约主体请先前往客商中心完成合同签约。
                 </div>
             </el-form>
             <template #footer>
@@ -397,13 +398,17 @@
 
             <div class="section-title" style="margin-top: 20px;">资金流水</div>
             <el-table :data="currentWalletFlows" border style="width: 100%">
-                <el-table-column prop="time" label="时间" min-width="150"></el-table-column>
+                <el-table-column prop="time" label="创建时间" min-width="150"></el-table-column>
+                <el-table-column label="支付时间" min-width="150">
+                    <template #default="scope">{{ payTimeOf(scope.row) }}</template>
+                </el-table-column>
+                <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
                 <el-table-column prop="flowType" label="流水类型" min-width="110" align="center">
                     <template #default="scope">
                         <el-tag :type="flowTypeTag(scope.row.flowType)" size="small">{{ scope.row.flowType }}</el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="变动金额" min-width="120" align="right">
+                <el-table-column label="入账金额" min-width="120" align="right">
                     <template #default="scope">
                         <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">{{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(currentWallet.currency) }}{{ formatMoney(scope.row.amount) }}</span>
                     </template>
@@ -416,6 +421,65 @@
             <template #footer>
                 <span class="dialog-footer">
                     <el-button @click="flowDialogVisible = false">关 闭</el-button>
+                </span>
+            </template>
+        </el-dialog>
+
+        <!-- 我司账户流水（双边记账的我司账户侧：充值/代充入账、提现/充值退回出账） -->
+        <el-dialog v-model="bankFlowDialogVisible" title="资金流水（我司账户）" width="720px" destroy-on-close>
+            <div class="section-title">账户信息</div>
+            <el-row :gutter="20">
+                <el-col :span="12">
+                    <span class="detail-label">账户主体</span>
+                    <div class="detail-value">{{ currentBankAccount.entityName }}</div>
+                </el-col>
+                <el-col :span="12">
+                    <span class="detail-label">币种</span>
+                    <div class="detail-value">{{ currencyName(currentBankAccount.currency) }}</div>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 12px;">
+                <el-col :span="12">
+                    <span class="detail-label">开户行</span>
+                    <div class="detail-value">{{ currentBankAccount.bankName }}</div>
+                </el-col>
+                <el-col :span="12">
+                    <span class="detail-label">账号</span>
+                    <div class="detail-value">{{ currentBankAccount.accountNo }}</div>
+                </el-col>
+            </el-row>
+            <el-row :gutter="20" style="margin-top: 12px;">
+                <el-col :span="12">
+                    <span class="detail-label">余额（系统自动核算）</span>
+                    <div class="detail-value balance">{{ currencySymbol(currentBankAccount.currency) }}{{ formatMoney(currentBankAccount.balance) }}</div>
+                </el-col>
+            </el-row>
+
+            <div class="section-title" style="margin-top: 20px;">资金流水</div>
+            <el-table :data="currentBankFlows" border style="width: 100%">
+                <el-table-column prop="time" label="创建时间" min-width="150"></el-table-column>
+                <el-table-column label="支付时间" min-width="150">
+                    <template #default="scope">{{ payTimeOf(scope.row) }}</template>
+                </el-table-column>
+                <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
+                <el-table-column prop="flowType" label="流水类型" min-width="110" align="center">
+                    <template #default="scope">
+                        <el-tag :type="flowTypeTag(scope.row.flowType)" size="small">{{ scope.row.flowType }}</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="入账金额" min-width="120" align="right">
+                    <template #default="scope">
+                        <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">{{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(currentBankAccount.currency) }}{{ formatMoney(scope.row.amount) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="变动后余额" min-width="140" align="right">
+                    <template #default="scope">{{ currencySymbol(currentBankAccount.currency) }}{{ formatMoney(scope.row.balanceAfter) }}</template>
+                </el-table-column>
+                <el-table-column prop="relatedNo" label="关联单号" min-width="150"></el-table-column>
+            </el-table>
+            <template #footer>
+                <span class="dialog-footer">
+                    <el-button @click="bankFlowDialogVisible = false">关 闭</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -657,7 +721,7 @@
                     const c = (customerContracts[addWalletForm.customerName] || []).find(x => x.entityName === addWalletForm.entityName);
                     if (!c) return '';
                     if (c.status === '已签署' || c.status === '签署中') return '';
-                    return `该主体的合同状态为「${c.status}」，本次开通的币种钱包将用于存量账单结算与赔付入账；系统不会自动停用该主体下已有钱包。`;
+                    return `该主体的合同状态为「${c.status}」，本次开通的币种钱包将用于存量账单结算与贷记单入账；系统不会自动停用该主体下已有钱包。`;
                 });
 
                 const openAddWallet = () => {
@@ -776,54 +840,56 @@
                 // 资金流水弹窗
                 const walletFlowsMap = {
                     1: [
-                        { time: '2026-08-27 10:25', flowType: '充值', amount: 3000.00, balanceAfter: 3719.50, relatedNo: 'FD20260827001' },
-                        { time: '2026-08-24 10:00', flowType: '转汇', amount: -8640.00, balanceAfter: 719.50, relatedNo: 'TR20260824001' },
-                        { time: '2026-08-20 11:00', flowType: '提现', amount: -500.00, balanceAfter: 9359.50, relatedNo: 'WD20260820001' },
-                        { time: '2026-07-09 15:00', flowType: '收款核销', amount: -700.00, balanceAfter: 9859.50, relatedNo: 'WO20260709001' }
+                        { time: '2026-08-27 10:25', payTime: '2026-08-26 15:40', flowNo: 'WF20260827001', flowType: '充值', amount: 3000.00, balanceAfter: 3719.50, relatedNo: 'FD20260827001' },
+                        { time: '2026-08-24 10:00', flowNo: 'WF20260824002', flowType: '转汇', amount: -8640.00, balanceAfter: 719.50, relatedNo: 'TR20260824001' },
+                        { time: '2026-08-20 11:00', flowNo: 'WF20260820001', flowType: '提现', amount: -500.00, balanceAfter: 9359.50, relatedNo: 'WD20260820001' },
+                        { time: '2026-07-09 15:00', flowNo: 'WF20260709001', flowType: '收款核销', amount: -700.00, balanceAfter: 9859.50, relatedNo: 'WO20260709001' }
                     ],
                     2: [
-                        { time: '2026-08-24 10:00', flowType: '转汇', amount: 1200.00, balanceAfter: 1200.00, relatedNo: 'TR20260824001' }
+                        { time: '2026-08-24 10:00', flowNo: 'WF20260824003', flowType: '转汇', amount: 1200.00, balanceAfter: 1200.00, relatedNo: 'TR20260824001' }
                     ],
                     3: [
-                        { time: '2026-08-25 14:15', flowType: '充值', amount: 3200.00, balanceAfter: 3200.00, relatedNo: 'FD20260825004' }
+                        { time: '2026-08-25 14:15', payTime: '2026-08-25 10:05', flowNo: 'WF20260825001', flowType: '充值', amount: 3200.00, balanceAfter: 3200.00, relatedNo: 'FD20260825004' }
                     ],
                     4: [
-                        { time: '2026-08-26 09:30', flowType: '收款核销', amount: -719.50, balanceAfter: 800.00, relatedNo: 'WO20260826001' },
-                        { time: '2026-07-20 11:00', flowType: '收款核销', amount: -1500.00, balanceAfter: 1519.50, relatedNo: 'WO20260720001' },
-                        { time: '2026-07-08 09:30', flowType: '收款核销撤销', amount: 400.00, balanceAfter: 3019.50, relatedNo: 'WO20260708001' },
-                        { time: '2026-07-06 14:00', flowType: '收款核销', amount: -400.00, balanceAfter: 2619.50, relatedNo: 'WO20260706001' },
-                        { time: '2026-06-05 10:00', flowType: '收款核销', amount: -2800.00, balanceAfter: 3019.50, relatedNo: 'WO20260605001' },
-                        { time: '2026-06-04 09:10', flowType: '充值', amount: 2000.00, balanceAfter: 5819.50, relatedNo: 'FD20260604002' }
+                        { time: '2026-08-26 09:30', flowNo: 'WF20260826001', flowType: '收款核销', amount: -719.50, balanceAfter: 800.00, relatedNo: 'WO20260826001' },
+                        { time: '2026-07-20 11:00', flowNo: 'WF20260720001', flowType: '收款核销', amount: -1500.00, balanceAfter: 1519.50, relatedNo: 'WO20260720001' },
+                        { time: '2026-07-08 09:30', flowNo: 'WF20260708001', flowType: '收款核销撤销', amount: 400.00, balanceAfter: 3019.50, relatedNo: 'WO20260708001' },
+                        { time: '2026-07-06 14:00', flowNo: 'WF20260706001', flowType: '收款核销', amount: -400.00, balanceAfter: 2619.50, relatedNo: 'WO20260706001' },
+                        { time: '2026-06-05 10:00', flowNo: 'WF20260605001', flowType: '收款核销', amount: -2800.00, balanceAfter: 3019.50, relatedNo: 'WO20260605001' },
+                        { time: '2026-06-04 09:10', payTime: '2026-06-03 09:00', flowNo: 'WF20260604001', flowType: '充值', amount: 2000.00, balanceAfter: 5819.50, relatedNo: 'FD20260604002' }
                     ],
                     5: [
-                        { time: '2026-08-22 17:00', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, relatedNo: 'FD20260822005' }
+                        { time: '2026-08-22 17:00', payTime: '2026-08-22 11:30', flowNo: 'WF20260822001', flowType: '充值', amount: 25000.00, balanceAfter: 25000.00, relatedNo: 'FD20260822005' }
                     ],
                     6: [
-                        { time: '2026-08-26 15:45', flowType: '充值', amount: 8000.00, balanceAfter: 12000.00, relatedNo: 'FL20260826001' },
-                        { time: '2026-08-21 10:05', flowType: '提现', amount: -4000.00, balanceAfter: 4000.00, relatedNo: 'WD20260821001' }
+                        { time: '2026-08-26 15:45', payTime: '2026-08-26 15:00', flowNo: 'WF20260826002', flowType: '充值', amount: 8000.00, balanceAfter: 12000.00, relatedNo: 'WF20260826002' },
+                        { time: '2026-08-21 10:05', flowNo: 'WF20260821001', flowType: '提现', amount: -4000.00, balanceAfter: 4000.00, relatedNo: 'WD20260821001' }
                     ],
                     7: [
-                        { time: '2026-08-19 16:30', flowType: '转汇', amount: -820.00, balanceAfter: 0.00, relatedNo: 'TR20260819001' }
+                        { time: '2026-08-19 16:30', flowNo: 'WF20260819001', flowType: '转汇', amount: -820.00, balanceAfter: 0.00, relatedNo: 'TR20260819001' }
                     ],
                     // 8 = 东莞市宏泰五金（已停用客户，存量钱包照收照核）/ 9 = 华美·广东飞点 / 10 = 华美·香港富力顿（有钱、但名下无账单）
                     8: [
-                        { time: '2026-08-18 10:00', flowType: '充值', amount: 5000.00, balanceAfter: 5000.00, relatedNo: 'FD20260818002' }
+                        { time: '2026-08-18 10:00', payTime: '2026-08-17 16:00', flowNo: 'WF20260818001', flowType: '充值', amount: 5000.00, balanceAfter: 5000.00, relatedNo: 'FD20260818002' }
                     ],
                     9: [
-                        { time: '2026-09-07 09:00', flowType: '赔付入账', amount: 300.00, balanceAfter: 1100.00, relatedNo: 'AR-GD-202608-00003' },
-                        { time: '2026-08-15 10:00', flowType: '充值', amount: 800.00, balanceAfter: 800.00, relatedNo: 'FD20260815001' }
+                        { time: '2026-09-07 09:00', flowNo: 'WF20260907001', flowType: '贷记单入账', amount: 300.00, balanceAfter: 1100.00, relatedNo: 'AR-GD-202608-00003' },
+                        { time: '2026-08-15 10:00', payTime: '2026-08-14 16:00', flowNo: 'WF20260815001', flowType: '充值', amount: 800.00, balanceAfter: 800.00, relatedNo: 'FD20260815001' }
                     ],
                     10: [
-                        { time: '2026-08-24 09:50', flowType: '充值', amount: 15000.00, balanceAfter: 15000.00, relatedNo: 'FD20260824003' }
+                        { time: '2026-08-24 09:50', payTime: '2026-08-23 18:20', flowNo: 'WF20260824001', flowType: '充值', amount: 15000.00, balanceAfter: 15000.00, relatedNo: 'FD20260824003' }
                     ]
                 };
                 const flowDialogVisible = ref(false);
                 const currentWallet = reactive({ customerName: '', entityName: '', currency: '', accountName: '', balance: 0, pendingWriteoff: 0, pendingConfirm: 0 });
                 const currentWalletFlows = ref([]);
                 const flowTypeTag = (t) => {
-                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '赔付入账': 'success' };
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '贷记单入账': 'success' };
                     return map[t] || 'info';
                 };
+                // 支付时间：仅充值/代充有独立的「客户实际打款时间」（payTime，可早于创建时间）；其余流水类型无独立支付事件、支付时间 = 创建时间
+                const payTimeOf = (row) => row.payTime || row.time;
                 const openWalletFlows = (row) => {
                     currentWallet.customerName = row.customerName;
                     currentWallet.entityName = row.entityName;
@@ -834,6 +900,38 @@
                     currentWallet.pendingConfirm = row.pendingConfirm;
                     currentWalletFlows.value = walletFlowsMap[row.id] || [];
                     flowDialogVisible.value = true;
+                };
+
+                // 我司账户流水（双边记账的我司账户侧：bank_account_id 匹配 + company_amount ≠ 0；核销/冲账/转汇/贷记单结转不动、不在此列）
+                const bankFlowsMap = {
+                    1: [
+                        { time: '2026-08-27 10:25', payTime: '2026-08-26 15:40', flowNo: 'WF20260827001', flowType: '充值', amount: 3000.00, balanceAfter: 1289430.50, relatedNo: 'FD20260827001' },
+                        { time: '2026-08-20 11:00', flowNo: 'WF20260820001', flowType: '提现', amount: -500.00, balanceAfter: 1286930.50, relatedNo: 'WD20260820001' },
+                        { time: '2026-06-04 09:10', payTime: '2026-06-03 09:00', flowNo: 'WF20260604001', flowType: '充值', amount: 2000.00, balanceAfter: 1284430.50, relatedNo: 'FD20260604002' }
+                    ],
+                    3: [
+                        { time: '2026-08-25 14:12', payTime: '2026-08-25 10:05', flowNo: 'WF20260825001', flowType: '充值', amount: 3200.00, balanceAfter: 646000.00, relatedNo: 'FD20260825003' }
+                    ],
+                    4: [
+                        { time: '2026-08-15 10:00', payTime: '2026-08-14 16:00', flowNo: 'WF20260815001', flowType: '充值', amount: 800.00, balanceAfter: 513100.00, relatedNo: 'FD20260815001' }
+                    ],
+                    5: [
+                        { time: '2026-08-24 09:50', payTime: '2026-08-23 18:20', flowNo: 'WF20260824001', flowType: '充值', amount: 15000.00, balanceAfter: 905000.00, relatedNo: 'FD20260824003' },
+                        { time: '2026-08-22 17:00', payTime: '2026-08-22 11:30', flowNo: 'WF20260822001', flowType: '充值', amount: 25000.00, balanceAfter: 930000.00, relatedNo: 'FD20260822005' }
+                    ]
+                };
+                const bankFlowDialogVisible = ref(false);
+                const currentBankAccount = reactive({ entityName: '', currency: '', accountName: '', bankName: '', accountNo: '', balance: 0 });
+                const currentBankFlows = ref([]);
+                const openBankFlows = (row) => {
+                    currentBankAccount.entityName = row.entityName;
+                    currentBankAccount.currency = row.currency;
+                    currentBankAccount.accountName = row.accountName;
+                    currentBankAccount.bankName = row.bankName;
+                    currentBankAccount.accountNo = row.accountNo;
+                    currentBankAccount.balance = row.balance;
+                    currentBankFlows.value = bankFlowsMap[row.id] || [];
+                    bankFlowDialogVisible.value = true;
                 };
 
                 const searchExpanded = ref(false);
@@ -860,7 +958,8 @@
                     walletEntityOptions, walletCurrencyOptions, walletContractHint, onWalletCustomerChange, onWalletEntityChange,
                     transferVisible, transferFormRef, transferForm, transferRules,
                     toCurrencyOptions, computedToAmount, rateSourceLabel, onToCurrencyChange, openTransfer, submitTransfer,
-                    flowDialogVisible, currentWallet, currentWalletFlows, flowTypeTag, openWalletFlows,
+                    flowDialogVisible, currentWallet, currentWalletFlows, flowTypeTag, payTimeOf, openWalletFlows,
+                    bankFlowDialogVisible, currentBankAccount, currentBankFlows, openBankFlows,
                     handleExport, handleSearch, searchExpanded, handleReset, handleAdd
                 };
             }

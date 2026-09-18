@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>核销记录 - 员工端</title>
+    <title>核销/冲账管理 - 员工端</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
     <script src="https://unpkg.com/element-plus"></script>
@@ -28,11 +28,11 @@
 </head>
 <body>
     <div id="app">
-        <!-- 上层卡片：查询区（6 个条件，全部是核销记录自身的属性 —— 不 join 账单 / 钱包的实时值；默认露前 3 个，其余进「更多查询条件」） -->
+        <!-- 上层卡片：查询区（6 个条件，全部是核销/冲账记录自身的属性 —— 不 join 账单 / 钱包的实时值；默认露前 3 个，其余进「更多查询条件」） -->
         <div class="content-card" style="height: auto; margin-bottom: 16px;">
             <div class="search-area">
                 <div class="search-conditions">
-                    <el-input v-model="search.writeoffNo" placeholder="核销单号" class="search-control" clearable></el-input>
+                    <el-input v-model="search.writeoffNo" placeholder="结清单号" class="search-control" clearable></el-input>
                     <el-input v-model="search.billNo" placeholder="账单编号" class="search-control" clearable></el-input>
                     <el-input v-model="search.customerNick" placeholder="客户昵称" class="search-control" clearable></el-input>
                     <template v-if="searchExpanded">
@@ -55,10 +55,10 @@
             </div>
         </div>
 
-        <!-- 下层卡片：核销记录列表（一行一条核销单 = 一次核销动作的事实快照，「核销」与「已反核销」同一张表按类型区分） -->
+        <!-- 下层卡片：核销/冲账记录列表（一行一条结清单 = 一次核销 / 冲账动作的事实快照，「核销 / 冲账 / 已反核销 / 已反冲账」同一张表按类型区分） -->
         <div class="content-card" style="height: calc(100vh - 128px);">
             <el-table :data="filteredRecords" border style="width: 100%;">
-                <el-table-column prop="writeoffNo" label="核销单号" width="160"></el-table-column>
+                <el-table-column prop="writeoffNo" label="结清单号" width="160"></el-table-column>
                 <el-table-column label="账单编号" width="200">
                     <template #default="scope">
                         <el-tooltip :content="recordBillTip(scope.row)" placement="top">
@@ -71,20 +71,24 @@
                 <el-table-column label="币种" width="80" align="center">
                     <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                 </el-table-column>
-                <el-table-column label="核销金额" width="120" align="right">
+                <el-table-column label="账单金额" width="120" align="right">
+                    <template #default="scope"><span style="color: #909399;">{{ moneySigned(scope.row.currency, scope.row.billAmount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="结清金额" width="120" align="right">
                     <template #default="scope"><span style="font-weight: 600;">{{ moneySigned(scope.row.currency, scope.row.amount) }}</span></template>
                 </el-table-column>
-                <el-table-column label="未核销金额（前 → 后）" width="180" align="right">
+                <el-table-column label="未结清金额（前 → 后）" width="180" align="right">
                     <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.billBefore) }} <span style="color: #909399;">→</span> {{ formatMoney(scope.row.billAfter) }}</template>
                 </el-table-column>
                 <el-table-column label="类型" width="110" align="center">
-                    <template #default="scope"><el-tag :type="scope.row.type === '核销' ? 'success' : 'warning'" size="small">{{ scope.row.type }}</el-tag></template>
+                    <template #default="scope"><el-tag :type="typeTag(scope.row.type)" size="small">{{ scope.row.type }}</el-tag></template>
                 </el-table-column>
                 <el-table-column prop="operator" label="操作人" width="100" align="center"></el-table-column>
                 <el-table-column prop="time" label="操作时间" width="150" align="center"></el-table-column>
                 <el-table-column label="操作" width="110" fixed="right" align="center">
                     <template #default="scope">
                         <el-button v-if="scope.row.type === '核销'" link type="danger" size="small" @click="reverseWriteoff(scope.row)">反核销</el-button>
+                        <el-button v-if="scope.row.type === '冲账'" link type="danger" size="small" @click="reverseChargeOff(scope.row)">反冲账</el-button>
                     </template>
                 </el-table-column>
             </el-table>
@@ -114,21 +118,23 @@
                 const formatSigned = (val) => { const v = Number(val) || 0; return (v < 0 ? '-' : '') + formatMoney(Math.abs(v)); };
                 const moneySigned = (cur, val) => currencySymbol(cur) + formatSigned(val);
                 const entityOptions = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
-                const typeOptions = ['核销', '已反核销'];
+                const typeOptions = ['核销', '冲账', '已反核销', '已反冲账'];
+                const typeTag = (ty) => ({ '核销': 'success', '冲账': 'danger', '已反核销': 'warning', '已反冲账': 'warning' }[ty] || 'info');
                 const nowStamp = () => DEMO_TODAY + ' 16:40';
                 const pad = (n) => String(n).padStart(2, '0');
                 const fmtDate = (dt) => dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate());
 
                 // ===== 账单静态属性快照（核销记录只 join 账单「生成即固定」的属性：编号 / 客户 / 主体 / 币种 / 账单日期 / 账期 / 到期日期 / 账单金额）=====
-                // 核销状态 / 已核销金额 / 未核销金额 / 钱包余额 这些**实时值不进本页** —— 它们是「账单管理」与「资金账户管理」的当前值，本页是历史事实
+                // 核销状态 / 已核销金额 / 未结清金额 / 钱包余额 这些**实时值不进本页** —— 它们是「账单管理」与「资金账户管理」的当前值，本页是历史事实
                 const billSnapshots = {
                     'AR-GZ-202606-00001': { customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-06-01', termText: '月结+5', dueDate: '2026-06-05', billAmount: 2800.00 },
                     'AR-GZ-202607-00001': { customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+5', dueDate: '2026-07-05', billAmount: 3500.00 },
                     'AR-GZ-202607-00002': { customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+15', dueDate: '2026-07-15', billAmount: 1450.00 },
-                    'AR-SZ-202607-00001': { customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+30', dueDate: '2026-07-30', billAmount: 2160.00 }
+                    'AR-SZ-202607-00001': { customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '深圳飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+30', dueDate: '2026-07-30', billAmount: 2160.00 },
+                    'AR-GD-202607-00001': { customerName: '东莞新锐电子有限公司', customerNick: 'ywscm', customerNo: 'KH1003', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-07-01', termText: '月结+10', dueDate: '2026-07-10', billAmount: 560.00 }
                 };
 
-                // ===== 核销记录 = 事实快照表（一行一条核销单）：核销前 / 后「未核销金额」+ 核销前 / 后「钱包余额」（钱包侧两列只留痕、不上表）=====
+                // ===== 核销记录 = 事实快照表（一行一条核销单）：核销前 / 后「未结清金额」+ 核销前 / 后「钱包余额」（钱包侧两列只留痕、不上表）=====
                 const writeoffs = reactive([
                     { writeoffNo: 'WO20260605001', billNo: 'AR-GZ-202606-00001', amount: 2800.00, billBefore: 2800.00, billAfter: 0.00, walletBefore: 5819.50, walletAfter: 3019.50, type: '核销', operator: '李伟', time: '2026-06-05 10:00' },
                     { writeoffNo: 'WO20260703001', billNo: 'AR-SZ-202607-00001', amount: 1000.00, billBefore: 2160.00, billAfter: 1160.00, walletBefore: 5360.00, walletAfter: 4360.00, type: '核销', operator: '李伟', time: '2026-07-03 10:20' },
@@ -137,8 +143,12 @@
                     // 反核销链路演示：同一笔 400.00 一条「核销」+ 一条「已反核销」，净影响 0；已反核销的记录不再显示「反核销」按钮（R23）
                     { writeoffNo: 'WO20260708001', billNo: 'AR-GZ-202607-00001', amount: 400.00, billBefore: 3100.00, billAfter: 3500.00, walletBefore: 2619.50, walletAfter: 3019.50, type: '已反核销', operator: '李伟', time: '2026-07-08 09:30' },
                     { writeoffNo: 'WO20260709001', billNo: 'AR-GZ-202607-00002', amount: 700.00, billBefore: 1450.00, billAfter: 750.00, walletBefore: 4419.50, walletAfter: 3719.50, type: '核销', operator: '李伟', time: '2026-07-09 15:00' },
+                    // 尾款冲账演示（随核销一并产生）：客户付 700 后尾款 750 不付、钱包无余额 → 财务认亏平账；wallet 前后恒等（不动钱包）
+                    { writeoffNo: 'WO20260715001', billNo: 'AR-GZ-202607-00002', amount: 750.00, billBefore: 750.00, billAfter: 0.00, walletBefore: 3719.50, walletAfter: 3719.50, type: '冲账', operator: '李伟', time: '2026-07-15 10:00', reason: '客户尾款不付、钱包无余额，坏账冲销' },
                     { writeoffNo: 'WO20260720001', billNo: 'AR-GZ-202607-00001', amount: 1500.00, billBefore: 3500.00, billAfter: 2000.00, walletBefore: 3019.50, walletAfter: 1519.50, type: '核销', operator: '李伟', time: '2026-07-20 11:00' },
-                    { writeoffNo: 'WO20260826001', billNo: 'AR-GZ-202607-00001', amount: 719.50, billBefore: 2000.00, billAfter: 1280.50, walletBefore: 1519.50, walletAfter: 800.00, type: '核销', operator: '李伟', time: '2026-08-26 09:30' }
+                    { writeoffNo: 'WO20260826001', billNo: 'AR-GZ-202607-00001', amount: 719.50, billBefore: 2000.00, billAfter: 1280.50, walletBefore: 1519.50, walletAfter: 800.00, type: '核销', operator: '李伟', time: '2026-08-26 09:30' },
+                    // 冲账（坏账冲销）演示：客户失联、尾款不付、钱包无余额 → 财务认亏平账；wallet 前后恒等（不动钱包）
+                    { writeoffNo: 'WO20260810001', billNo: 'AR-GD-202607-00001', amount: 560.00, billBefore: 560.00, billAfter: 0.00, walletBefore: 12000.00, walletAfter: 12000.00, type: '冲账', operator: '李伟', time: '2026-08-10 11:00', reason: '客户失联、尾款不付、钱包无余额，坏账冲销' }
                 ]);
                 // 核销单号规则 = `WO + YYYYMMDD + 3 位序号`
 
@@ -178,16 +188,35 @@
                 });
                 const recordBillTip = (r) => `客户编号 ${r.customerNo} ｜ 客户昵称 ${r.customerNick} ｜ 账单日期 ${r.billingDate} ｜ 账期 ${r.termText} ｜ 到期日期 ${r.dueDate} ｜ 账单金额 ${moneySigned(r.currency, r.billAmount)}`;
 
+                // 反冲账（R74）：对「冲账」记录反冲账 → 账单未结清金额回补、重新进账龄；写一条「已反冲账」记录（原记录保留、不删除）
+                const reverseChargeOff = (row) => {
+                    if (row.type !== '冲账') { ElMessage.warning('该记录已反冲账'); return; }
+                    ElMessageBox.confirm(
+                        '确认对冲账单 ' + row.writeoffNo + ' 执行反冲账？反冲账后：账单 ' + row.billNo + ' 的未结清金额由 '
+                        + moneySigned(row.currency, row.billAfter) + ' 回补为 ' + moneySigned(row.currency, row.billBefore)
+                        + '、重新进账龄；本页会新增一条「已反冲账」记录（原记录保留、不删除）。',
+                        '反冲账', { confirmButtonText: '确认反冲账', cancelButtonText: '取消', type: 'warning' }
+                    ).then(() => {
+                        row._rec.type = '已反冲账';
+                        writeoffs.unshift({
+                            writeoffNo: 'WO' + nowStamp().slice(0, 10).replace(/-/g, '') + String(writeoffs.filter(w => w.time.slice(0, 10) === DEMO_TODAY).length + 1).padStart(3, '0'),
+                            billNo: row.billNo, amount: row.amount, billBefore: row.billAfter, billAfter: row.billBefore,
+                            walletBefore: row.walletAfter, walletAfter: row.walletBefore, type: '已反冲账', operator: '李伟', time: nowStamp(), reason: row.reason
+                        });
+                        ElMessage.success('反冲账成功，已新增一条「已反冲账」记录');
+                    }).catch(() => {});
+                };
+
                 // 关联跳转：点账单编号 → 新标签页打开「账单管理」并定位该账单（账单详情在那页，本页不重复摆账单字段）
                 const jumpToBillDetail = (billNo) => {
                     window.open('财务_账单管理.html?billNo=' + encodeURIComponent(billNo), '_blank');
                 };
 
-                // 反核销（R23）：写一条「已反核销」记录、账单未核销金额回补、钱包余额回补；已反核销的记录不再显示入口
+                // 反核销（R23）：写一条「已反核销」记录、账单未结清金额回补、钱包余额回补；已反核销的记录不再显示入口
                 const reverseWriteoff = (row) => {
                     if (row.type !== '核销') { ElMessage.warning('该记录已反核销'); return; }
                     ElMessageBox.confirm(
-                        '确认对核销单 ' + row.writeoffNo + ' 执行反核销？反核销后：账单 ' + row.billNo + ' 的未核销金额由 '
+                        '确认对核销单 ' + row.writeoffNo + ' 执行反核销？反核销后：账单 ' + row.billNo + ' 的未结清金额由 '
                         + moneySigned(row.currency, row.billAfter) + ' 回补为 ' + moneySigned(row.currency, row.billBefore)
                         + '、客户钱包余额回补 ' + moneySigned(row.currency, row.amount) + '；本页会新增一条「已反核销」记录（原记录保留、不删除）。',
                         '反核销', { confirmButtonText: '确认反核销', cancelButtonText: '取消', type: 'warning' }
@@ -203,9 +232,9 @@
                 };
 
                 return {
-                    currencyName, formatMoney, moneySigned, entityOptions, typeOptions,
+                    currencyName, formatMoney, moneySigned, entityOptions, typeOptions, typeTag,
                     writeoffs, search, searchExpanded, handleSearch, resetSearch,
-                    recordRows, filteredRecords, recordBillTip, jumpToBillDetail, reverseWriteoff
+                    recordRows, filteredRecords, recordBillTip, jumpToBillDetail, reverseWriteoff, reverseChargeOff
                 };
             }
         });

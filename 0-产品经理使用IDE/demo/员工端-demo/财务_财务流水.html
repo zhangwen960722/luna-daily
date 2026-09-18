@@ -213,6 +213,37 @@
                         </el-form-item>
                     </el-col>
                 </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="支付时间" prop="payTime">
+                            <el-date-picker v-model="rechargeForm.payTime" type="date" value-format="YYYY-MM-DD" placeholder="请选择支付时间" style="width: 100%"></el-date-picker>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="入账账户" prop="bankAccountId">
+                            <el-select v-model="rechargeForm.bankAccountId" placeholder="请选择入账账户" style="width: 100%" :disabled="!rechargeForm.entityName || !rechargeForm.currency">
+                                <el-option v-for="a in rechargeBankAccounts" :key="a.id" :label="a.name" :value="a.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
+                <el-form-item label="打款凭证" prop="voucher">
+                    <el-upload
+                        action="#"
+                        :auto-upload="false"
+                        :limit="1"
+                        v-model:file-list="voucherList"
+                        :on-change="onVoucherChange"
+                        :on-remove="onVoucherRemove"
+                        accept="image/*,.pdf">
+                        <el-button type="primary" plain>
+                            <el-icon style="margin-right: 4px;"><Upload></Upload></el-icon>上传打款凭证
+                        </el-button>
+                        <template #tip>
+                            <div class="el-upload__tip">请上传银行转账回单截图或 PDF，单个文件不超过 5MB；支持截图后直接 Ctrl+V 粘贴</div>
+                        </template>
+                    </el-upload>
+                </el-form-item>
             </el-form>
             <template #footer>
                 <span class="dialog-footer">
@@ -255,6 +286,15 @@
                         </el-form-item>
                     </el-col>
                 </el-row>
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-form-item label="出款账户" prop="bankAccountId">
+                            <el-select v-model="withdrawForm.bankAccountId" placeholder="请选择出款账户" style="width: 100%" :disabled="!withdrawForm.entityName || !withdrawForm.currency">
+                                <el-option v-for="a in withdrawBankAccounts" :key="a.id" :label="a.name" :value="a.id"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
                 <div v-if="withdrawForm.customerName && withdrawForm.entityName && withdrawForm.currency" style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #606266; font-size: 13px;">
                     当前钱包余额：{{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(currentBalance) }}
                 </div>
@@ -269,7 +309,7 @@
     </div>
 
     <script>
-        const { createApp, ref, reactive, computed } = Vue;
+        const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
         const { ElMessage, ElMessageBox } = ElementPlus;
 
         const app = createApp({
@@ -287,6 +327,16 @@
 
                 const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
                 const customers = ['深圳市华美科技有限公司', '广州迅达贸易有限公司', '东莞新锐电子有限公司'];
+                // 我司账户（bank_account，即「资金账户管理 → 我司账户」）—— 代充入账 / 提现出款的双边落账账户（仅启用账户可选）
+                const bankAccounts = [
+                    { id: 1, entityName: '广州飞点', currency: 'CNY', name: '广州飞点-招商银行(7559 1234 5678)', status: '启用' },
+                    { id: 2, entityName: '广州飞点', currency: 'USD', name: '广州飞点-中国银行(7654 3210 9876)', status: '启用' },
+                    { id: 3, entityName: '深圳飞点', currency: 'CNY', name: '深圳飞点-工商银行(4000 1111 2222)', status: '启用' },
+                    { id: 4, entityName: '广东飞点', currency: 'CNY', name: '广东飞点-建设银行(4400 2222 3333)', status: '启用' },
+                    { id: 5, entityName: '香港富力顿', currency: 'HKD', name: '香港富力顿-汇丰银行(123-456-789)', status: '启用' },
+                    { id: 6, entityName: '香港富力顿', currency: 'USD', name: '香港富力顿-汇丰银行美元户(123-456-790)', status: '启用' },
+                    { id: 7, entityName: '墨链', currency: 'CNY', name: '墨链-平安银行(1500 8888 6666)', status: '启用' }
+                ];
 
                 const activeTab = ref('audit');
 
@@ -331,25 +381,68 @@
                 // === 客户充值（代充） ===
                 const rechargeVisible = ref(false);
                 const rechargeFormRef = ref(null);
-                const rechargeForm = reactive({ customerName: '', entityName: '', currency: '', amount: null });
+                const rechargeForm = reactive({ customerName: '', entityName: '', currency: '', amount: null, payTime: '', bankAccountId: null, voucher: '' });
+                const voucherList = ref([]);
                 const rechargeRecords = reactive([
-                    { flowNo: 'FL20260826001', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, operator: '张珊', time: '2026-08-26 15:45' },
-                    { flowNo: 'FL20260825001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, operator: '张珊', time: '2026-08-25 14:15' }
+                    { flowNo: 'WF20260826002', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, operator: '张珊', time: '2026-08-26 15:45' },
+                    { flowNo: 'WF20260825001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, operator: '张珊', time: '2026-08-25 14:15' }
                 ]);
 
                 const opRules = {
                     customerName: [{ required: true, message: '请选择客户', trigger: 'change' }],
                     entityName: [{ required: true, message: '请选择主体', trigger: 'change' }],
                     currency: [{ required: true, message: '请选择币种', trigger: 'change' }],
-                    amount: [{ required: true, message: '请输入金额', trigger: 'blur' }]
+                    amount: [{ required: true, message: '请输入金额', trigger: 'blur' }],
+                    payTime: [{ required: true, message: '请选择支付时间', trigger: 'change' }],
+                    bankAccountId: [{ required: true, message: '请选择入账/出款账户', trigger: 'change' }],
+                    voucher: [{ required: true, message: '请上传打款凭证', trigger: 'change' }]
                 };
 
+                const onVoucherChange = (file) => { rechargeForm.voucher = file.name; };
+                const onVoucherRemove = () => { rechargeForm.voucher = ''; };
+                // 粘贴截图上传（Ctrl+V）：与货主端充值一致，剪贴板里的截图直接作为打款凭证
+                const voucherMimeExt = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp', 'image/bmp': 'bmp' };
+                const onVoucherPaste = (e) => {
+                    if (!rechargeVisible.value) return;
+                    const cd = e.clipboardData || window.clipboardData;
+                    const items = cd && cd.items;
+                    if (!items) return;
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
+                        if (item.kind === 'file' && item.type && item.type.indexOf('image/') === 0) {
+                            const blob = item.getAsFile();
+                            if (!blob) continue;
+                            if (blob.size > 5 * 1024 * 1024) {
+                                ElMessage.warning('截图大小超过 5MB，请压缩后重试');
+                                e.preventDefault();
+                                return;
+                            }
+                            const ext = voucherMimeExt[item.type] || 'png';
+                            const name = '充值凭证截图.' + ext;
+                            voucherList.value = [{
+                                name: name,
+                                size: blob.size,
+                                status: 'ready',
+                                raw: blob,
+                                uid: Date.now()
+                            }];
+                            rechargeForm.voucher = name;
+                            ElMessage.success('截图已粘贴，可继续填写后提交');
+                            e.preventDefault();
+                            return;
+                        }
+                    }
+                };
+                onMounted(() => document.addEventListener('paste', onVoucherPaste));
+                onBeforeUnmount(() => document.removeEventListener('paste', onVoucherPaste));
+
                 const openRecharge = () => {
-                    rechargeForm.customerName = ''; rechargeForm.entityName = ''; rechargeForm.currency = ''; rechargeForm.amount = null;
+                    rechargeForm.customerName = ''; rechargeForm.entityName = ''; rechargeForm.currency = ''; rechargeForm.amount = null; rechargeForm.payTime = ''; rechargeForm.bankAccountId = null; rechargeForm.voucher = '';
+                    voucherList.value = [];
                     rechargeVisible.value = true;
                 };
                 const submitRecharge = () => {
-                    if (!rechargeForm.customerName || !rechargeForm.entityName || !rechargeForm.currency || !rechargeForm.amount) {
+                    if (!rechargeForm.customerName || !rechargeForm.entityName || !rechargeForm.currency || !rechargeForm.amount || !rechargeForm.payTime || !rechargeForm.bankAccountId || !rechargeForm.voucher) {
                         ElMessage.warning('请填写完整信息'); return;
                     }
                     ElMessageBox.confirm(`确认将 ${currencySymbol(rechargeForm.currency)}${formatMoney(rechargeForm.amount)} 入池到「${rechargeForm.customerName}-${rechargeForm.entityName}-${currencyName(rechargeForm.currency)}」钱包？`, '确认代充', { confirmButtonText: '确认入池', cancelButtonText: '取消', type: 'warning' }).then(() => {
@@ -357,9 +450,9 @@
                         const pad = (n) => String(n).padStart(2, '0');
                         const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
                         rechargeRecords.unshift({
-                            flowNo: `FL${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
+                            flowNo: `WF${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
                             customerName: rechargeForm.customerName, entityName: rechargeForm.entityName,
-                            currency: rechargeForm.currency, amount: rechargeForm.amount, operator: '张珊', time: timeStr
+                            currency: rechargeForm.currency, amount: rechargeForm.amount, payTime: rechargeForm.payTime, bankAccountId: rechargeForm.bankAccountId, operator: '张珊', time: timeStr
                         });
                         rechargeVisible.value = false;
                         ElMessage.success('已入池');
@@ -369,9 +462,12 @@
                 // === 客户提现 ===
                 const withdrawVisible = ref(false);
                 const withdrawFormRef = ref(null);
-                const withdrawForm = reactive({ customerName: '', entityName: '', currency: '', amount: null });
+                const withdrawForm = reactive({ customerName: '', entityName: '', currency: '', amount: null, bankAccountId: null });
+                // 入账/出款账户 = 我司账户（bank_account）里「主体 + 币种匹配」且「启用」的账户（双边流水我司侧落账账户）
+                const rechargeBankAccounts = computed(() => bankAccounts.filter(a => a.entityName === rechargeForm.entityName && a.currency === rechargeForm.currency && a.status === '启用'));
+                const withdrawBankAccounts = computed(() => bankAccounts.filter(a => a.entityName === withdrawForm.entityName && a.currency === withdrawForm.currency && a.status === '启用'));
                 const withdrawRecords = reactive([
-                    { flowNo: 'FL20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, operator: '李伟', time: '2026-08-20 11:05' }
+                    { flowNo: 'WF20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, operator: '李伟', time: '2026-08-20 11:05' }
                 ]);
 
                 const walletBalances = {
@@ -390,11 +486,11 @@
                 const onWithdrawCustomerChange = () => {};
 
                 const openWithdraw = () => {
-                    withdrawForm.customerName = ''; withdrawForm.entityName = ''; withdrawForm.currency = ''; withdrawForm.amount = null;
+                    withdrawForm.customerName = ''; withdrawForm.entityName = ''; withdrawForm.currency = ''; withdrawForm.amount = null; withdrawForm.bankAccountId = null;
                     withdrawVisible.value = true;
                 };
                 const submitWithdraw = () => {
-                    if (!withdrawForm.customerName || !withdrawForm.entityName || !withdrawForm.currency || !withdrawForm.amount) {
+                    if (!withdrawForm.customerName || !withdrawForm.entityName || !withdrawForm.currency || !withdrawForm.amount || !withdrawForm.bankAccountId) {
                         ElMessage.warning('请填写完整信息'); return;
                     }
                     if (withdrawForm.amount > currentBalance.value) {
@@ -407,9 +503,9 @@
                         const key = `${withdrawForm.customerName}-${withdrawForm.entityName}-${withdrawForm.currency}`;
                         walletBalances[key] = Number((walletBalances[key] - withdrawForm.amount).toFixed(2));
                         withdrawRecords.unshift({
-                            flowNo: `FL${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
+                            flowNo: `WF${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
                             customerName: withdrawForm.customerName, entityName: withdrawForm.entityName,
-                            currency: withdrawForm.currency, amount: withdrawForm.amount, operator: '李伟', time: timeStr
+                            currency: withdrawForm.currency, amount: withdrawForm.amount, bankAccountId: withdrawForm.bankAccountId, operator: '李伟', time: timeStr
                         });
                         withdrawVisible.value = false;
                         ElMessage.success('提现成功');
@@ -423,8 +519,10 @@
                     handleExport, handleSearch, resetAuditSearch,
                     applyDetailVisible, currentApply, openApplyDetail, approveApply, rejectApply,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRecords, opRules,
+                    voucherList, onVoucherChange, onVoucherRemove, onVoucherPaste,
                     openRecharge, submitRecharge,
                     withdrawVisible, withdrawFormRef, withdrawForm, withdrawRecords,
+                    bankAccounts, rechargeBankAccounts, withdrawBankAccounts,
                     currentBalance, onWithdrawCustomerChange, openWithdraw, submitWithdraw
                 };
             }

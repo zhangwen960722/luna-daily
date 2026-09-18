@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应付业务流水 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; box-sizing: border-box; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start; flex-wrap: nowrap; }
+        .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
+        .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+        .search-area .el-date-editor.el-input__wrapper,
+        .search-area .el-date-editor--daterange { flex: 0 0 240px; min-width: 240px; max-width: 240px; width: 240px !important; }
+        .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .link { color: #409EFF; cursor: pointer; }
+        .link:hover { text-decoration: underline; }
+        .amount-in { color: #67C23A; font-weight: 500; }
+        .amount-out { color: #F56C6C; font-weight: 500; }
+        .summary-bar { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding: 10px 12px; margin-bottom: 16px; background: #F5F7FA; border-radius: 4px; color: #606266; }
+        .summary-bar .sum-item { display: flex; align-items: center; gap: 4px; }
+        .summary-bar .sum-label { color: #909399; }
+        .summary-bar .sum-val { font-weight: 600; color: #303133; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 上层卡片：查询区 -->
+        <div class="content-card" style="margin-bottom: 16px;">
+            <div class="search-area">
+                <div class="search-conditions">
+                    <el-input v-model="searchForm.customerNick" placeholder="客户昵称" class="search-control" clearable></el-input>
+                    <el-input v-model="searchForm.cusNo" placeholder="客户编号" class="search-control" clearable></el-input>
+                    <el-select v-model="searchForm.entityId" placeholder="我司主体" class="search-control" clearable>
+                        <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                    </el-select>
+                    <template v-if="searchExpanded">
+                        <el-select v-model="searchForm.currency" placeholder="币种" class="search-control" clearable>
+                            <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                        </el-select>
+                        <el-select v-model="searchForm.feeTypeId" placeholder="费用类型" class="search-control" clearable>
+                            <el-option v-for="t in feeTypes" :key="t" :label="t" :value="t"></el-option>
+                        </el-select>
+                        <el-select v-model="searchForm.auditStatus" placeholder="审计状态" class="search-control" clearable>
+                            <el-option label="待业务审计" value="待业务审计"></el-option>
+                            <el-option label="已审计" value="已审计"></el-option>
+                        </el-select>
+                        <el-select v-model="searchForm.billStatus" placeholder="账单状态" class="search-control" clearable>
+                            <el-option label="未成账（草稿池）" value="未成账"></el-option>
+                            <el-option label="已进账单" value="已进账单"></el-option>
+                        </el-select>
+                        <el-input v-model="searchForm.waybillNo" placeholder="运单号" class="search-control" clearable></el-input>
+                        <el-input v-model="searchForm.customerNo" placeholder="客户单号" class="search-control" clearable></el-input>
+                        <el-date-picker v-model="searchForm.pickTimeRange" type="daterange" value-format="YYYY-MM-DD" class="search-control" start-placeholder="拣货开始日期" end-placeholder="拣货结束日期"></el-date-picker>
+                    </template>
+                </div>
+                <div class="search-actions">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
+                    </el-button>
+                    <el-button type="primary" link @click="searchExpanded = !searchExpanded">
+                        更多查询条件<el-icon class="el-icon--right"><ArrowDown v-if="!searchExpanded"></ArrowDown><ArrowUp v-else></ArrowUp></el-icon>
+                    </el-button>
+                </div>
+            </div>
+
+            <div class="summary-bar">
+                <span class="sum-item">金额合计：<span class="sum-val" :class="totalAmount >= 0 ? 'amount-in' : 'amount-out'">{{ totalAmount >= 0 ? '+' : '' }}{{ formatMoney(totalAmount) }}</span></span>
+                <span class="sum-item">已审计 <span class="sum-val">{{ auditedCount }}</span> 条 / 待业务审计 <span class="sum-val">{{ pendingCount }}</span> 条</span>
+                <span class="sum-item">已进账单 <span class="sum-val">{{ billedCount }}</span> 条 / 草稿池 <span class="sum-val">{{ draftCount }}</span> 条</span>
+            </div>
+        </div>
+
+        <!-- 下层卡片：流水列表（一期空态） -->
+        <div class="content-card">
+            <el-alert title="应付管理 Phase 2 上线后展示应付业务流水" type="info" :closable="false" show-icon style="margin-bottom: 16px;" description="应付业务流水（我司应付供应商的成本流水）数据源在 Phase 2 应付管理上线后产生，本页为预建的空态台账。"></el-alert>
+            <el-table :data="filteredFlows" border style="width: 100%" max-height="calc(100vh - 320px)">
+                <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
+                <el-table-column prop="customerName" label="供应商" min-width="160" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="entityName" label="我司主体" min-width="110"></el-table-column>
+                <el-table-column prop="currency" label="币种" min-width="80" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column prop="feeType" label="费用类型" min-width="130"></el-table-column>
+                <el-table-column prop="unitPrice" label="单价" min-width="100" align="right">
+                    <template #default="scope">{{ formatMoney(scope.row.unitPrice) }}</template>
+                </el-table-column>
+                <el-table-column prop="pricingUnit" label="计价单位" min-width="90" align="center"></el-table-column>
+                <el-table-column prop="quantity" label="计费量" min-width="90" align="right"></el-table-column>
+                <el-table-column label="金额" min-width="120" align="right">
+                    <template #default="scope">
+                        <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">
+                            {{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}
+                        </span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="auditStatus" label="审计状态" min-width="110" align="center"></el-table-column>
+                <el-table-column prop="pickTime" label="拣货时间" min-width="150" align="center">
+                    <template #default="scope">{{ scope.row.pickTime || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="操作" width="80" align="center" fixed="right">
+                    <template #default="scope">
+                        <el-button type="primary" link @click="openDetail(scope.row)">详情</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="filteredFlows.length"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 行详情抽屉 -->
+        <el-drawer v-model="detailVisible" title="流水详情" size="420px" append-to-body>
+            <template v-if="detailRow">
+                <el-descriptions :column="1" border>
+                    <el-descriptions-item label="运单号">{{ detailRow.waybillNo }}</el-descriptions-item>
+                    <el-descriptions-item label="供应商">{{ detailRow.customerName }}</el-descriptions-item>
+                    <el-descriptions-item label="我司主体">{{ detailRow.entityName }}</el-descriptions-item>
+                    <el-descriptions-item label="费用类型">{{ detailRow.feeType }}</el-descriptions-item>
+                    <el-descriptions-item label="金额">{{ currencySymbol(detailRow.currency) }}{{ formatMoney(detailRow.amount) }}</el-descriptions-item>
+                    <el-descriptions-item label="来源规则">{{ detailRow.sourceRule || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="数据来源">{{ detailRow.source || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="生成节点">{{ detailRow.generateNode || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="创建人">{{ detailRow.createdBy || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="创建时间">{{ detailRow.createdAt || '—' }}</el-descriptions-item>
+                </el-descriptions>
+            </template>
+        </el-drawer>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
+                const feeTypes = ['干线运费', '清关费', '海外仓操作费', '尾程派送费'];
+
+                const searchForm = reactive({ customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', auditStatus: '', billStatus: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
+                const searchExpanded = ref(false);
+
+                // 一期空态：应付业务流水数据源随 Phase 2 应付管理上线
+                const allFlows = reactive([]);
+
+                const filteredFlows = computed(() => allFlows);
+
+                const totalAmount = computed(() => filteredFlows.value.reduce((s, f) => s + Number(f.amount), 0));
+                const auditedCount = computed(() => filteredFlows.value.filter(f => f.auditStatus === '已审计').length);
+                const pendingCount = computed(() => filteredFlows.value.filter(f => f.auditStatus === '待业务审计').length);
+                const billedCount = computed(() => filteredFlows.value.filter(f => !!f.billNo).length);
+                const draftCount = computed(() => filteredFlows.value.filter(f => !f.billNo).length);
+
+                const detailVisible = ref(false);
+                const detailRow = ref(null);
+                const openDetail = (row) => { detailRow.value = row; detailVisible.value = true; };
+
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => {
+                    Object.assign(searchForm, { customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', auditStatus: '', billStatus: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
+                };
+
+                return {
+                    currencyOptions, currencySymbol, currencyName, formatMoney,
+                    entities, feeTypes,
+                    searchForm, searchExpanded, filteredFlows,
+                    totalAmount, auditedCount, pendingCount, billedCount, draftCount,
+                    detailVisible, detailRow, openDetail,
+                    handleSearch, resetSearch
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
