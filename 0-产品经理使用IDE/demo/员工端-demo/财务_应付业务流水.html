@@ -10,58 +10,62 @@
     <script src="https://unpkg.com/@element-plus/icons-vue"></script>
     <style>
         :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
-        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+        #app { flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
         .content-card { background-color: #fff; border-radius: 4px; padding: 16px; box-sizing: border-box; }
 
-        .search-area { display: flex; gap: 16px; margin-bottom: 16px; align-items: flex-start; flex-wrap: nowrap; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 0; align-items: flex-start; flex-wrap: nowrap; }
         .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
         .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
         .search-area .el-date-editor.el-input__wrapper,
-        .search-area .el-date-editor--daterange { flex: 0 0 240px; min-width: 240px; max-width: 240px; width: 240px !important; }
+        .search-area .el-date-editor--daterange,
+        .search-area .el-date-editor--month { flex: 0 0 240px; min-width: 240px; max-width: 240px; width: 240px !important; }
         .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
         .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
         .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
         .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
         .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
-        .link { color: #409EFF; cursor: pointer; }
-        .link:hover { text-decoration: underline; }
-        .amount-in { color: #67C23A; font-weight: 500; }
-        .amount-out { color: #F56C6C; font-weight: 500; }
-        .summary-bar { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding: 10px 12px; margin-bottom: 16px; background: #F5F7FA; border-radius: 4px; color: #606266; }
-        .summary-bar .sum-item { display: flex; align-items: center; gap: 4px; }
-        .summary-bar .sum-label { color: #909399; }
-        .summary-bar .sum-val { font-weight: 600; color: #303133; }
+        .amount-cell { font-weight: 600; }
+
+        .toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+        .import-tip { background: #F5F7FA; border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; color: #606266; line-height: 1.6; }
+        .section-title { font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: var(--el-color-primary); margin-right: 8px; border-radius: 2px; }
+
+        /* 新增应付业务流水弹窗：卡片式逐条录入（与运单审计「新增应付流水」同款） */
+        .fee-add-card { border: 1px solid var(--el-border-color-lighter); border-radius: 8px; padding: 12px 14px 2px; margin-bottom: 12px; background: #fff; }
+        .fee-add-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .fee-add-card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--el-text-color-primary); }
+        .fee-add-card-sub { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary); }
+        .fee-add-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+        .fee-add-field-label { font-size: 12px; color: var(--el-text-color-secondary); }
+        .fee-add-field-label .req { color: var(--el-color-danger); font-style: normal; }
+        .fee-add-amount { font-weight: 600; font-size: 15px; line-height: 32px; }
     </style>
 </head>
 <body>
     <div id="app">
         <!-- 上层卡片：查询区 -->
-        <div class="content-card" style="margin-bottom: 16px;">
+        <div class="content-card" style="flex: none;">
             <div class="search-area">
                 <div class="search-conditions">
-                    <el-input v-model="searchForm.customerNick" placeholder="客户昵称" class="search-control" clearable></el-input>
-                    <el-input v-model="searchForm.cusNo" placeholder="客户编号" class="search-control" clearable></el-input>
-                    <el-select v-model="searchForm.entityId" placeholder="我司主体" class="search-control" clearable>
-                        <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                    <el-input v-model="searchForm.supplier" placeholder="供应商" class="search-control" clearable></el-input>
+                    <el-input v-model="searchForm.waybillNo" placeholder="运单号" class="search-control" clearable></el-input>
+                    <el-select v-model="searchForm.feeType" placeholder="费用类型" class="search-control" clearable>
+                        <el-option v-for="t in feeTypes" :key="t" :label="t" :value="t"></el-option>
                     </el-select>
                     <template v-if="searchExpanded">
+                        <el-input v-model="searchForm.oaNo" placeholder="OA审批编号" class="search-control" clearable></el-input>
                         <el-select v-model="searchForm.currency" placeholder="币种" class="search-control" clearable>
                             <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
-                        </el-select>
-                        <el-select v-model="searchForm.feeTypeId" placeholder="费用类型" class="search-control" clearable>
-                            <el-option v-for="t in feeTypes" :key="t" :label="t" :value="t"></el-option>
-                        </el-select>
-                        <el-select v-model="searchForm.auditStatus" placeholder="审计状态" class="search-control" clearable>
-                            <el-option label="待业务审计" value="待业务审计"></el-option>
-                            <el-option label="已审计" value="已审计"></el-option>
                         </el-select>
                         <el-select v-model="searchForm.billStatus" placeholder="账单状态" class="search-control" clearable>
                             <el-option label="未成账（草稿池）" value="未成账"></el-option>
                             <el-option label="已进账单" value="已进账单"></el-option>
                         </el-select>
-                        <el-input v-model="searchForm.waybillNo" placeholder="运单号" class="search-control" clearable></el-input>
-                        <el-input v-model="searchForm.customerNo" placeholder="客户单号" class="search-control" clearable></el-input>
-                        <el-date-picker v-model="searchForm.pickTimeRange" type="daterange" value-format="YYYY-MM-DD" class="search-control" start-placeholder="拣货开始日期" end-placeholder="拣货结束日期"></el-date-picker>
+                        <el-input v-model="searchForm.blNo" placeholder="提单号" class="search-control" clearable></el-input>
+                        <el-input v-model="searchForm.transferNo" placeholder="转单号" class="search-control" clearable></el-input>
+                        <el-date-picker v-model="searchForm.bizTime" type="month" value-format="YYYY-MM" class="search-control" placeholder="业务时间（账单归属月）"></el-date-picker>
                     </template>
                 </div>
                 <div class="search-actions">
@@ -76,42 +80,76 @@
                     </el-button>
                 </div>
             </div>
-
-            <div class="summary-bar">
-                <span class="sum-item">金额合计：<span class="sum-val" :class="totalAmount >= 0 ? 'amount-in' : 'amount-out'">{{ totalAmount >= 0 ? '+' : '' }}{{ formatMoney(totalAmount) }}</span></span>
-                <span class="sum-item">已审计 <span class="sum-val">{{ auditedCount }}</span> 条 / 待业务审计 <span class="sum-val">{{ pendingCount }}</span> 条</span>
-                <span class="sum-item">已进账单 <span class="sum-val">{{ billedCount }}</span> 条 / 草稿池 <span class="sum-val">{{ draftCount }}</span> 条</span>
-            </div>
         </div>
 
-        <!-- 下层卡片：流水列表（一期空态） -->
-        <div class="content-card">
-            <el-alert title="应付管理 Phase 2 上线后展示应付业务流水" type="info" :closable="false" show-icon style="margin-bottom: 16px;" description="应付业务流水（我司应付供应商的成本流水）数据源在 Phase 2 应付管理上线后产生，本页为预建的空态台账。"></el-alert>
-            <el-table :data="filteredFlows" border style="width: 100%" max-height="calc(100vh - 320px)">
+        <!-- 下层卡片：工具栏 + 应付业务流水列表 -->
+        <div class="content-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+            <div class="toolbar">
+                <el-button type="primary" @click="openAddDialog">
+                    <el-icon style="margin-right: 4px;"><Plus></Plus></el-icon>新增应付业务流水
+                </el-button>
+                <el-button type="primary" plain @click="openFileImport">
+                    <el-icon style="margin-right: 4px;"><Upload></Upload></el-icon>导入
+                </el-button>
+                <el-button type="success" @click="handleExport">
+                    <el-icon style="margin-right: 4px;"><Download></Download></el-icon>导出
+                </el-button>
+                <el-button type="danger" @click="handleDelete">
+                    <el-icon style="margin-right: 4px;"><Delete></Delete></el-icon>删除
+                </el-button>
+            </div>
+
+            <el-table :data="filteredFlows" border style="width: 100%; flex: 1;" height="100%" @selection-change="onSelectionChange">
+                <el-table-column type="selection" width="50" align="center"></el-table-column>
+                <el-table-column prop="flowNo" label="流水号" min-width="150"></el-table-column>
+                <el-table-column prop="oaNo" label="OA审批编号" min-width="150" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="supplier" label="供应商" min-width="140" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="waybillNo" label="运单号" min-width="150"></el-table-column>
-                <el-table-column prop="customerName" label="供应商" min-width="160" show-overflow-tooltip></el-table-column>
-                <el-table-column prop="entityName" label="我司主体" min-width="110"></el-table-column>
-                <el-table-column prop="currency" label="币种" min-width="80" align="center">
-                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                <el-table-column label="提单号" min-width="150" show-overflow-tooltip>
+                    <template #default="scope">{{ scope.row.blNo || '—' }}</template>
                 </el-table-column>
-                <el-table-column prop="feeType" label="费用类型" min-width="130"></el-table-column>
-                <el-table-column prop="unitPrice" label="单价" min-width="100" align="right">
-                    <template #default="scope">{{ formatMoney(scope.row.unitPrice) }}</template>
-                </el-table-column>
-                <el-table-column prop="pricingUnit" label="计价单位" min-width="90" align="center"></el-table-column>
-                <el-table-column prop="quantity" label="计费量" min-width="90" align="right"></el-table-column>
-                <el-table-column label="金额" min-width="120" align="right">
+                <el-table-column prop="feeType" label="费用类型" min-width="120"></el-table-column>
+                <el-table-column label="审计状态" min-width="100" align="center">
                     <template #default="scope">
-                        <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">
-                            {{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}
-                        </span>
+                        <el-tag :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'" size="small">{{ scope.row.auditStatus }}</el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column prop="auditStatus" label="审计状态" min-width="110" align="center"></el-table-column>
-                <el-table-column prop="pickTime" label="拣货时间" min-width="150" align="center">
-                    <template #default="scope">{{ scope.row.pickTime || '—' }}</template>
+                <el-table-column label="转单号" min-width="150" show-overflow-tooltip>
+                    <template #default="scope">{{ scope.row.transferNo || '—' }}</template>
                 </el-table-column>
-                <el-table-column label="操作" width="80" align="center" fixed="right">
+                <el-table-column label="币种" min-width="70" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column label="汇率" min-width="90" align="right">
+                    <template #default="scope">{{ formatRate(scope.row.rate) }}</template>
+                </el-table-column>
+                <el-table-column label="费用（原币金额）" min-width="130" align="right">
+                    <template #default="scope">
+                        <span class="amount-cell">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="费用（本币金额）" min-width="130" align="right">
+                    <template #default="scope">
+                        <span class="amount-cell">¥{{ formatMoney(cnyAmount(scope.row)) }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="备注" min-width="140" show-overflow-tooltip>
+                    <template #default="scope">{{ scope.row.remark || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="描述" min-width="140" show-overflow-tooltip>
+                    <template #default="scope">{{ scope.row.description || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="账单编号" min-width="160">
+                    <template #default="scope">{{ scope.row.billNo || '—' }}</template>
+                </el-table-column>
+                <el-table-column prop="createdBy" label="创建人" min-width="90" align="center"></el-table-column>
+                <el-table-column label="业务时间（账单归属月）" min-width="150" align="center">
+                    <template #default="scope">{{ scope.row.bizTime || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="创建时间" min-width="150" align="center">
+                    <template #default="scope">{{ scope.row.createdAt || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="操作" width="70" align="center" fixed="right">
                     <template #default="scope">
                         <el-button type="primary" link @click="openDetail(scope.row)">详情</el-button>
                     </template>
@@ -122,20 +160,110 @@
             </div>
         </div>
 
+        <!-- 新增应付业务流水弹窗（与运单审计「新增应付流水」同款，校验一致） -->
+        <el-dialog v-model="addVisible" title="新增应付业务流水" width="900px" destroy-on-close>
+            <div class="import-tip">
+                一条费用可同时铺到多票运单：保存时按「费用 × 票数」展开为多条流水；可「＋添加一行」加多笔不同费用。<br>
+                <span style="color:#F56C6C;">运单「应付」已整票审计的不可新增（如需补录请先到「运单审计」反审计应付）。</span>
+            </div>
+            <div v-for="(row, idx) in addRows" :key="idx" class="fee-add-card">
+                <div class="fee-add-card-head">
+                    <span class="fee-add-card-title">流水 {{ idx + 1 }}<span class="fee-add-card-sub">× {{ (row.waybillNos || []).length }} 票 · 合计 {{ addBatchAmountText(row) }}</span></span>
+                    <el-button link type="danger" size="small" :disabled="addRows.length <= 1" :title="addRows.length <= 1 ? '至少保留一条应付流水' : ''" @click="addRows.splice(idx, 1)">删除</el-button>
+                </div>
+                <el-row :gutter="12">
+                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">适用运单 <i class="req">*</i><span style="font-size:12px;color:#909399;">（一条费用 × M 票 = M 条流水）</span></span><el-select v-model="row.waybillNos" multiple filterable size="small" style="width:100%" collapse-tags collapse-tags-tooltip placeholder="输入运单号搜索，可多选" clearable><el-option v-for="w in apWaybills" :key="w.waybillNo" :label="apWaybillLabel(w)" :value="w.waybillNo" :disabled="w.apAudited"></el-option></el-select></div></el-col>
+                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">提单号<span style="font-size:12px;color:#909399;">（非必填 · 可多选 · 输入搜索）</span></span><el-select v-model="row.blNos" multiple filterable size="small" style="width:100%" collapse-tags collapse-tags-tooltip placeholder="输入提单号搜索，可多选" clearable><el-option v-for="b in blNoOptions" :key="b" :label="b" :value="b"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">OA审批编号 <i class="req">*</i></span><el-input v-model="row.oaNo" size="small" placeholder="请输入 OA 审批编号"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">供应商 <i class="req">*</i></span><el-select v-model="row.supplier" size="small" style="width:100%" placeholder="请选择供应商" filterable><el-option v-for="s in supplierOptions" :key="s" :label="s" :value="s"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.feeType" size="small" style="width:100%" placeholder="请选择" filterable><el-option v-for="t in feeTypes" :key="t" :label="t" :value="t"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="row.currency" size="small" style="width:100%" @change="handleCurrencyChange(row)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="row.rate" size="small"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位</span><el-select v-model="row.pricingUnit" size="small" style="width:100%" clearable><el-option v-for="p in pricingUnits" :key="p" :label="p" :value="p"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（原币） <i class="req">*</i></span><el-input-number v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（本币）</span><div class="fee-add-amount">¥ {{ formatMoney(cnyAmount(row)) }}</div></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">备注（仅内部）</span><el-input v-model="row.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
+                </el-row>
+            </div>
+            <el-button plain size="small" style="width:100%;" @click="addRows.push(newAddRow())">＋ 添加一行</el-button>
+            <template #footer>
+                <el-button @click="addVisible = false">取消</el-button>
+                <el-button type="primary" @click="submitAdd">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 文件导入弹窗：上传文件批量导入应付业务流水 -->
+        <el-dialog v-model="fileImportVisible" title="导入应付业务流水" width="720px" destroy-on-close>
+            <div class="import-tip">
+                请下载标准模板，按模板填写「运单号 / 供应商 / 费用类型 / 币种 / 汇率 / 金额（原币）/ 备注 / 描述」后上传；系统逐行校验并按「一条费用一行」批量生成应付业务流水（<b>审计状态 = 待业务审计</b>）。<br>
+                <span style="color:#F56C6C;">运单「应付」已整票审计的运单行不可导入；校验失败的行不落库，可在失败清单中查看原因。</span>
+            </div>
+            <div style="margin-bottom: 16px;">
+                <el-button plain @click="downloadFlowTemplate">
+                    <el-icon style="margin-right: 4px;"><Download></Download></el-icon>下载导入模板（.xlsx）
+                </el-button>
+            </div>
+            <el-upload class="upload-demo" drag action="#" :auto-upload="false" :on-change="onFlowFileChange" :limit="1" accept=".xlsx,.xls,.csv" style="margin-bottom: 16px;">
+                <el-icon style="font-size: 48px; color: #c0c4cc;"><upload-filled></upload-filled></el-icon>
+                <div style="margin-top: 12px; color: #606266;">
+                    将填好的文件拖到此处，或 <em style="color: var(--el-color-primary);">点击上传</em>
+                </div>
+                <template #tip>
+                    <div style="margin-top: 12px; font-size: 12px; color: #909399;">
+                        支持 .xlsx、.xls、.csv 格式，单次 1 个文件
+                    </div>
+                </template>
+            </el-upload>
+            <div v-if="flowFileName" style="margin-bottom: 16px; padding: 8px 12px; background: #f0f9eb; border-radius: 4px; font-size: 13px; color: #67c23a;">
+                📎 {{ flowFileName }}
+            </div>
+
+            <div v-if="flowImportPreview.length" class="section-title">导入预览（{{ flowImportPreview.length }} 条）</div>
+            <el-table v-if="flowImportPreview.length" :data="flowImportPreview" border size="small" max-height="260" style="width: 100%;">
+                <el-table-column prop="waybillNo" label="运单号" min-width="130"></el-table-column>
+                <el-table-column prop="supplier" label="供应商" min-width="140" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="feeType" label="费用类型" min-width="90"></el-table-column>
+                <el-table-column label="币种" width="60" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column label="汇率" width="90" align="right">
+                    <template #default="scope">{{ formatRate(scope.row.rate) }}</template>
+                </el-table-column>
+                <el-table-column label="金额（原币）" width="130" align="right">
+                    <template #default="scope">
+                        <span class="amount-cell">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</span>
+                    </template>
+                </el-table-column>
+            </el-table>
+
+            <template #footer>
+                <el-button @click="fileImportVisible = false">取消</el-button>
+                <el-button type="primary" :disabled="!flowFileName" @click="submitFlowImport">确认导入</el-button>
+            </template>
+        </el-dialog>
+
         <!-- 行详情抽屉 -->
-        <el-drawer v-model="detailVisible" title="流水详情" size="420px" append-to-body>
+        <el-drawer v-model="detailVisible" title="应付业务流水详情" size="460px" append-to-body>
             <template v-if="detailRow">
                 <el-descriptions :column="1" border>
-                    <el-descriptions-item label="运单号">{{ detailRow.waybillNo }}</el-descriptions-item>
-                    <el-descriptions-item label="供应商">{{ detailRow.customerName }}</el-descriptions-item>
-                    <el-descriptions-item label="我司主体">{{ detailRow.entityName }}</el-descriptions-item>
-                    <el-descriptions-item label="费用类型">{{ detailRow.feeType }}</el-descriptions-item>
-                    <el-descriptions-item label="金额">{{ currencySymbol(detailRow.currency) }}{{ formatMoney(detailRow.amount) }}</el-descriptions-item>
-                    <el-descriptions-item label="来源规则">{{ detailRow.sourceRule || '—' }}</el-descriptions-item>
-                    <el-descriptions-item label="数据来源">{{ detailRow.source || '—' }}</el-descriptions-item>
-                    <el-descriptions-item label="生成节点">{{ detailRow.generateNode || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="流水号">{{ detailRow.flowNo }}</el-descriptions-item>
+                    <el-descriptions-item label="OA审批编号">{{ detailRow.oaNo || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="供应商">{{ detailRow.supplier || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="运单号">{{ detailRow.waybillNo || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="提单号">{{ detailRow.blNo || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="费用类型">{{ detailRow.feeType || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="转单号">{{ detailRow.transferNo || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="币种">{{ currencyName(detailRow.currency) }}</el-descriptions-item>
+                    <el-descriptions-item label="汇率">{{ formatRate(detailRow.rate) }}</el-descriptions-item>
+                    <el-descriptions-item label="费用（原币金额）">{{ currencySymbol(detailRow.currency) }}{{ formatMoney(detailRow.amount) }}</el-descriptions-item>
+                    <el-descriptions-item label="费用（本币金额）">¥{{ formatMoney(cnyAmount(detailRow)) }}</el-descriptions-item>
+                    <el-descriptions-item label="备注">{{ detailRow.remark || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="描述">{{ detailRow.description || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="账单编号">{{ detailRow.billNo || '—' }}</el-descriptions-item>
                     <el-descriptions-item label="创建人">{{ detailRow.createdBy || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="业务时间（账单归属月）">{{ detailRow.bizTime || '—' }}</el-descriptions-item>
                     <el-descriptions-item label="创建时间">{{ detailRow.createdAt || '—' }}</el-descriptions-item>
+                    <el-descriptions-item label="审计状态">{{ detailRow.auditStatus || '—' }}</el-descriptions-item>
                 </el-descriptions>
             </template>
         </el-drawer>
@@ -143,7 +271,7 @@
 
     <script>
         const { createApp, ref, reactive, computed } = Vue;
-        const { ElMessage } = ElementPlus;
+        const { ElMessage, ElMessageBox } = ElementPlus;
 
         const app = createApp({
             setup() {
@@ -157,40 +285,206 @@
                 const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
                 const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
                 const formatMoney = (val) => Number(val || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatRate = (val) => (val === null || val === undefined || val === '') ? '—' : Number(val).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
+                // 金额（本币）= 金额（原币）× 汇率（只读、前端派生展示，不落库；本位币 = CNY）
+                const cnyAmount = (row) => Number(((Number(row && row.amount) || 0) * (Number(row && row.rate) || 1)).toFixed(2));
+                const formatNow = () => {
+                    const d = new Date();
+                    const p = (n) => String(n).padStart(2, '0');
+                    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                };
+                const currentMonth = () => {
+                    const d = new Date();
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+                };
 
-                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
-                const feeTypes = ['干线运费', '清关费', '海外仓操作费', '尾程派送费'];
+                const feeTypes = ['干线运输费', '提货费', '操作费', '拖车费', '清关费', '尾程派送费'];
+                const supplierOptions = ['UPS', 'FedEx', '深圳拖车行', '广州报关行', '美森快船'];
+                const pricingUnits = ['KG', 'm³', '票', '箱', '柜', '数量'];
+                const blNoOptions = ['MBL-20260414001', 'BL998822', 'MBL-20260415003', 'HBL-20260415002', 'BL998823'];
 
-                const searchForm = reactive({ customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', auditStatus: '', billStatus: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
+                const searchForm = reactive({ supplier: '', waybillNo: '', feeType: '', oaNo: '', currency: '', billStatus: '', blNo: '', transferNo: '', bizTime: '' });
                 const searchExpanded = ref(false);
 
-                // 一期空态：应付业务流水数据源随 Phase 2 应付管理上线
-                const allFlows = reactive([]);
+                // 应付业务流水（flow_category = 20 应付；我司付给供应商）
+                const allFlows = ref([
+                    { id: 1, flowNo: 'FLW20260901001', oaNo: 'OA-2026-0901-015', supplier: '美森快船', waybillNo: 'YD20260413005', blNo: 'MBL-20260414001', feeType: '干线运输费', transferNo: 'EMT20260413005', currency: 'CNY', rate: 1, amount: 5000.00, remark: '按柜计收 · 2 柜', description: '美森快船 2 柜干线运费', billNo: '', createdBy: '李四', bizTime: '2026-09', createdAt: '2026-09-01 10:00', auditStatus: '待业务审计' },
+                    { id: 2, flowNo: 'FLW20260901002', oaNo: 'OA-2026-0901-018', supplier: 'UPS', waybillNo: 'YD20260413006', blNo: 'BL998822', feeType: '操作费', transferNo: 'EMT20260413006', currency: 'USD', rate: 7.25, amount: 80.00, remark: '海外仓分拣操作', description: '分拣操作费 · 8 票', billNo: '', createdBy: '王五', bizTime: '2026-09', createdAt: '2026-09-01 11:30', auditStatus: '待业务审计' },
+                    { id: 3, flowNo: 'FLW20260901003', oaNo: 'OA-2026-0901-021', supplier: 'FedEx', waybillNo: 'YD20260413007', blNo: 'HBL-20260415002', feeType: '提货费', transferNo: 'EMT20260413007', currency: 'CNY', rate: 1, amount: 120.00, remark: '提货 4 票 · 按票计收', description: '提货费 4 票', billNo: '', createdBy: '李四', bizTime: '2026-09', createdAt: '2026-09-01 14:00', auditStatus: '已审计' },
+                    { id: 4, flowNo: 'FLW20260901004', oaNo: 'OA-2026-0901-026', supplier: '深圳拖车行', waybillNo: 'YD20260413008', blNo: 'MBL-20260415003', feeType: '拖车费', transferNo: 'EMT20260413008', currency: 'CNY', rate: 1, amount: 260.00, remark: '港口到仓拖车', description: '拖车费 1 票', billNo: '', createdBy: '李四', bizTime: '2026-09', createdAt: '2026-09-01 15:20', auditStatus: '已审计' },
+                    { id: 5, flowNo: 'FLW20260901005', oaNo: 'OA-2026-0901-030', supplier: '广州报关行', waybillNo: 'YD20260413009', blNo: 'BL998823', feeType: '清关费', transferNo: 'EMT20260413009', currency: 'HKD', rate: 0.92, amount: 300.00, remark: '出口报关代垫', description: '清关费 1 票', billNo: '', createdBy: '王五', bizTime: '2026-09', createdAt: '2026-09-01 16:40', auditStatus: '待业务审计' },
+                    { id: 6, flowNo: 'FLW20260828001', oaNo: 'OA-2026-0828-012', supplier: '美森快船', waybillNo: 'YD20260805001', blNo: 'MBL-20260414002', feeType: '干线运输费', transferNo: 'EMT20260805001', currency: 'CNY', rate: 1, amount: 3500.00, remark: '按柜计收 · 1 柜', description: '美森快船 1 柜干线运费', billNo: '', createdBy: '李四', bizTime: '2026-08', createdAt: '2026-08-28 09:00', auditStatus: '已审计' },
+                    { id: 7, flowNo: 'FLW20260901006', oaNo: 'OA-2026-0901-034', supplier: 'UPS', waybillNo: 'YD20260815001', blNo: 'HBL-20260415003', feeType: '尾程派送费', transferNo: 'EMT20260815001', currency: 'EUR', rate: 7.85, amount: 200.00, remark: '尾程派送 · 按票', description: '尾程派送费 2 票', billNo: '', createdBy: '王五', bizTime: '2026-09', createdAt: '2026-09-01 17:00', auditStatus: '待业务审计' },
+                    { id: 8, flowNo: 'FLW20260815001', oaNo: 'OA-2026-0815-019', supplier: 'FedEx', waybillNo: 'YD20260815002', blNo: 'BL998824', feeType: '提货费', transferNo: 'EMT20260815002', currency: 'CNY', rate: 1, amount: 90.00, remark: '提货 3 票', description: '提货费 3 票', billNo: '', createdBy: '李四', bizTime: '2026-08', createdAt: '2026-08-15 10:30', auditStatus: '已审计' }
+                ]);
 
-                const filteredFlows = computed(() => allFlows);
+                // 新增应付流水的候选运单（含运单级应付审计标记 + 转单号=快递主单号）
+                const apWaybills = [
+                    { waybillNo: 'YD20260413005', transferNo: 'EMT20260413005', apAudited: false },
+                    { waybillNo: 'YD20260413006', transferNo: 'EMT20260413006', apAudited: false },
+                    { waybillNo: 'YD20260413007', transferNo: 'EMT20260413007', apAudited: true },
+                    { waybillNo: 'YD20260413008', transferNo: 'EMT20260413008', apAudited: false },
+                    { waybillNo: 'YD20260413009', transferNo: 'EMT20260413009', apAudited: false },
+                    { waybillNo: 'YD20260805001', transferNo: 'EMT20260805001', apAudited: false },
+                    { waybillNo: 'YD20260815001', transferNo: 'EMT20260815001', apAudited: false },
+                    { waybillNo: 'YD20260815002', transferNo: 'EMT20260815002', apAudited: false }
+                ];
+                const apWaybillLabel = (w) => w.waybillNo + (w.apAudited ? '（应付已整票审计，不可新增）' : '');
 
-                const totalAmount = computed(() => filteredFlows.value.reduce((s, f) => s + Number(f.amount), 0));
-                const auditedCount = computed(() => filteredFlows.value.filter(f => f.auditStatus === '已审计').length);
-                const pendingCount = computed(() => filteredFlows.value.filter(f => f.auditStatus === '待业务审计').length);
-                const billedCount = computed(() => filteredFlows.value.filter(f => !!f.billNo).length);
-                const draftCount = computed(() => filteredFlows.value.filter(f => !f.billNo).length);
+                const filteredFlows = computed(() => {
+                    let rows = allFlows.value;
+                    if (searchForm.supplier) rows = rows.filter(r => (r.supplier || '').includes(searchForm.supplier));
+                    if (searchForm.waybillNo) rows = rows.filter(r => (r.waybillNo || '').includes(searchForm.waybillNo));
+                    if (searchForm.feeType) rows = rows.filter(r => r.feeType === searchForm.feeType);
+                    if (searchForm.oaNo) rows = rows.filter(r => (r.oaNo || '').includes(searchForm.oaNo));
+                    if (searchForm.currency) rows = rows.filter(r => r.currency === searchForm.currency);
+                    if (searchForm.billStatus) rows = rows.filter(r => searchForm.billStatus === '已进账单' ? !!r.billNo : !r.billNo);
+                    if (searchForm.blNo) rows = rows.filter(r => (r.blNo || '').includes(searchForm.blNo));
+                    if (searchForm.transferNo) rows = rows.filter(r => (r.transferNo || '').includes(searchForm.transferNo));
+                    if (searchForm.bizTime) rows = rows.filter(r => r.bizTime === searchForm.bizTime);
+                    return rows;
+                });
+
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => {
+                    Object.assign(searchForm, { supplier: '', waybillNo: '', feeType: '', oaNo: '', currency: '', billStatus: '', blNo: '', transferNo: '', bizTime: '' });
+                };
+
+                // ===== 新增应付业务流水（与运单审计「新增应付流水」同款：提单号 + OA审批编号 + 供应商 + 费用类型 + 币种/汇率 + 计价单位 + 金额 + 备注）=====
+                const addVisible = ref(false);
+                const addRows = ref([]);
+                const newAddRow = () => ({
+                    waybillNos: [], blNos: [], oaNo: '', supplier: '', feeType: '',
+                    currency: 'CNY', rate: 1, pricingUnit: '', amount: null, remark: ''
+                });
+                const openAddDialog = () => {
+                    addRows.value = [newAddRow()];
+                    addVisible.value = true;
+                };
+                const addBatchAmountText = (row) => formatMoney(Number((Number(row.amount) || 0) * ((row.waybillNos || []).length)));
+                const handleCurrencyChange = (row) => {
+                    const rateMap = { CNY: 1, USD: 7.25, HKD: 0.92, EUR: 7.85 };
+                    row.rate = rateMap[row.currency] || 1;
+                };
+                const submitAdd = () => {
+                    const rows = addRows.value.filter(r => r.feeType);
+                    if (!rows.length) { ElMessage.warning('请先选择费用类型'); return; }
+                    for (const r of rows) {
+                        if (!r.supplier) { ElMessage.warning(`「${r.feeType}」请选择供应商`); return; }
+                        if (!r.oaNo || !String(r.oaNo).trim()) { ElMessage.warning(`「${r.feeType}」请填写 OA 审批编号`); return; }
+                        if (!(r.waybillNos || []).length) { ElMessage.warning(`「${r.feeType}」请至少选择一票适用运单`); return; }
+                        if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.feeType}」请填写金额`); return; }
+                        const audited = (r.waybillNos || []).filter(no => (apWaybills.find(w => w.waybillNo === no) || {}).apAudited);
+                        if (audited.length) { ElMessage.warning(`运单 ${audited.join('、')} 应付已整票审计，不允许新增应付费用；如需补录请先反审计应付`); return; }
+                    }
+                    const now = formatNow();
+                    const month = currentMonth();
+                    let seq = allFlows.value.length + 1;
+                    let total = 0;
+                    rows.forEach(r => {
+                        (r.waybillNos || []).forEach(no => {
+                            const w = apWaybills.find(x => x.waybillNo === no) || {};
+                            allFlows.value.unshift({
+                                id: Date.now() + Math.floor(Math.random() * 1000),
+                                flowNo: 'FLW' + now.replace(/[-: ]/g, '').substring(0, 8) + String(seq).padStart(3, '0'),
+                                oaNo: r.oaNo || '', supplier: r.supplier, waybillNo: no,
+                                blNo: (r.blNos || []).join(' / '), feeType: r.feeType, transferNo: w.transferNo || '',
+                                currency: r.currency, rate: Number(r.rate || 1), amount: Number(r.amount || 0),
+                                remark: r.remark || '', description: '', billNo: '', createdBy: '李四',
+                                bizTime: month, createdAt: now, auditStatus: '待业务审计'
+                            });
+                            seq += 1; total += 1;
+                        });
+                    });
+                    const waybillCount = new Set(rows.flatMap(r => r.waybillNos || [])).size;
+                    ElMessage.success(`已新增 ${rows.length} 条费用 × ${waybillCount} 票 = ${total} 条应付业务流水`);
+                    addVisible.value = false;
+                    addRows.value = [newAddRow()];
+                };
+
+                // ===== 导出：校验是否有勾选数据 =====
+                const selectedFlows = ref([]);
+                const onSelectionChange = (val) => { selectedFlows.value = val; };
+                const handleExport = () => {
+                    if (!selectedFlows.value.length) { ElMessage.warning('请先勾选需要导出的应付业务流水'); return; }
+                    ElMessage.success('应付业务流水导出中…（已勾选 ' + selectedFlows.value.length + ' 条）');
+                };
+
+                // ===== 删除：校验审计状态，已审计不允许删除 =====
+                const deleteEligible = computed(() => selectedFlows.value.filter(r => r.auditStatus === '待业务审计'));
+                const handleDelete = () => {
+                    const eligible = deleteEligible.value;
+                    if (eligible.length === 0) {
+                        ElMessage.warning('请勾选「待业务审计」的应付业务流水（已审计的流水不允许删除）');
+                        return;
+                    }
+                    const skipped = selectedFlows.value.length - eligible.length;
+                    ElMessageBox.confirm('确定删除选中的 ' + eligible.length + ' 条应付业务流水吗？' + (skipped > 0 ? '（已审计 ' + skipped + ' 条不可删、跳过）' : ''), '删除确认', {
+                        confirmButtonText: '确定删除',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        const flowNos = eligible.map(r => r.flowNo);
+                        allFlows.value = allFlows.value.filter(r => !flowNos.includes(r.flowNo));
+                        selectedFlows.value = [];
+                        ElMessage.success('删除成功');
+                    }).catch(() => {});
+                };
+
+                // ===== 文件导入（上传文件批量导入应付业务流水）=====
+                const fileImportVisible = ref(false);
+                const flowFileName = ref('');
+                const flowImportPreview = ref([]);
+                const openFileImport = () => {
+                    flowFileName.value = '';
+                    flowImportPreview.value = [];
+                    fileImportVisible.value = true;
+                };
+                const downloadFlowTemplate = () => { ElMessage.success('应付业务流水导入模板生成中，请稍候下载…'); };
+                const onFlowFileChange = (file) => {
+                    flowFileName.value = file.name;
+                    // 模拟解析文件内容，生成导入预览（真实实现为服务端解析 + 逐行校验）
+                    flowImportPreview.value = [
+                        { waybillNo: 'YD20260413009', supplier: '广州报关行', feeType: '清关费', currency: 'HKD', rate: 0.92, amount: 300.00, remark: '', description: '' },
+                        { waybillNo: 'YD20260815001', supplier: 'UPS', feeType: '尾程派送费', currency: 'CNY', rate: 1.0, amount: 200.00, remark: '', description: '' }
+                    ];
+                };
+                const submitFlowImport = () => {
+                    if (!flowFileName.value) { ElMessage.warning('请先上传需要导入的文件'); return; }
+                    if (!flowImportPreview.value.length) { ElMessage.warning('文件中没有可导入的应付业务流水'); return; }
+                    const now = formatNow();
+                    const month = currentMonth();
+                    let seq = allFlows.value.length + 1;
+                    flowImportPreview.value.forEach(p => {
+                        const w = apWaybills.find(x => x.waybillNo === p.waybillNo) || {};
+                        allFlows.value.unshift({
+                            id: Date.now() + Math.floor(Math.random() * 1000),
+                            flowNo: 'FLW' + now.replace(/[-: ]/g, '').substring(0, 8) + String(seq).padStart(3, '0'),
+                            oaNo: '', supplier: p.supplier, waybillNo: p.waybillNo, blNo: '', feeType: p.feeType,
+                            transferNo: w.transferNo || '', currency: p.currency, rate: Number(p.rate || 1), amount: Number(p.amount || 0),
+                            remark: p.remark || '', description: p.description || '', billNo: '', createdBy: '财务-导入',
+                            bizTime: month, createdAt: now, auditStatus: '待业务审计'
+                        });
+                        seq += 1;
+                    });
+                    ElMessage.success('已导入 ' + flowImportPreview.value.length + ' 条应付业务流水');
+                    fileImportVisible.value = false;
+                };
 
                 const detailVisible = ref(false);
                 const detailRow = ref(null);
                 const openDetail = (row) => { detailRow.value = row; detailVisible.value = true; };
 
-                const handleSearch = () => { ElMessage.success('执行查询'); };
-                const resetSearch = () => {
-                    Object.assign(searchForm, { customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', auditStatus: '', billStatus: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
-                };
-
                 return {
-                    currencyOptions, currencySymbol, currencyName, formatMoney,
-                    entities, feeTypes,
-                    searchForm, searchExpanded, filteredFlows,
-                    totalAmount, auditedCount, pendingCount, billedCount, draftCount,
-                    detailVisible, detailRow, openDetail,
-                    handleSearch, resetSearch
+                    currencyOptions, currencySymbol, currencyName, formatMoney, formatRate, cnyAmount,
+                    feeTypes, supplierOptions, pricingUnits, blNoOptions,
+                    searchForm, searchExpanded, filteredFlows, handleSearch, resetSearch,
+                    addVisible, addRows, newAddRow, openAddDialog, addBatchAmountText, handleCurrencyChange, submitAdd,
+                    apWaybills, apWaybillLabel,
+                    selectedFlows, onSelectionChange, handleExport,
+                    deleteEligible, handleDelete,
+                    fileImportVisible, flowFileName, flowImportPreview, openFileImport, downloadFlowTemplate, onFlowFileChange, submitFlowImport,
+                    detailVisible, detailRow, openDetail
                 };
             }
         });

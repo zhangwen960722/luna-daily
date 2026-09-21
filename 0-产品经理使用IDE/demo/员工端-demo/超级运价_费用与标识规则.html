@@ -76,13 +76,6 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
           <el-tag :type="s.row.status==='正常'?'success':'danger'" size="small">{{ s.row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="优惠" width="110" align="center">
-        <template #default="s">
-          <span v-if="s.row._raw.action!=='charge'" style="color:#C0C4CC;font-size:12px">—</span>
-          <el-tag v-else-if="discountCountOf(s.row)" size="small" type="success" effect="plain">{{ discountCountOf(s.row) }} 条</el-tag>
-          <span v-else style="color:#C0C4CC;font-size:12px">未配置</span>
-        </template>
-      </el-table-column>
       <el-table-column label="操作" width="250" fixed="right" align="center" class-name="op-col">
         <template #default="s">
           <el-button size="small" @click="openEdit(s.row,s.$index)">编辑</el-button>
@@ -195,7 +188,7 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-form-item label="动作类型" required>
           <el-radio-group v-model="f.action" :disabled="identityLocked">
             <el-radio value="charge">加收费用</el-radio>
-            <el-radio value="flag">标识提醒</el-radio>
+            <el-radio value="flag" v-if="f.type!=='manual'">标识提醒</el-radio>
           </el-radio-group>
         </el-form-item>
         <div style="margin-left:110px;padding:8px 12px;background:#FAFAFA;border-radius:4px;font-size:12px;color:var(--text-secondary);margin-bottom:8px" v-if="f.action==='charge'">在运单费用中增加一项收费</div>
@@ -357,8 +350,8 @@ data:function(){
         _raw:{id:'R005',type:'field',action:'charge',node:'receive',conditions:[{dim:'sku',val:'powder'}],ml:'',pricingRows:[{dir:'r',feeLabel:'出口费用',pu:'cbm',price:200,currency:'rmb'}],tagId:2,status:'active'}},
       {name:'商业地址加收',type:'字段匹配',action:'加收',node:'运单收货完成',cond:'尾程派送方式=快递派 AND 地址类型=商业地址',pricing:'按票 50元',feeLabel:'派送费用',direction:'应收',status:'正常',
         _raw:{id:'R003',type:'field',action:'charge',node:'receive',conditions:[{dim:'lastMile',val:'express'},{dim:'address',val:'commercial'}],ml:'',pricingRows:[{dir:'r',feeLabel:'派送费用',pu:'ticket',price:50,currency:'rmb'}],tagId:5,status:'active'}},
-      {name:'贴标费',type:'人工添加',action:'加收',node:'人工触发',cond:'人工勾选贴标+填张数',pricing:'按数量 2元',feeLabel:'增值服务',direction:'应收',status:'已冻结',
-        _raw:{id:'R004',type:'manual',action:'charge',node:'manual',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'增值服务',pu:'unit',price:2,currency:'rmb'}],tagId:6,status:'disabled'}}
+      {name:'贴标费',type:'人工添加',action:'加收',node:'人工触发',cond:'人工勾选贴标+填张数',pricing:'按数量 2元',feeLabel:'增值服务',direction:'应收',status:'正常',
+        _raw:{id:'R004',type:'manual',action:'charge',node:'manual',ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'增值服务',pu:'unit',price:2,currency:'rmb'}],tagId:6,status:'active'}}
     ],
     surchargeDiscounts:[
       {name:'S-粉末品名加收减0.30',surchargeRule:'粉末品名加收',targetTypeLabel:'客户等级',targetName:'S',modeLabel:'固定减免',val:'-0.30',priorityLabel:'中（客户等级）',validityLabel:'永久有效',status:'生效中',
@@ -373,7 +366,7 @@ data:function(){
 },
 computed:{
   dimOptions:function(){if(this.f.type==='fieldFormula'){return [{label:'服务组合',value:'combination'}]}return [{label:'尾程派送方式',value:'lastMile'},{label:'地址类型（第三方查询）',value:'address'},{label:'SKU属性（取自商品管理）',value:'sku'},{label:'是否FBA运单',value:'isFba'},{label:'报关方式',value:'customsMode'},{label:'自送标识',value:'selfDelivery'},{label:'出口先查后装模式（取自运单）',value:'exportInspectFirst'},{label:'邮编（第三方查询）',value:'zip'},{label:'交货站点（取自仓库列表-本地仓）',value:'warehouse'},{label:'服务组合',value:'combination'},{label:'用户',value:'user'}]},
-  pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'}]},
+  pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'},{label:'按箱',value:'box'}]},
   receivablePrice:function(){var rows=this.f.pricingRows||[];for(var i=0;i<rows.length;i++){if(rows[i].dir==='r'&&rows[i].price!==null&&rows[i].price!==undefined)return Number(rows[i].price)}return null},
   isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status === '已冻结'; },
   // 规则骨架锁定（编辑态）：规则类型 / 动作类型 / 维度 一旦落库即不可改 —— 改它们等于换成另一条规则，
@@ -422,7 +415,7 @@ methods:{
   onCondDimChange:function(row){row.val=this.isMultiDim(row.dim)?[]:''},
   
   
-  onTypeChange:function(){var opts=this.pricingUnitOptions.map(function(u){return u.value});var row=this.f.pricingRows[0];if(row&&opts.indexOf(row.pu)===-1){row.pu=opts[0]}var dl=this.dimOptions.map(function(d){return d.value});var d0=this.dimOptions[0];this.f.conditions.forEach(function(cc){if(dl.indexOf(cc.dim)===-1){cc.dim=d0.value;cc.val=[]}});if(this.f.type==='fieldFormula'&&this.f.conditions.length>1){this.f.conditions=[this.f.conditions[0]]}},
+  onTypeChange:function(){var opts=this.pricingUnitOptions.map(function(u){return u.value});var row=this.f.pricingRows[0];if(row&&opts.indexOf(row.pu)===-1){row.pu=opts[0]}var dl=this.dimOptions.map(function(d){return d.value});var d0=this.dimOptions[0];this.f.conditions.forEach(function(cc){if(dl.indexOf(cc.dim)===-1){cc.dim=d0.value;cc.val=[]}});if(this.f.type==='fieldFormula'&&this.f.conditions.length>1){this.f.conditions=[this.f.conditions[0]]};if(this.f.type==='manual'&&this.f.action==='flag'){this.f.action='charge'}},
   checkSpecialWorse:function(){var self=this,out=[];var lvlOf=function(cid){for(var i=0;i<self.customerList.length;i++){if(self.customerList[i].id===cid)return self.customerList[i].level}return null};var rules=self.d.rules||[];for(var i=0;i<rules.length;i++){var r=rules[i];if(r.targetType!=="special"||r.mode!=="fixed")continue;var custs=r.targetCustomers||[];for(var j=0;j<custs.length;j++){var cid=custs[j],lv=lvlOf(cid);if(!lv)continue;var lvRule=null;for(var k=0;k<rules.length;k++){var q=rules[k];if(q.targetType==="level"&&q.mode==="fixed"&&(q.targetLevels||[]).indexOf(lv)!==-1){lvRule=q;break}}if(!lvRule)continue;if(Number(r.val)>Number(lvRule.val)){out.push("附加费优惠第 "+(i+1)+" 行：给「"+self.custNameById(cid)+"」（"+lv+"级）的特批 "+Number(r.val).toFixed(2)+" 比该等级的 "+Number(lvRule.val).toFixed(2)+" 更差，客户将按更差的执行")}}}return out},
   onDiscountTargetTypeChange:function(row){if(row.targetType==='special'){row.targetLevels=[]}else{row.targetCustomers=[];row.approvalNo=''}},
   onDiscountModeChange:function(row){if(row.mode==='rate'){row.val=0.9}else{row.val=-0.5}},
@@ -431,13 +424,6 @@ methods:{
   // ★ 列表「附加费标识」列：按 id 取标识名与颜色
   tagLabelOf:function(id){var l=this.surchargeTags||[];for(var i=0;i<l.length;i++){if(String(l[i].id)===String(id))return l[i].label}return (id===null||id===undefined||id==='')?'':('#'+id)},
   tagColorOf:function(id){var l=this.surchargeTags||[];for(var i=0;i<l.length;i++){if(String(l[i].id)===String(id))return l[i].color}return '#C0C4CC'},
-  // ★ 列表「优惠」列：统计该规则生效中的优惠条数（标识提醒型恒为 0）
-  discountCountOf:function(row){
-    var raw=row._raw||{};
-    if(raw.action!=='charge')return 0;
-    var id=raw.id||'';
-    return (this.surchargeDiscounts||[]).filter(function(d){return d._raw&&d._raw.ruleId===id&&d.status==='生效中'}).length;
-  },
   // ★ 打开独立优惠配置弹窗
   openDiscount:function(row){
     var raw=row._raw||{};

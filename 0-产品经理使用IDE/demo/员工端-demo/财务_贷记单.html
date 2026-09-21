@@ -267,18 +267,21 @@
                 <el-table :data="currentFlows" border style="width: 100%;" max-height="260">
                     <el-table-column prop="waybillNo" label="运单号" width="150"></el-table-column>
                     <el-table-column prop="feeType" label="费用类型" width="120"></el-table-column>
+                    <el-table-column prop="pricingUnit" label="计价单位" width="100" align="center"></el-table-column>
+                    <el-table-column label="单价" width="110" align="right">
+                        <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.unitPrice) }}</template>
+                    </el-table-column>
                     <el-table-column label="币种" width="80" align="center">
                         <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                     </el-table-column>
                     <el-table-column label="汇率" width="100" align="right">
                         <template #default="scope">{{ Number(scope.row.rate).toFixed(6) }}</template>
                     </el-table-column>
-                    <el-table-column label="单价" width="110" align="right">
-                        <template #default="scope">{{ moneySigned(scope.row.currency, scope.row.unitPrice) }}</template>
-                    </el-table-column>
-                    <el-table-column prop="pricingUnit" label="计价单位" width="100" align="center"></el-table-column>
-                    <el-table-column label="金额" width="120" align="right">
+                    <el-table-column label="金额（原币）" width="120" align="right">
                         <template #default="scope"><span style="font-weight: 600; color: #F56C6C;">{{ moneySigned(scope.row.currency, scope.row.amount) }}</span></template>
+                    </el-table-column>
+                    <el-table-column label="金额（本币）" width="120" align="right">
+                        <template #default="scope"><span style="color: #F56C6C;">¥{{ baseAmountText(scope.row) }}</span></template>
                     </el-table-column>
                     <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip></el-table-column>
                     <el-table-column v-if="billEditable" label="操作" width="90" align="center" fixed="right">
@@ -385,6 +388,8 @@
                 const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const formatSigned = (val) => { const v = Number(val) || 0; return (v < 0 ? '-' : '') + formatMoney(Math.abs(v)); };
                 const moneySigned = (cur, val) => currencySymbol(cur) + formatSigned(val);
+                // 金额（本币）= 金额（原币）× 汇率（只读、前端派生展示，不落库；本币 = 人民币 ¥）
+                const baseAmountText = (row) => { const v = Number(((Number(row && row.amount) || 0) * (Number(row && row.rate) || 1)).toFixed(2)); return (v < 0 ? '-' : '') + formatMoney(Math.abs(v)); };
                 const entityOptions = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
                 const entityCodeMap = { '广州飞点': 'GZ', '深圳飞点': 'SZ', '广东飞点': 'GD', '香港富力顿': 'HK', '墨链': 'ML' };
                 const pad = (n) => String(n).padStart(2, '0');
@@ -719,7 +724,7 @@
                 initDeepLink();
 
                 return {
-                    currencyName, moneySigned, entityOptions,
+                    currencyName, moneySigned, baseAmountText, entityOptions,
                     bills, search, searchExpanded, activeTab, handleSearch, resetSearch,
                     pendingBills, sentBills, settledBills, voidedBills,
                     sendStatusTag, confirmStatusTag, confirmInfo, settledAtOf, isSettled,

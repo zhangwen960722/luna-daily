@@ -171,8 +171,11 @@
                             <template #default="scope">{{ formatSigned(scope.row.unitPrice) }}</template>
                         </el-table-column>
                         <el-table-column prop="pricingUnit" label="计价单位" width="90" align="center"></el-table-column>
-                        <el-table-column label="金额" width="120" align="right">
+                        <el-table-column label="金额（原币）" width="120" align="right">
                             <template #default="scope"><span :style="amountStyle(scope.row)">{{ moneySigned(scope.row.currency, scope.row.amount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="金额（本币）" width="120" align="right">
+                            <template #default="scope"><span :style="amountStyle(scope.row)">¥{{ baseAmountText(scope.row) }}</span></template>
                         </el-table-column>
                         <el-table-column prop="description" label="描述" width="180" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="remark" label="备注" width="160" show-overflow-tooltip></el-table-column>
@@ -537,14 +540,21 @@
                         <template #default="scope">{{ formatVolume(scope.row.volume) }}</template>
                     </el-table-column>
                     <el-table-column prop="feeType" label="费用类型" width="100"></el-table-column>
+                    <el-table-column prop="pricingUnit" label="计价单位" width="90" align="center"></el-table-column>
                     <el-table-column label="单价" width="80" align="right">
                         <template #default="scope">{{ formatSigned(scope.row.unitPrice) }}</template>
                     </el-table-column>
-                    <el-table-column label="金额" width="110" align="right">
-                        <template #default="scope"><span :style="amountStyle(scope.row)">{{ moneySigned(currentBill.currency, scope.row.amount) }}</span></template>
-                    </el-table-column>
                     <el-table-column label="币种" width="65" align="center">
                         <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                    </el-table-column>
+                    <el-table-column label="汇率" width="90" align="right">
+                        <template #default="scope">{{ formatRate(scope.row.rate) }}</template>
+                    </el-table-column>
+                    <el-table-column label="金额（原币）" width="110" align="right">
+                        <template #default="scope"><span :style="amountStyle(scope.row)">{{ moneySigned(currentBill.currency, scope.row.amount) }}</span></template>
+                    </el-table-column>
+                    <el-table-column label="金额（本币）" width="110" align="right">
+                        <template #default="scope"><span :style="amountStyle(scope.row)">¥{{ baseAmountText(scope.row) }}</span></template>
                     </el-table-column>
                     <el-table-column prop="description" label="描述" width="200" show-overflow-tooltip></el-table-column>
                     <el-table-column prop="declareWay" label="报关方式" width="85" align="center"></el-table-column>
@@ -892,6 +902,8 @@
                     fontWeight: 600,
                     color: row.amount < 0 ? '#F56C6C' : '',
                 });
+                // 金额（本币）= 金额（原币）× 汇率（只读、前端派生展示，不落库；本币 = 人民币 ¥）
+                const baseAmountText = (row) => { const v = Number(((Number(row && row.amount) || 0) * (Number(row && row.rate) || 1)).toFixed(2)); return (v < 0 ? '-' : '') + formatMoney(Math.abs(v)); };
 
                 const pad = (n) => String(n).padStart(2, '0');
                 const fmtDate = (dt) => dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate());
@@ -2248,7 +2260,7 @@
                 return {
                     // 公共
                     DEMO_TODAY, REF_BILLING_DATE, currencyOptions, entityOptions, customerOptions, nicknameOptions, currencySymbol, currencyName,
-                    formatMoney, formatSigned, formatRate, formatWeight, formatVolume, formatDensity, moneySigned, amountStyle,
+                    formatMoney, formatSigned, formatRate, formatWeight, formatVolume, formatDensity, moneySigned, amountStyle, baseAmountText,
                     sendStatusTag, confirmStatusTag, writeoffStatusTag, handleSearch, resetSearch,
                     // 导出账单（「已发送」Tab 工具栏；**必须先勾选**）
                     exportVisible, exportForm, exportSelection, exportRows, onExportSelectionChange, openExport, submitExport,

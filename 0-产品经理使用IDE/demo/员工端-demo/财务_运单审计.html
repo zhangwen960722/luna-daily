@@ -288,7 +288,6 @@
         .fee-add-card { border: 1px solid var(--el-border-color-lighter); border-radius: 8px; padding: 12px 14px 2px; margin-bottom: 12px; background: #fff; }
         .fee-add-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .fee-add-card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--el-text-color-primary); }
-        .fee-add-hint { font-size: 12px; font-weight: 400; color: #E6A23C; cursor: help; border-bottom: 1px dashed #E6A23C; }
         .fee-add-card-sub { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary); }
         .fee-add-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
         .fee-add-field-label { font-size: 12px; color: var(--el-text-color-secondary); }
@@ -414,8 +413,8 @@
                     <el-table-column prop="user" label="客户昵称" width="110" show-overflow-tooltip></el-table-column>
                     <el-table-column prop="sales" label="销售代表" width="100" align="center"></el-table-column>
                     <el-table-column prop="service" label="服务组合" min-width="200" show-overflow-tooltip></el-table-column>
-                    <el-table-column label="提单柜号" min-width="150" show-overflow-tooltip>
-                    <template #default="scope">{{ (scope.row.blNo || '') + (scope.row.containerNo ? ' / ' + scope.row.containerNo : '') }}</template>
+                    <el-table-column label="提单号" min-width="150" show-overflow-tooltip>
+                    <template #default="scope">{{ rowBlNosText(scope.row) }}</template>
                     </el-table-column>
                     <el-table-column prop="warehouseCode" label="仓库代码" width="110" align="center"></el-table-column>
                     <el-table-column prop="receiver" label="收件人" width="100" show-overflow-tooltip></el-table-column>
@@ -442,15 +441,15 @@
                                 <el-table-column label="审计状态" width="104" align="center">
                                     <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : (s.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
                                 </el-table-column>
-                                <el-table-column label="金额" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
+                                <el-table-column label="金额（原币）" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
                                 <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
                                 <el-table-column v-if="rowHasRate(scope.row, 'ar')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
-                                <el-table-column v-if="rowHasRate(scope.row, 'ar')" label="折合 CNY" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
+                                <el-table-column v-if="rowHasRate(scope.row, 'ar')" label="金额（本币）" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
                             </el-table>
                             <div style="margin-top:8px;font-size:12px;color:var(--el-text-color-secondary);">
                                 总额 <b style="color:var(--el-text-color-primary);">{{ rowDirTotalText(scope.row, 'ar') }}</b>
                                 <span v-if="rowMultiCurrency(scope.row, 'ar')" style="margin-left:10px;">原币小计：{{ rowDirSubtotalText(scope.row, 'ar') }}</span>
-                                <span v-if="rowHasRate(scope.row, 'ar')" style="margin-left:10px;">折合口径 = 金额 × 汇率</span>
+                                <span v-if="rowHasRate(scope.row, 'ar')" style="margin-left:10px;">金额（本币）= 金额（原币）× 汇率</span>
                             </div>
                         </el-popover>
                         <span v-else style="color:var(--el-text-color-secondary);">—</span>
@@ -468,15 +467,15 @@
                                 <el-table-column label="审计状态" width="104" align="center">
                                     <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : (s.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
                                 </el-table-column>
-                                <el-table-column label="金额" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
+                                <el-table-column label="金额（原币）" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
                                 <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
                                 <el-table-column v-if="rowHasRate(scope.row, 'ap')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
-                                <el-table-column v-if="rowHasRate(scope.row, 'ap')" label="折合 CNY" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
+                                <el-table-column v-if="rowHasRate(scope.row, 'ap')" label="金额（本币）" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
                             </el-table>
                             <div style="margin-top:8px;font-size:12px;color:var(--el-text-color-secondary);">
                                 总额 <b style="color:var(--el-text-color-primary);">{{ rowDirTotalText(scope.row, 'ap') }}</b>
                                 <span v-if="rowMultiCurrency(scope.row, 'ap')" style="margin-left:10px;">原币小计：{{ rowDirSubtotalText(scope.row, 'ap') }}</span>
-                                <span v-if="rowHasRate(scope.row, 'ap')" style="margin-left:10px;">折合口径 = 金额 × 汇率</span>
+                                <span v-if="rowHasRate(scope.row, 'ap')" style="margin-left:10px;">金额（本币）= 金额（原币）× 汇率</span>
                             </div>
                         </el-popover>
                         <span v-else style="color:var(--el-text-color-secondary);">—</span>
@@ -526,12 +525,9 @@
                     </template>
                     </el-table-column>
                     <el-table-column prop="supplier" label="供应商" width="110" align="center"></el-table-column>
-                    <el-table-column label="操作" width="150" fixed="right" align="center">
+                    <el-table-column label="操作" width="80" fixed="right" align="center">
                     <template #default="scope">
                         <el-button link type="primary" size="small" @click.stop="openDetail(scope.row)">详情</el-button>
-                        <el-tooltip :disabled="waybillRowReversible(scope.row)" content="该运单应收/应付均未审计，无可反审计内容" placement="top">
-                            <span><el-button link type="danger" size="small" :disabled="!waybillRowReversible(scope.row)" @click.stop="openWaybillAudit('reverse', scope.row)">反审计</el-button></span>
-                        </el-tooltip>
                     </template>
                     </el-table-column>
 </el-table>
@@ -1279,9 +1275,9 @@
         <el-dialog v-model="dialogImport" title="导入运单" width="700px" append-to-body @close="resetImport">
             <div style="padding: 24px 24px 0;">
                 <el-steps :active="importStep" align-center finish-status="success">
-                    <el-step title="下载模板" description="选择客户并下载对应模板" />
-                    <el-step title="上传文件" description="填写后上传" />
-                    <el-step title="查看结果" description="确认导入结果" />
+                    <el-step title="下载模板" description="选择客户并下载对应模板"></el-step>
+                    <el-step title="上传文件" description="填写后上传"></el-step>
+                    <el-step title="查看结果" description="确认导入结果"></el-step>
                 </el-steps>
             </div>
 
@@ -2196,8 +2192,8 @@
                                         </div>
                                         </div>
                                         <el-table :data="currentArFlows" @selection-change="handleFeeArSelectionChange" border size="small" class="fee-flow-table">
-                                        <el-table-column type="selection" width="46" align="center"></el-table-column>
-                                            <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                        <el-table-column type="selection" width="46" align="center" fixed="left"></el-table-column>
+                                            <el-table-column prop="type" label="费用类型" min-width="112" fixed="left" show-overflow-tooltip></el-table-column>
                                 <el-table-column label="审计状态" width="104" align="center">
                                     <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : (s.row.auditStatus === '已红冲' ? 'danger' : 'warning')">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
                                 </el-table-column>
@@ -2206,7 +2202,8 @@
                                             <el-table-column label="单价" width="88" align="right"><template #default="scope"><span :style="{color: scope.row.unitPrice < 0 ? 'var(--el-color-danger)' : ''}">{{ scope.row.unitPrice }}</span></template></el-table-column>
                                             <el-table-column label="计价单位" width="76" align="center"><template #default="scope">{{ scope.row.unit || '—' }}</template></el-table-column>
                                             <el-table-column label="计费量" width="72" align="center"><template #default="scope">{{ scope.row.quantity }}</template></el-table-column>
-                                            <el-table-column label="金额" width="100" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
+                                            <el-table-column label="金额（原币）" width="104" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
+                                            <el-table-column label="金额（本币）" width="106" align="right"><template #default="scope"><span :style="{fontWeight:600, color: flowCnyValue(scope.row) < 0 ? 'var(--el-color-danger)' : ''}">¥ {{ cnyFormat(flowCnyValue(scope.row)) }}</span></template></el-table-column>
                                             <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
                                             <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
@@ -2220,14 +2217,14 @@
                                             </el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
-                                            <el-table-column label="操作" width="156" align="center" class-name="fee-op-cell">
+                                            <el-table-column label="操作" width="156" align="center" fixed="right" class-name="fee-op-cell">
                                             <template #default="scope">
                                             <el-button link type="primary" size="small" @click="openFeeArDetail(scope.row)">详情</el-button>
                                             <el-tooltip :disabled="feeRowEditable(scope.row)" :content="feeRowLockReason(scope.row)" placement="top">
                                                 <span><el-button link type="primary" size="small" :disabled="!feeRowEditable(scope.row)" @click="openFeeArEdit(scope.row)">编辑</el-button></span>
                                             </el-tooltip>
                                             <el-tooltip :disabled="feeRowEditable(scope.row)" :content="feeRowLockReason(scope.row)" placement="top">
-                                                <span><el-button link type="danger" size="small" :disabled="!feeRowEditable(scope.row)" @click="feeArFlows.splice(scope.$index, 1)">删除</el-button></span>
+                                                <span><el-button link type="danger" size="small" :disabled="!feeRowEditable(scope.row)" @click="removeArFlow(scope.$index)">删除</el-button></span>
                                             </el-tooltip>
                                             </template>
                                             </el-table-column>
@@ -2238,38 +2235,48 @@
                                             <div><span style="color:var(--el-text-color-regular);">流水条数：</span><span style="font-weight:bold; font-size:16px; color:var(--el-color-danger);">{{ currentApFlows.length }}</span></div>
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <el-tooltip :disabled="feeWaybillOperable('ap')" :content="feeWaybillLockReason('ap')" placement="top">
-                                                    <span><el-button type="primary" size="small" :disabled="!feeWaybillOperable('ap')" @click="dialogFeeAp = true">新增流水</el-button></span>
+                                                    <span><el-button type="primary" size="small" :disabled="!feeWaybillOperable('ap')" @click="openFeeApDialog('detail')">新增流水</el-button></span>
                                                 </el-tooltip>
                                                 <el-button size="small" :disabled="!canRowAuditAp" @click="submitRowAudit('audit', 'ap')">审计</el-button>
                                                 <el-button size="small" type="danger" plain :disabled="!canRowReverseAuditAp" @click="submitRowAudit('reverse', 'ap')">反审计</el-button>
                                             </div>
                                         </div>
-                                        <el-table :data="currentApFlows" @selection-change="handleFeeApSelectionChange" border size="small">
-                                        <el-table-column type="selection" width="46" align="center"></el-table-column>
-                                            <el-table-column prop="type" label="费用类型" min-width="110"></el-table-column>
-                                            <el-table-column label="币种" width="80" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
-                                            <el-table-column prop="rate" label="汇率" width="70" align="center"></el-table-column>
-                                            <el-table-column label="金额" width="100" align="right"><template #default="scope">{{ scope.row.amount }}</template></el-table-column>
-                                            <el-table-column prop="quantity" label="数量" width="70" align="center"></el-table-column>
-                                            <el-table-column prop="remark" label="备注" min-width="110"></el-table-column>
-                                            <el-table-column prop="time" label="业务时间" width="150"></el-table-column>
-                                            <el-table-column prop="source" label="数据来源" width="90" align="center"></el-table-column>
-                                            <el-table-column label="审计状态" width="104" align="center">
-                                            <template #default="scope">
-                                                <el-tag size="small" :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
-                                            </template>
+                                        <el-table :data="currentApFlows" @selection-change="handleFeeApSelectionChange" border size="small" class="fee-flow-table">
+                                        <el-table-column type="selection" width="46" align="center" fixed="left"></el-table-column>
+                                            <el-table-column label="提单平摊" min-width="150" align="center" fixed="left">
+                                                <template #default="scope"><span>{{ scope.row.blAmortize || '—' }}</span></template>
                                             </el-table-column>
-                                            <el-table-column label="操作" width="120" align="center">
+                                            <el-table-column prop="type" label="费用类型" min-width="110" fixed="left" show-overflow-tooltip></el-table-column>
+                                            <el-table-column label="审计状态" width="104" align="center">
+                                            <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : 'warning'">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
+                                            </el-table-column>
+                                            <el-table-column label="币种" width="64" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
+                                            <el-table-column prop="rate" label="汇率" width="64" align="center"></el-table-column>
+                                            <el-table-column label="金额" width="100" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
+                                            <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip></el-table-column>
+                                            <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
+                                            <el-table-column prop="supplier" label="供应商" width="110" align="center" show-overflow-tooltip></el-table-column>
+                                            <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
+                                            <el-table-column label="关联账单" width="180" align="center">
+                                                <template #default="scope">
+                                                    <el-tooltip v-if="scope.row.billNo" content="在账单管理中查看" placement="top">
+                                                        <span class="bill-link" @click="jumpToBill(scope.row.billNo)"><el-tag size="small" type="warning">{{ scope.row.billNo }}</el-tag></span>
+                                                    </el-tooltip>
+                                                    <span v-else style="color:var(--el-text-color-secondary);">—</span>
+                                                </template>
+                                            </el-table-column>
+                                            <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip></el-table-column>
+                                            <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
+                                            <el-table-column label="操作" width="120" align="center" fixed="right" class-name="fee-op-cell">
                                             <template #default="scope">
                                                 <el-tooltip :disabled="feeRowEditable(scope.row)" :content="feeRowLockReason(scope.row)" placement="top">
                                                     <span><el-button link type="primary" size="small" :disabled="!feeRowEditable(scope.row)" @click="feeApEditRow = Object.assign({}, scope.row)">编辑</el-button></span>
                                                 </el-tooltip>
                                                 <el-tooltip :disabled="feeRowEditable(scope.row)" :content="feeRowLockReason(scope.row)" placement="top">
-                                                    <span><el-button link type="danger" size="small" :disabled="!feeRowEditable(scope.row)" @click="feeApFlows.splice(scope.$index, 1)">删除</el-button></span>
+                                                    <span><el-button link type="danger" size="small" :disabled="!feeRowEditable(scope.row)" @click="removeApFlow(scope.$index)">删除</el-button></span>
                                                 </el-tooltip>
                                             </template>
                                             </el-table-column>
-
                                         </el-table>
                                     </el-tab-pane>
                                 </el-tabs>
@@ -2680,13 +2687,12 @@
         <el-dialog :model-value="!!feeArDetail" title="流水详情" width="720px" append-to-body @update:model-value="feeArDetail = null">
             <el-descriptions v-if="feeArDetail" :column="2" border size="small">
                 <el-descriptions-item label="费用类型">{{ feeArDetail.type }}</el-descriptions-item>
-                <el-descriptions-item label="金额">{{ feeArDetail.currency }} {{ feeAmountText(feeArDetail) }}</el-descriptions-item>
-                <el-descriptions-item label="来源类型">{{ feeArDetail.sourceType === 20 ? '人工添加' : '系统自动计算' }}</el-descriptions-item>
-                <el-descriptions-item label="描述" :span="2">{{ feeArDetail.description || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="金额（原币）">{{ feeArDetail.currency }} {{ feeAmountText(feeArDetail) }}</el-descriptions-item>
+                <el-descriptions-item label="金额（本币）">¥ {{ cnyFormat(flowCnyValue(feeArDetail)) }}</el-descriptions-item>
                 <el-descriptions-item label="数据来源">{{ feeArDetail.source || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="描述" :span="2">{{ feeArDetail.description || '—' }}</el-descriptions-item>
                 <el-descriptions-item label="来源规则类型">{{ feeArDetail.sourceRuleType ? feeRuleTypeLabel(feeArDetail.sourceRuleType) : '—' }}</el-descriptions-item>
                 <el-descriptions-item label="来源规则ID">{{ feeArDetail.sourceRuleId || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="生成节点">{{ generateNodeLabel(feeArDetail) }}</el-descriptions-item>
                 <el-descriptions-item label="来源规则名（快照）" :span="2">{{ feeArDetail.sourceRuleName || '—' }}</el-descriptions-item>
                 <el-descriptions-item label="创建人">{{ feeArDetail.createdBy || '—' }}</el-descriptions-item>
                 <el-descriptions-item label="拣货时间">{{ feeArDetail.pickTime || '—' }}</el-descriptions-item>
@@ -2974,75 +2980,96 @@
                 <div class="fee-add-card-head">
                     <span class="fee-add-card-title">
                         流水 {{ idx + 1 }}
-                        <el-tooltip v-if="row.autoHint" :content="row.autoHint" placement="top"><span class="fee-add-hint">通常自动生成</span></el-tooltip>
                         <span v-if="feeAddWaybillOptions.length > 1" class="fee-add-card-sub">× {{ feeRowWaybills(row).length }} 票 · 合计 {{ feeBatchAmountText(row) }}</span>
                     </span>
-                    <el-button link type="danger" size="small" @click="feeArList.splice(idx, 1)">删除</el-button>
+                    <el-button link type="danger" size="small" :disabled="feeArList.length <= 1" :title="feeArList.length <= 1 ? '至少保留一条业务流水' : ''" @click="feeArList.splice(idx, 1)">删除</el-button>
                 </div>
                 <el-row :gutter="12">
-                    <el-col v-if="feeAddWaybillOptions.length > 1" :span="24"><div class="fee-add-field"><span class="fee-add-field-label">适用运单 <i class="req">*</i><span class="fee-add-tag-note">（一条费用 × M 票 = M 条流水，可逐票取消）</span></span><el-select v-model="row.waybillNos" multiple size="small" style="width:100%" collapse-tags collapse-tags-tooltip placeholder="请选择适用运单"><el-option v-for="no in feeAddWaybillOptions" :key="no" :label="no" :value="no" :disabled="feeAddWaybillDisabled(no)"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.type" size="small" style="width:100%" placeholder="请选择" @change="handleFeeArTypeChange(row)"><el-option v-for="t in feeTypeArOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">来源规则（可选 · 按规则带出单价并自动打标）</span><el-select v-if="(row.rules || []).length" v-model="row.ruleId" size="small" style="width:100%" clearable placeholder="不选则自由填写" @change="handleFeeArRuleChange(row)"><el-option v-for="r in row.rules" :key="r.id" :label="r.name" :value="r.id"></el-option></el-select><el-input v-else disabled placeholder="该费用类型未绑定规则" size="small"></el-input></div></el-col>
+                    <el-col v-if="feeAddWaybillOptions.length > 1" :span="24"><div class="fee-add-field"><span class="fee-add-field-label">适用运单 <i class="req">*</i><span class="fee-add-tag-note">（带出主列表勾选的运单，不可修改）</span></span><div style="display:flex; flex-wrap:wrap; gap:6px;"><el-tag v-for="no in feeAddWaybillOptions" :key="no" size="small" effect="plain" :type="feeAddWaybillDisabled(no) ? 'info' : 'primary'">{{ no }}</el-tag></div></div></el-col>
+                    <el-col :span="24"><div class="fee-add-field"><el-radio-group v-model="row.kind" size="small" @change="handleFeeArKindChange(row)"><el-radio-button label="nonsurcharge">直接填写</el-radio-button><el-radio-button label="surcharge">按规则</el-radio-button></el-radio-group></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.type" size="small" style="width:100%" placeholder="请选择" filterable @change="handleFeeArTypeChange(row)"><el-option v-for="t in feeTypeArOptionsOf(row)" :key="t" :label="t" :value="t"></el-option></el-select></div></el-col>
+                    <el-col :span="8" v-if="!feeArRowIsDirect(row)"><div class="fee-add-field"><span class="fee-add-field-label">来源规则（可选 · 按规则带出单价并自动打标）</span><el-select v-if="(row.rules || []).length" v-model="row.ruleId" size="small" style="width:100%" clearable placeholder="不选则自由填写" @change="handleFeeArRuleChange(row)"><el-option v-for="r in row.rules" :key="r.id" :label="r.name" :value="r.id"></el-option></el-select><el-input v-else disabled placeholder="该费用类型未绑定规则" size="small"></el-input></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="row.currency" size="small" style="width:100%" :disabled="feeArRowLocked(row)" @change="handleFeeCurrencyChange(row)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="row.rate" size="small" :disabled="feeArRowLocked(row)"></el-input></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" :disabled="feeArRowLocked(row)" @change="handleFeeUnitPriceChange(row)"></el-input-number></div></el-col>
+                    <el-col :span="8" v-if="!feeArRowIsDirect(row)"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" @change="handleFeeArUnitPriceChange(row)"></el-input-number></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位</span><el-select v-model="row.unit" size="small" style="width:100%" :disabled="feeArRowLocked(row)"><el-option v-for="u in pricingUnitOptions" :key="u" :label="u" :value="u"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计费量 <i class="req">*</i></span><el-input-number v-model="row.quantity" size="small" style="width:100%" :controls="false" @change="handleFeeUnitPriceChange(row)"></el-input-number></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">{{ feeAddWaybillOptions.length > 1 ? '合计金额（= 单价 × 计费量 × 票数）' : '金额（= 单价 × 计费量）' }}</span><div class="fee-add-amount">{{ row.currency }} {{ feeAddWaybillOptions.length > 1 ? feeBatchAmountText(row) : feeAmountText(row) }}</div></div></el-col>
+                    <el-col :span="8" v-if="!feeArRowIsDirect(row)"><div class="fee-add-field"><span class="fee-add-field-label">计费量 <i class="req">*</i></span><el-input-number v-model="row.quantity" size="small" style="width:100%" :controls="false" @change="handleFeeUnitPriceChange(row)"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">{{ feeArRowIsDirect(row) ? (feeAddWaybillOptions.length > 1 ? '金额（原币 · 每票 · 直接填）' : '金额（原币 · 直接填）') : (feeAddWaybillOptions.length > 1 ? '合计金额（原币 · 单价 × 计费量 × 票数）' : '金额（原币 · 单价 × 计费量）') }}</span><el-input-number v-if="feeArRowIsDirect(row)" v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number><div v-else class="fee-add-amount">{{ row.currency }} {{ feeAddWaybillOptions.length > 1 ? feeBatchAmountText(row) : feeAmountText(row) }}</div></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（本币）</span><div class="fee-add-amount">¥ {{ feeArCnyAmountText(row) }}</div></div></el-col>
                     <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">描述（面向客户）</span><el-input v-model="row.description" size="small" placeholder="如：超重超长按实测尺寸计收"></el-input></div></el-col>
                     <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">备注（仅内部）</span><el-input v-model="row.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
                 </el-row>
                 <div v-if="row.ruleTag" class="fee-add-tag">关联标识<el-tag size="small" type="danger" effect="plain">{{ row.ruleTag }}</el-tag><span class="fee-add-tag-note">保存后自动打在运单上（与规则自动命中时的打标口径一致）</span></div>
+                <div v-if="feeArDiscount(row)" class="fee-add-tag">连带优惠<el-tag size="small" type="success" effect="plain">{{ feeArDiscount(row).name }}</el-tag><span class="fee-add-tag-note">保存后自动生成一条附加费优惠流水（优惠值 {{ feeArDiscount(row).unitPrice }} × 计费量）</span></div>
             </div>
             <el-button plain size="small" style="width:100%;" @click="feeArList.push(newFeeRow())">＋ 添加一行</el-button>
             <template #footer><el-button @click="dialogFeeAr = false">取消</el-button><el-button type="primary" @click="saveFeeAr">保存</el-button></template>
         </el-dialog>
 
-        <!-- 编辑应收流水：人工添加行可改金额口径；系统自动行只放行 描述 / 内部备注 -->
-        <el-dialog :model-value="!!feeArEdit" title="编辑应收流水" width="760px" append-to-body @update:model-value="feeArEdit = null">
-            <el-form v-if="feeArEdit" label-width="90px">
-                <div v-if="feeEditLocked" style="margin: 0 0 14px 90px;"><el-tag size="small" type="info" effect="plain">系统自动计算 · 仅可修改描述与内部备注</el-tag></div>
-                <el-row :gutter="16">
-                    <el-col :span="24"><el-form-item label="费用类型"><el-input :value="feeArEdit.type" disabled></el-input></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="币种"><el-select v-model="feeArEdit.currency" style="width:100%" :disabled="feeEditLocked" @change="handleFeeCurrencyChange(feeArEdit)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="汇率"><el-input v-model="feeArEdit.rate" :disabled="feeEditLocked"></el-input></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="金额"><el-input-number v-model="feeArEdit.amount" :controls="false" :precision="2" style="width:100%" :disabled="feeEditLocked"></el-input-number></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="单价"><el-input-number v-model="feeArEdit.unitPrice" :controls="false" :precision="2" style="width:100%" :disabled="feeEditLocked" @change="handleFeeUnitPriceChange(feeArEdit)"></el-input-number></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="计价单位"><el-select v-model="feeArEdit.unit" style="width:100%" :disabled="feeEditLocked"><el-option v-for="u in pricingUnitOptions" :key="u" :label="u" :value="u"></el-option></el-select></el-form-item></el-col>
-                    <el-col :span="8"><el-form-item label="计费量"><el-input-number v-model="feeArEdit.quantity" :controls="false" style="width:100%" :disabled="feeEditLocked" @change="handleFeeUnitPriceChange(feeArEdit)"></el-input-number></el-form-item></el-col>
-                    <el-col :span="24"><el-form-item label="描述"><el-input v-model="feeArEdit.description" placeholder="面向客户的说明，货主端可见"></el-input></el-form-item></el-col>
-                    <el-col :span="24"><el-form-item label="内部备注"><el-input v-model="feeArEdit.remark" placeholder="仅员工端可见"></el-input></el-form-item></el-col>
+        <!-- 编辑应收流水：带规则（有来源规则）→ 单价 × 计费量；不带规则（无来源规则）→ 直接填金额；系统自动行只放行 描述 / 内部备注 -->
+        <el-dialog :model-value="!!feeArEdit" title="编辑应收流水" width="860px" append-to-body @update:model-value="feeArEdit = null">
+            <el-alert v-if="feeArEdit && feeEditLocked" title="系统自动计算 · 金额口径字段只读，仅可修改「描述」与「内部备注」" type="info" :closable="false" show-icon style="margin-bottom: 16px;"></el-alert>
+            <div v-if="feeArEdit" class="fee-add-card" style="margin-bottom: 0;">
+                <el-row :gutter="12">
+                    <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">费用类型</span><el-input :value="feeArEdit.type" size="small" disabled></el-input></div></el-col>
+                    <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">数据来源</span><el-input :value="feeArEdit.source || '—'" size="small" disabled></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="feeArEdit.currency" size="small" style="width:100%" :disabled="feeEditLocked || !!feeArEdit.sourceRuleType" @change="handleFeeCurrencyChange(feeArEdit)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="feeArEdit.rate" size="small" :disabled="feeEditLocked"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额</span><el-input-number v-model="feeArEdit.amount" size="small" style="width:100%" :controls="false" :precision="2" :disabled="feeEditLocked"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="feeArEdit.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" :disabled="feeEditLocked || !!feeArEdit.sourceRuleType" @change="handleFeeUnitPriceChange(feeArEdit)"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位</span><el-select v-model="feeArEdit.unit" size="small" style="width:100%" :disabled="feeEditLocked || !!feeArEdit.sourceRuleType"><el-option v-for="u in pricingUnitOptions" :key="u" :label="u" :value="u"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计费量</span><el-input-number v-model="feeArEdit.quantity" size="small" style="width:100%" :controls="false" :disabled="feeEditLocked || !feeArEdit.sourceRuleType" @change="handleFeeUnitPriceChange(feeArEdit)"></el-input-number></div></el-col>
+                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">描述（面向客户）</span><el-input v-model="feeArEdit.description" size="small" placeholder="面向客户的说明，货主端可见"></el-input></div></el-col>
+                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">内部备注（仅内部）</span><el-input v-model="feeArEdit.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
                 </el-row>
-            </el-form>
+            </div>
             <template #footer><el-button @click="feeArEdit = null">取消</el-button><el-button type="primary" @click="saveFeeArEdit">保存</el-button></template>
         </el-dialog>
 
-        <!-- 新增应付流水 -->
+        <!-- 新增应付流水（卡片式逐条录入，与「添加应收」同款；可新增多条） -->
         <el-dialog v-model="dialogFeeAp" title="新增应付流水" width="900px" append-to-body>
-            <div style="margin-bottom:12px; text-align:right;"><el-button type="primary" size="small" plain @click="feeApList.push(newFeeRow())">添加一行</el-button></div>
-            <el-table :data="feeApList" border size="small">
-                <el-table-column label="费用类型" width="130"><template #default="scope"><el-select v-model="scope.row.type" size="small" style="width:100%" @change="handleFeeTypeChange(scope.row, 'ap')"><el-option v-for="t in feeTypeApOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></template></el-table-column>
-                <el-table-column label="币种" width="100"><template #default="scope"><el-select v-model="scope.row.currency" size="small" style="width:100%" @change="handleFeeCurrencyChange(scope.row)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></template></el-table-column>
-                <el-table-column label="汇率" width="80"><template #default="scope"><el-input v-model="scope.row.rate" size="small"></el-input></template></el-table-column>
-                <el-table-column label="单价" width="100"><template #default="scope"><el-input-number v-model="scope.row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" @change="handleFeeUnitPriceChange(scope.row)"></el-input-number></template></el-table-column>
-                <el-table-column label="计价单位" width="110"><template #default="scope"><el-select v-model="scope.row.unit" size="small" style="width:100%"><el-option v-for="u in pricingUnitOptions" :key="u" :label="u" :value="u"></el-option></el-select></template></el-table-column>
-                <el-table-column label="计费量" width="90"><template #default="scope"><el-input-number v-model="scope.row.quantity" size="small" style="width:100%" :controls="false" @change="handleFeeUnitPriceChange(scope.row)"></el-input-number></template></el-table-column>
-                <el-table-column label="金额" width="110"><template #default="scope"><el-input-number v-model="scope.row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></template></el-table-column>
-                <el-table-column label="备注" min-width="120"><template #default="scope"><el-input v-model="scope.row.remark" size="small"></el-input></template></el-table-column>
-                <el-table-column label="操作" width="60" align="center"><template #default="scope"><el-button type="text" class="is-danger" size="small" @click="feeApList.splice(scope.$index, 1)">删除</el-button></template></el-table-column>
-            </el-table>
+            <div class="fee-add-info">
+                <span><span class="fee-add-label">运单号</span><b style="color:var(--el-text-color-primary);">{{ feeAddWaybillText }}</b></span>
+                <span><span class="fee-add-label">客户</span>{{ feeAddCustomerText }}</span>
+                <span><span class="fee-add-label">服务组合</span>{{ feeAddServiceText }}</span>
+            </div>
+            <div v-for="(row, idx) in feeApList" :key="idx" class="fee-add-card">
+                <div class="fee-add-card-head">
+                    <span class="fee-add-card-title">
+                        流水 {{ idx + 1 }}
+                        <span v-if="feeAddWaybillOptions.length > 1" class="fee-add-card-sub">× {{ feeRowWaybills(row).length }} 票 · 合计 {{ feeApBatchAmountText(row) }}</span>
+                    </span>
+                    <el-button link type="danger" size="small" :disabled="feeApList.length <= 1" :title="feeApList.length <= 1 ? '至少保留一条应付流水' : ''" @click="feeApList.splice(idx, 1)">删除</el-button>
+                </div>
+                <el-row :gutter="12">
+                    <el-col v-if="feeAddWaybillOptions.length > 1" :span="24"><div class="fee-add-field"><span class="fee-add-field-label">适用运单 <i class="req">*</i><span class="fee-add-tag-note">（带出主列表勾选的运单，不可修改）</span></span><div style="display:flex; flex-wrap:wrap; gap:6px;"><el-tag v-for="no in feeAddWaybillOptions" :key="no" size="small" effect="plain" :type="feeAddWaybillApDisabled(no) ? 'info' : 'primary'">{{ no }}</el-tag></div></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">提单号<span style="font-size:12px;color:#909399;">（非必填 · 单选）</span></span><el-select v-model="row.blNo" filterable size="small" style="width:100%" placeholder="选择提单号" clearable><el-option v-for="b in feeApBlNoOptions" :key="b" :label="b" :value="b"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">OA审批编号 <i class="req">*</i></span><el-input v-model="row.oaNo" size="small" placeholder="请输入 OA 审批编号"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">供应商 <i class="req">*</i></span><el-select v-model="row.supplier" size="small" style="width:100%" placeholder="请选择供应商" filterable><el-option v-for="s in supplierOptions" :key="s" :label="s" :value="s"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.type" size="small" style="width:100%" placeholder="请选择" filterable @change="handleFeeTypeChange(row, 'ap')"><el-option v-for="t in feeTypeApOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="row.currency" size="small" style="width:100%" @change="handleFeeCurrencyChange(row)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="row.rate" size="small"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（原币） <i class="req">*</i></span><el-input-number v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（本币）</span><div class="fee-add-amount">¥ {{ feeApCnyAmountText(row) }}</div></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">备注（仅内部）</span><el-input v-model="row.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
+                </el-row>
+            </div>
+            <el-button plain size="small" style="width:100%;" @click="feeApList.push(newFeeApRow())">＋ 添加一行</el-button>
             <template #footer><el-button @click="dialogFeeAp = false">取消</el-button><el-button type="primary" @click="saveFeeAp">保存</el-button></template>
         </el-dialog>
 
         <!-- 编辑应付流水 -->
-        <el-dialog :model-value="!!feeApEditRow" title="编辑应付流水" width="600px" append-to-body @update:model-value="feeApEditRow = null">
-            <el-form v-if="feeApEditRow" label-width="90px">
-                <el-form-item label="费用类型"><el-input :value="feeApEditRow.type" disabled></el-input></el-form-item>
-                <el-form-item label="币种"><el-select v-model="feeApEditRow.currency" style="width:160px" @change="handleFeeCurrencyChange(feeApEditRow)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></el-form-item>
-                <el-form-item label="金额"><el-input-number v-model="feeApEditRow.amount" :controls="false" :precision="2" style="width:160px"></el-input-number></el-form-item>
-                <el-form-item label="数量"><el-input-number v-model="feeApEditRow.quantity" :controls="false" style="width:160px"></el-input-number></el-form-item>
-                <el-form-item label="备注"><el-input v-model="feeApEditRow.remark"></el-input></el-form-item>
-            </el-form>
+        <el-dialog :model-value="!!feeApEditRow" title="编辑应付流水" width="860px" append-to-body @update:model-value="feeApEditRow = null">
+            <div v-if="feeApEditRow" class="fee-add-card" style="margin-bottom: 0;">
+                <el-row :gutter="12">
+                    <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">费用类型</span><el-input :value="feeApEditRow.type" size="small" disabled></el-input></div></el-col>
+                    <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">供应商 <i class="req">*</i></span><el-select v-model="feeApEditRow.supplier" size="small" style="width:100%" filterable><el-option v-for="s in supplierOptions" :key="s" :label="s" :value="s"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="feeApEditRow.currency" size="small" style="width:100%" @change="handleFeeCurrencyChange(feeApEditRow)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="feeApEditRow.rate" size="small"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额 <i class="req">*</i></span><el-input-number v-model="feeApEditRow.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
+                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">内部备注（仅内部）</span><el-input v-model="feeApEditRow.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
+                </el-row>
+            </div>
             <template #footer><el-button @click="feeApEditRow = null">取消</el-button><el-button type="primary" @click="saveFeeApEdit">保存</el-button></template>
         </el-dialog>
 
@@ -3385,7 +3412,7 @@
                             <el-tag size="small" type="info">系统自动计算</el-tag>
                         </div>
                     </el-form-item>
-                    <el-alert title="提示：提交后无法修改，请谨慎操作" type="warning" show-icon :closable="false" style="margin-top: 16px;" />
+                    <el-alert title="提示：提交后无法修改，请谨慎操作" type="warning" show-icon :closable="false" style="margin-top: 16px;"></el-alert>
                 </template>
             </el-form>
             <template #footer>
@@ -3660,7 +3687,7 @@
                 const mkRow = (no, status, isFba, fbaNos) => ({
                     orderNo: no, customerNo: 'CUS'+String(Math.floor(Math.random()*900+100)),
                     fbaNos: isFba ? (Array.isArray(fbaNos) ? fbaNos : [(fbaNos||'FBA'+String(Math.floor(Math.random()*900+100)))]) : [], isFba,
-                    relNo: 'REL'+no.slice(-3), blNo: 'BL'+no.slice(-3),
+                    relNo: 'REL'+no.slice(-3), blNo: 'BL'+no.slice(-3), blNos: null,
                     warehouseCode: warehouseCodeOf(no, isFba),
                     source:'API', user:'szcross',
                     service: isFba ? '美森360-海运-卡派-KG-包税' : '空派-包税-DPD',
@@ -3698,8 +3725,8 @@
                     // 运单审计范围 = 已收货及之后（已下单 / 收货中 / 已取消 无费用可审，不进本页）
                     (()=>{ const r=mkRow('YD20260413005','已收货',true,['FBA19GM2GSBX', 'FBA19KH7TPQ4']); r.billingType='kg'; r.service='美森360-海运-卡派-KG-包税'; r.surchargeMark=['超长','出口查验']; r.exportInspectFirst='是'; return r; })(),
                     (()=>{ const r=mkRow('YD20260413006','已收货',true,'FBA18XK3MNPQ'); r.billingType='cbm'; r.service='美森360-海运-卡派-按方包税'; r.exportInspectFirst='否'; return r; })(),
-                    mkRow('YD20260413007','转运中',false), mkRow('YD20260413008','转运中',true,'FBA17TR9WQ2L'),
-                    mkRow('YD20260413009','已到港',false), mkRow('YD20260413010','已到港',true,'FBA16HD5CJ8V'),
+                    (()=>{ const r=mkRow('YD20260413007','转运中',false); r.blNos=['MBL20260413001','HBL20260413001']; r.blNo='MBL20260413001'; return r; })(), mkRow('YD20260413008','转运中',true,'FBA17TR9WQ2L'),
+                    (()=>{ const r=mkRow('YD20260413009','已到港',false); r.blNos=['MBL20260409001','HBL20260409001','HBL20260409002']; r.blNo='MBL20260409001'; return r; })(), mkRow('YD20260413010','已到港',true,'FBA16HD5CJ8V'),
                     mkRow('YD20260413011','已清关',false), mkRow('YD20260413012','已清关',true,'FBA15PL4ZR6T'),
                     (()=>{ const r=mkRow('YD20260413013','已到仓',false); r.surchargeMark=['加急件']; return r; })(),
                     (()=>{ const r=mkRow('YD20260413014','已签收',false); r.arAuditStatus='已审计'; r.arAuditBy='财务-王五'; r.arAuditAt='2026-04-15 10:20'; return r; })(),
@@ -5607,47 +5634,50 @@
                 const fileVisible = ref('是');
                 // 入口上下文：'detail' = 运单详情的费用 tab（该运单）；'list' = 运单列表工具栏（勾选的运单，可多票）
                 const feeAddContext = ref({ source: 'detail', waybills: [] });
+                // 运费 / 运费优惠 / 泡比优惠 的计价单位：取上下文运单的服务组合计费方式（kg→KG、cbm→m³）；多票入口已保证计费方式一致
+                const feeAddDefaultUnit = computed(() => {
+                    const ws = feeAddContext.value.waybills || [];
+                    const bt = ws.length ? (ws[0].billingType || '') : '';
+                    return bt === 'cbm' ? 'm³' : (bt === 'kg' ? 'KG' : '');
+                });
                 const newFeeRow = () => ({
-                    waybillNos: (feeAddContext.value.waybills || []).filter(w => !waybillFeeAudited(w, 'ar')).map(w => w.orderNo),
-                    type: '', rules: [], ruleId: null, autoHint: '', ruleTag: '',
-                    unitPrice: null, unit: '', currency: 'CNY', rate: 1, quantity: 1, amount: 0,
+                    waybillNos: (feeAddContext.value.waybills || []).map(w => w.orderNo),
+                    kind: 'nonsurcharge', type: '', rules: [], ruleId: null, ruleTag: '',
+                    unitPrice: null, unit: '', currency: 'CNY', rate: 1, quantity: 1, amount: null,
                     description: '', remark: ''
                 });
+                // 应付流水行：提单号（单选 · 仅该运单关联的提单号）+ OA审批编号（必填）+ 供应商 + 费用类型 + 币种/汇率 + 金额 + 备注（供应商不登录系统、账单不发给供应商，故无「描述」；计价单位不填）
+                const newFeeApRow = () => ({
+                    waybillNos: (feeAddContext.value.waybills || []).map(w => w.orderNo),
+                    blNo: '', oaNo: '', supplier: '', type: '', currency: 'CNY', rate: 1,
+                    amount: null,
+                    remark: ''
+                });
                 const feeArList = ref([newFeeRow()]);
-                const feeApList = ref([newFeeRow()]);
+                const feeApList = ref([newFeeApRow()]);
 
-                // 费用类型字典（引用头程管理 fee_type，unitPrice=null 表示直接填金额）
+                // 费用类型字典（引用头程管理 fee_type）
                 const feeTypeArOptions = [
-                    { name: '运费', unitPrice: null, unit: '' },
-                    { name: '周六派送费', unitPrice: 50, unit: '票' },
-                    { name: '超重费', unitPrice: 20, unit: 'kg' },
-                    { name: '地址附加费', unitPrice: 15, unit: '票' },
-                    { name: '商品附加费', unitPrice: 5, unit: '件' },
-                    { name: '报关费', unitPrice: 120, unit: '票' },
-                    { name: '库内贴标费', unitPrice: 0.5, unit: '张' },
+                    { name: '运费' },
+                    { name: '周六派送费' },
+                    { name: '超重费' },
+                    { name: '地址附加费' },
+                    { name: '商品附加费' },
+                    { name: '报关费' },
+                    { name: '库内贴标费' },
                     { name: '运费优惠' }, { name: '泡比优惠' }, { name: '附加费优惠' }
                 ];
 
                 // 费用类型 × 规则绑定（反查：某费用类型下有哪些**可选的**来源规则）
                 //   有 rules ：该费用类型被「人工添加型」附加费规则（surcharge_rule.rule_type=30）的计价明细「应收」行引用
                 //              → 「来源规则」列出现且**选填**：选了 → 币种 / 单价 / 计价单位按规则带出并置灰、流水种类=附加费；不选 → 自由填写、流水种类=手工新增
-                //   有 autoHint：该费用类型通常由系统自动生成（运价行 / 字段匹配 / 字段&公式 / 优惠规则）
-                //              → **仍然允许手工新增**（业务认为自动行不对时，先删除原行再手工新增），仅在「流水种类」标签上给悬浮提示
                 const feeTypeArBindings = {
-                    '运费': { autoHint: '运费通常由运价行在收货完成时自动生成；手工新增的行不参与重算，若原自动行有误请先删除再补录' },
-                    '周六派送费': { rules: [{ id: 7021, name: '周六派送费（人工添加 · 按票）', unit: '票', unitPrice: 50, currency: 'CNY', tagId: 4021, tagName: '周六派送' }] },
-                    '超重费': { rules: [
-                        { id: 7012, name: '超重超长（人工添加 · 按箱）', unit: '箱', unitPrice: 20, currency: 'CNY', tagId: 4001, tagName: '超长' },
-                        { id: 7013, name: '超重费（人工添加 · 按 KG）', unit: 'KG', unitPrice: 12, currency: 'CNY', tagId: 4001, tagName: '超长' }
-                    ] },
-                    '地址附加费': { autoHint: '地址附加费通常由字段匹配型规则在收货完成时自动生成；手工新增的行不参与重算' },
-                    '商品附加费': { autoHint: '商品附加费通常由字段匹配型规则在收货完成时自动生成；手工新增的行不参与重算' },
-                    '库内贴标费': { rules: [{ id: 7002, name: '库内贴标费（人工添加 · 按张）', unit: '张', unitPrice: 0.5, currency: 'CNY', tagId: 4002, tagName: '库内贴标' }] },
-                    '报关费': {},
-                    '运费优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' },
-                    '泡比优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' },
-                    '附加费优惠': { autoHint: '优惠类流水通常由优惠规则自动生成；手工新增请在「描述」中说明原因，便于后续审计举证' }
+                    '库内贴标费': { rules: [{ id: 'R004', name: '贴标费（人工添加 · 按数量）', unit: '数量', unitPrice: 2, currency: 'CNY', tagId: 6, tagName: '贴标', discount: { id: 'D001', name: '贴标费优惠 · S 级客户 -0.5 元/张', unitPrice: -0.5 } }] }
                 };
+                // 类型分叉：附加费类型 = 被「人工添加型」附加费规则引用的费用类型（有来源规则候选）；非附加费类型 = 其余（直接填金额）
+                const feeTypeSurchargeOptions = Object.keys(feeTypeArBindings);
+                const feeTypeNonSurchargeOptions = feeTypeArOptions.map(t => t.name).filter(n => !feeTypeSurchargeOptions.includes(n));
+                const feeTypeArOptionsOf = (row) => (row && row.kind === 'surcharge') ? feeTypeSurchargeOptions : feeTypeNonSurchargeOptions;
 
                 // 弹窗顶部与逐行：单票 = 主运单号（从详情或列表单选进入）；多票 = 逐行指定运单
                 const feeAddWaybillOptions = computed(() => (feeAddContext.value.waybills || []).map(w => w.orderNo));
@@ -5655,6 +5685,11 @@
                 const feeAddWaybillDisabled = (no) => {
                     const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
                     return waybillFeeAudited(w, 'ar');
+                };
+                // 应付的「适用运单」已整票审计判定（'ap'）
+                const feeAddWaybillApDisabled = (no) => {
+                    const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
+                    return waybillFeeAudited(w, 'ap');
                 };
                 const feeAddWaybillText = computed(() => {
                     const opts = feeAddWaybillOptions.value;
@@ -5672,31 +5707,44 @@
                 });
                 // 该行实际适用的运单：多票上下文取行上多选；单票上下文即唯一样本
                 const feeRowWaybills = (row) => (feeAddWaybillOptions.value.length > 1 ? (row.waybillNos || []) : feeAddWaybillOptions.value).filter(Boolean);
-                // 批量合计 = 单价 × 计费量 × 票数
-                const feeBatchAmountText = (row) => feeAmountText({ amount: Number(((row.unitPrice || 0) * (row.quantity || 0) * feeRowWaybills(row).length).toFixed(2)) });
+                // 非附加费（费用类型无「人工添加型」附加费规则候选）→ 直接填金额，不填单价 / 计费量
+                const feeArRowIsDirect = (row) => !!(row && row.kind !== 'surcharge');
+                // 批量合计 = 单价 × 计费量 × 票数（非附加费 = 每票金额 × 票数）
+                const feeBatchAmountText = (row) => {
+                    const per = feeArRowIsDirect(row) ? (Number(row.amount) || 0) : ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0));
+                    return feeAmountText({ amount: per * feeRowWaybills(row).length });
+                };
+                // 应付批量合计 = 每票金额 × 票数（应付无单价/计费量，金额直接填）
+                const feeApBatchAmountText = (row) => feeAmountText({ amount: (Number(row.amount) || 0) * feeRowWaybills(row).length });
                 // 选了来源规则 → 币种 / 单价 / 计价单位 / 汇率按规则带出，不允许改
                 const feeArRowLocked = (row) => !!(row && row.ruleId);
+                // 选中来源规则的附加费优惠（方案 2：手工新增也自动匹配附加费优惠）
+                const feeArDiscount = (row) => { const r = (row.rules || []).find(x => x.id === row.ruleId); return (r && r.discount) ? r.discount : null; };
 
-                // 选费用类型 → 带出可选来源规则（选填）与「通常自动生成」提示；带不出规则即自由填写
+                // 换类型（附加费 / 非附加费）→ 清空费用类型与全部金额口径字段
+                const handleFeeArKindChange = (row) => {
+                    row.type = ''; row.rules = []; row.ruleId = null; row.ruleTag = '';
+                    row.unitPrice = null; row.quantity = null; row.amount = null; row.unit = '';
+                };
+                // 选费用类型 → 附加费带出可选来源规则；非附加费直接填金额
                 const handleFeeArTypeChange = (row) => {
-                    row.ruleId = null; row.rules = []; row.autoHint = '';
+                    row.ruleId = null; row.rules = []; row.ruleTag = '';
+                    row.unitPrice = null; row.quantity = null; row.amount = null;
                     if (!row.type) { row.kindLabel = '手工新增'; return; }
-                    const b = feeTypeArBindings[row.type] || {};
-                    row.rules = b.rules || [];
-                    row.autoHint = b.autoHint || '';
-                    if (row.rules.length === 1) { row.ruleId = row.rules[0].id; handleFeeArRuleChange(row); return; }
-                    const opt = feeTypeArOptions.find(t => t.name === row.type) || {};
-                    if (opt.unit != null) row.unit = opt.unit;
-                    if (opt.unitPrice != null) row.unitPrice = opt.unitPrice;
-                    row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
+                    if (row.kind === 'surcharge') {
+                        row.rules = (feeTypeArBindings[row.type] || {}).rules || [];
+                        if (row.rules.length === 1) { row.ruleId = row.rules[0].id; handleFeeArRuleChange(row); return; }
+                    }
+                    // 运费 / 运费优惠 / 泡比优惠 → 按服务组合计费方式（KG/m³）；其余留空（非附加费时计价单位仅作标记）
+                    row.unit = ['运费', '运费优惠', '泡比优惠'].includes(row.type) ? feeAddDefaultUnit.value : '';
                 };
 
-                // 选 / 清空来源规则：清空后回到自由填写（按费用类型字典带出默认单价）
+                // 选 / 清空来源规则：清空后回到自由填写（单价留空，由操作员手填）
                 const handleFeeArRuleChange = (row) => {
                     const r = (row.rules || []).find(x => x.id === row.ruleId);
                     if (!r) {
-                        const opt = feeTypeArOptions.find(t => t.name === row.type) || {};
-                        row.unit = opt.unit || ''; row.unitPrice = (opt.unitPrice != null ? opt.unitPrice : null);
+                        row.unit = ['运费', '运费优惠', '泡比优惠'].includes(row.type) ? feeAddDefaultUnit.value : '';
+                        row.unitPrice = null;
                         row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
                         row.ruleTag = '';
                         return;
@@ -5707,7 +5755,7 @@
                     row.amount = Number(((row.unitPrice || 0) * (row.quantity || 0)).toFixed(2));
                 };
 
-                // 保存：校验 → 落库（source_type=20 / generate_node=30；拣货时间与创建日期由后台赋值）
+                // 保存：校验 → 落库（source_type=20；拣货时间与创建日期由后台赋值）
                 const saveFeeAr = () => {
                     const feeRows = feeArList.value.filter(r => r.type);
                     if (!feeRows.length) { ElMessage.warning('请先选择费用类型'); return; }
@@ -5715,8 +5763,8 @@
                         if (!feeRowWaybills(r).length) { ElMessage.warning(`「${r.type}」请至少选择一票适用运单`); return; }
                         const audited = feeRowWaybills(r).filter(no => feeAddWaybillDisabled(no));
                         if (audited.length) { ElMessage.warning(`运单 ${audited.join('、')} 已整单审计，不允许新增费用；如需补收请先反审计`); return; }
-                        if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.type}」请填写计费量`); return; }
-                        if (/优惠$/.test(r.type) && !r.description) { ElMessage.warning(`「${r.type}」为优惠类手工新增，请在「描述」中说明原因`); return; }
+                        if (feeArRowIsDirect(r)) { if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.type}」请填写金额`); return; } }
+                        else if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.type}」请填写计费量`); return; }
                     }
                     // 一条费用 × 每票运单 = 一条流水（批量铺费用）
                     const rows = [];
@@ -5739,16 +5787,32 @@
                         arArr.push({
                             id: seq++,
                             type: r.type, kindLabel: rule ? '附加费' : '手工新增', currency: r.currency,
-                            unitPrice: r.unitPrice, unit: r.unit, quantity: r.quantity,
-                            amount: Number(((r.unitPrice || 0) * (r.quantity || 0)).toFixed(2)),
+                            unitPrice: feeArRowIsDirect(r) ? null : r.unitPrice, unit: r.unit, quantity: feeArRowIsDirect(r) ? null : r.quantity,
+                            amount: feeArRowIsDirect(r) ? Number(r.amount || 0) : Number(((r.unitPrice || 0) * (r.quantity || 0)).toFixed(2)),
                             rate: r.rate, description: r.description || '', remark: r.remark || '',
                             pickTime: '2026-04-14 16:20',
                             source: rule ? '附加费规则' : '人工添加',
-                            sourceType: 20, createdBy: '李四', createdAt, generateNode: 30,
+                            sourceType: 20, createdBy: '李四', createdAt,
                             sourceRuleType: rule ? 40 : undefined,
                             sourceRuleId: rule ? rule.id : undefined,
                             sourceRuleName: rule ? rule.name : undefined
                         });
+                        // 方案 2：选中来源规则后自动匹配附加费优惠，命中则生成一条优惠流水（优惠独立成行）
+                        if (rule && rule.discount) {
+                            arArr.push({
+                                id: seq++,
+                                type: r.type, kindLabel: '附加费优惠', currency: r.currency,
+                                unitPrice: rule.discount.unitPrice, unit: r.unit, quantity: r.quantity,
+                                amount: Number(((rule.discount.unitPrice || 0) * (r.quantity || 0)).toFixed(2)),
+                                rate: r.rate, description: '', remark: '',
+                                pickTime: '2026-04-14 16:20',
+                                source: '附加费优惠规则',
+                                sourceType: 20, createdBy: '李四', createdAt,
+                                sourceRuleType: 50,
+                                sourceRuleId: rule.discount.id,
+                                sourceRuleName: rule.discount.name
+                            });
+                        }
                     });
                     // 打标按「该行所属运单」执行（详情进入 = 该运单；列表多选进入 = 行上所选运单），同一标识不重复打
                     if (tagNames.length) {
@@ -5778,19 +5842,30 @@
                     { name: '拖车费', unitPrice: null, unit: '' },
                     { name: '干线运输费', unitPrice: null, unit: '' }
                 ];
+                // 应付供应商（应付 = 我司付给承运 / 拖车 / 报关等供应商）
+                const supplierOptions = ['UPS', 'FedEx', '深圳拖车行', '广州报关行', '美森快船'];
+                // 运单的提单号列表：blNos 存在用 blNos，否则单提单号 blNo（一个运单可关联多个提单）
+                const rowBlNos = (row) => ((row && row.blNos && row.blNos.length) ? row.blNos : [row && row.blNo]).filter(Boolean);
+                const rowBlNosText = (row) => { const list = rowBlNos(row); return list.length ? list.join(' / ') : '—'; };
+                // 提单号候选 = 当前上下文运单各自关联的提单号（去重）—— 只可选这个运单关联的提单号
+                const feeApBlNoOptions = computed(() => {
+                    const set = new Set();
+                    (feeAddContext.value.waybills || []).forEach(w => rowBlNos(w).forEach(b => set.add(b)));
+                    return [...set];
+                });
 
                 // 费用 tab 展示的业务流水（粒度=运单 × 费用项；一条费用项一行、优惠独立成行）
                 // 收货完成时由系统生成：运费（预置费用类型）→ 运费优惠 / 泡比优惠（费用类型取优惠规则配置的）→ 附加费（匹配动作类型=加收费用的规则）→ 附加费优惠
                 // 每条流水留痕来源规则，供运单审计下钻「这笔钱是哪条规则给的」；生成后进入账单草稿池（未关联账单即停留池内）
                 const feeArFlows = ref([
-                    { id: 9001, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', remark: '当周公布价 × 计费重量；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
-                    { id: 9002, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', remark: '客户特批（S 级客户）', pickTime: '2026-04-14 16:20', source: '特批规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 20, sourceRuleId: 5021, sourceRuleName: 'S级客户运费特批 -1.00/KG' },
-                    { id: 9003, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', remark: '泡比 360 ≥ 阈值 300', pickTime: '2026-04-14 16:20', source: '泡比规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 30, sourceRuleId: 6012, sourceRuleName: '密度阈值300 泡比优惠 -0.50/KG' },
-                    { id: 9004, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', remark: '拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
-                    { id: 9005, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
-                    { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-00001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）；本行 8 月已随当期账单出账（同票其余流水 9 月成账）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
-                    { id: 9007, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '人工添加', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
-                    ,{ id: 9008, auditStatus: '已审计', billNo: 'AR-GZ-202609-00002', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算，按 7.1000 折合；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '人工添加', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
+                    { id: 9001, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', remark: '当周公布价 × 计费重量；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
+                    { id: 9002, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', remark: '客户特批（S 级客户）', pickTime: '2026-04-14 16:20', source: '特批规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', sourceRuleType: 20, sourceRuleId: 5021, sourceRuleName: 'S级客户运费特批 -1.00/KG' },
+                    { id: 9003, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', remark: '泡比 360 ≥ 阈值 300', pickTime: '2026-04-14 16:20', source: '泡比规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', sourceRuleType: 30, sourceRuleId: 6012, sourceRuleName: '密度阈值300 泡比优惠 -0.50/KG' },
+                    { id: 9004, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', remark: '拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
+                    { id: 9005, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
+                    { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-00001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）；本行 8 月已随当期账单出账（同票其余流水 9 月成账）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
+                    { id: 9007, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '人工添加', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30' }
+                    ,{ id: 9008, auditStatus: '已审计', billNo: 'AR-GZ-202609-00002', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算，按 7.1000 折合；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '人工添加', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30' }
                 ]);
                 // 运单应收净额 = 各行金额的代数和（优惠已独立成行，不再逐行做「公布价 − 优惠」）
                 const feeArNet = computed(() => currentArFlows.value.reduce((s, r) => s + flowCnyValue(r), 0));
@@ -5799,8 +5874,15 @@
                     const abs = Math.abs(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     return (v < 0 ? '-' : '') + abs;
                 };
+                // 金额（本币）= 金额（原币）× 汇率（只读、前端派生展示；与弹窗内「金额（原币）」同口径）
+                const feeArCnyAmountText = (row) => {
+                    const per = feeArRowIsDirect(row) ? (Number(row.amount) || 0) : ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0));
+                    const total = feeArRowIsDirect(row) ? per : per * feeRowWaybills(row).length;
+                    return feeAmountText({ amount: Number((total * (Number(row.rate) || 1)).toFixed(2)) });
+                };
+                const feeApCnyAmountText = (row) => feeAmountText({ amount: Number(((Number(row.amount) || 0) * (Number(row.rate) || 1)).toFixed(2)) });
                 const feeApFlows = ref([
-                    { id: 8001, auditStatus: '待业务审计', type: '操作费', kindLabel: '手工新增', currency: 'CNY', unitPrice: 10.00, unit: '票', quantity: 8, amount: 80.00, rate: 1, remark: '分拣操作', time: '2026-04-13 10:00', source: '人工添加' }
+                    { id: 8001, auditStatus: '待业务审计', type: '操作费', kindLabel: '手工新增', currency: 'CNY', unitPrice: 10.00, unit: '票', quantity: 8, amount: 80.00, rate: 1, description: '分拣操作费', remark: '分拣操作', blAmortize: '', supplier: 'UPS', createdBy: '李四', billNo: '', pickTime: '2026-04-13 10:00', source: '人工添加' }
                 ]);
 
                 // 演示：把上面的流水挂到「已收货」那票运单；其余运单按各自状态自然为空
@@ -5819,19 +5901,19 @@
                             { id: 9201, auditStatus: '已审计', billNo: 'AR-SZ-202608-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 8.00, unit: 'KG', quantity: 100, amount: 800.00, rate: 1, description: '运单应收运费（美森360 · 按方包税）', remark: '当周公布价 × 计费量；08-01 随当期账单出账，客户待确认', pickTime: '2026-04-11 14:00', source: '当周公布价' },
                             { id: 9202, auditStatus: '已审计', billNo: 'AR-SZ-202608-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 10, amount: 200.00, rate: 1, description: '单件超 30KG 的 10 件，加收 ¥20.00/KG', remark: '拣货实测触发；08-01 随当期账单出账', pickTime: '2026-04-11 14:00', source: '附加费规则' }
                         ];
-                        r06.apFlows = clone(feeApFlows.value, 8201, { type: '提货费', unitPrice: 30.00, quantity: 4, amount: 120.00, remark: '提货 4 票' });
+                        r06.apFlows = clone(feeApFlows.value, 8201, { type: '提货费', unitPrice: 30.00, quantity: 4, amount: 120.00, description: '提货 4 票', supplier: 'FedEx', remark: '提货 4 票' });
                     }
                     const r14 = tableData.value.find(r => r.orderNo === 'YD20260413014');
                     if (r14) {
                         r14.arFlows = clone(feeArFlows.value.slice(0, 5), 9301, { auditStatus: '已审计', billNo: '' });
-                        r14.apFlows = clone(feeApFlows.value, 8301, { auditStatus: '已审计' });
+                        r14.apFlows = clone(feeApFlows.value, 8301, { auditStatus: '已审计', type: '干线运输费', unitPrice: 2500.00, unit: '柜', quantity: 2, amount: 5000.00, description: '美森快船 2 柜干线运费', supplier: '美森快船', blAmortize: 'MBL-20260414001', remark: '主提单 MBL-20260414001 平摊' });
                         r14.apAuditStatus = '已审计'; r14.apAuditBy = '财务-王五'; r14.apAuditAt = '2026-04-15 10:20';
                     }
                     const r09 = tableData.value.find(r => r.orderNo === 'YD20260413009');
                     if (r09) {
                         // 应付部分审计：应付标记未整票审计，但已有一条应付流水审计通过
                         r09.apFlows = [
-                            Object.assign({}, feeApFlows.value[0], { id: 8401, auditStatus: '已审计', remark: '拖车费已核对（流水级审计，未整票）' }),
+                            Object.assign({}, feeApFlows.value[0], { id: 8401, auditStatus: '已审计', type: '拖车费', unitPrice: null, unit: '', quantity: 1, amount: 260.00, description: '拖车费（按票）', supplier: '深圳拖车行', remark: '拖车费已核对（流水级审计，未整票）' }),
                         ];
                     }
                     // 016 / 017 / 018 三票：各挂自己的应收流水（金额与「账单管理」里对应账单的明细逐行一致），并写上账单号（关联账单列可点击跳转）
@@ -5862,7 +5944,7 @@
                 const rowArTotal = (row) => ((row && row.arFlows) || []).reduce((s, f) => s + Number(f.amount || 0), 0);
                 const rowApTotal = (row) => ((row && row.apFlows) || []).reduce((s, f) => s + Number(f.amount || 0), 0);
                 // 毛利 = 应收折合 − 应付折合（多币种时先按行汇率折算为本位币 CNY，否则直接相加会串币种）
-                // ── 应收 / 应付 列展示：总额（金额 + 币种）+ 悬浮费用明细（费用类型 + 金额 + 币种 [+ 汇率 / 折合 CNY]）
+                // ── 应收 / 应付 列展示：总额（金额 + 币种）+ 悬浮费用明细（费用类型 + 金额（原币）+ 币种 [+ 汇率 / 金额（本币）]）
                 const rowDirFlows = (r, dir) => ((dir === 'ap' ? (r && r.apFlows) : (r && r.arFlows)) || []);
                 const flowRate = (f) => { const v = Number(f && f.rate); return v > 0 ? v : 1; };
                 const flowCnyValue = (f) => Number(((Number(f && f.amount) || 0) * flowRate(f)).toFixed(2));
@@ -5884,11 +5966,10 @@
 
                 const pricingUnitOptions = ['KG', 'm³', '票', '箱', '数量'];
 
-                // 生成节点 / 来源规则类型标签（行详情用）
-                const generateNodeLabel = (row) => ({ 10: '收货完成', 20: '拣货完成', 30: '人工添加' }[row && row.generateNode] || '—');
+                // 来源规则类型标签（行详情用）
                 const feeRuleTypeLabel = (t) => ({ 10: '运价行', 20: '运费优惠规则', 30: '泡比优惠规则', 40: '附加费规则', 50: '附加费优惠规则' }[t] || '—');
 
-                // 行详情：来源规则 / 数据来源 / 创建人 / 创建时间 / 生成节点 —— 运单审计下钻「这笔钱是哪条规则给的」
+                // 行详情：来源规则 / 数据来源 / 创建人 / 创建时间 —— 运单审计下钻「这笔钱是哪条规则给的」
                 const feeArDetail = ref(null);
                 const openFeeArDetail = (row) => { feeArDetail.value = row; };
 
@@ -5908,10 +5989,30 @@
                     ElMessage.success('已保存');
                     feeArEdit.value = null;
                 };
+                // 删除：操作当前运单的流水数组（列表展示的就是 currentRow.arFlows / apFlows，不能误删全局 feeArFlows）
+                const confirmRemoveFlow = (direction, index) => {
+                    const arr = currentRow.value && currentRow.value[direction === 'ar' ? 'arFlows' : 'apFlows'];
+                    if (!arr) return;
+                    const row = arr[index];
+                    if (!row) return;
+                    const label = direction === 'ar' ? '应收' : '应付';
+                    ElMessageBox.confirm(`确认删除该条${label}流水「${row.type}」吗？删除后不可恢复。`, '删除确认', {
+                        confirmButtonText: '确定删除',
+                        cancelButtonText: '取消',
+                        type: 'warning',
+                        confirmButtonClass: 'el-button--danger'
+                    }).then(() => {
+                        arr.splice(index, 1);
+                        ElMessage.success('删除成功');
+                    }).catch(() => {});
+                };
+                const removeArFlow = (index) => confirmRemoveFlow('ar', index);
+                const removeApFlow = (index) => confirmRemoveFlow('ap', index);
 
                 // 选费用类型：带出单价与计价单位，并按 单价×计费量 自动算金额
                 const handleFeeTypeChange = (row, direction) => {
-                    const opts = direction === 'ar' ? feeTypeArOptions : feeTypeApOptions;
+                    if (direction === 'ap') return; // 应付：直接填金额，无单价/计价单位/计费量带出
+                    const opts = feeTypeArOptions;
                     const opt = opts.find(o => o.name === row.type);
                     if (opt) {
                         if (opt.unitPrice != null) row.unitPrice = opt.unitPrice;
@@ -5925,6 +6026,17 @@
                 const handleFeeUnitPriceChange = (row) => {
                     if (row.unitPrice != null && row.quantity) {
                         row.amount = Number((row.unitPrice * row.quantity).toFixed(2));
+                    }
+                };
+                // 改了单价：若偏离规则价，清空来源规则留痕，退化为「手工新增」（方案 C：不记 source_rule、不打标）
+                const handleFeeArUnitPriceChange = (row) => {
+                    handleFeeUnitPriceChange(row);
+                    if (!row.ruleId) return;
+                    const r = (row.rules || []).find(x => x.id === row.ruleId);
+                    if (r && Number(row.unitPrice) !== Number(r.unitPrice)) {
+                        row.ruleId = null;
+                        row.ruleTag = '';
+                        ElMessage.info('单价已修改，该流水退化为「手工新增」（不再关联来源规则、不打标）');
                     }
                 };
                 // 选币种：人民币默认1，外币自动取实时汇率（mock）
@@ -6040,13 +6152,37 @@
                         ways = (selection.value || []).slice();
                         if (!ways.length) { ElMessage.warning('请先勾选需要添加应收的运单'); return; }
                     }
+                    const billings = [...new Set(ways.map(w => (w.billingType || 'kg')))];
+                    if (billings.length > 1) { ElMessage.warning('勾选的运单计费方式不一致（有按 KG、有按 m³），请只勾选同一计费方式的运单再添加应收'); return; }
                     feeAddContext.value = { source: source || 'detail', waybills: ways };
                     feeArList.value = [newFeeRow()];
                     dialogFeeAr.value = true;
                 };
 
+                // 添加应付：入口校验与应收同口径 —— 勾选运单计费方式一致 + 整票应付未审计
+                const openFeeApDialog = (source) => {
+                    let ways = [];
+                    if (source === 'list') {
+                        ways = (selection.value || []).slice();
+                        if (!ways.length) { ElMessage.warning('请先勾选需要添加应付的运单'); return; }
+                    } else if (currentRow.value && currentRow.value.orderNo) {
+                        ways = [currentRow.value];
+                    } else {
+                        ways = (selection.value || []).slice();
+                        if (!ways.length) { ElMessage.warning('请先勾选需要添加应付的运单'); return; }
+                    }
+                    const billings = [...new Set(ways.map(w => (w.billingType || 'kg')))];
+                    if (billings.length > 1) { ElMessage.warning('勾选的运单计费方式不一致（有按 KG、有按 m³），请只勾选同一计费方式的运单再添加应付'); return; }
+                    const audited = ways.filter(w => waybillFeeAudited(w, 'ap'));
+                    if (audited.length) { ElMessage.warning(`运单 ${audited.map(w => w.orderNo).join('、')} 应付已整票审计，不允许新增应付费用；如需补录请先反审计应付`); return; }
+                    feeAddContext.value = { source: source || 'detail', waybills: ways };
+                    feeApList.value = [newFeeApRow()];
+                    dialogFeeAp.value = true;
+                };
+
                 const handleCommand = (command) => {
                     if (command === 'feeAr') { openFeeArDialog('list'); return; }
+                    if (command === 'feeAp') { openFeeApDialog('list'); return; }
                     // 权限拦截
                     if (command === 'cancelOrder' && !canCancel.value) { ElMessage.warning('所选运单状态不支持取消操作'); return; }
                     if (command === 'returnGoods' && !canReturn.value) { ElMessage.warning('所选运单状态不支持退件操作'); return; }
@@ -6055,7 +6191,7 @@
                     const map = {
                         'routeAdd': dialogRouteAdd, 'routeDel': dialogRouteDel,
                         'supPush': dialogSupPush, 'supExtract': dialogSupExtract, 'supPrint': dialogSupPrint, 'supPod': dialogSupPod,
-                        'feeAp': dialogFeeAp, 'feeAr': dialogFeeAr,
+                        'feeAr': dialogFeeAr,
                         'statusAdj': dialogStatusAdj, 'showStat': dialogStat
                     };
                     if (map[command]) {
@@ -6290,24 +6426,37 @@
                 const saveFeeAp = () => {
                     const rows = feeApList.value.filter(r => r.type);
                     if (!rows.length) { ElMessage.warning('请先选择费用类型'); return; }
-                    // 落库口径：详情打开时 = 当前运单；从列表工具栏进入时退回演示运单
-                    const apArr = (drawerDetail.value && currentRow.value && Array.isArray(currentRow.value.apFlows)) ? currentRow.value.apFlows : feeApFlows.value;
-                    rows.forEach(r => {
+                    for (const r of rows) {
+                        if (!r.supplier) { ElMessage.warning(`「${r.type}」请选择供应商`); return; }
+                        if (!r.oaNo || !String(r.oaNo).trim()) { ElMessage.warning(`「${r.type}」请填写 OA 审批编号`); return; }
+                        if (!feeRowWaybills(r).length) { ElMessage.warning(`「${r.type}」请至少选择一票适用运单`); return; }
+                        if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.type}」请填写金额`); return; }
+                    }
+                    // 一条费用 × 每票运单 = 一条流水（批量铺费用；适用运单带出主列表勾选的运单、不可修改）
+                    const items = [];
+                    rows.forEach(r => feeRowWaybills(r).forEach(no => items.push(Object.assign({}, r, { waybillNo: no }))));
+                    const audited = items.map(x => x.waybillNo).filter(no => feeAddWaybillApDisabled(no));
+                    if (audited.length) { ElMessage.warning(`运单 ${[...new Set(audited)].join('、')} 应付已整票审计，不允许新增应付费用；如需补录请先反审计应付`); return; }
+                    items.forEach(r => {
+                        const target = (feeAddContext.value.waybills || []).find(x => x.orderNo === r.waybillNo) || null;
+                        const apArr = target && Array.isArray(target.apFlows) ? target.apFlows : feeApFlows.value;
                         apArr.push({
                             id: Date.now() + Math.floor(Math.random() * 1000), auditStatus: '待业务审计',
-                            type: r.type, kindLabel: '手工新增', currency: r.currency, unitPrice: r.unitPrice, unit: r.unit,
-                            quantity: r.quantity, amount: r.amount, rate: r.rate, description: r.description || '',
-                            remark: r.remark || '', time: '2026-04-13 10:00', source: '人工添加'
+                            type: r.type, kindLabel: '手工新增', supplier: r.supplier, currency: r.currency,
+                            amount: Number(r.amount || 0), rate: r.rate,
+                            remark: r.remark || '', blAmortize: r.blNo || '', oaNo: r.oaNo || '', billNo: '', pickTime: '2026-04-15 09:00', source: '人工添加', createdBy: '李四'
                         });
                     });
-                    ElMessage.success(`已新增 ${rows.length} 条应付流水`);
+                    const waybillCount = feeRowWaybills(rows[0]).length;
+                    ElMessage.success(`已新增 ${rows.length} 条费用 × ${waybillCount} 票 = ${items.length} 条应付流水`);
                     dialogFeeAp.value = false;
-                    feeApList.value = [newFeeRow()];
+                    feeApList.value = [newFeeApRow()];
                 };
                 const saveFeeApEdit = () => {
                     if (!feeApEditRow.value) return;
-                    const row = feeApFlows.value.find(f => f.id === feeApEditRow.value.id);
-                    if (row) Object.assign(row, { currency: feeApEditRow.value.currency, amount: feeApEditRow.value.amount, quantity: feeApEditRow.value.quantity, remark: feeApEditRow.value.remark });
+                    const src = (currentRow.value && currentRow.value.apFlows) || feeApFlows.value;
+                    const row = src.find(f => f.id === feeApEditRow.value.id);
+                    if (row) Object.assign(row, { supplier: feeApEditRow.value.supplier, currency: feeApEditRow.value.currency, rate: feeApEditRow.value.rate, amount: feeApEditRow.value.amount, remark: feeApEditRow.value.remark });
                     ElMessage.success('已保存');
                     feeApEditRow.value = null;
                 };
@@ -6337,15 +6486,15 @@
                     openDialog, handlePrintCommand, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn, canFee,
                     compareChecks, compareTableData, compareRefNos, compareSelected, compareMockData, onChannelCheck, handleRecompare, handleRecompareAll, onChannelSelect, handleConfirmCompare,
                     printFormat, printFormatInv, printFormatSup, extractTypes, markType, insureType,
-                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeApFlows, feeTypeArOptions, feeTypeApOptions, handleFeeTypeChange, handleFeeCurrencyChange, newFeeRow,
-                    feeAddContext, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddWaybillDisabled,
+                    podStatus, podVisible, buyInsurance, fileVisible, feeArList, feeApList, feeArFlows, feeApFlows, feeTypeArOptions, feeTypeApOptions, handleFeeTypeChange, handleFeeCurrencyChange, newFeeRow, newFeeApRow, supplierOptions, feeApBlNoOptions, rowBlNosText,
+                    feeAddContext, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddWaybillDisabled, feeAddWaybillApDisabled, feeApBatchAmountText,
                     rowAuditState, rowAuditStateMatch, rowArPartialAudited, rowApPartialAudited,
                     rowDirFlows, flowRate, flowCnyValue, cnyFormat, rowHasRate, rowMultiCurrency, rowDirTotalText, rowDirSubtotalText, rowCnyTotal,
-                    feeArNet, feeAmountText, pricingUnitOptions, handleFeeUnitPriceChange,
+                    feeArNet, feeAmountText, feeArCnyAmountText, feeApCnyAmountText, pricingUnitOptions, handleFeeUnitPriceChange, handleFeeArUnitPriceChange,
                     canAudit, canReverseAudit, copyOrderNo, waybillAuditVisible, waybillAuditMode, waybillAuditDirs, waybillAuditSummary, waybillAuditMulti, waybillAuditFullHtml, waybillReverseStat, waybillAuditDirUsable, waybillReverseOpts, waybillReverseUsable, waybillRowReversible, openWaybillAudit, submitWaybillAudit,
                     feeArSelection, feeApSelection, handleFeeArSelectionChange, handleFeeApSelectionChange, canRowAudit, canRowReverseAudit, canRowAuditAp, canRowReverseAuditAp, submitRowAudit,
                     feeApEditRow, saveFeeAp, saveFeeApEdit,
-                    feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, feeEditLocked, feeRowEditable, feeRowLockReason, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, generateNodeLabel, feeRuleTypeLabel, openFeeArDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, handleFeeArTypeChange, handleFeeArRuleChange,
+                    feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, removeArFlow, removeApFlow, feeEditLocked, feeRowEditable, feeRowLockReason, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, feeRuleTypeLabel, openFeeArDialog, openFeeApDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, feeArDiscount, feeArRowIsDirect, feeTypeArOptionsOf, handleFeeArKindChange, handleFeeArTypeChange, handleFeeArRuleChange,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,

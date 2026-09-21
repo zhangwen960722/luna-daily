@@ -287,9 +287,35 @@
                         <el-sub-menu index="7">
                             <template #title>
                                 <el-icon><Money /></el-icon>
-                                <span>财务</span>
+                                <span>财务管理</span>
                             </template>
-                            <el-menu-item v-for="item in financeMenuList" :key="item.index" :index="item.index">
+                            <!-- 运单审计（直挂） -->
+                            <el-menu-item v-for="item in financeMenuList.audit" :key="item.index" :index="item.index">
+                                <template #title>{{ item.name }}</template>
+                            </el-menu-item>
+                            <!-- 应收管理 -->
+                            <el-sub-menu index="7-1">
+                                <template #title><span>应收管理</span></template>
+                                <el-menu-item v-for="item in financeMenuList.ar" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 应付管理 -->
+                            <el-sub-menu index="7-2">
+                                <template #title><span>应付管理</span></template>
+                                <el-menu-item v-for="item in financeMenuList.ap" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 资金管理 -->
+                            <el-sub-menu index="7-3">
+                                <template #title><span>资金管理</span></template>
+                                <el-menu-item v-for="item in financeMenuList.fund" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
+                            <!-- 账龄台账（直挂） -->
+                            <el-menu-item v-for="item in financeMenuList.aging" :key="item.index" :index="item.index">
                                 <template #title>{{ item.name }}</template>
                             </el-menu-item>
                         </el-sub-menu>
@@ -522,7 +548,7 @@
         const app = createApp({
             setup() {
                 // 模拟当前登录用户的权限列表
-                const userPermissions = ['首页', '后台任务', '基础资料', '头程管理', '邀请入驻', '客商中心', '系统设置', '商品管理', '地址管理', '异常处理池', '箱唛案例', '运单管理', '运输服务', '服务组合', '海外仓库列表', '港口管理', 'VAT管理', '标识管理', '企业客户档案', '自然人客户档案', '客户管理', '供应商管理', '等级管理', '用户管理', '员工管理', '角色管理', '亚马逊物流事件', '费用类型', '物流事件', '超级运价', '财务', '运单审计', '应收业务流水', '应付业务流水', '账单管理', '贷记单', '核销/冲账管理', '账龄台账', '资金账户管理', '财务流水', '资金流水', '舱位管理'];
+                const userPermissions = ['首页', '后台任务', '基础资料', '头程管理', '邀请入驻', '客商中心', '系统设置', '商品管理', '地址管理', '异常处理池', '箱唛案例', '运单管理', '运输服务', '服务组合', '海外仓库列表', '港口管理', 'VAT管理', '标识管理', '企业客户档案', '自然人客户档案', '客户管理', '供应商管理', '等级管理', '用户管理', '员工管理', '角色管理', '亚马逊物流事件', '费用类型', '物流事件', '超级运价', '财务管理', '运单审计', '应收业务流水', '应付业务流水', '账单管理', '贷记单', '核销/冲账管理', '账龄台账', '资金账户管理', '财务流水', '资金流水', '舱位管理'];
 
                 /**
                  * 检查是否有权限
@@ -599,19 +625,38 @@
                     { index: '等级管理.html', name: '等级管理', permission: '等级管理' }
                 ].filter(item => hasPermission(item.permission));
 
-                // 财务菜单列表
-                const financeMenuList = [
-                    { index: '财务_运单审计.html', name: '运单审计', permission: '运单审计' },
-                    { index: '财务_应收业务流水.html', name: '应收业务流水', permission: '应收业务流水' },
-                    { index: '财务_应付业务流水.html', name: '应付业务流水', permission: '应付业务流水' },
-                    { index: '财务_账单管理.html', name: '账单管理', permission: '账单管理' },
-                    { index: '财务_贷记单.html', name: '贷记单', permission: '贷记单' },
-                    { index: '财务_核销冲账管理.html', name: '核销/冲账管理', permission: '核销/冲账管理' },
-                    { index: '财务_账龄台账.html', name: '账龄台账', permission: '账龄台账' },
-                    { index: '财务_资金账户管理.html', name: '资金账户管理', permission: '资金账户管理' },
-                    { index: '财务_财务流水.html', name: '财务流水', permission: '财务流水' },
-                    { index: '财务_资金流水.html', name: '资金流水', permission: '资金流水' }
-                ].filter(item => hasPermission(item.permission));
+                // 财务菜单列表（三级结构：直挂项 + 应收/应付/资金 三个分组）
+                const financeMenuList = {
+                    audit: [
+                        { index: '财务_运单审计.html', name: '运单审计', permission: '运单审计' }
+                    ].filter(item => hasPermission(item.permission)),
+                    ar: [
+                        { index: '财务_应收业务流水.html', name: '应收业务流水', permission: '应收业务流水' },
+                        { index: '财务_账单管理.html', name: '账单管理', permission: '账单管理' },
+                        { index: '财务_贷记单.html', name: '贷记单', permission: '贷记单' },
+                        { index: '财务_核销冲账管理.html', name: '核销/冲账管理', permission: '核销/冲账管理' }
+                    ].filter(item => hasPermission(item.permission)),
+                    ap: [
+                        { index: '财务_应付业务流水.html', name: '应付业务流水', permission: '应付业务流水' }
+                    ].filter(item => hasPermission(item.permission)),
+                    fund: [
+                        { index: '财务_资金账户管理.html', name: '资金账户管理', permission: '资金账户管理' },
+                        { index: '财务_财务流水.html', name: '财务流水', permission: '财务流水' },
+                        { index: '财务_资金流水.html', name: '资金流水', permission: '资金流水' }
+                    ].filter(item => hasPermission(item.permission)),
+                    aging: [
+                        { index: '财务_账龄台账.html', name: '账龄台账', permission: '账龄台账' }
+                    ].filter(item => hasPermission(item.permission))
+                };
+
+                // 财务全部菜单项（扁平化，供面包屑与跨页路由查找）
+                const financeAllItems = [
+                    ...financeMenuList.audit,
+                    ...financeMenuList.ar,
+                    ...financeMenuList.ap,
+                    ...financeMenuList.fund,
+                    ...financeMenuList.aging
+                ];
 
                 // 系统设置菜单列表
                 const systemSettingsMenuList = [
@@ -669,7 +714,7 @@
                         item = systemSettingsMenuList.find(m => m.index === activeMenu.value);
                     }
                     if (!item) {
-                        item = financeMenuList.find(m => m.index === activeMenu.value);
+                        item = financeAllItems.find(m => m.index === activeMenu.value);
                     }
                     return item ? item.name : '';
                 });
@@ -698,6 +743,15 @@
                     }
                     if (headTransportMenuList.manifest.find(m => m.index === activeMenu.value)) {
                         return '舱单管理';
+                    }
+                    if (financeMenuList.ar.find(m => m.index === activeMenu.value)) {
+                        return '应收管理';
+                    }
+                    if (financeMenuList.ap.find(m => m.index === activeMenu.value)) {
+                        return '应付管理';
+                    }
+                    if (financeMenuList.fund.find(m => m.index === activeMenu.value)) {
+                        return '资金管理';
                     }
                     return '';
                 });
@@ -728,8 +782,8 @@
                     if (systemSettingsMenuList.find(m => m.index === activeMenu.value)) {
                         return '系统设置';
                     }
-                    if (financeMenuList.find(m => m.index === activeMenu.value)) {
-                        return '财务';
+                    if (financeAllItems.find(m => m.index === activeMenu.value)) {
+                        return '财务管理';
                     }
                     return '基础资料';
                 });
@@ -791,7 +845,7 @@
                                     ...inviteMenuList,
                                     ...merchantMenuList,
                                     ...systemSettingsMenuList,
-                                    ...financeMenuList,
+                                    ...financeAllItems,
                                     { index: '首页.html', name: '首页' },
                                     { index: '后台任务.html', name: '后台任务' },
                                     { index: '仓库列表_主列表.html', name: '仓库列表' }
