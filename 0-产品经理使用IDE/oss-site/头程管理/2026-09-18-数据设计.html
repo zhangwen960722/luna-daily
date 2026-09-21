@@ -18,9 +18,9 @@
 </div>
 <div class="layout">
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-实体清单-x-表映射">一、实体清单 x 表映射</a></li><li class="toc-lv2"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#2-1-表-vat_registration-对应实体-VATRegistration-聚合根">2.1 表: `vat_registration` | 对应实体: VATRegistration (聚合根)</a></li><li class="toc-lv3"><a href="#2-2-表-vat_attachment-对应实体-VATAttachment">2.2 表: `vat_attachment` | 对应实体: VATAttachment</a></li><li class="toc-lv3"><a href="#2-3-表-fee_type-对应实体-FeeType">2.3 表: `fee_type` | 对应实体: FeeType</a></li><li class="toc-lv3"><a href="#2-4-表-logistics_event-对应实体-LogisticsEvent">2.4 表: `logistics_event` | 对应实体: LogisticsEvent</a></li><li class="toc-lv3"><a href="#2-5-表-amazon_logistics_event-对应实体-AmazonLogisticsEvent">2.5 表: `amazon_logistics_event` | 对应实体: AmazonLogisticsEvent</a></li><li class="toc-lv3"><a href="#2-6-表-tag-对应实体-Tag">2.6 表: `tag` | 对应实体: Tag</a></li><li class="toc-lv3"><a href="#2-7-运单级补充字段-供财务账单明细引用">2.7 运单级补充字段（供财务账单明细引用）</a></li><li class="toc-lv2"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv2"><a href="#四-关键设计说明">四、关键设计说明</a></li><li class="toc-lv3"><a href="#4-1-软删除策略">4.1 软删除策略</a></li><li class="toc-lv3"><a href="#4-2-乐观锁">4.2 乐观锁</a></li><li class="toc-lv3"><a href="#4-3-JSON-字段使用场景">4.3 JSON 字段使用场景</a></li><li class="toc-lv3"><a href="#4-4-纯逻辑实体说明">4.4 纯逻辑实体说明</a></li><li class="toc-lv3"><a href="#4-5-查询接口对外暴露">4.5 查询接口对外暴露</a></li><li class="toc-lv3"><a href="#4-6-状态枚举汇总">4.6 状态枚举汇总</a></li><li class="toc-lv2"><a href="#五-数据融合附记-Demo-vs-数据设计-差异点">五、数据融合附记：Demo vs 数据设计 差异点</a></li></ul></nav>
-<div class="content"><div class="doc-content"><p><h1 id="数据设计-头程管理">数据设计 -- 头程管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.3 | <strong>日期</strong>: 2026-09-15 | <strong>作者</strong>: 飞点跨境产品经理
-<strong>上游文档</strong>: <code>2026-09-15-用户需求.md</code> (RDD v2.3)
-<strong>本次更新</strong>: 登记运单级补充字段「<strong>FBA 单号</strong> / 转单号 / 产品数量」（供财务账单明细引用），并显式区分箱级与运单级字段</blockquote></p><p><hr></p><p><h2 id="一-实体清单-x-表映射">一、实体清单 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
+<div class="content"><div class="doc-content"><p><h1 id="数据设计-头程管理">数据设计 -- 头程管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.4 | <strong>日期</strong>: 2026-09-18 | <strong>作者</strong>: 飞点跨境产品经理
+<strong>上游文档</strong>: <code>2026-09-18-用户需求.md</code> (RDD v2.4)
+<strong>本次更新</strong>: 费用类型去掉「是否赔付类型 / 赔付类型」字段（<code>is_credit</code> / <code>credit_type</code> 删除）</blockquote></p><p><hr></p><p><h2 id="一-实体清单-x-表映射">一、实体清单 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
 <tr><td>VATRegistration (VAT注册资料)</td><td><code>vat_registration</code></td><td>聚合根</td><td>基本信息+电商平台信息，员工端可修改全部字段</td></tr>
 <tr><td>VATAttachment (VAT附件)</td><td><code>vat_attachment</code></td><td>1:N 子表</td><td>通过 <code>vat_registration_id</code> 关联，附件类型按注册国家差异化</td></tr>
@@ -98,8 +98,6 @@
 <tr><td><code>fee_name</code></td><td>费用名称</td><td>String(100)</td><td>Yes</td><td><strong>部分唯一</strong>（tenant_id, fee_name, fee_direction, status=正常）</td><td>同方向同名仅一个启用，冻结的同名可多个；如"周六派送费""超重费"</td></tr>
 <tr><td><code>fee_direction</code></td><td>费用方向</td><td>TinyInt</td><td>Yes</td><td><strong>Unique</strong> (tenant_id, fee_name, fee_direction)</td><td>10:应收, 20:应付</td></tr>
 <tr><td><code>is_system</code></td><td>是否系统预置</td><td>Boolean</td><td>Yes</td><td>—</td><td>系统预置的费用类型（如「运费」）不可删除/冻结；Default: false</td></tr>
-<tr><td><code>is_credit</code></td><td>是否赔付类型</td><td>Boolean</td><td>Yes</td><td>—</td><td>标记为赔付类型，供财务<strong>识别赔付（抵扣）行</strong>；仅应收方向；Default: false</td></tr>
-<tr><td><code>credit_type</code></td><td>赔付类型</td><td>String(32)</td><td>No</td><td>—</td><td>is_credit=true 时必填；引用系统枚举配置（赔付类型，可自定义），如超时赔付/丢件赔付/货损赔偿</td></tr>
 <tr><td><code>status</code></td><td>状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:正常, 20:已冻结</td></tr>
 <tr><td><code>operator</code></td><td>操作人</td><td>String</td><td>Yes</td><td>—</td><td>最后操作人标识</td></tr>
 <tr><td><code>created_at</code></td><td>创建时间</td><td>DateTime</td><td>Yes</td><td>—</td><td>自动生成</td></tr>

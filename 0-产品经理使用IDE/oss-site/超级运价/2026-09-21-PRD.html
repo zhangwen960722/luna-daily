@@ -22,8 +22,8 @@
 <strong>作者</strong>：AI PM + 飞点业务团队
 <strong>评审人</strong>：产品/研发/测试/业务代表</blockquote>
 >
-<blockquote>变更历史见 <code>变更记录.md</code>（业务变更）与 <code>LOG.md</code>（工作日志）。</blockquote></p><p><h3 id="0-1-关联链接">0.1 关联链接</h3></p><p><ul><li>RDD：<code><a href="2026-09-15-用户需求.html">用户需求</a></code></li>
-<li>Architecture：<code><a href="2026-09-15-数据设计.html">数据设计</a></code></li>
+<blockquote>变更历史见 <code>变更记录.md</code>（业务变更）与 <code>LOG.md</code>（工作日志）。</blockquote></p><p><h3 id="0-1-关联链接">0.1 关联链接</h3></p><p><ul><li>RDD：<code><a href="2026-09-21-用户需求.html">用户需求</a></code></li>
+<li>Architecture：<code><a href="2026-09-21-数据设计.html">数据设计</a></code></li>
 <li>需求背景：<code>analysis/超级运价需求调研/超级运价需求背景.md</code></li>
 <li>原型：<code>demo/员工端-demo/, demo/货主端-demo/</code></li>
 </ul>
@@ -118,7 +118,7 @@
 <tr><td>--------</td><td>----</td><td>--------</td><td>------</td></tr>
 <tr><td>规则类型</td><td>10</td><td>字段匹配</td><td>字段匹配</td></tr>
 <tr><td>规则类型</td><td>20</td><td>公式阈值</td><td>公式阈值（保留枚举定义、当前不使用）</td></tr>
-<tr><td>规则类型</td><td>30</td><td>人工添加</td><td>人工添加</td></tr>
+<tr><td>规则类型</td><td>50</td><td>人工添加</td><td>人工添加</td></tr>
 <tr><td>规则类型</td><td>40</td><td>字段&公式</td><td>字段&公式</td></tr>
 <tr><td>动作类型</td><td>10</td><td>加收费用</td><td>加收费用</td></tr>
 <tr><td>动作类型</td><td>20</td><td>标识提醒</td><td>标识提醒</td></tr>
@@ -135,8 +135,8 @@
 <tr><td>计价单位</td><td>50</td><td>按数量</td><td>按数量</td></tr>
 </table></div>
 <blockquote><strong>附加费规则枚举口径</strong>：
-<ul><li><strong>规则类型三态</strong>：<code>field</code>(10) 字段匹配 / <code>fieldFormula</code>(40) 字段&公式 / <code>manual</code>(30) 人工添加。<strong>20:公式阈值 保留枚举定义、当前不使用</strong>，能力并入 40:字段&公式。</li>
-<li><strong>动作类型两态</strong>：<code>10:加收费用</code> / <code>20:标识提醒</code>（<code>30:阻止下单</code> 保留枚举定义、当前不使用）。</li>
+<ul><li><strong>规则类型三态</strong>：<code>field</code>(10) 字段匹配 / <code>fieldFormula</code>(40) 字段&公式 / <code>manual</code>(50) 人工添加。<strong>20:公式阈值 保留枚举定义、当前不使用</strong>，能力并入 40:字段&公式。</li>
+<li><strong>动作类型两态</strong>：<code>10:加收费用</code> / <code>20:标识提醒</code>（<code>30:阻止下单</code> 保留枚举定义、当前不使用）；<strong>规则类型=人工添加时仅「加收费用」可选</strong>（人工添加型由操作员手动触发、只加收费用，无「命中后提醒」场景，「标识提醒」直接隐藏不展示）。</li>
 <li><strong>优惠上限以数值约束表达</strong>：不设 <code>可优惠级别</code>（<code>discountable_level</code>）字段——上限由「<strong><code>|优惠值| ≤ 计价明细应收行单价</code></strong>」（<strong>绝对值比较</strong>，否则负数永远通不过校验）承担（超出→优惠后单价为负 → 拦截）；「不可优惠」这类业务政策改为靠<strong>不建优惠规则</strong>实现，二期可选落到「基础资料-费用类型」加「是否可优惠」标记。</blockquote></li>
 </ul>
 <h3 id="2-9-优惠规则枚举">2.9 优惠规则枚举</h3></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>备注</td></tr>
@@ -446,7 +446,6 @@
 <tr><td>包税方式</td><td>tax_method</td><td>枚举渲染</td></tr>
 <tr><td>服务类型</td><td>service_type</td><td>枚举渲染</td></tr>
 <tr><td>状态</td><td>status</td><td>正常/已冻结</td></tr>
-<tr><td>优惠</td><td>运费优惠规则 / 泡比优惠规则（按组合统计生效中条数）</td><td>标签渲染「运费 N」「泡比 M」；两者都未配置时显示「未配置」</td></tr>
 </table></div>
 <strong>编辑弹窗</strong>：包含<strong>两个</strong>折叠区域 ——
 <ul><li>「基本信息」：组合基础字段（名称/渠道/运输方式/尾程派送/计费方式/包税方式/服务类型/状态）</li>
@@ -461,6 +460,14 @@
 <li><strong>已失效的优惠行也会载入</strong>，灰化只读（不可编辑、无删除按钮），且<strong>不占用唯一性名额</strong></li>
 <li>组合状态 ≠「正常」（已冻结）时：顶部提示「该服务组合已冻结，优惠规则仅可查看，不可编辑」，底部只剩「关闭」</li>
 <li>底部：取消 / 保存优惠</li>
+</ul>
+<strong>批量添加优惠（工具栏入口）</strong>：工具栏「新增服务组合」旁新增「批量添加优惠」按钮，打开独立弹窗，用于<strong>一条优惠规则批量挂到多个服务组合</strong>（对应数据模型 <code>scope_combo_ids</code> 多组合数组）——
+<ul><li>弹窗标题：<code>批量添加优惠</code>，宽 1180px</li>
+<li>顶部提示条：说明「选择多个服务组合并配置优惠规则，保存后每条规则批量应用到所有选中组合」</li>
+<li><strong>作用范围（服务组合）</strong>：多选服务组合（必填，至少 1 个），选项 = 全部服务组合，支持全选 / 反全选</li>
+<li><strong>两个 Tab</strong>：「运费优惠」「泡比优惠」，各自 <code>+ 添加规则</code> + 可编辑表格 + 空态；列与单个组合优惠弹窗一致（运费：对象类型 / 目标 / 优惠方式 / 优惠值 / 有效期 / 有效期起止 / 审批编号 / 费用类型 / 删除；泡比另在「目标」后加「密度阈值」）</li>
+<li><strong>保存</strong>：校验作用范围非空 + 规则字段完整（复用单个组合优惠弹窗校验口径）→ 每条规则按目标展开、<code>scope_combo_ids</code> = 选中的全部组合，批量写入（一条优惠挂多个组合）</li>
+<li>底部：取消 / 保存</li>
 </ul>
 <strong>关联接口</strong>：
 <ul><li>查询组合：<code>GET /api/service-combinations?channel_id={id}</code></li>
@@ -491,7 +498,7 @@
 <li>快递派：派送段按重量段 × 邮编前缀查表，直接累加不比较</li>
 <li>底部绿色公式条：成本底价 = 头程 + 派送普通项 + 派送MAX/快递合计</li>
 </ul>
-<strong>新建周批次</strong>：从全局 <code>loading_standard</code> 表拉取全部启用行快照为数组（每行含运输方式/基准类型/尾程方式/KG基准/CBM基准），弹窗「折算基准快照」Tab 以可编辑表格展示（KG/CBM基准可直接修改，快递派行锁定为1不可编辑），支持运价管理员针对本周覆盖全局默认值。+ 汇率。可选「从上周复制」——骨架重生+决策继承：用本周启用航线/组合笛卡尔积铺底→匹配旧批次→命中则继承加成额/公布价（成本底价用本周 costRefMap 重算），未命中用组合默认加成额初始化并标记「新增」，已停用的航线/组合/成本项自动移除。复制后全部标记待重算。加成额取组合默认加成额起步值，不随批次快照。系统定时生效后锁定不可编辑。</p><p><strong>待重算</strong>：成本单价变更 → 自动标记当前批次运价行为待重算 → 工作台提醒条 → [重算成本底价] 或 [已知晓不调整]。点击任一按钮弹出弹窗，列出带 ⚠ 的服务组合（服务组合 × 交货地），可勾选多选；确定后仅对选中的服务组合执行「重算」或「已知晓」，未选中的保持待重算。</p><p><hr></p><p><h3 id="5-10-费用与标识规则列表-编辑">5.10 费用与标识规则列表 / 编辑</h3></p><p><strong>页面信息</strong>：菜单位置「费用与标识规则」（唯一入口，规则配置统一在本页）</p><p><strong>列表页字段</strong>：规则名称、类型(字段匹配/字段&公式/人工添加)、动作(加收费用/标识提醒)、<strong>触发条件/公式</strong>、计价（取计价明细行）、<strong>费用类型</strong>（取计价明细行）、<strong>费用方向</strong>（一期恒「应收」）、状态、优惠（动作类型=标识提醒显示「—」；有配置显示「N 条」；无配置显示「未配置」）、操作。<strong>「生效范围」不在列表展示</strong>（<code>scope_type</code> 一期固定「全局」，字段保留、页面不展示）</p><p><strong>编辑页</strong>：按 rule_type 渲染不同表单区块——
+<strong>新建周批次</strong>：从全局 <code>loading_standard</code> 表拉取全部启用行快照为数组（每行含运输方式/基准类型/尾程方式/KG基准/CBM基准），弹窗「折算基准快照」Tab 以可编辑表格展示（KG/CBM基准可直接修改，快递派行锁定为1不可编辑），支持运价管理员针对本周覆盖全局默认值。+ 汇率。可选「从上周复制」——骨架重生+决策继承：用本周启用航线/组合笛卡尔积铺底→匹配旧批次→命中则继承加成额/公布价（成本底价用本周 costRefMap 重算），未命中用组合默认加成额初始化并标记「新增」，已停用的航线/组合/成本项自动移除。复制后全部标记待重算。加成额取组合默认加成额起步值，不随批次快照。系统定时生效后锁定不可编辑。</p><p><strong>待重算</strong>：成本单价变更 → 自动标记当前批次运价行为待重算 → 工作台提醒条 → [重算成本底价] 或 [已知晓不调整]。点击任一按钮弹出弹窗，列出带 ⚠ 的服务组合（服务组合 × 交货地），可勾选多选；确定后仅对选中的服务组合执行「重算」或「已知晓」，未选中的保持待重算。</p><p><hr></p><p><h3 id="5-10-费用与标识规则列表-编辑">5.10 费用与标识规则列表 / 编辑</h3></p><p><strong>页面信息</strong>：菜单位置「费用与标识规则」（唯一入口，规则配置统一在本页）</p><p><strong>列表页字段</strong>：规则名称、类型(字段匹配/字段&公式/人工添加)、动作(加收费用/标识提醒)、<strong>触发条件/公式</strong>、计价（取计价明细行）、<strong>费用类型</strong>（取计价明细行）、<strong>费用方向</strong>（一期恒「应收」）、状态、操作。<strong>「生效范围」不在列表展示</strong>（<code>scope_type</code> 一期固定「全局」，字段保留、页面不展示）</p><p><strong>编辑页</strong>：按 rule_type 渲染不同表单区块——
 <ul><li>通用区（所有类型共享字段，见下表）</li>
 <li>条件配置区（按 rule_type 动态渲染：<strong>字段匹配 → 维度条件列表（AND，≥1 条必填）</strong> / <strong>字段&公式 → 维度条件（仅「服务组合」多选，最多 1 条，可为空）＋ 公式条件列表（OR，≥1 条必填）</strong> / 人工添加 → 无触发条件）</li>
 <li>附加费标识区（详见下方"附加费标识字段"）</li>
@@ -507,17 +514,17 @@
 </ul>
 <strong>规则类型（三态）× 触发条件 × 计价单位</strong>：</p><p><div class="table-wrapper"><table><tr><td>值</td><td>常量名</td><td>名称</td><td>触发条件</td><td>计价单位</td></tr>
 <tr><td>:--:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
-<tr><td>10</td><td>field</td><td>字段匹配</td><td>维度条件（AND，<strong>≥1 条必填</strong>）</td><td>按票 / 按KG / 按m³ / 按数量</td></tr>
+<tr><td>10</td><td>field</td><td>字段匹配</td><td>维度条件（AND，<strong>≥1 条必填</strong>）</td><td>按票 / 按KG / 按m³ / 按箱</td></tr>
 <tr><td>40</td><td>fieldFormula</td><td>字段&公式</td><td><strong>维度条件（仅「服务组合」多选，最多 1 条，可为空）＋ 公式条件（OR，≥1 条必填）</strong></td><td><strong>仅按箱</strong></td></tr>
-<tr><td>30</td><td>manual</td><td>人工添加</td><td>无（操作员在运单界面手动触发）</td><td>仅按数量</td></tr>
+<tr><td>50</td><td>manual</td><td>人工添加</td><td>无（操作员在运单界面手动触发）</td><td>仅按数量</td></tr>
 </table></div>
 <blockquote>规则类型为三态，<code>20:公式阈值</code> 保留枚举定义、当前不使用，能力并入 <code>40:字段&公式</code>。</blockquote></p><p><strong>触发节点</strong>（后台预置，<strong>原型不展示、数据库保留</strong>）：</p><p><div class="table-wrapper"><table><tr><td>规则类型</td><td>触发节点</td></tr>
 <tr><td>:---</td><td>:---</td></tr>
 <tr><td>字段匹配</td><td>运单收货完成</td></tr>
-<tr><td>字段&公式</td><td><strong>拣货</strong></td></tr>
+<tr><td>字段&公式</td><td><strong>运单收货完成</strong></td></tr>
 <tr><td>人工添加</td><td>人工触发</td></tr>
 </table></div>
-<ul><li>通用：<strong>运单信息变更 → 重新扫描费用规则</strong></li>
+<blockquote><strong>费用类型引用约束</strong>：同一费用类型最多只能被一条「人工添加型」附加费规则（<code>rule_type=50</code>）的计价明细「应收」行引用；字段匹配 / 字段&公式型不限制。</blockquote></p><p><ul><li>通用：<strong>运单信息变更 → 重新扫描费用规则</strong></li>
 <li>冻结边界：收货完成前随意重扫 / 收货后~业务审计前可重扫并留痕 / <strong>业务审计后冻结</strong> / <strong>进账单后冻结</strong> / <strong>人工添加型费用永远豁免重扫</strong></li>
 </ul>
 <strong>字段匹配型 — 维度 × 取值</strong>：</p><p>每条条件 = 一个维度 + 取值；条件之间为「且」关系。<strong>维度与取值均必填</strong>（保存时逐行校验：第 N 行条件：请选择维度 / 请选择取值）。<strong>取值一律下拉选择，不允许自由输入</strong>。</p><p><div class="table-wrapper"><table><tr><td>#</td><td>维度</td><td>取值</td><td>选择方式</td><td>取值来源</td></tr>
@@ -544,8 +551,8 @@
 <strong>通用字段表</strong>：</p><p><div class="table-wrapper"><table><tr><td>字段名</td><td>中文名</td><td>类型</td><td>必填</td><td>校验规则</td></tr>
 <tr><td>--------</td><td>--------</td><td>------</td><td>------</td><td>---------</td></tr>
 <tr><td>name</td><td>规则名称</td><td>字符串(50)</td><td>✅</td><td>唯一 Unique</td></tr>
-<tr><td>rule_type</td><td>规则类型</td><td>小整数</td><td>✅</td><td>10:字段匹配 40:字段&公式 30:人工添加（20:公式阈值 保留定义、不可选）</td></tr>
-<tr><td>action_type</td><td>动作类型</td><td>小整数</td><td>✅</td><td>10:加收费用 20:标识提醒（30:阻止下单 保留定义、不可选）</td></tr>
+<tr><td>rule_type</td><td>规则类型</td><td>小整数</td><td>✅</td><td>10:字段匹配 40:字段&公式 50:人工添加（20:公式阈值 保留定义、不可选）</td></tr>
+<tr><td>action_type</td><td>动作类型</td><td>小整数</td><td>✅</td><td>10:加收费用 20:标识提醒（30:阻止下单 保留定义、不可选）；<strong>规则类型=人工添加时仅 10:加收费用 可选</strong></td></tr>
 <tr><td>scope_type</td><td>生效范围</td><td>小整数</td><td>✅</td><td>10/20/30</td></tr>
 <tr><td>scope_ids</td><td>生效范围ID列表</td><td>数组</td><td>条件</td><td>scope_type=20时取正常的服务渠道名称；scope_type=30时取服务组合</td></tr>
 <tr><td>pricing_rows</td><td>计价明细</td><td>数组</td><td>条件</td><td>action_type=10 时必填。<strong>费用方向固定「应收」（<code>fee_direction</code> 恒 10）</strong>，一期<strong>仅 1 行</strong>（应付方向二期拓展）；约束：<strong>同一费用方向最多 1 行</strong>。每行含 fee_direction/fee_label/pricing_unit/price/currency（明细列：费用方向(只读) / 费用类型 / 计价单位 / 单价 / 币种），<strong>「计价单位」在明细行内</strong>（规则级不设该字段）</td></tr>
@@ -815,7 +822,7 @@
 <tr><td>R02</td><td>公布价生成</td><td><code>公布价 = 成本底价 + 加成额 + 拖车费交货地组加价/KG</code>（加成额，元/计价单位，取自组合 default_markup 作起步值，可逐行覆盖；拖车费交货地组加价按所选交货地组查表）；KG/CBM 分别计算</td><td>price_table_row.price_每公斤/cbm</td><td>—</td></tr>
 <tr><td>R03</td><td>运价查询-重量段匹配</td><td>KG路径→计费重量匹配 weight_tier(KG)的 start≤x<end；CBM路径→计费体积匹配 weight_tier(CBM)</td><td>公布价</td><td>无匹配→不显示该组合</td></tr>
 <tr><td>R04</td><td>运费优惠优先级与唯一性</td><td><strong>一期即生效</strong>：二级优先级 客户特批 > 客户等级，高覆盖低不叠加（特批命中即覆盖等级规则，只取特批规则参与计算）；同一父实体+同一对象类型+同一目标最多一条生效规则（客户特批比客户ID、客户等级比等级ID，两个命名空间互不冲突）</td><td>优惠后运费</td><td>—</td></tr>
-<tr><td>R05</td><td>附加费匹配</td><td><strong>字段匹配</strong>：维度条件自动比对（AND，≥1 条必填）；<strong>字段&公式</strong>：维度条件（仅「服务组合」，最多 1 条）＋ 公式条件（OR，≥1 条必填），在<strong>拣货</strong>节点比对；<strong>人工添加</strong>：运单界面人工触发。命中后按计价明细行「应收」单价 × 计价量计算</td><td>附加费明细</td><td>维度/公式条件为空→阻止保存</td></tr>
+<tr><td>R05</td><td>附加费匹配</td><td><strong>字段匹配</strong>：维度条件自动比对（AND，≥1 条必填）；<strong>字段&公式</strong>：维度条件（仅「服务组合」，最多 1 条）＋ 公式条件（OR，≥1 条必填），在<strong>收货完成</strong>节点比对；<strong>人工添加</strong>：运单界面人工触发。命中后按计价明细行「应收」单价 × 计价量计算</td><td>附加费明细</td><td>维度/公式条件为空→阻止保存</td></tr>
 <tr><td>R06</td><td>附加费优惠</td><td>绑定附加费规则 + 折扣率/固定减免（<strong>动作类型=加收费用 的规则才有优惠可配</strong>；动作类型=标识提醒 的规则列表操作列「优惠」入口置灰不可点）；<strong>对象类型一期同时开放 客户等级 与 客户特批</strong>（优先级与唯一性同 R04：特批 > 等级，高覆盖低不叠加）；<strong>优惠量纲=计价明细「应收」行单价</strong>（单价级：优惠后单价 = 单价 × Π(折扣率) + Σ(固定减免值)，固定减免值为<strong>带符号调整量</strong>、负=减钱），与运费优惠独立计算</td><td>优惠后附加费</td><td>无应收行→拒绝配置优惠；<strong><code>\</td><td>优惠值\</td><td>> 应收单价</code></strong>（优惠后单价为负）→拦截（<strong>绝对值比较</strong>）</td></tr>
 <tr><td>R07</td><td>底线检查（只判运费侧）</td><td><strong>一期</strong>：运费净利=公布价+运费优惠值+泡比优惠值−成本（优惠值为带符号调整量，负=减钱、正=加价）；绿：运费净利≥成本×5%；黄：0≤运费净利<成本×5%；红：运费净利<0。附加费不并入判定（仅展示）。仅销售/运营端展示，货主端不展示</td><td>盈亏标识</td><td>红灯→运价管理员录入时弹窗确认</td></tr>
 <tr><td>R08</td><td>成本批量更新</td><td>改模板default_price→查引用此模板的channel_cost_item→找到combination_cost_item→展示清单→勾选（可选择成本项+组合）→仅更新已有项单价（不新增不删除）→可选"自动重算预告批次"→重算每公斤成本/cbm。仓点/快递单价同步同理</td><td>重算公布价</td><td>≤50条单事务；>50条分批(50条/批)独立事务</td></tr>
@@ -844,7 +851,7 @@
 <tr><td>R31</td><td>优惠上限截断（强制）</td><td>任一费用项的最终金额<strong>不得为负</strong>：<strong><code>该费用项金额 + Σ(带符号优惠值) ≥ 0</code>，等价 <code>\</td><td>Σ(负向优惠值)\</td><td>≤ 该费用项金额</code></strong>（按代数和判定），<strong>超出则对「负向（减钱）优惠总量」按比例截断到 0</strong>（正向加价不受截断约束）。<strong>附加费优惠为一期唯一单价级优惠</strong>：<strong><code>\</td><td>优惠值\</td><td>≤ 计价明细「应收」行单价</code></strong>（<strong>绝对值比较</strong>），优惠后单价不得为负，且<strong>配置时即前置拦截</strong>（<strong><code>\</td><td>优惠值\</td><td></code> > 应收单价</strong> / 无应收行）。与 R07 红灯<strong>仅预警放行</strong>是两回事，不可合并实现</td><td>费用项最终金额</td><td>截断须在报价与落库两侧一致，避免报价 0 元、落库负金额</td></tr>
 <tr><td>R32</td><td>优惠冲突判定</td><td>按数据设计 §3.19 矩阵执行。<strong>一期</strong>：同一父实体 × 同一对象类型 × 同一目标唯一命中（客户特批比客户ID、客户等级比等级ID，两个命名空间互不冲突；<strong>泡比优惠另加「同一密度阈值」维度</strong>，故同一目标可按不同阈值各配一条阶梯）；<strong>客户特批 > 客户等级（高覆盖低，互斥不叠加，特批命中即覆盖等级规则）</strong>；<strong>运费优惠 × 泡比优惠叠加，泡比多条命中取阈值最大档（不叠加）</strong>；附加费优惠与运费优惠独立计算。<strong>★ 二期</strong>：单次有效、折扣率、浮动优惠与叠加顺序可配接入</td><td>优惠后各费用项</td><td>二期浮动优惠接入时只追加矩阵行，不改判定入口</td></tr>
 <tr><td>R33</td><td>优惠父实体删除保护</td><td>服务组合 / 附加费规则删除前校验是否存在生效中的优惠规则，存在则阻断并提示。<strong>优惠表的父实体外键禁止 <code>ON DELETE CASCADE</code></strong></td><td>删除结果</td><td>防止静默丢优惠历史，二期迁移依赖此约束</td></tr>
-<tr><td>R34</td><td>计费取数入参</td><td>财务调 <code>POST /api/pricing/calc</code>（生成应收流水 / 重算）时</td><td>入参分五组：<strong>调用上下文</strong>（<code>trigger</code> 10收货完成 / 20拣货实测完成 / 30运单信息变更、<code>changedFields[]</code>、<code>batchId</code>）、<strong>运单与身份</strong>（<code>waybillId</code> / <code>waybillNo</code> / <code>customerId</code> / <code>entityId</code>）、<strong>服务与路径</strong>（<code>combinationId</code> / <code>deliverySite</code> / <code>destWarehouseCode</code> / <code>zipCode</code> / <code>addressType</code> / <code>isRemoteZip</code>）、<strong>货物参数</strong>（<code>packageMode</code> / <code>boxes[]</code> 含拣货实测值 / <code>totalWeight</code> / <code>totalVolume</code> / <code>cargoAttrs[]</code> / <code>skuList[]</code> / <code>pieces</code> / <code>boxCount</code>）、<strong>业务开关</strong>（<code>isFbaWaybill</code> / <code>selfDelivery</code> / <code>customsMode</code>）。<strong>运单只传自身字段</strong>——尾程派送方式 / 计费方式 / 包税方式 / 客户等级 / 可用优惠规则<strong>一律服务端按 <code>combinationId</code>、<code>customerId</code> 反查</strong></td><td>缺必填参数 → 拒绝并回传缺失字段名；无匹配运价行 → 返回「暂未报价」；参数清单与每类行的依赖见数据设计 §6.6</td></tr>
+<tr><td>R34</td><td>计费取数入参</td><td>财务调 <code>POST /api/pricing/calc</code>（生成应收流水 / 重算）时</td><td>入参分五组：<strong>调用上下文</strong>（<code>trigger</code> 10收货完成 / 30运单信息变更、<code>changedFields[]</code>、<code>batchId</code>）、<strong>运单与身份</strong>（<code>waybillId</code> / <code>waybillNo</code> / <code>customerId</code> / <code>entityId</code>）、<strong>服务与路径</strong>（<code>combinationId</code> / <code>deliverySite</code> / <code>destWarehouseCode</code> / <code>zipCode</code> / <code>addressType</code> / <code>isRemoteZip</code>）、<strong>货物参数</strong>（<code>packageMode</code> / <code>boxes[]</code> 含收货过机实测值 / <code>totalWeight</code> / <code>totalVolume</code> / <code>cargoAttrs[]</code> / <code>skuList[]</code> / <code>pieces</code> / <code>boxCount</code>）、<strong>业务开关</strong>（<code>isFbaWaybill</code> / <code>selfDelivery</code> / <code>customsMode</code>）。<strong>运单只传自身字段</strong>——尾程派送方式 / 计费方式 / 包税方式 / 客户等级 / 可用优惠规则<strong>一律服务端按 <code>combinationId</code>、<code>customerId</code> 反查</strong></td><td>缺必填参数 → 拒绝并回传缺失字段名；无匹配运价行 → 返回「暂未报价」；参数清单与每类行的依赖见数据设计 §6.6</td></tr>
 <tr><td>R35</td><td>运单参数变更 → 重算</td><td>运单信息变更事件（事件需带<strong>变更字段清单</strong>）</td><td>由<strong>财务侧 <code>POST /api/finance/ar-flows/recalculate</code></strong> 发起，内部<strong>整单重跑 <code>calc</code></strong> 并按去重键覆盖未审计自动行；<strong>哪些字段变更要重算见数据设计 §6.6 变更重算矩阵</strong>（服务组合变更 = 五类全部重算；重量 / 体积 / 箱数变化还可能<strong>重量段跳档</strong>）</td><td>已审计 / 已进账单的行<strong>不覆盖</strong>（只能红冲）；<code>generate_node=30</code> 人工添加型永久豁免</td></tr>
 </table></div>
 <div class="table-wrapper"><table><tr><td>R36</td><td>附加费标识打标去重（幂等）</td><td>任一规则命中并需要为运单打标时（自动命中，或财务「添加应收」选中的「人工添加型」规则）</td><td>打标前按<strong>去重键 = 运单 + 标识（<code>waybill_id</code> + <code>tag_id</code>）</strong>判重：该运单已存在该标识 → <strong>跳过打标、不报错、不产生第二条打标记录</strong>；<strong>多条规则共用同一标识且同时命中</strong>（如「出口先查后装」按现有能力拆成的「加收运费单价」「加收报关费」两条规则）→ <strong>只打一枚</strong></td><td>运单上该标识仅一枚；<strong>规则命中与流水留痕不受影响</strong> —— 每条命中规则的应收流水仍各自带 <code>source_rule_id</code> / <code>source_rule_name</code>；<strong>同一 <code>tag_id</code> 允许被多条规则共用</strong>，不设跨规则唯一性约束</td></tr>
@@ -922,7 +929,7 @@
     按KG: 计费量 = 计费重量
     按CBM: 计费量 = 计费体积
     按数量: 计费量 = 人工填入数量
-  计价单位受规则类型约束: 字段匹配→按票/按KG/按m³/按数量；字段&amp;公式→仅按箱；人工添加→仅按数量
+  计价单位受规则类型约束: 字段匹配→按票/按KG/按m³/按箱；字段&amp;公式→仅按箱；人工添加→仅按数量
   优惠后单价 = 应收单价 × Π(附加费折扣率_i) + Σ(附加费固定减免值_j)　（固定减免值为带符号调整量，负=减钱、正=加价）
     约束: 0.01 ≤ 折扣率 ≤ 1（一期不支持加价）；**固定减免逐条 `|优惠值| ≤ 应收单价`**（**绝对值比较**，否则负数永远通不过校验）；优惠后单价 ≥ 0，否则拒绝配置
   优惠后附加费 = Σ( 优惠后单价_k × 计费量_k )
@@ -1046,6 +1053,7 @@
 <tr><td>A19</td><td>询价日志记录</td><td>手动操作</td><td>执行查询→询价日志中出现对应记录</td><td>AC29</td></tr>
 <tr><td>A20</td><td>权限生效</td><td>角色切换</td><td>销售账号→无法编辑运价/看不到成本底价</td><td>—</td></tr>
 <tr><td>A21</td><td>规则骨架编辑态置灰</td><td>手动操作</td><td>打开任一已有规则的「编辑」→ <strong>规则类型 / 动作类型 / 维度 三项置灰不可点</strong>、条件行「+ 添加条件 / ✕」置灰且悬浮给出原因；改「取值 / 计价明细 / 附加费标识」仍可正常保存；<strong>新建规则时三项均可自由选择</strong></td><td>AC7~AC12</td></tr>
+<tr><td>A22</td><td>批量添加优惠</td><td>手动操作</td><td>工具栏「批量添加优惠」→ 勾选多个服务组合 → 运费优惠 Tab 添加规则并填全字段 → 保存 → 该规则批量挂到所有选中组合（单个组合「优惠」弹窗可见、scope 含全部选中组合）；泡比优惠同理；未选组合 / 未填规则时保存被拦截</td><td>AC13, AC13a</td></tr>
 </table></div>
 <blockquote><strong>RDD AC 对照</strong>：以下 RDD 验收标准无独立 PRD Axx 映射，已在流程设计中覆盖或归入二期：AC0m, AC0n, AC0q, AC0r, AC0s, AC0t, AC0u, AC0v, AC3, AC4a, AC5a~AC5f, AC5h, AC5i, AC28。</blockquote></p><p><hr></p><p><h2 id="12-附录">12. 附录</h2></p><p><ul><li><strong>术语表</strong>：</li>
 </ul>  - FBA (Fulfillment by Amazon) — 亚马逊物流服务
@@ -1055,8 +1063,8 @@
   - ETA (Estimated Time of Arrival) — 预计到港时间
   - SKU (Stock Keeping Unit) — 库存量单位
   - SRM (Supplier Relationship Management) — 供应商关系管理
-  - JTBD (Jobs To Be Done) — 待办任务</p><p><ul><li><strong>完整数据模型</strong>：见 <code><a href="2026-09-15-数据设计.html">数据设计</a></code></li>
-<li><strong>完整业务流程 + 字段表</strong>：见 <code><a href="2026-09-15-用户需求.html">用户需求</a></code></li>
+  - JTBD (Jobs To Be Done) — 待办任务</p><p><ul><li><strong>完整数据模型</strong>：见 <code><a href="2026-09-21-数据设计.html">数据设计</a></code></li>
+<li><strong>完整业务流程 + 字段表</strong>：见 <code><a href="2026-09-21-用户需求.html">用户需求</a></code></li>
 <li><strong>原型</strong>：见 <code>demo/员工端-demo/, demo/货主端-demo/</code></li>
 <li><strong>AC 清单</strong>：见 <code>prds/超级运价/AC-Checklist.md</code></li>
 </ul></p></div></div>
