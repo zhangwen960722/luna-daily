@@ -26,7 +26,7 @@
 <tr><td>2</td><td>应收账单</td><td><code>ar_bill</code></td><td>独立表</td><td>财务手工成账或<strong>系统每月 1 号自动出账</strong>；<strong>客户 × 我司主体 × 币种</strong> 一张（不跨币种折合）</td></tr>
 <tr><td>3</td><td>收款核销流水</td><td><code>ar_writeoff</code></td><td>独立表</td><td>核销/反核销留痕</td></tr>
 <tr><td>4</td><td>账龄台账</td><td>—</td><td><strong>视图</strong></td><td>实时计算，不落表</td></tr>
-<tr><td>4b</td><td><strong>业务流水台账（应收 / 应付）</strong></td><td>—</td><td><strong>视图</strong></td><td>直接查 <code>ar_flow</code> 的<strong>全量视图</strong>（跨 待审计 / 已审计未成账 / 已进账单 / 作废释放 全部状态），<strong>不建新表、不建新状态机</strong>；按 <code>flow_category</code> 分「应收业务流水（10）/ 应付业务流水（20）」两个菜单；应付流水数据源随 Phase 2 应付管理上线，一期空态。<strong>页面承载「新增流水 / 导入（文件）/ 删除」三个写动作 + 勾选批量「审计 / 反审计」</strong>（<code>ar_flow</code> 本表增删 + 流水级审计 / 反审计，走 R60 / R61 / R75 口径：新增流水 = 批量新增流水进运单，导入 = 上传文件批量导入流水，删除 = 删流水，审计 / 反审计 = 勾选流水批量置 已审计 / 退回待业务审计）</td></tr>
+<tr><td>4b</td><td><strong>业务流水台账（应收 / 应付）</strong></td><td>—</td><td><strong>视图</strong></td><td>直接查 <code>ar_flow</code> 的<strong>全量视图</strong>（跨 待审计 / 已审计未成账 / 已进账单 / 作废释放），<strong>不建新表、不建新状态机</strong>；按 <code>flow_category</code> 分「应收（10）/ 应付（20）」两个菜单，应付数据随 Phase 2 上线、一期空态；写动作复用 R60 / R61 / R75（详见 §二「视图：业务流水台账」）</td></tr>
 <tr><td>5</td><td>我方银行账户</td><td><code>bank_account</code></td><td>独立表</td><td>每主体可多账户</td></tr>
 <tr><td>6</td><td>客户预存款钱包</td><td><code>customer_wallet</code></td><td>独立表</td><td>客户×主体×币种</td></tr>
 <tr><td>7</td><td>资金流水</td><td><code>wallet_flow</code></td><td>独立表</td><td>9 类流水</td></tr>
@@ -40,8 +40,8 @@
 <tr><td>—</td><td>汇率</td><td>—</td><td>外部接口</td><td>调<strong>阿里汇率接口</strong>实时获取，不落库、不自建汇率表；币种互转时接口汇率与实际采用汇率随单留痕</td></tr>
 <tr><td>—</td><td>费用类型</td><td>—</td><td>逻辑实体</td><td>引用头程管理 <code>fee_type</code> 字典（同方向唯一），财务不建表</td></tr>
 <tr><td>—</td><td>账期（合同）</td><td>—</td><td>逻辑实体</td><td>引用客商中心 <code>customer_contract</code></td></tr>
-<tr><td>—</td><td>账单草稿池</td><td>—</td><td><strong>视图</strong></td><td><strong>已审计且未成账的流水集合</strong>（<code>audit_status = 已审计(20)</code> 且 <code>bill_id</code> 为空的 <code>ar_flow</code>）；<strong>逐条流水展示</strong>（不按运单聚合），按 <strong>客户 × 我司主体 × 币种</strong> 过滤（账单日不参与分组）；由「账单管理 → 草稿池」Tab 展示，财务<strong>逐条勾选流水</strong>成账，<strong>不跨币种折合</strong>（见 PRD R11）</td></tr>
-<tr><td>—</td><td>账单管理 · 待核销清单</td><td>—</td><td><strong>视图</strong></td><td><code>ar_bill</code> 上「<strong><code>bill_type = 应收(10)</code></strong> + <strong>客户已确认（<code>confirm_status = 已确认(20)</code>）</strong> + <code>unreceived_amount > 0</code> + <code>void_status = 正常(10)</code>」的实时查询结果（<strong>没有临时表</strong>）—— <strong>不占独立 Tab</strong>，在「账单管理 → 已发送」Tab 用查询条件「核销状态」筛出、并用行内「核销」按钮处理；客户未确认的账单不进本清单（见 PRD R67）；<strong>本视图不筛客户状态</strong> —— 客户被禁用、或合同已过期 / 已解约，其存量账单照常进清单、照常可核销（钱得收回来）；核销弹窗里的「钱包余额」另按 客户 × 主体 × 币种 实时取 <code>customer_wallet.balance</code></td></tr>
+<tr><td>—</td><td>账单草稿池</td><td>—</td><td><strong>视图</strong></td><td><strong>已审计且未成账的流水集合</strong>（<code>audit_status = 已审计(20)</code> 且 <code>bill_id</code> 为空），<strong>逐条流水展示</strong>、按 客户 × 我司主体 × 币种 过滤、<strong>不跨币种折合</strong>（详见下方「账单草稿池」说明）</td></tr>
+<tr><td>—</td><td>账单管理 · 待核销清单</td><td>—</td><td><strong>视图</strong></td><td><code>ar_bill</code> 上满足「<strong>应收(10)</strong> + <strong>客户已确认</strong> + 未结清金额 > 0 + 未作废」的实时查询结果（<strong>不建临时表、不占独立 Tab</strong>，在「已发送」Tab 用「核销状态」筛出，见 PRD R67）；<strong>不筛客户状态</strong>——禁用 / 过期 / 解约客户照常可核销</td></tr>
 <tr><td>—</td><td>货主端资金账户总览</td><td>—</td><td><strong>视图</strong></td><td>基于 <code>customer_wallet</code> + <code>ar_bill</code> 实时计算，按 主体 × 币种 聚合，供货主端「资金账户 → 账户余额」展示（见 §二 视图）</td></tr>
 </table></div>
 <blockquote><strong>FBA 单号（<code>fba_no</code>）</strong>：运单级<strong>派生多值</strong>（头程管理侧登记），<strong>财务侧不落库</strong> —— 草稿池列与账单明细列取数时<strong>按运单汇总、以 <code> / </code> 拼接展示</strong>，非 FBA 运单显示「—」。</blockquote>
@@ -130,14 +130,20 @@
 <tr><td>operator_by / operator_at</td><td>操作人/时间</td><td>—</td><td>Yes</td><td>—</td><td>财务</td></tr>
 </table></div>
 <h3 id="视图-贷记单-负数账单-与-结转钱包">视图：贷记单（负数账单）与「结转钱包」</h3></p><p><strong>负数应收流水 = 业务事实驱动、系统自动产生</strong>（识别到赔付即向运单插一条负应收），它不取决于客户是否合作 —— 所以必须有<strong>不依赖"客户后续业务"的结清出口</strong>。口径：</p><p><ul><li><strong>净额 > 0</strong> → 应收账单（负数流水作账单内一行「赔付抵扣 −N」，随账单正常发送 / 确认 / 核销）</li>
-<li><strong>净额 < 0</strong> → <strong>贷记单</strong>（我司欠客户）：<code>ar_bill</code> 上<strong>用 <code>bill_type = 贷记(20)</code> 标出单据类型</strong>（<strong>同一张表、同一套流程</strong>，不建第二张表），但：<strong>不参与收款核销</strong>（核销准入以 <code>bill_type = 应收(10)</code> 为准）、<strong>照常发送客户</strong>（<code>ship_status</code> 走正常发送流转、货主端照常展示并标注「贷记单」）、<strong>不进账龄台账</strong>、<strong>不计入资金账户「未结清金额」</strong>（该指标口径加 <code>unreceived_amount > 0</code>）；<code>writeoff_status</code> 保持 <code>未核销(10)</code> 但<strong>不参与核销状态机流转</strong></li>
-<li><strong>明细允许异号流水</strong>（与应收账单同一规则）：贷记单里可以有正数运费行、应收账单里可以有「赔付抵扣 −N」行 —— <strong><code>bill_type</code> 只看整单 <code>bill_amount</code> 的符号</strong>；<code>ar_flow</code> 每条流水仍按原符号完整落库，<strong>经营分析走流水、结算看账单</strong></li>
+<li><strong>净额 < 0</strong> → <strong>贷记单</strong>（我司欠客户）：<code>ar_bill</code> 上<strong>用 <code>bill_type = 贷记(20)</code> 标出单据类型</strong>（<strong>同一张表、同一套流程</strong>，不建第二张表），但：</li>
+</ul>  - <strong>不参与收款核销</strong>（核销准入以 <code>bill_type = 应收(10)</code> 为准）
+  - <strong>照常发送客户</strong>（<code>ship_status</code> 走正常发送流转、货主端照常展示并标注「贷记单」）
+  - <strong>不进账龄台账</strong>、<strong>不计入资金账户「未结清金额」</strong>（该指标口径加 <code>unreceived_amount > 0</code>）
+  - <code>writeoff_status</code> 保持 <code>未核销(10)</code> 但<strong>不参与核销状态机流转</strong>
+<ul><li><strong>明细允许异号流水</strong>（与应收账单同一规则）：贷记单里可以有正数运费行、应收账单里可以有「赔付抵扣 −N」行 —— <strong><code>bill_type</code> 只看整单 <code>bill_amount</code> 的符号</strong>；<code>ar_flow</code> 每条流水仍按原符号完整落库，<strong>经营分析走流水、结算看账单</strong></li>
 <li><strong>结清 = 结转钱包</strong>：写一条 <code>wallet_flow</code>（<code>flow_type = 70</code>、<code>related_no</code> = 账单号、<code>amount</code> = 贷记单净额的绝对值、<code>wallet_before/after</code> 留痕）；客户钱包余额增加 → <strong>之后可正常核销其他账单，也可提现</strong></li>
 <li><strong>「已结转」是派生状态</strong>（<strong>不新增状态枚举</strong>）：判定 = 存在 <code>wallet_flow(flow_type = 70, related_no = 账单号)</code>。<strong>结转即终态、不可撤销</strong> —— 钱进了客户可用额度就可能已被拿去核销别的账单，反悔必须走<strong>对冲凭证</strong>（运单侧新增反向流水 → 下期账单作为应收费抵扣），不回滚已发生的资金流水</li>
 <li><strong>幂等</strong>：<code>wallet_flow</code> 上 <code>flow_type = 70</code> + <code>related_no</code> <strong>唯一</strong>（同一贷记单只能结转一次，且不可逆）</li>
 <li><strong>照常发送客户、走同一套确认流程</strong>（客户端展示为「贷记单」黄 tag + 悬浮说明；<strong>发送满 7 个自然日未确认 → 系统自动确认</strong>，R16）→ <strong>结转前置 = <code>confirm_status = 已确认</code></strong>（与核销对称；有自动确认兜底，不会因客户不合作而卡死）；</li>
-<li><strong>不做「撤销入账」</strong>：结转是<strong>结清动作、入钱包即终态</strong> —— 钱包是「客户可用额度」容器，钱一旦进去就与充值款混同、可能已被核销其他账单或提现，逐笔回滚既不可行也说不清（"这笔钱被哪笔核销用掉了"需要资金逐笔配对，一期不做）。<strong>纠错统一走对冲</strong>：运单侧新增一条正数流水（→ 下期账单里作为应收费抵扣），下游账单与核销记录都不动、账面自动轧平。同一理由，<strong>核销也不再从「资金流水」页撤销</strong>（反核销在「核销记录」菜单）</li>
-<li><strong>结转进「操作时间线」</strong>（结清动作留痕：金额 + 钱包余额前后 + 流水号）；金额一律 = 账单净额，<strong>不让人手改</strong></li>
+<li><strong>不做「撤销入账」</strong>：结转是<strong>结清动作、入钱包即终态</strong> —— 钱包是「客户可用额度」容器，钱一旦进去就与充值款混同、可能已被核销其他账单或提现，逐笔回滚既不可行也说不清（"这笔钱被哪笔核销用掉了"需要资金逐笔配对，一期不做）</li>
+</ul>  - <strong>纠错统一走对冲</strong>：运单侧新增一条正数流水（→ 下期账单里作为应收费抵扣），下游账单与核销记录都不动、账面自动轧平
+  - 同一理由，<strong>核销也不再从「资金流水」页撤销</strong>（反核销在「核销记录」菜单）
+<ul><li><strong>结转进「操作时间线」</strong>（结清动作留痕：金额 + 钱包余额前后 + 流水号）；金额一律 = 账单净额，<strong>不让人手改</strong></li>
 </ul>
 <blockquote>为什么不做独立的"贷记台账 / 退款单"：钱包（<code>customer_wallet</code>）本来就是「客户可用额度」的容器，再造一套会出现<strong>两个池子都要轧账</strong>、客户可能同时在两处有钱 —— 双份口径，长期维护成本更高。</blockquote></p><p><h3 id="视图-账龄台账-不建表">视图：账龄台账（不建表）</h3></p><p>基于 <code>ar_bill</code> 实时计算：<strong><code>bill_type = 应收(10)</code></strong> 且 <strong><code>send_status = 已发送(20)</code></strong> 且 <code>unreceived_amount > 0</code> <strong>且 <code>void_status = 正常(10)</code></strong> 的账单（<strong>「待发送」账单不计入</strong> —— 未发给客户，账龄是对客催收口径；作废账单不计入），按 <code>billing_date + payment_terms_days</code> 推逾期天数 → 未到期单列 + 逾期 0-30 / 31-60 / 61-90 / 90+；维度 = 客户 × 主体 × 币种；分币种不折算。<strong>冲账（坏账冲销）后账单 <code>unreceived_amount = 0</code> → 自动出账龄</strong>（不再催收）。</p><p><h3 id="视图-业务流水台账-不建表">视图：业务流水台账（不建表）</h3></p><p><strong>业务流水台账（PRD 功能 A12/A13）本身不新增任何实体 / 表</strong> —— 它就是 <code>ar_flow</code> 的<strong>全量查询</strong>，按 <code>flow_category</code> 分「应收业务流水（10）/ 应付业务流水（20）」两个菜单（<strong>应收台账本页同时承载「新增流水 / 导入（文件）/ 删除」写动作 + 勾选批量「审计 / 反审计」</strong>，见 PRD §5.14，写动作复用 R60 / R61 / R75，不新增状态机）：</p><p><div class="table-wrapper"><table><tr><td>环节</td><td>承载</td></tr>
 <tr><td>:---</td><td>:---</td></tr>
@@ -146,9 +152,13 @@
 <tr><td>应付台账</td><td><code>flow_category = 20 应付</code>；<strong>列表 18 个业务字段 + 工具栏「新增应付业务流水 / 导入（文件）/ 导出 / 删除」</strong>（新增同「运单审计」新增应付流水、删除仅限「待业务审计」、导出校验勾选、导入 = 文件批量导入，走 R60 / R61 / R75 同口径）</td></tr>
 <tr><td>账单状态派生</td><td><code>bill_id</code> 为空 → 展示「草稿池」（未成账）；非空 → join <code>ar_bill.bill_no</code> 展示账单号（可点击跳账单详情）</td></tr>
 <tr><td>关联下钻</td><td>运单号 → <code>waybill</code>（跳运单审计详情）；账单号 → <code>ar_bill</code>（跳账单详情）；来源规则 → <code>source_rule_type / source_rule_id / source_rule_name</code>（收进行详情）</td></tr>
-<tr><td><strong>列表 JOIN / 派生列</strong></td><td>主列表展示的 <strong>客户编号 / 客户昵称 / 客户名称</strong> join <code>客商中心·customer</code>（<code>customer_id</code>）、<strong>销售代表</strong> join <code>waybill</code>（运单所属销售代表）、<strong>转单号（快递主单号）</strong> join <code>waybill</code>（运单关联的快递主单号）；<strong>流水号 / 汇率 / 创建人 / 备注 / 描述 / 拣货时间 / 创建时间</strong> 为 <code>ar_flow</code> 本表字段（<code>flow_no</code> / <code>rate</code> / <code>created_by</code> / <code>remark</code> / <code>description</code> / <code>pick_time</code> / <code>created_at</code>）；<strong>业务时间（账单归属月）</strong> = 派生展示（已进账单取账单账期月、未成账按拣货 / 创建时间所在月预估），<strong>均不落 <code>ar_flow</code> 新列、不建客户快照表</strong></td></tr>
+<tr><td><strong>列表 JOIN</strong></td><td><strong>客户编号 / 客户昵称 / 客户名称</strong> join <code>客商中心·customer</code>（<code>customer_id</code>）、<strong>销售代表</strong> join <code>waybill</code>（运单所属销售代表）、<strong>转单号（快递主单号）</strong> join <code>waybill</code>（运单关联的快递主单号）</td></tr>
+<tr><td><strong>列表本表字段</strong></td><td>流水号 / 汇率 / 创建人 / 备注 / 描述 / 拣货时间 / 创建时间（<code>ar_flow</code> 本表字段 <code>flow_no</code> / <code>rate</code> / <code>created_by</code> / <code>remark</code> / <code>description</code> / <code>pick_time</code> / <code>created_at</code>）</td></tr>
+<tr><td><strong>列表派生列</strong></td><td><strong>业务时间（账单归属月）</strong> = 派生展示（已进账单取账单账期月、未成账按拣货 / 创建时间所在月预估），<strong>不落 <code>ar_flow</code> 新列、不建客户快照表</strong></td></tr>
 </table></div>
-<blockquote><strong>为什么不建表</strong>：台账是「从流水本身出发」的<strong>跨容器查询视角</strong>，与运单审计（写 + 审计，按运单）、草稿池（成账，只未成账）、账单详情（结算，只已进账单）是<strong>同一张 <code>ar_flow</code> 的不同视图</strong> —— 再建一张流水表等于把同一批流水抄两份，必然出现"哪份算数"的口径分裂。台账对 <code>ar_flow</code> 的<strong>写动作有「新增流水 / 导入（文件）/ 删除」+ 勾选批量「审计 / 反审计」</strong>（新增 / 删除流水行本身走 R60 / R61，文件批量导入走 R75，审计 / 反审计为流水级 R61 的第二入口），成账 / 结算仍各归原位，不在此页。</blockquote></p><p><h3 id="视图-货主端资金账户-不建表">视图：货主端资金账户（不建表）</h3></p><p>基于 <code>customer_wallet</code> + <code>ar_bill</code> 实时计算，按 主体 × 币种 聚合，货主端「资金账户」页展示：</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>说明</td></tr>
+<blockquote><strong>为什么不建表</strong>：台账是「从流水本身出发」的<strong>跨容器查询视角</strong>，与运单审计（写 + 审计，按运单）、草稿池（成账，只未成账）、账单详情（结算，只已进账单）是<strong>同一张 <code>ar_flow</code> 的不同视图</strong> —— 再建一张流水表等于把同一批流水抄两份，必然出现"哪份算数"的口径分裂。</blockquote>
+>
+<blockquote><strong>写动作</strong>：台账对 <code>ar_flow</code> 有「新增流水 / 导入（文件）/ 删除」+ 勾选批量「审计 / 反审计」（新增 / 删除走 R60 / R61，文件导入走 R75，审计 / 反审计为流水级 R61 第二入口），成账 / 结算仍各归原位，不在此页。</blockquote></p><p><h3 id="视图-货主端资金账户-不建表">视图：货主端资金账户（不建表）</h3></p><p>基于 <code>customer_wallet</code> + <code>ar_bill</code> 实时计算，按 主体 × 币种 聚合，货主端「资金账户」页展示：</p><p><div class="table-wrapper"><table><tr><td>字段</td><td>说明</td></tr>
 <tr><td>:---</td><td>:---</td></tr>
 <tr><td>账户主体</td><td><code>customer_wallet.entity_id</code> → 主体名称（合同签约主体）</td></tr>
 <tr><td>币种</td><td><code>customer_wallet.currency</code>（默认人民币，各主体统一；其他币种财务手工开通）</td></tr>
