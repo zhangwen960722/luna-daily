@@ -17,18 +17,19 @@
 <span>数据设计</span>
 </div>
 <div class="layout">
-<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-实体清单-x-表映射">一、实体清单 x 表映射</a></li><li class="toc-lv2"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#2-1-表-vat_registration-对应实体-VATRegistration-聚合根">2.1 表: `vat_registration` | 对应实体: VATRegistration (聚合根)</a></li><li class="toc-lv3"><a href="#2-2-表-vat_attachment-对应实体-VATAttachment">2.2 表: `vat_attachment` | 对应实体: VATAttachment</a></li><li class="toc-lv3"><a href="#2-3-表-fee_type-对应实体-FeeType">2.3 表: `fee_type` | 对应实体: FeeType</a></li><li class="toc-lv3"><a href="#2-4-表-logistics_event-对应实体-LogisticsEvent">2.4 表: `logistics_event` | 对应实体: LogisticsEvent</a></li><li class="toc-lv3"><a href="#2-5-表-amazon_logistics_event-对应实体-AmazonLogisticsEvent">2.5 表: `amazon_logistics_event` | 对应实体: AmazonLogisticsEvent</a></li><li class="toc-lv3"><a href="#2-6-表-tag-对应实体-Tag">2.6 表: `tag` | 对应实体: Tag</a></li><li class="toc-lv3"><a href="#2-7-运单级补充字段-供财务账单明细引用">2.7 运单级补充字段（供财务账单明细引用）</a></li><li class="toc-lv2"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv2"><a href="#四-关键设计说明">四、关键设计说明</a></li><li class="toc-lv3"><a href="#4-1-软删除策略">4.1 软删除策略</a></li><li class="toc-lv3"><a href="#4-2-乐观锁">4.2 乐观锁</a></li><li class="toc-lv3"><a href="#4-3-JSON-字段使用场景">4.3 JSON 字段使用场景</a></li><li class="toc-lv3"><a href="#4-4-纯逻辑实体说明">4.4 纯逻辑实体说明</a></li><li class="toc-lv3"><a href="#4-5-查询接口对外暴露">4.5 查询接口对外暴露</a></li><li class="toc-lv3"><a href="#4-6-状态枚举汇总">4.6 状态枚举汇总</a></li><li class="toc-lv2"><a href="#五-数据融合附记-Demo-vs-数据设计-差异点">五、数据融合附记：Demo vs 数据设计 差异点</a></li></ul></nav>
-<div class="content"><div class="doc-content"><p><h1 id="数据设计-头程管理">数据设计 -- 头程管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.4 | <strong>日期</strong>: 2026-09-18 | <strong>作者</strong>: 飞点跨境产品经理
-<strong>上游文档</strong>: <code>2026-09-18-用户需求.md</code> (RDD v2.4)
-<strong>本次更新</strong>: 费用类型去掉「是否赔付类型 / 赔付类型」字段（<code>is_credit</code> / <code>credit_type</code> 删除）</blockquote></p><p><hr></p><p><h2 id="一-实体清单-x-表映射">一、实体清单 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#一-实体清单-x-表映射">一、实体清单 x 表映射</a></li><li class="toc-lv2"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#2-1-表-vat_registration-对应实体-VATRegistration-聚合根">2.1 表: `vat_registration` | 对应实体: VATRegistration (聚合根)</a></li><li class="toc-lv3"><a href="#2-2-表-vat_attachment-对应实体-VATAttachment">2.2 表: `vat_attachment` | 对应实体: VATAttachment</a></li><li class="toc-lv3"><a href="#2-3-表-fee_type-对应实体-FeeType">2.3 表: `fee_type` | 对应实体: FeeType</a></li><li class="toc-lv3"><a href="#2-4-表-logistics_event-对应实体-LogisticsEvent">2.4 表: `logistics_event` | 对应实体: LogisticsEvent</a></li><li class="toc-lv3"><a href="#2-5-表-amazon_logistics_event-对应实体-AmazonLogisticsEvent">2.5 表: `amazon_logistics_event` | 对应实体: AmazonLogisticsEvent</a></li><li class="toc-lv3"><a href="#2-6-表-tag-对应实体-Tag">2.6 表: `tag` | 对应实体: Tag</a></li><li class="toc-lv3"><a href="#2-7-运单级补充字段-供财务账单明细引用">2.7 运单级补充字段（供财务账单明细引用）</a></li><li class="toc-lv3"><a href="#2-8-提单配载明细-供财务提单平摊取数">2.8 提单配载明细（供财务提单平摊取数）</a></li><li class="toc-lv2"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv2"><a href="#四-关键设计说明">四、关键设计说明</a></li><li class="toc-lv3"><a href="#4-1-软删除策略">4.1 软删除策略</a></li><li class="toc-lv3"><a href="#4-2-乐观锁">4.2 乐观锁</a></li><li class="toc-lv3"><a href="#4-3-JSON-字段使用场景">4.3 JSON 字段使用场景</a></li><li class="toc-lv3"><a href="#4-4-纯逻辑实体说明">4.4 纯逻辑实体说明</a></li><li class="toc-lv3"><a href="#4-5-查询接口对外暴露">4.5 查询接口对外暴露</a></li><li class="toc-lv3"><a href="#4-6-状态枚举汇总">4.6 状态枚举汇总</a></li><li class="toc-lv2"><a href="#五-数据融合附记-Demo-vs-数据设计-差异点">五、数据融合附记：Demo vs 数据设计 差异点</a></li></ul></nav>
+<div class="content"><div class="doc-content"><p><h1 id="数据设计-头程管理">数据设计 -- 头程管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.6 | <strong>日期</strong>: 2026-09-22 | <strong>作者</strong>: 飞点跨境产品经理
+<strong>上游文档</strong>: <code>2026-09-22-用户需求.md</code> (RDD v2.5)
+<strong>本次更新</strong>: 费用类型「费用方向」由单选改多选（应收 / 应付 / 销售成本），<code>fee_direction</code> 改多值 + 唯一约束改为名称唯一</blockquote></p><p><hr></p><p><h2 id="一-实体清单-x-表映射">一、实体清单 x 表映射</h2></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
 <tr><td>VATRegistration (VAT注册资料)</td><td><code>vat_registration</code></td><td>聚合根</td><td>基本信息+电商平台信息，员工端可修改全部字段</td></tr>
 <tr><td>VATAttachment (VAT附件)</td><td><code>vat_attachment</code></td><td>1:N 子表</td><td>通过 <code>vat_registration_id</code> 关联，附件类型按注册国家差异化</td></tr>
-<tr><td>FeeType (费用类型)</td><td><code>fee_type</code></td><td>独立表</td><td>费用科目字典，同方向费用名称唯一</td></tr>
+<tr><td>FeeType (费用类型)</td><td><code>fee_type</code></td><td>独立表</td><td>费用科目字典，费用名称唯一，方向多选（应收/应付/销售成本）</td></tr>
 <tr><td>LogisticsEvent (物流事件)</td><td><code>logistics_event</code></td><td>独立表</td><td>自定义物流事件模板，N:1 关联 AmazonLogisticsEvent，配合Ship Track</td></tr>
 <tr><td>AmazonLogisticsEvent (亚马逊物流事件)</td><td><code>amazon_logistics_event</code></td><td>独立表</td><td>亚马逊标准物流事件代码字典，含状态启停</td></tr>
 <tr><td>Tag (标识)</td><td><code>tag</code></td><td>独立表</td><td>标识定义，供舱单/运单打标引用</td></tr>
 <tr><td>Waybill (运单)</td><td>运单主表（字段全集以运单管理原型 <code>demo/员工端-demo/Waybill.html</code> 与财务 PRD §5.1 列表列为准）</td><td>外部实体（本模块不持有、不建表）</td><td>本模块仅登记被其他模块（财务账单明细）引用的运单级补充字段：<code>fba_no</code> / <code>transfer_no</code> / <code>product_qty</code>，见 §2.7</td></tr>
+<tr><td>提单配载明细 (BLLoad)</td><td>待头程管理专项落表（原型 <code>舱位管理.html</code> 已承载「提单号 + 配载信息」）</td><td>外部关联（供财务提单平摊取数）</td><td>提单（舱位）→ 运单的装柜配载关系 + 实收体积，供财务「提单平摊应付」按实收体积平摊取数，见 §2.8</td></tr>
 </table></div>
 <hr></p><p><h2 id="二-逐表字段清单">二、逐表字段清单</h2></p><p><h3 id="2-1-表-vat_registration-对应实体-VATRegistration-聚合根">2.1 表: <code>vat_registration</code> | 对应实体: VATRegistration (聚合根)</h3></p><p><blockquote><strong>设计说明</strong>: VAT注册资料的聚合根，含基本信息和电商平台信息。同客户下 VAT号+EORI号联合唯一。文件附件拆到 <code>vat_attachment</code> 子表。员工端可修改全部字段。提供查询接口供运单模块调用。
 ⚠️ <strong>Demo BUG</strong>：Demo中Vue模板引用 <code>formData.amazonLink</code>，但JS data model定义为 <code>formData.shopLink</code>，变量名不一致。本设计使用 <code>amazon_shop_link</code>。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
@@ -91,12 +92,12 @@
 <ul><li>注册国家=英国(GB)时：attachment_type=10,20,30,40 至少各一条记录</li>
 <li>注册国家=其他(DE/FR)时：attachment_type=10,20,30,50,60,70 至少各一条记录</li>
 </ul>
-<hr></p><p><h3 id="2-3-表-fee_type-对应实体-FeeType">2.3 表: <code>fee_type</code> | 对应实体: FeeType</h3></p><p><blockquote><strong>设计说明</strong>: 费用类型字典表，供下游运单计费模块引用。同方向（应收/应付）费用名称唯一——不同方向可有同名费用（如"应收-超重费"和"应付-超重费"）。无权限管控。提供查询接口供运单计费调用。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<hr></p><p><h3 id="2-3-表-fee_type-对应实体-FeeType">2.3 表: <code>fee_type</code> | 对应实体: FeeType</h3></p><p><blockquote><strong>设计说明</strong>: 费用类型字典表，供下游运单计费模块引用。费用名称唯一（租户内）；费用方向为多选（应收/应付/销售成本），同一费用科目可同时属于多个方向。无权限管控。提供查询接口供运单计费调用。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS数据隔离</td></tr>
-<tr><td><code>fee_name</code></td><td>费用名称</td><td>String(100)</td><td>Yes</td><td><strong>部分唯一</strong>（tenant_id, fee_name, fee_direction, status=正常）</td><td>同方向同名仅一个启用，冻结的同名可多个；如"周六派送费""超重费"</td></tr>
-<tr><td><code>fee_direction</code></td><td>费用方向</td><td>TinyInt</td><td>Yes</td><td><strong>Unique</strong> (tenant_id, fee_name, fee_direction)</td><td>10:应收, 20:应付</td></tr>
+<tr><td><code>fee_name</code></td><td>费用名称</td><td>String(100)</td><td>Yes</td><td><strong>部分唯一</strong>（tenant_id, fee_name, status=正常）</td><td>同名仅一个启用，冻结的同名可多个；如"周六派送费""超重费"</td></tr>
+<tr><td><code>fee_direction</code></td><td>费用方向</td><td>Varchar(50)</td><td>Yes</td><td>—</td><td>多选，逗号分隔方向码：10 应收 / 20 应付 / 30 销售成本（如 "10,30" = 应收+销售成本）</td></tr>
 <tr><td><code>is_system</code></td><td>是否系统预置</td><td>Boolean</td><td>Yes</td><td>—</td><td>系统预置的费用类型（如「运费」）不可删除/冻结；Default: false</td></tr>
 <tr><td><code>status</code></td><td>状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:正常, 20:已冻结</td></tr>
 <tr><td><code>operator</code></td><td>操作人</td><td>String</td><td>Yes</td><td>—</td><td>最后操作人标识</td></tr>
@@ -111,7 +112,7 @@
 <ul><li>无外部关联（独立字典表）</li>
 </ul>
 <strong>查询接口</strong>:
-<ul><li>供运单计费模块调用：按 fee_direction / status 过滤，返回费用类型列表</li>
+<ul><li>供运单计费模块调用：按 fee_direction（费用类型方向包含所选方向）/ status 过滤，返回费用类型列表</li>
 </ul>
 <hr></p><p><h3 id="2-4-表-logistics_event-对应实体-LogisticsEvent">2.4 表: <code>logistics_event</code> | 对应实体: LogisticsEvent</h3></p><p><blockquote><strong>设计说明</strong>: 存储自定义物流事件模板，含事件话术和通知话术模板。物流事件名称全局唯一。绑定亚马逊物流事件代码以配合Ship Track。供运单/提单更新路由时调用查询接口获取匹配的事件模板。
 ⚠️ <strong>Demo差异</strong>：(1) Demo以字符串直接存储亚马逊事件名称，本设计用FK <code>amazon_event_id</code>（正确做法）；(2) Demo中 <code>event_template</code> 始终必填，本设计按R20/R21区分条件（notify=是时必填，notify=否时不必填）</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
@@ -211,6 +212,16 @@
 <strong>关联关系</strong>:
 <ul><li><code>Many-to-One</code> with Waybill（运单主表，本模块不建表；字段随运单实体落库）</li>
 </ul>
+<hr></p><p><h3 id="2-8-提单配载明细-供财务提单平摊取数">2.8 提单配载明细（供财务提单平摊取数）</h3></p><p><blockquote><strong>本节登记「提单（舱位）→ 运单」的装柜配载关系与实收体积</strong>，供财务「提单平摊应付」按实收体积平摊取数（见财务数据设计「提单平摊应付」节）。<strong>提单（舱位）实体与配载明细的完整建模待头程管理专项</strong>（舱位管理原型 <code>舱位管理.html</code> 已承载「提单号 + 配载信息」，数据设计尚未落表），本节先固定平摊取数所需的字段口径。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
+<tr><td><code>bl_no</code></td><td>提单号</td><td>String(64)</td><td>Yes</td><td>Index</td><td>提单（舱位）唯一标识；财务 <code>ar_flow.bl_amortize</code> 引用</td></tr>
+<tr><td><code>waybill_no</code></td><td>运单号</td><td>String(32)</td><td>Yes</td><td>Index</td><td>装进该提单的运单</td></tr>
+<tr><td><code>received_volume</code></td><td>实收体积</td><td>Decimal(20,6)</td><td>Yes</td><td>—</td><td><strong>平摊分子</strong>；舱位管理配载信息「体积 下单/实收」的<strong>实收</strong>值（单位 CBM / m³）</td></tr>
+<tr><td><code>box_no</code></td><td>货箱号</td><td>String(32)</td><td>No</td><td>—</td><td>货箱维度配载时的箱号（运单维度聚合时为空）</td></tr>
+</table></div>
+<strong>取数与平摊口径</strong>：</p><p><ul><li><strong>分母</strong> = 提单总实收体积 = Σ 该提单下各运单 <code>received_volume</code>；<strong>分子</strong> = 各运单 <code>received_volume</code>；</li>
+<li>财务平摊按「各运单实收体积 ÷ 提单总实收体积」分摊提单级应付总额，<strong>尾差挂最后一个运单</strong>（见财务数据设计「提单平摊应付」节）。</li>
+</ul>
 <hr></p><p><h2 id="三-ER-关系图">三、ER 关系图</h2></p><p><div class="mermaid">erDiagram
     AMAZON_LOGISTICS_EVENT ||--o{ LOGISTICS_EVENT : "1:N (amazon_event_id, nullable)"
     VAT_REGISTRATION ||--o{ VAT_ATTACHMENT : "1:N (vat_registration_id)"
@@ -256,8 +267,8 @@
     FEE_TYPE {
         BigInt id PK
         String tenant_id
-        String fee_name "联合唯一"
-        TinyInt fee_direction "联合唯一 10:应收 20:应付"
+        String fee_name "唯一"
+        String fee_direction "多选 10应收/20应付/30销售成本"
         TinyInt status "10:正常 20:已冻结"
         String operator
     }
@@ -304,6 +315,7 @@
 <tr><td>AuditStatus</td><td>30</td><td>REJECTED</td><td>已拒绝</td><td>VATRegistration</td></tr>
 <tr><td>FeeDirection</td><td>10</td><td>RECEIVABLE</td><td>应收</td><td>FeeType</td></tr>
 <tr><td>FeeDirection</td><td>20</td><td>PAYABLE</td><td>应付</td><td>FeeType</td></tr>
+<tr><td>FeeDirection</td><td>30</td><td>SALES_COST</td><td>销售成本</td><td>FeeType</td></tr>
 <tr><td>ModuleScope</td><td>10</td><td>MANIFEST</td><td>舱单</td><td>Tag</td></tr>
 <tr><td>ModuleScope</td><td>20</td><td>WAYBILL</td><td>运单</td><td>Tag</td></tr>
 <tr><td>AttachmentType</td><td>10</td><td>VAT_CERT</td><td>VAT证书</td><td>VATAttachment</td></tr>
