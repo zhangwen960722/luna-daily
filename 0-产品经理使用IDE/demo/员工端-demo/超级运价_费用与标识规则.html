@@ -254,18 +254,13 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
 
     <el-alert v-if="d.status==='已冻结'" type="warning" :closable="false" show-icon title="该规则已冻结，优惠规则仅可查看，不可编辑" style="margin-bottom:12px"></el-alert>
     <el-alert v-else-if="d.basePrice===null" type="warning" :closable="false" show-icon title="该规则未配置「应收」费用行，无可作用的量纲，无法配置优惠" style="margin-bottom:12px"></el-alert>
-    <el-alert v-else type="info" :closable="false" show-icon :title="'优惠值口径：锚定应收单价 ¥'+Number(d.basePrice).toFixed(2)+' —— 固定减免的绝对值不得超过应收单价；折扣率取 0.01~1（一期不支持加价）'" style="margin-bottom:12px"></el-alert>
 
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px">
-      <span style="font-size:12px;color:var(--text-secondary);line-height:1.7">
-        按 <b>客户等级</b> 或 <b>客户特批</b> 匹配（<b>均为一期</b>）。同一对象类型 + 同一目标只能配置一条<b>生效中</b>规则；<b>客户特批优先级高于客户等级，命中即覆盖、不叠加</b>；客户特批须填<b>飞书审批编号</b>。<br>
-        优惠值为<b>带符号调整量</b>：<b>负数 = 减钱（正向优惠）</b>、<b>正数 = 加价（反向优惠）</b>，计算为「应收单价 + 优惠值」。
-      </span>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
       <el-button size="small" type="primary" plain :disabled="dLocked" @click="addDiscountRow">+ 添加规则</el-button>
     </div>
 
     <div style="width:100%;overflow-x:auto">
-      <el-table :data="d.rules" border size="small" style="width:100%;min-width:1060px" v-if="d.rules.length">
+      <el-table :data="d.rules" border size="small" style="width:100%;min-width:1300px" v-if="d.rules.length">
         <el-table-column label="对象类型" width="100">
           <template #default="s2"><el-select v-model="s2.row.targetType" size="small" style="width:100%" :disabled="dLocked||s2.row._expired" @change="onDiscountTargetTypeChange(s2.row)"><el-option label="客户等级" value="level"></el-option><el-option label="客户特批" value="special"></el-option></el-select></template>
         </el-table-column>
@@ -291,6 +286,10 @@ body{margin:0;padding:16px;background:var(--bg);font-family:-apple-system,BlinkM
         <el-table-column label="有效期起止" width="210" v-if="d.rules.some(function(r){return r.validity==='period'})"><template #default="s2"><el-date-picker v-if="s2.row.validity==='period'" v-model="s2.row.validRange" type="daterange" range-separator="至" start-placeholder="起" end-placeholder="止" size="small" style="width:100%" value-format="YYYY-MM-DD" :disabled="dLocked||s2.row._expired"></el-date-picker><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
         <el-table-column label="审批编号" width="140" v-if="d.rules.some(function(r){return r.targetType==='special'})"><template #header><span style="color:#E6A23C">* </span>审批编号</template><template #default="s2"><el-input v-if="s2.row.targetType==='special'" v-model="s2.row.approvalNo" size="small" placeholder="飞书审批编号" :disabled="dLocked||s2.row._expired"></el-input><span v-else style="color:#C0C4CC;font-size:12px">—</span></template></el-table-column>
         <el-table-column label="状态" width="80" align="center"><template #default="s2"><el-tag :type="s2.row._expired?'info':'success'" size="small">{{ s2.row._expired?'已失效':'生效中' }}</el-tag></template></el-table-column>
+        <el-table-column label="费用方向" width="90"><template #default="s2"><el-input v-model="s2.row.feeDirection" size="small" disabled></el-input></template></el-table-column>
+        <el-table-column label="费用类型" width="130"><template #header><span style="color:#E6A23C">* </span>费用类型</template>
+          <template #default="s2"><el-select v-model="s2.row.feeType" size="small" style="width:100%" :disabled="dLocked||s2.row._expired"><el-option v-for="ft in feeTypesAll" :key="ft.label" :label="ft.label" :value="ft.label"></el-option></el-select></template>
+        </el-table-column>
         <el-table-column width="50" align="center" fixed="right">
           <template #default="s2"><el-button v-if="!s2.row._expired" link type="danger" size="small" :disabled="dLocked" @click="removeDiscountRow(s2.$index)">✕</el-button></template>
         </el-table-column>
@@ -355,11 +354,11 @@ data:function(){
     ],
     surchargeDiscounts:[
       {name:'S-粉末品名加收减0.30',surchargeRule:'粉末品名加收',targetTypeLabel:'客户等级',targetName:'S',modeLabel:'固定减免',val:'-0.30',priorityLabel:'中（客户等级）',validityLabel:'永久有效',status:'生效中',
-        _raw:{ruleId:'R001',targetType:'level',targetLevel:'S',targetCustomer:'',mode:'fixed',val:-0.30,priority:40,validity:'permanent',validFrom:'',validTo:'',approvalNo:''}},
+        _raw:{ruleId:'R001',targetType:'level',targetLevel:'S',targetCustomer:'',mode:'fixed',val:-0.30,priority:40,validity:'permanent',validFrom:'',validTo:'',approvalNo:'',feeType:'出口费用'}},
       {name:'深圳市XX科技-粉末品名加收减0.50',surchargeRule:'粉末品名加收',targetTypeLabel:'客户特批',targetName:'深圳市XX科技',modeLabel:'固定减免',val:'-0.50',priorityLabel:'高（客户特批）',validityLabel:'固定期限 2026-09-01~2026-12-31',status:'生效中',
-        _raw:{ruleId:'R001',targetType:'special',targetLevel:'',targetCustomer:'C001',mode:'fixed',val:-0.50,priority:10,validity:'period',validFrom:'2026-09-01',validTo:'2026-12-31',approvalNo:'FS-2026-0912-018'}},
+        _raw:{ruleId:'R001',targetType:'special',targetLevel:'',targetCustomer:'C001',mode:'fixed',val:-0.50,priority:10,validity:'period',validFrom:'2026-09-01',validTo:'2026-12-31',approvalNo:'FS-2026-0912-018',feeType:'出口费用'}},
       {name:'A-商业地址加收打折0.90',surchargeRule:'商业地址加收',targetTypeLabel:'客户等级',targetName:'A',modeLabel:'折扣率',val:'0.90',priorityLabel:'中（客户等级）',validityLabel:'固定期限 2026-01-01~2026-06-30',status:'已失效',
-        _raw:{ruleId:'R003',targetType:'level',targetLevel:'A',targetCustomer:'',mode:'rate',val:0.90,priority:40,validity:'period',validFrom:'2026-01-01',validTo:'2026-06-30',approvalNo:''}}
+        _raw:{ruleId:'R003',targetType:'level',targetLevel:'A',targetCustomer:'',mode:'rate',val:0.90,priority:40,validity:'period',validFrom:'2026-01-01',validTo:'2026-06-30',approvalNo:'',feeType:'派送费用'}}
     ],
     f:{name:'',type:'field',action:'charge',conditions:[{dim:'lastMile',val:'express'}],formulas:[],ml:'贴标张数',pricingRows:[{dir:'r',feeLabel:'',pu:'kg',price:0,currency:'rmb'}],status:'active',tagId:null}
   }
@@ -431,19 +430,19 @@ methods:{
     var ruleId=raw.id||'';
     var pr=(raw.pricingRows||[]).filter(function(p){return p.dir==='r'&&p.price!==null&&p.price!==undefined})[0];
     var basePrice=pr?Number(pr.price):null;
-    this.d={ruleId:ruleId,name:row.name,type:raw.type,action:raw.action,status:row.status,basePrice:basePrice,rules:[]};
+    this.d={ruleId:ruleId,name:row.name,type:raw.type,action:raw.action,status:row.status,basePrice:basePrice,feeType:(pr?pr.feeLabel:''),rules:[]};
     this.dLocked=(row.status!=='正常');
     // 生效中 + 已失效都载入：已失效行只读留痕、不占用唯一性名额
     var matched=(this.surchargeDiscounts||[]).filter(function(d){return d._raw&&d._raw.ruleId===ruleId});
     this.d.rules=matched.map(function(d){
       var r=d._raw;
       var sp=(r.targetType==='special');
-      return {targetType:(sp?'special':'level'),targetLevels:(sp?[]:(r.targetLevel?[r.targetLevel]:[])),targetCustomers:((sp&&r.targetCustomer)?[r.targetCustomer]:[]),mode:r.mode,val:r.val,validity:r.validity||'permanent',validRange:(r.validFrom&&r.validTo)?[r.validFrom,r.validTo]:[],approvalNo:(r.approvalNo||''),status:(d.status||'生效中'),_expired:(d.status!=='生效中')};
+      return {targetType:(sp?'special':'level'),targetLevels:(sp?[]:(r.targetLevel?[r.targetLevel]:[])),targetCustomers:((sp&&r.targetCustomer)?[r.targetCustomer]:[]),mode:r.mode,val:r.val,validity:r.validity||'permanent',validRange:(r.validFrom&&r.validTo)?[r.validFrom,r.validTo]:[],feeDirection:'应收',feeType:(r.feeType||(pr?pr.feeLabel:'')),approvalNo:(r.approvalNo||''),status:(d.status||'生效中'),_expired:(d.status!=='生效中')};
     });
     this.showDiscountDialog=true;
   },
   closeDiscount:function(){this.showDiscountDialog=false},
-  addDiscountRow:function(){this.d.rules.push({targetType:'level',targetLevels:[],targetCustomers:[],mode:'fixed',val:-0.5,validity:'permanent',validRange:[],approvalNo:'',status:'生效中',_expired:false})},
+  addDiscountRow:function(){this.d.rules.push({targetType:'level',targetLevels:[],targetCustomers:[],mode:'fixed',val:-0.5,validity:'permanent',validRange:[],feeDirection:'应收',feeType:this.d.feeType||'',approvalNo:'',status:'生效中',_expired:false})},
   removeDiscountRow:function(i){var self=this;ElementPlus.ElMessageBox.confirm('确定删除该优惠规则？删除后不可恢复。','确认删除',{confirmButtonText:'确定删除',cancelButtonText:'取消',type:'warning'}).then(function(){self.d.rules.splice(i,1);ElementPlus.ElMessage.success('已删除')}).catch(function(){})},
   
   validateDiscountUniqueness:function(){
@@ -468,6 +467,7 @@ methods:{
       if(!tgts||!tgts.length){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择至少一个'+(isSp?'客户':'目标等级'));return}
       if(isSp&&(!rr.approvalNo||!String(rr.approvalNo).trim())){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：客户特批请填写飞书审批编号');return}
       if(!rr.mode){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择优惠方式');return}
+      if(!rr.feeType){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请选择费用类型');return}
       if(rr.val===null||rr.val===''){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：请输入优惠值');return}
       if(rr.mode==='rate'&&(rr.val<=0||rr.val>1)){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：折扣率须在 0.01~1 之间（一期不支持加价）');return}
       if(rr.mode==='fixed'&&Math.abs(Number(rr.val))>basePrice){ElementPlus.ElMessage.warning('第'+(di+1)+'行优惠规则：优惠值 '+Number(rr.val).toFixed(2)+'（绝对值 '+Math.abs(Number(rr.val)).toFixed(2)+'）超过应收单价 '+basePrice.toFixed(2)+'，优惠后单价将为负');return}
@@ -495,7 +495,7 @@ methods:{
           targetTypeLabel:(isSp2?'客户特批':'客户等级'),targetName:targetName,
           modeLabel:r2.mode==='rate'?'折扣率':'固定减免',val:vs,
           validityLabel:r2.validity==='permanent'?'永久有效':('固定期限'+(vals.length?(' '+vals[0]+'~'+vals[1]):'')),status:stay,
-          _raw:{ruleId:ruleId,targetType:(isSp2?'special':'level'),targetLevel:(isSp2?'':(tgt||'')),targetCustomer:(isSp2?(tgt||''):''),mode:r2.mode,val:r2.val,priority:(isSp2?10:40),validity:r2.validity,validFrom:(vals[0]||''),validTo:(vals[1]||''),approvalNo:(r2.approvalNo||'')}
+          _raw:{ruleId:ruleId,targetType:(isSp2?'special':'level'),targetLevel:(isSp2?'':(tgt||'')),targetCustomer:(isSp2?(tgt||''):''),mode:r2.mode,val:r2.val,priority:(isSp2?10:40),validity:r2.validity,validFrom:(vals[0]||''),validTo:(vals[1]||''),approvalNo:(r2.approvalNo||''),feeDirection:'应收',feeType:(r2.feeType||'')}
         });
       }
     }

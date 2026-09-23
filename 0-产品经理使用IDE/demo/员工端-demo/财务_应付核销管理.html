@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应付核销管理 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; box-sizing: border-box; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 0; align-items: flex-start; flex-wrap: nowrap; }
+        .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
+        .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+        .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .bill-link { color: #409EFF; cursor: pointer; }
+        .bill-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 上层卡片：查询区 -->
+        <div class="content-card" style="margin-bottom: 16px;">
+            <div class="search-area">
+                <div class="search-conditions">
+                    <el-input v-model="search.writeoffNo" placeholder="核销单号" class="search-control" clearable></el-input>
+                    <el-input v-model="search.billNo" placeholder="账单编号" class="search-control" clearable></el-input>
+                    <el-input v-model="search.supplier" placeholder="供应商" class="search-control" clearable></el-input>
+                    <template v-if="searchExpanded">
+                        <el-select v-model="search.currency" placeholder="币种" class="search-control" clearable>
+                            <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                        </el-select>
+                        <el-select v-model="search.type" placeholder="类型" class="search-control" clearable>
+                            <el-option v-for="t in typeOptions" :key="t" :label="t" :value="t"></el-option>
+                        </el-select>
+                    </template>
+                </div>
+                <div class="search-actions">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
+                    </el-button>
+                    <el-button type="primary" link @click="searchExpanded = !searchExpanded">
+                        更多查询条件<el-icon class="el-icon--right"><ArrowDown v-if="!searchExpanded"></ArrowDown><ArrowUp v-else></ArrowUp></el-icon>
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：应付核销记录列表 -->
+        <div class="content-card">
+            <el-table :data="filteredRecords" border style="width: 100%">
+                <el-table-column prop="writeoffNo" label="核销单号" width="160"></el-table-column>
+                <el-table-column label="账单编号" width="200">
+                    <template #default="scope">
+                        <el-tooltip :content="recordBillTip(scope.row)" placement="top">
+                            <span class="bill-link" @click="jumpToBillDetail(scope.row.billNo)">{{ scope.row.billNo }}</span>
+                        </el-tooltip>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="supplier" label="供应商" width="150" show-overflow-tooltip></el-table-column>
+                <el-table-column label="币种" width="80" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column prop="bankAccountName" label="出款账户" width="200" show-overflow-tooltip></el-table-column>
+                <el-table-column label="核销金额" width="120" align="right">
+                    <template #default="scope"><span style="font-weight: 600;">{{ money(scope.row.currency, scope.row.amount) }}</span></template>
+                </el-table-column>
+                <el-table-column label="未结清金额（前 → 后）" width="180" align="right">
+                    <template #default="scope">{{ money(scope.row.currency, scope.row.billBefore) }} <span style="color: #909399;">→</span> {{ money(scope.row.currency, scope.row.billAfter) }}</template>
+                </el-table-column>
+                <el-table-column label="类型" width="110" align="center">
+                    <template #default="scope"><el-tag :type="typeTag(scope.row.type)" size="small">{{ scope.row.type }}</el-tag></template>
+                </el-table-column>
+                <el-table-column prop="operator" label="操作人" width="100" align="center"></el-table-column>
+                <el-table-column prop="time" label="操作时间" width="150" align="center"></el-table-column>
+                <el-table-column label="操作" width="110" fixed="right" align="center">
+                    <template #default="scope">
+                        <el-button v-if="scope.row.type === '核销'" link type="danger" size="small" @click="reverseWriteoff(scope.row)">反核销</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="filteredRecords.length"></el-pagination>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const DEMO_TODAY = '2026-09-15';
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencyName = (c) => (currencyMap[c] ? currencyMap[c].name : c);
+                const currencySymbol = (c) => (currencyMap[c] ? currencyMap[c].symbol : c);
+                const formatMoney = (val) => Number(val).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const money = (c, val) => currencySymbol(c) + formatMoney(val);
+                const typeOptions = ['核销', '已反核销'];
+                const typeTag = (ty) => ({ '核销': 'success', '已反核销': 'warning' }[ty] || 'info');
+                const nowStamp = () => DEMO_TODAY + ' 16:40';
+
+                // 应付账单静态属性快照（核销记录只 join 账单「生成即固定」的属性：编号/供应商/OA审批编号/币种/账单金额）
+                const billSnapshots = {
+                    'AP-202609-00001': { supplier: '中远海运', oaNo: 'OA-2026-0901-015', currency: 'CNY', billAmount: 16000.00 },
+                    'AP-202609-00002': { supplier: '广州报关行', oaNo: 'OA-2026-0901-016', currency: 'CNY', billAmount: 1000.00 },
+                    'AP-202609-00003': { supplier: '广州港务', oaNo: 'OA-2026-0901-017', currency: 'CNY', billAmount: 700.00 }
+                };
+
+                // 我司账户余额（mock，用于反核销回补展示）
+                const accountBalances = {
+                    '广州飞点-招商银行(7559 1234 5678)': 500000.00,
+                    '广州飞点-中国银行(7654 3210 9876)': 80000.00
+                };
+
+                // 应付核销记录 = 事实快照表（一行一条付款）：billBefore/after + accountBefore/after（账户侧只留痕、不上表）
+                const writeoffs = reactive([
+                    { writeoffNo: 'APW20260910001', billNo: 'AP-202609-00001', bankAccountName: '广州飞点-招商银行(7559 1234 5678)', amount: 10000.00, billBefore: 16000.00, billAfter: 6000.00, accountBefore: 510000.00, accountAfter: 500000.00, type: '核销', operator: '张珊', time: '2026-09-10 10:00' },
+                    { writeoffNo: 'APW20260912001', billNo: 'AP-202609-00003', bankAccountName: '广州飞点-招商银行(7559 1234 5678)', amount: 700.00, billBefore: 700.00, billAfter: 0.00, accountBefore: 500700.00, accountAfter: 500000.00, type: '核销', operator: '张珊', time: '2026-09-12 15:00' },
+                    // 反核销演示：一笔 2000 核销被撤销（未结清 4000 → 回补 6000）；已反核销记录不再显示「反核销」按钮
+                    { writeoffNo: 'APW20260912002', billNo: 'AP-202609-00001', bankAccountName: '广州飞点-招商银行(7559 1234 5678)', amount: 2000.00, billBefore: 4000.00, billAfter: 6000.00, accountBefore: 500000.00, accountAfter: 502000.00, type: '已反核销', operator: '张珊', time: '2026-09-12 16:00' }
+                ]);
+
+                const search = reactive({ writeoffNo: '', billNo: '', supplier: '', currency: '', type: '' });
+                const searchExpanded = ref(false);
+                const handleSearch = () => { searchExpanded.value = false; ElMessage.success('执行查询'); };
+                const resetSearch = () => {
+                    Object.assign(search, { writeoffNo: '', billNo: '', supplier: '', currency: '', type: '' });
+                    searchExpanded.value = false;
+                    ElMessage.success('已重置查询条件');
+                };
+
+                const recordRows = computed(() => writeoffs.map(w => {
+                    const b = billSnapshots[w.billNo] || {};
+                    return Object.assign({}, b, {
+                        billNo: w.billNo,
+                        writeoffNo: w.writeoffNo, bankAccountName: w.bankAccountName, type: w.type, amount: w.amount,
+                        billBefore: w.billBefore, billAfter: w.billAfter,
+                        accountBefore: w.accountBefore, accountAfter: w.accountAfter,
+                        operator: w.operator, time: w.time, _rec: w
+                    });
+                }).slice().sort((a, b) => {
+                    if (a.time !== b.time) return a.time < b.time ? 1 : -1;
+                    return a.writeoffNo < b.writeoffNo ? 1 : -1;
+                }));
+                const filteredRecords = computed(() => {
+                    let d = recordRows.value;
+                    if (search.writeoffNo) d = d.filter(r => r.writeoffNo.includes(search.writeoffNo));
+                    if (search.billNo) d = d.filter(r => r.billNo.includes(search.billNo));
+                    if (search.supplier) d = d.filter(r => (r.supplier || '').includes(search.supplier));
+                    if (search.currency) d = d.filter(r => r.currency === search.currency);
+                    if (search.type) d = d.filter(r => r.type === search.type);
+                    return d;
+                });
+                const recordBillTip = (r) => `供应商 ${r.supplier} ｜ OA审批编号 ${r.oaNo} ｜ 币种 ${currencyName(r.currency)} ｜ 账单金额 ${money(r.currency, r.billAmount)}`;
+
+                const jumpToBillDetail = (billNo) => {
+                    window.open('财务_应付账单管理.html?billNo=' + encodeURIComponent(billNo), '_blank');
+                };
+
+                // 反核销：账单未结清金额回补、出款账户余额回补；原记录置「已反核销」+ 新增一条「已反核销」记录
+                const reverseWriteoff = (row) => {
+                    if (row.type !== '核销') { ElMessage.warning('该记录已反核销'); return; }
+                    ElMessageBox.confirm(
+                        '确认对核销单 ' + row.writeoffNo + ' 执行反核销？反核销后：账单 ' + row.billNo + ' 的未结清金额由 '
+                        + money(row.currency, row.billAfter) + ' 回补为 ' + money(row.currency, row.billBefore)
+                        + '、出款账户「' + row.bankAccountName + '」余额回补 ' + money(row.currency, row.amount) + '；本页会新增一条「已反核销」记录（原记录保留、不删除）。',
+                        '反核销', { confirmButtonText: '确认反核销', cancelButtonText: '取消', type: 'warning' }
+                    ).then(() => {
+                        row._rec.type = '已反核销';
+                        if (accountBalances[row.bankAccountName] !== undefined) {
+                            accountBalances[row.bankAccountName] = Number((accountBalances[row.bankAccountName] + row.amount).toFixed(2));
+                        }
+                        writeoffs.unshift({
+                            writeoffNo: 'APW' + nowStamp().slice(0, 10).replace(/-/g, '') + String(writeoffs.filter(w => w.time.slice(0, 10) === DEMO_TODAY).length + 1).padStart(3, '0'),
+                            billNo: row.billNo, bankAccountName: row.bankAccountName, amount: row.amount,
+                            billBefore: row.billAfter, billAfter: row.billBefore,
+                            accountBefore: row.accountAfter, accountAfter: row.accountBefore, type: '已反核销', operator: '张珊', time: nowStamp()
+                        });
+                        ElMessage.success('反核销成功，已新增一条「已反核销」记录');
+                    }).catch(() => {});
+                };
+
+                return {
+                    currencyOptions, currencyName, currencySymbol, formatMoney, money, typeOptions, typeTag,
+                    search, searchExpanded, handleSearch, resetSearch,
+                    recordRows, filteredRecords, recordBillTip, jumpToBillDetail, reverseWriteoff
+                };
+            }
+        });
+        app.use(ElementPlus);
+        for (const [key, comp] of Object.entries(ElementPlusIconsVue)) { app.component(key, comp); }
+        app.mount('#app');
+    </script>
+</body>
+</html>

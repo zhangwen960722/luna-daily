@@ -56,6 +56,18 @@
         .base-stat-box { text-align: center; padding: 10px; }
         .base-stat-title { font-size: 13px; color: #909399; margin-bottom: 8px; }
         .base-stat-value { font-size: 18px; font-weight: bold; color: #303133; }
+
+        /* 添加应付费用弹窗（卡片式逐条录入） */
+        .fee-add-info { display: flex; gap: 28px; align-items: center; padding: 8px 14px; margin-bottom: 14px; background: #f7f9fc; border-radius: 6px; font-size: 13px; }
+        .fee-add-info .fee-add-label { color: var(--el-text-color-secondary); margin-right: 6px; }
+        .fee-add-card { border: 1px solid var(--el-border-color-lighter); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; }
+        .fee-add-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .fee-add-card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+        .fee-add-card-sub { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary); }
+        .fee-add-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+        .fee-add-field-label { font-size: 12px; color: var(--el-text-color-secondary); }
+        .fee-add-field-label .req { color: var(--el-color-danger); font-style: normal; }
+        .fee-add-amount { font-weight: 600; font-size: 15px; line-height: 32px; }
     </style>
 </head>
 <body>
@@ -123,17 +135,8 @@
                             <el-button @click="openStatusDialog" style="margin-left: 12px;">状态调整</el-button>
                             <el-button @click="exportDialogVisible = true" style="margin-left: 12px;">导出</el-button>
                             <el-button @click="markDialogVisible = true" style="margin-left: 12px;">标识</el-button>
-                            <el-dropdown style="margin-left: 12px;" trigger="click" @command="handleFeeCommand">
-                                <el-button>费用管理 <el-icon class="el-icon--right"><ArrowDown></ArrowDown></el-icon></el-button>
-                                <template #dropdown>
-                                    <el-dropdown-menu>
-                                        <el-dropdown-item command="ap">添加应付</el-dropdown-item>
-                                        <el-dropdown-item command="ar">添加应收</el-dropdown-item>
-                                        <el-dropdown-item command="audit" divided>审计</el-dropdown-item>
-                                        <el-dropdown-item command="unaudit">反审计</el-dropdown-item>
-                                    </el-dropdown-menu>
-                                </template>
-                            </el-dropdown>
+                            <el-button @click="batchAuditSpaces" style="margin-left: 12px;">审计</el-button>
+                            <el-button @click="batchReverseAuditSpaces" style="margin-left: 12px;">反审计</el-button>
                         </div>
                     </div>
 
@@ -146,6 +149,14 @@
                         <el-table-column prop="sealNo" label="铅封号" width="120"></el-table-column>
                         <el-table-column prop="vesselVoyage" label="船名航次" width="160" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="route" label="航线" width="140" show-overflow-tooltip></el-table-column>
+                        <el-table-column label="审计状态" width="90" align="center">
+                            <template #default="s">
+                                <el-tag :type="s.row.auditStatus === '已审计' ? 'success' : 'info'" size="small">{{ s.row.auditStatus || '未审计' }}</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="billNo" label="账单编号" width="170" show-overflow-tooltip>
+                            <template #default="s">{{ s.row.billNo || '—' }}</template>
+                        </el-table-column>
                         <el-table-column prop="etd" label="预计出发时间" width="160"></el-table-column>
                         <el-table-column prop="eta" label="预计到达时间" width="160"></el-table-column>
                         <el-table-column prop="volume" label="容积" width="90"></el-table-column>
@@ -432,15 +443,65 @@
                             <!-- 财务信息 -->
                             <template v-if="spaceDetailTab === 'finance'">
                                 <div class="section-block">
-                                    <div style="margin-bottom: 16px; display: flex; justify-content: space-between;">
-                                        <el-button type="primary" size="small" @click="feeDialogVisible = true; feeType = 'ap'"><el-icon><Plus></Plus></el-icon> 添加费用</el-button>
-                                        <span style="font-weight: bold; font-size: 16px; color: #f56c6c;">总费用：$ 1,250.00</span>
+                                    <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="display: flex; gap: 8px; align-items: center;">
+                                            <el-tooltip :disabled="!financeLocked" :content="financeLockTip" placement="top">
+                                                <span><el-button type="primary" size="small" :disabled="financeLocked" @click="openFinanceAdd"><el-icon><Plus></Plus></el-icon> 添加应付费用</el-button></span>
+                                            </el-tooltip>
+                                            <el-tooltip :disabled="!financeLocked" :content="'提单已审计，不允许批量平摊'" placement="top">
+                                                <span><el-button type="warning" size="small" :disabled="financeLocked" @click="openBatchAmortize">批量平摊</el-button></span>
+                                            </el-tooltip>
+                                            <span><el-button size="small" @click="openBatchReverseAmortize">批量撤销平摊</el-button></span>
+                                            <span style="width:1px; height:16px; background:var(--el-border-color); margin:0 4px;"></span>
+                                            <el-button size="small" type="success" @click="rowAuditFinance">审计</el-button>
+                                            <el-button size="small" type="warning" @click="rowReverseAuditFinance">反审计</el-button>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:12px;">
+                                            <span style="font-size:13px;color:var(--el-text-color-secondary);">提单审计状态：</span>
+                                            <el-tag :type="currentSpaceDetail && currentSpaceDetail.auditStatus === '已审计' ? 'success' : 'info'" size="small">{{ (currentSpaceDetail && currentSpaceDetail.auditStatus) || '未审计' }}</el-tag>
+                                            <span style="font-weight: bold; font-size: 16px; color: #f56c6c;">总费用：¥ {{ financeTotal.toFixed(2) }}</span>
+                                        </div>
                                     </div>
-                                    <el-table :data="mockFinanceData" border stripe>
-                                        <el-table-column prop="type" label="费用类型"></el-table-column>
-                                        <el-table-column prop="unitPrice" label="单位费用"></el-table-column>
-                                        <el-table-column prop="currency" label="币种"></el-table-column>
-                                        <el-table-column prop="desc" label="描述"></el-table-column>
+                                    <el-table :data="financeData" border stripe @selection-change="onFinanceSelect">
+                                        <el-table-column type="selection" width="50" fixed="left" align="center" :selectable="(row) => row.status !== '运单挂靠'"></el-table-column>
+                                        <el-table-column prop="type" label="费用类型" min-width="110" fixed="left"></el-table-column>
+                                        <el-table-column label="金额（原币）" width="120" align="right">
+                                            <template #default="s">{{ moneyText(s.row.amount) }}</template>
+                                        </el-table-column>
+                                        <el-table-column label="金额（本币）" width="120" align="right">
+                                            <template #default="s">¥ {{ financeCnyAmount(s.row) }}</template>
+                                        </el-table-column>
+                                        <el-table-column prop="currency" label="币种" width="70" align="center"></el-table-column>
+                                        <el-table-column prop="rate" label="汇率" width="70" align="right"></el-table-column>
+                                        <el-table-column prop="supplier" label="供应商" width="110"></el-table-column>
+                                        <el-table-column prop="oaNo" label="OA审批编号" width="130"></el-table-column>
+                                        <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip></el-table-column>
+                                        <el-table-column prop="bizTime" label="业务时间" width="110" align="center"></el-table-column>
+                                        <el-table-column label="平摊状态" width="100" align="center">
+                                            <template #default="s">
+                                                <el-tag v-if="s.row.status === '运单挂靠'" type="info" size="small">运单挂靠</el-tag>
+                                                <el-tag v-else :type="s.row.status === '待摊' ? 'warning' : 'success'" size="small">{{ s.row.status }}</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="审计状态" width="100" align="center">
+                                            <template #default="s">
+                                                <el-tag v-if="!s.row.auditStatus" type="info" size="small">—</el-tag>
+                                                <el-tag v-else :type="s.row.auditStatus === '已审计' ? 'success' : 'warning'" size="small">{{ s.row.auditStatus }}</el-tag>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="billNo" label="账单编号" width="150" show-overflow-tooltip></el-table-column>
+                                        <el-table-column prop="createdAt" label="创建时间" width="160"></el-table-column>
+                                        <el-table-column prop="createdBy" label="创建人" width="90"></el-table-column>
+                                        <el-table-column label="操作" width="200" fixed="right" align="center">
+                                            <template #default="s">
+                                                <el-button link type="primary" size="small" @click="viewFinance(s.row)">查看</el-button>
+                                                <template v-if="s.row.status !== '运单挂靠'">
+                                                    <el-button v-if="s.row.status === '待摊'" link type="primary" size="small" @click="singleAmortize(s.row)">平摊</el-button>
+                                                    <el-button v-else link type="warning" size="small" :disabled="!canReverseAmortize(s.row)" :title="reverseAmortizeTip(s.row)" @click="singleReverseAmortize(s.row)">撤销平摊</el-button>
+                                                    <el-button link type="danger" size="small" :disabled="!canDeleteFinance(s.row)" :title="deleteFinanceTip(s.row)" @click="removeFinance(s.row)">删除</el-button>
+                                                </template>
+                                            </template>
+                                        </el-table-column>
                                     </el-table>
                                 </div>
                             </template>
@@ -629,40 +690,101 @@
             <template #footer><el-button @click="exportDialogVisible = false">取消</el-button><el-button type="primary" @click="doExport">导出</el-button></template>
         </el-dialog>
 
-        <!-- 8. 添加费用 Dialog -->
-        <el-dialog v-model="feeDialogVisible" :title="feeType === 'ap' ? '添加应付' : '添加应收'" width="600px" destroy-on-close append-to-body>
-            <el-form label-width="100px">
-                <el-form-item label="运单号"><el-input type="textarea" v-model="feeForm.blNos"></el-input></el-form-item>
-                <el-form-item label="业务时间"><el-date-picker v-model="feeForm.time" type="date" style="width: 100%;"></el-date-picker></el-form-item>
-                <el-form-item label="费用类型"><el-input v-model="feeForm.type"></el-input></el-form-item>
-                <el-row>
-                    <el-col :span="12"><el-form-item label="币种"><el-input v-model="feeForm.currency"></el-input></el-form-item></el-col>
-                    <el-col :span="12"><el-form-item label="汇率"><el-input v-model="feeForm.rate"></el-input></el-form-item></el-col>
+        <!-- 8. 添加应付费用 Dialog（卡片式逐条录入，可新增多条） -->
+        <el-dialog v-model="feeDialogVisible" title="添加应付费用" width="900px" destroy-on-close append-to-body>
+            <div class="fee-add-info">
+                <span><span class="fee-add-label">提单号</span><b style="color:var(--el-text-color-primary);">{{ financeBlNo }}</b></span>
+                <span><span class="fee-add-label">船名航次</span>{{ financeVessel }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;">
+                <span style="font-weight:600;">是否自动平摊</span>
+                <el-switch v-model="feeAutoAmortize"></el-switch>
+                <span style="font-size:12px;color:#909399;">勾选后保存即按实收体积自动平摊到该提单下各运单；不勾选则落提单「待摊」，之后手动批量平摊</span>
+            </div>
+            <div v-for="(row, idx) in feeApList" :key="idx" class="fee-add-card">
+                <div class="fee-add-card-head">
+                    <span class="fee-add-card-title">流水 {{ idx + 1 }}</span>
+                    <el-button link type="danger" size="small" :disabled="feeApList.length <= 1" :title="feeApList.length <= 1 ? '至少保留一条应付费用' : ''" @click="feeApList.splice(idx, 1)">删除</el-button>
+                </div>
+                <el-row :gutter="12">
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">提单号<span style="font-size:12px;color:#909399;">（默认当前提单）</span></span><el-input :model-value="financeBlNo" size="small" disabled></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">业务时间 <i class="req">*</i></span><el-date-picker v-model="row.bizTime" type="date" size="small" style="width:100%" placeholder="选择业务时间" value-format="YYYY-MM-DD"></el-date-picker></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">OA审批编号 <i class="req">*</i></span><el-input v-model="row.oaNo" size="small" placeholder="请输入 OA 审批编号"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">供应商 <i class="req">*</i></span><el-select v-model="row.supplier" size="small" style="width:100%" placeholder="请选择供应商" filterable @change="onFinanceSupplierChange(row)"><el-option v-for="s in supplierOptions" :key="s" :label="s" :value="s"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">我司主体 <i class="req">*</i></span><el-select v-model="row.entityName" size="small" style="width:100%" placeholder="请选择我司主体" :disabled="!row.supplier"><el-option v-for="e in entityOptionsBySupplier(row.supplier)" :key="e" :label="e" :value="e"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.type" size="small" style="width:100%" placeholder="请选择" filterable><el-option v-for="t in feeTypeApOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种 <i class="req">*</i></span><el-select v-model="row.currency" size="small" style="width:100%"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率 <i class="req">*</i></span><el-input v-model="row.rate" size="small"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（原币） <i class="req">*</i></span><el-input-number v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">备注（仅内部）</span><el-input v-model="row.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
                 </el-row>
-                <el-row>
-                    <el-col :span="12"><el-form-item label="单位"><el-input v-model="feeForm.unit"></el-input></el-form-item></el-col>
-                    <el-col :span="12"><el-form-item label="单位费用"><el-input v-model="feeForm.unitPrice"></el-input></el-form-item></el-col>
-                </el-row>
-                <el-form-item label="描述"><el-input v-model="feeForm.desc"></el-input></el-form-item>
-                <el-form-item label="备注"><el-input v-model="feeForm.remark"></el-input></el-form-item>
-            </el-form>
-            <template #footer><el-button @click="feeDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('保存费用'); feeDialogVisible = false;">确定</el-button></template>
+            </div>
+            <el-button plain size="small" style="width:100%;" @click="feeApList.push(newFeeApRow())">＋ 添加一行</el-button>
+            <template #footer><el-button @click="feeDialogVisible = false">取消</el-button><el-button type="primary" @click="saveFinance">保存</el-button></template>
         </el-dialog>
 
-        <!-- 9. 审计/反审计 Dialog -->
-        <el-dialog v-model="auditDialogVisible" :title="auditType === 'audit' ? '审计' : '反审计'" width="500px" destroy-on-close append-to-body>
+        <!-- 应付费用详情 / 平摊 / 撤销平摊（统一弹窗） -->
+        <el-dialog v-model="financeDetailVisible" :title="financeDetailTitle" width="1240px" destroy-on-close append-to-body>
+            <div style="font-weight:600;margin-bottom:8px;">应付费用（{{ financeDetailRows.length }} 条）</div>
+            <el-table :data="financeDetailRows" border size="small" max-height="220" style="margin-bottom:16px;">
+                <el-table-column prop="type" label="费用类型" min-width="100"></el-table-column>
+                <el-table-column prop="supplier" label="供应商" min-width="110"></el-table-column>
+                <el-table-column label="平摊状态" width="100" align="center">
+                    <template #default="s"><el-tag :type="s.row.status === '待摊' ? 'warning' : (s.row.status === '运单挂靠' ? 'info' : 'success')" size="small">{{ s.row.status }}</el-tag></template>
+                </el-table-column>
+                <el-table-column label="金额（原币）" width="120" align="right">
+                    <template #default="s">{{ moneyText(s.row.amount) }} {{ s.row.currency }}</template>
+                </el-table-column>
+                <el-table-column label="金额（本币）" width="110" align="right">
+                    <template #default="s">¥ {{ financeCnyAmount(s.row) }}</template>
+                </el-table-column>
+                <el-table-column prop="bizTime" label="业务时间" width="100" align="center"></el-table-column>
+                <el-table-column prop="oaNo" label="OA审批编号" width="130"></el-table-column>
+                <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip></el-table-column>
+            </el-table>
+
+            <template v-if="!financeDetailRows.some(r => r.status === '运单挂靠')">
+            <div style="font-weight:600;margin:16px 0 8px;">{{ (financeDetailMode === 'reverse' || financeDetailMode === 'batchReverse') ? '平摊明细（撤销后将删除以下运单应付流水）' : '平摊明细（按实收体积，尾差挂最后一个运单）' }}</div>
+            <el-table :data="amortizePreview" border size="small">
+                <el-table-column prop="waybillNo" label="运单号" min-width="140"></el-table-column>
+                <el-table-column prop="customerName" label="客户昵称" min-width="120" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="service" label="服务组合" min-width="100"></el-table-column>
+                <el-table-column prop="country" label="到达国家" width="90" align="center"></el-table-column>
+                <el-table-column prop="pickSite" label="拣货站点" width="100" align="center"></el-table-column>
+                <el-table-column prop="customsType" label="报关方式" width="100" align="center"></el-table-column>
+                <el-table-column prop="boxes" label="箱数" width="70" align="right"></el-table-column>
+                <el-table-column prop="volume" label="实收体积（m³）" width="120" align="right"></el-table-column>
+                <el-table-column prop="ratio" label="占比" width="80" align="right"></el-table-column>
+                <el-table-column label="应付审计状态" width="130" align="center">
+                    <template #default="s">
+                        <el-tag v-if="s.row.apAuditStatus === '已审计'" size="small" type="danger">已审计 · 不可平摊</el-tag>
+                        <el-tag v-else size="small" type="success">未审计</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column label="分摊金额" width="130" align="right"><template #default="s">¥ {{ moneyText(s.row.amount) }}<el-tag v-if="s.row.isTail" size="small" type="warning" style="margin-left:4px;">尾差</el-tag></template></el-table-column>
+            </el-table>
+            </template>
+
+            <div v-if="financeDetailMode === 'reverse' || financeDetailMode === 'batchReverse'" style="font-weight:600;color:#f56c6c;padding:12px;background:#fef0f0;border-radius:4px;margin-top:16px;">撤销后，这些费用将退回提单「待摊」，其下未审计、未进账单的运单应付流水将被删除</div>
+
+            <template #footer>
+                <el-button @click="financeDetailVisible = false">{{ financeDetailMode === 'view' ? '关闭' : '取消' }}</el-button>
+                <el-button v-if="financeDetailMode === 'amortize' || financeDetailMode === 'batchAmortize'" type="primary" @click="confirmFinanceDetail">确认平摊</el-button>
+                <el-button v-if="financeDetailMode === 'reverse' || financeDetailMode === 'batchReverse'" type="warning" @click="confirmFinanceDetail">确认撤销平摊</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 9. 审计/反审计 Dialog（提单级：审计范围 = 应付） -->
+        <el-dialog v-model="auditDialogVisible" :title="auditType === 'audit' ? '审计' : '反审计'" width="520px" destroy-on-close append-to-body>
             <el-form label-width="100px">
-                <el-form-item label="运单号"><el-input type="textarea" v-model="auditForm.blNos" placeholder="支持多行显示" :rows="3"></el-input></el-form-item>
-                <el-form-item label="类型">
+                <el-form-item label="提单号"><el-input type="textarea" :model-value="auditForm.blNos" placeholder="勾选的提单号" :rows="3" readonly></el-input></el-form-item>
+                <el-form-item label="审计范围">
                     <el-checkbox-group v-model="auditForm.types" style="display: flex; flex-direction: column;">
-                        <el-checkbox label="应收-仅流水">应收-仅流水</el-checkbox>
-                        <el-checkbox label="应付-仅流水">应付-仅流水</el-checkbox>
-                        <el-checkbox label="应收-运单及流水">应收-运单及流水</el-checkbox>
-                        <el-checkbox label="应付-运单及流水">应付-运单及流水</el-checkbox>
+                        <el-checkbox label="应付">应付（该提单全部应付流水统一审计）</el-checkbox>
                     </el-checkbox-group>
                 </el-form-item>
             </el-form>
-            <template #footer><el-button @click="auditDialogVisible = false">取消</el-button><el-button type="primary" @click="handleAction('执行审计'); auditDialogVisible = false;">确定</el-button></template>
+            <template #footer><el-button @click="auditDialogVisible = false">取消</el-button><el-button type="primary" @click="confirmAuditSpaces">确定</el-button></template>
         </el-dialog>
 
         <!-- 10. 路由添加 Dialog -->
@@ -815,7 +937,7 @@
     </div>
 
     <script>
-        const { createApp, ref, reactive } = Vue;
+        const { createApp, ref, reactive, computed } = Vue;
         const { ElMessage, ElMessageBox } = ElementPlus;
 
         const app = createApp({
@@ -882,6 +1004,11 @@
                     r.arrivalTime = s >= 4 ? r.eta : '';
                     r.clearanceTime = s >= 5 ? '2024-05-28 10:00' : '';
                     r.finishTime = s >= 6 ? '2024-06-02 09:00' : '';
+                    r.auditStatus = ['已出发','已到站','已清关','已完成'].includes(r.status) ? '已审计' : '未审计';
+                    // financeReady：应付费用是否全部平摊完（已审计必然 true；「已装柜」= 已摊完待审计；「配载中/已配载」= 有待摊）
+                    r.financeReady = r.auditStatus === '已审计' || r.status === '已装柜';
+                    // billNo：是否已关联应付账单（仅「已出发」已进应付账单，用于演示「已关联账单不可反审计」）
+                    r.billNo = r.status === '已出发' ? 'AP-202609-00001' : '';
                 });
                 const spaceLoadLocked = Vue.computed(() => {
                     return currentSpaceDetail.value ? (statusStep[currentSpaceDetail.value.status] || 0) >= 2 : false;
@@ -925,6 +1052,44 @@
 
                 const selectedSpaces = ref([]);
                 const onSpaceSelect = (rows) => { selectedSpaces.value = rows; };
+                // 提单（舱单）批量审计 / 反审计 —— 点按钮打开弹窗选「审计范围：应付」
+                const batchAuditSpaces = () => {
+                    if (!selectedSpaces.value.length) { ElMessage.warning('请先勾选需要审计的舱单'); return; }
+                    const rows = selectedSpaces.value.filter(r => r.auditStatus !== '已审计');
+                    if (!rows.length) { ElMessage.warning('勾选的舱单均已审计'); return; }
+                    auditType.value = 'audit';
+                    auditForm.blNos = rows.map(r => r.blNo).join('\n');
+                    auditForm.types = [];
+                    auditDialogVisible.value = true;
+                };
+                const batchReverseAuditSpaces = () => {
+                    if (!selectedSpaces.value.length) { ElMessage.warning('请先勾选需要反审计的舱单'); return; }
+                    const rows = selectedSpaces.value.filter(r => r.auditStatus === '已审计');
+                    if (!rows.length) { ElMessage.warning('勾选的舱单均未审计，无需反审计'); return; }
+                    auditType.value = 'reverse';
+                    auditForm.blNos = rows.map(r => r.blNo).join('\n');
+                    auditForm.types = [];
+                    auditDialogVisible.value = true;
+                };
+                // 提单级审计 / 反审计确认（弹窗内）
+                const confirmAuditSpaces = () => {
+                    if (!auditForm.types.includes('应付')) { ElMessage.warning('请选择审计范围'); return; }
+                    const rows = selectedSpaces.value.filter(r => auditType.value === 'audit' ? r.auditStatus !== '已审计' : r.auditStatus === '已审计');
+                    if (auditType.value === 'audit') {
+                        // 审计前置：每个勾选提单的应付费用全部平摊完（financeReady）
+                        const notReady = rows.filter(r => r.financeReady !== true);
+                        if (notReady.length) { ElMessage.warning(`舱单 ${notReady.map(r => r.blNo).join('、')} 还有应付费用未平摊，需全部平摊后才能审计`); return; }
+                        rows.forEach(r => { r.auditStatus = '已审计'; r.financeReady = true; });
+                        ElMessage.success(`已批量审计 ${rows.length} 个舱单（该提单全部应付流水统一审计，审计后不可再添加应付费用）`);
+                    } else {
+                        // 反审计前置：每个勾选提单未关联账单（一锅端：标记回未审计 + 全部已摊应付流水回待审计）
+                        const billed = rows.filter(r => r.billNo);
+                        if (billed.length) { ElMessage.warning(`舱单 ${billed.map(r => r.blNo).join('、')} 已关联账单，不允许反审计`); return; }
+                        rows.forEach(r => { r.auditStatus = '未审计'; });
+                        ElMessage.success(`已批量反审计 ${rows.length} 个舱单（全部应付流水回待审计）`);
+                    }
+                    auditDialogVisible.value = false;
+                };
                 const statusDialogVisible = ref(false);
                 const newStatus = ref('');
                 const openStatusDialog = () => {
@@ -940,21 +1105,303 @@
                 };
 
                 const feeDialogVisible = ref(false);
-                const feeType = ref('ap'); 
-                const feeForm = reactive({ blNos: '', time: '', type: '', currency: '', rate: '', unit: '', unitPrice: '', desc: '', remark: '' });
-
                 const auditDialogVisible = ref(false);
                 const auditType = ref('audit'); 
                 const auditForm = reactive({ blNos: '', types: [] });
 
-                const handleFeeCommand = (cmd) => {
-                    if (cmd === 'ap' || cmd === 'ar') { feeType.value = cmd; feeDialogVisible.value = true; } 
-                    else if (cmd === 'audit' || cmd === 'unaudit') { auditType.value = cmd; auditDialogVisible.value = true; }
+                // ===== 财务信息：提单应付费用 + 批量平摊（按实收体积）=====
+                const supplierOptions = ['中远海运', '美森快船', '广州港务', '广州报关行', '深圳拖车行'];
+                // 我司主体（供应商有效合同的签约主体，4 家，无香港富力顿）
+                const entityOptions = ['广州飞点', '深圳飞点', '广东飞点', '墨链'];
+                const supplierEntities = {
+                    '中远海运': ['广州飞点', '深圳飞点'],
+                    '美森快船': ['广州飞点'],
+                    '广州港务': ['广州飞点', '广东飞点'],
+                    '广州报关行': ['广州飞点'],
+                    '深圳拖车行': ['深圳飞点', '墨链']
+                };
+                const entityOptionsBySupplier = (supplier) => supplierEntities[supplier] || [];
+                const onFinanceSupplierChange = (row) => { row.entityName = ''; };
+                const feeTypeApOptions = [
+                    { name: '海运费' }, { name: '港杂费' }, { name: '拖车费' }, { name: '报关费' }, { name: '操作费' }, { name: '干线运输费' }
+                ];
+                const newFeeApRow = () => ({ blNo: '', oaNo: '', supplier: '', entityName: '', type: '', currency: 'CNY', rate: 1, amount: null, remark: '', bizTime: '' });
+                const feeApList = ref([newFeeApRow()]);
+                const feeAutoAmortize = ref(true); // 是否自动平摊（默认勾选：保存即平摊到运单；不勾选则落提单待摊）
+
+                const financeBlNo = computed(() => (currentSpaceDetail.value && currentSpaceDetail.value.blNo) || '—');
+                const financeVessel = computed(() => (currentSpaceDetail.value && currentSpaceDetail.value.vesselVoyage) || '—');
+
+                // 按提单（代理）生成应付费用演示数据：不同代理 → 不同费用类型组合；已摊完 → 全部已摊 + 带账单编号；未摊完 → 前几条待摊、最后一条已摊
+                const agentFees = {
+                    '万海代理': [['海运费', 20000], ['港杂费', 3000], ['报关费', 800]],
+                    '长荣代理': [['海运费', 18000], ['拖车费', 1500], ['报关费', 900]],
+                    '中远代理': [['海运费', 15000], ['操作费', 600], ['港杂费', 2500]],
+                    '地中海代理': [['海运费', 22000], ['港杂费', 2800], ['拖车费', 1800]],
+                    '马士基代理': [['海运费', 16000], ['报关费', 1000], ['操作费', 700]],
+                    '赫伯罗特代理': [['海运费', 19000], ['港杂费', 3200], ['报关费', 850]]
+                };
+                const supplierOf = { '海运费': '中远海运', '港杂费': '广州港务', '报关费': '广州报关行', '拖车费': '深圳拖车行', '操作费': '广州港务' };
+                const agentOaSeed = { '马士基代理': 15, '万海代理': 24, '长荣代理': 30, '中远代理': 36, '地中海代理': 42, '赫伯罗特代理': 48 };
+                const genFinanceData = (row) => {
+                    const audited = !!(row && row.auditStatus === '已审计');
+                    const ready = audited || !!(row && row.financeReady === true);
+                    const linked = !!(row && row.billNo); // 提单已进应付账单（billNo 非空）
+                    const agent = (row && row.agent) || '万海代理';
+                    const fees = agentFees[agent] || agentFees['万海代理'];
+                    const base = { currency: 'CNY', rate: 1, bizTime: '2026-09-10', createdAt: '2026-09-10 09:30', createdBy: '张三' };
+                    const oaSeed = agentOaSeed[agent] || 15;
+                    const rows = fees.map((f, i) => {
+                        const type = f[0];
+                        const total = f[1];
+                        const isLast = i === fees.length - 1;
+                        const amortized = ready || isLast; // 已摊完 → 全部已摊；未摊完 → 前几条待摊、最后一条已摊
+                        const amount = amortized ? Math.round(total * 0.15 * 100) / 100 : total;
+                        return Object.assign({}, base, {
+                            type, amount, supplier: supplierOf[type] || '中远海运',
+                            oaNo: 'OA-2026-0901-' + String(oaSeed + i).padStart(3, '0'),
+                            remark: amortized ? '已平摊到运单' : '',
+                            status: amortized ? '已摊' : '待摊',
+                            billNo: amortized && linked ? 'AP-202609-0000' + (i + 1) : '',
+                            flowAudited: isLast, sourceType: 30,
+                            auditStatus: amortized ? (audited ? '已审计' : '待审计') : ''
+                        });
+                    });
+                    // 运单侧挂靠同步的应付流水（source_type=20）：提单侧只读镜像（仅查看，改/删回运单侧）；优先读 localStorage（运单审计添加应付选提单同步来的），无则默认演示一条
+                    if (!audited) {
+                        let linkList = [];
+                        try { linkList = JSON.parse(localStorage.getItem('luna_ap_amortize_link') || '[]'); } catch (e) {}
+                        const linked = (Array.isArray(linkList) ? linkList : []).filter(l => l.blNo === (row && row.blNo));
+                        const linkRows = linked.length ? linked.map(l => Object.assign({}, base, {
+                            type: l.type, amount: l.amount, supplier: l.supplier, currency: l.currency,
+                            rate: l.rate, remark: l.remark || '运单审计「添加应付」挂靠同步 · 提单侧只读',
+                            oaNo: '', bizTime: l.bizTime || base.bizTime, createdAt: l.createdAt || base.createdAt,
+                            status: '运单挂靠', billNo: '', flowAudited: false, sourceType: 20, auditStatus: ''
+                        })) : [Object.assign({}, base, {
+                            type: '干线运输费', amount: 3500, supplier: '美森快船',
+                            oaNo: 'OA-2026-0901-' + String(oaSeed + 90).padStart(3, '0'),
+                            remark: '运单审计「添加应付」挂靠同步 · 提单侧只读',
+                            status: '运单挂靠', billNo: '', flowAudited: false, sourceType: 20, auditStatus: ''
+                        })];
+                        rows.push(...linkRows);
+                    }
+                    return rows;
+                };
+                const financeData = ref([]);
+                const selectedFinanceRows = ref([]);
+                const onFinanceSelect = (val) => { selectedFinanceRows.value = val; };
+                // 流水级审计 / 反审计（勾选已摊应付流水 → 单条审计 / 反审计，只动该条 auditStatus、不动提单级标记）
+                const rowAuditFinance = () => {
+                    if (!selectedFinanceRows.value.length) { ElMessage.warning('请先勾选需要审计的应付流水'); return; }
+                    const rows = selectedFinanceRows.value.filter(r => r.status === '已摊' && r.auditStatus !== '已审计');
+                    if (!rows.length) { ElMessage.warning('勾选的行中没有可审计的已摊应付流水（待摊不可审计、已审计无需再审）'); return; }
+                    rows.forEach(r => { r.auditStatus = '已审计'; });
+                    ElMessage.success(`已审计 ${rows.length} 条应付流水`);
+                };
+                const rowReverseAuditFinance = () => {
+                    if (!selectedFinanceRows.value.length) { ElMessage.warning('请先勾选需要反审计的应付流水'); return; }
+                    const rows = selectedFinanceRows.value.filter(r => r.status === '已摊' && r.auditStatus === '已审计');
+                    if (!rows.length) { ElMessage.warning('勾选的行中没有可反审计的已摊应付流水'); return; }
+                    const billed = rows.filter(r => r.billNo);
+                    if (billed.length) { ElMessage.warning(`应付流水「${billed.map(r => r.type).join('、')}」已关联账单，不可反审计`); return; }
+                    rows.forEach(r => { r.auditStatus = '待审计'; });
+                    ElMessage.success(`已反审计 ${rows.length} 条应付流水`);
+                };
+                const financeTotal = computed(() => financeData.value.reduce((s, r) => s + (r.status === '待摊' ? Number(r.amount) : 0), 0));
+                const moneyText = (v) => Number(v || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const financeCnyAmount = (row) => moneyText((Number(row.amount) || 0) * (Number(row.rate) || 1));
+
+                // 提单（舱单）审计 / 反审计
+                const financeLocked = computed(() => !!(currentSpaceDetail.value && currentSpaceDetail.value.auditStatus === '已审计'));
+                const financeLockTip = '提单已审计，不允许添加应付费用';
+                const canAuditFinance = computed(() => {
+                    const cur = currentSpaceDetail.value;
+                    if (!cur || cur.auditStatus === '已审计') return false;
+                    return cur.financeReady === true;
+                });
+                const auditFinanceTip = computed(() => {
+                    const cur = currentSpaceDetail.value;
+                    if (!cur) return '';
+                    if (cur.auditStatus === '已审计') return '提单已审计，无需再次审计';
+                    if (cur.financeReady !== true) return '应付费用还未全部平摊，需全部平摊后才能审计';
+                    return '';
+                });
+                const canReverseAuditFinance = computed(() => {
+                    const cur = currentSpaceDetail.value;
+                    if (!cur || cur.auditStatus !== '已审计') return false;
+                    return !cur.billNo;
+                });
+                const reverseAuditFinanceTip = computed(() => {
+                    const cur = currentSpaceDetail.value;
+                    if (!cur) return '';
+                    if (cur.auditStatus !== '已审计') return '提单未审计，无需反审计';
+                    if (cur.billNo) return '已关联账单，不允许反审计';
+                    return '';
+                });
+                const auditFinance = () => {
+                    if (!canAuditFinance.value) { ElMessage.warning(auditFinanceTip.value || '暂不可审计'); return; }
+                    currentSpaceDetail.value.auditStatus = '已审计';
+                    ElMessage.success('提单已审计');
+                };
+                const reverseAuditFinance = () => {
+                    if (!canReverseAuditFinance.value) { ElMessage.warning(reverseAuditFinanceTip.value || '暂不可反审计'); return; }
+                    currentSpaceDetail.value.auditStatus = '未审计';
+                    ElMessage.success('提单已反审计');
+                };
+
+                const openFinanceAdd = () => {
+                    feeApList.value = [newFeeApRow()];
+                    feeDialogVisible.value = true;
+                };
+                const saveFinance = () => {
+                    if (currentSpaceDetail.value && currentSpaceDetail.value.auditStatus === '已审计') { ElMessage.warning('提单已审计，不允许添加应付费用'); return; }
+                    const rows = feeApList.value.filter(r => r.type);
+                    if (!rows.length) { ElMessage.warning('请先选择费用类型'); return; }
+                    for (const r of rows) {
+                        if (!r.bizTime) { ElMessage.warning(`「${r.type}」请选择业务时间`); return; }
+                        if (!r.supplier) { ElMessage.warning(`「${r.type}」请选择供应商`); return; }
+                        if (!r.entityName) { ElMessage.warning(`「${r.type}」请选择我司主体（供应商无有效合同时请先到供应商管理签约）`); return; }
+                        if (!r.oaNo || !String(r.oaNo).trim()) { ElMessage.warning(`「${r.type}」请填写 OA 审批编号`); return; }
+                        if (!r.currency) { ElMessage.warning(`「${r.type}」请选择币种`); return; }
+                        if (r.rate === null || r.rate === undefined || r.rate === '') { ElMessage.warning(`「${r.type}」请填写汇率`); return; }
+                        if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.type}」请填写金额（原币）`); return; }
+                    }
+                    // 弹窗内多行去重
+                    const typeCount = {};
+                    rows.forEach(r => { typeCount[r.type] = (typeCount[r.type] || 0) + 1; });
+                    const dupType = Object.keys(typeCount).find(t => typeCount[t] > 1);
+                    if (dupType) { ElMessage.warning(`费用类型「${dupType}」在弹窗内重复，请勿重复添加`); return; }
+                    // ① 提单维度去重：当前提单已有同费用类型（含提单级 + 运单挂靠行）
+                    for (const r of rows) {
+                        if (financeData.value.some(f => f.type === r.type)) { ElMessage.warning(`费用类型「${r.type}」已存在，不能重复新增`); return; }
+                    }
+                    // ③ 平摊查目标运单：自动平摊时，任一目标运单已有同费用类型 → 平摊失败 + 提单侧新增失败
+                    if (feeAutoAmortize.value) {
+                        for (const r of rows) {
+                            const conflictWb = amortizeWaybills.filter(w => (w.existingApTypes || []).includes(r.type));
+                            if (conflictWb.length) { ElMessage.warning(`运单 ${conflictWb.map(w => w.waybillNo).join('、')} 已存在费用类型「${r.type}」，平摊失败，提单侧新增一并取消`); return; }
+                        }
+                    }
+                    const auto = feeAutoAmortize.value;
+                    rows.forEach(r => financeData.value.push({ type: r.type, amount: Number(r.amount), currency: r.currency, rate: Number(r.rate), supplier: r.supplier, entityName: r.entityName || '', oaNo: r.oaNo, remark: auto ? (r.remark ? r.remark + '；已平摊' : '已平摊') : (r.remark || ''), bizTime: r.bizTime || '', status: auto ? '已摊' : '待摊', billNo: '', auditStatus: auto ? '待审计' : '', sourceType: 30, createdAt: '2026-09-21 09:30', createdBy: '财务' }));
+                    feeDialogVisible.value = false;
+                    ElMessage.success(auto ? `已新增 ${rows.length} 条应付费用并自动平摊到该提单下各运单（尾差挂最后一单）` : `已新增 ${rows.length} 条应付费用，落提单「待摊」，可批量平摊到运单`);
+                };
+                const canDeleteFinance = (row) => {
+                    if (row.status === '待摊') return !financeLocked.value;
+                    return !row.billNo && row.auditStatus !== '已审计';
+                };
+                const deleteFinanceTip = (row) => {
+                    if (row.status === '待摊' && financeLocked.value) return '提单已审计，不允许删除';
+                    if (row.billNo) return '已进账单的流水不允许删除';
+                    if (row.auditStatus === '已审计') return '该流水已审计，不可删除（如需调整请先反审计该流水）';
+                    return '';
+                };
+                // 撤销平摊（已摊行）只受流水级审计管，不看提单级标记（两层解耦：提单级管新增/平摊、流水级管撤销/删除）
+                const canReverseAmortize = (row) => !row.billNo && row.auditStatus !== '已审计';
+                const reverseAmortizeTip = (row) => {
+                    if (row.billNo) return '已进账单的流水不允许撤销平摊';
+                    if (row.auditStatus === '已审计') return '该流水已审计，不可撤销平摊（如需调整请先反审计该流水）';
+                    return '';
+                };
+                const removeFinance = (row) => {
+                    if (row.status === '待摊' && financeLocked.value) { ElMessage.warning('提单已审计，不允许删除'); return; }
+                    if (row.billNo) { ElMessage.warning('已进账单的流水不允许删除'); return; }
+                    if (row.auditStatus === '已审计') { ElMessage.warning('该流水已审计，不可删除（如需调整请先反审计该流水）'); return; }
+                    ElMessageBox.confirm(`确定删除「${row.type}」这条应付费用吗？`, '删除确认', { type: 'warning' })
+                        .then(() => { financeData.value = financeData.value.filter(r => r !== row); ElMessage.success('已删除'); })
+                        .catch(() => {});
+                };
+
+                // 应付费用详情 / 平摊 / 撤销平摊（统一弹窗：查看、单个平摊/撤销、批量平摊/撤销共用同一界面）
+                const financeDetailVisible = ref(false);
+                const financeDetailMode = ref('view'); // view | amortize | reverse | batchAmortize | batchReverse
+                const financeDetailRows = ref([]);
+                const financeDetailTitle = computed(() => {
+                    const map = { view: '应付费用详情', amortize: '平摊确认', reverse: '撤销平摊确认', batchAmortize: '批量平摊确认', batchReverse: '批量撤销平摊确认' };
+                    return map[financeDetailMode.value] || '应付费用详情';
+                });
+                // 平摊目标运单（mock）；existingApTypes = 该运单已有（运单级）应付费用类型，用于「费用类型唯一」校验（平摊到已有同类型的运单 → 平摊失败 + 提单侧新增失败）
+                const amortizeWaybills = [
+                    { waybillNo: 'YD20260413005', customerName: '深圳大卖科技', service: '美森快船', country: '美国', pickSite: '深圳仓', customsType: '买单报关', boxes: 12, volume: 45.5, apAuditStatus: '未审计', existingApTypes: ['操作费', '海运费', '港杂费'] },
+                    { waybillNo: 'YD20260413007', customerName: '义乌星光进出口', service: '美森快船', country: '美国', pickSite: '义乌仓', customsType: '双清包税', boxes: 20, volume: 80.0, apAuditStatus: '未审计', existingApTypes: [] },
+                    { waybillNo: 'YD20260413009', customerName: '广州迅达贸易', service: '美森快船', country: '美国', pickSite: '广州仓', customsType: '买单报关', boxes: 35, volume: 174.5, apAuditStatus: '未审计', existingApTypes: [] }
+                ];
+                const amortizePreview = computed(() => {
+                    const totalVolume = amortizeWaybills.reduce((s, w) => s + w.volume, 0);
+                    const totalAmount = financeDetailRows.value.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+                    let acc = 0;
+                    return amortizeWaybills.map((w, i) => {
+                        const isLast = i === amortizeWaybills.length - 1;
+                        const amt = isLast ? Math.round((totalAmount - acc) * 100) / 100 : Math.round(totalAmount * w.volume / totalVolume * 100) / 100;
+                        acc += amt;
+                        return { waybillNo: w.waybillNo, customerName: w.customerName, service: w.service, country: w.country, pickSite: w.pickSite, customsType: w.customsType, boxes: w.boxes, volume: w.volume, ratio: (w.volume / totalVolume * 100).toFixed(2) + '%', amount: amt, isTail: isLast, apAuditStatus: w.apAuditStatus };
+                    });
+                });
+                const viewFinance = (row) => { financeDetailRows.value = [row]; financeDetailMode.value = 'view'; financeDetailVisible.value = true; };
+                const singleAmortize = (row) => { financeDetailRows.value = [row]; financeDetailMode.value = 'amortize'; financeDetailVisible.value = true; };
+                const singleReverseAmortize = (row) => { financeDetailRows.value = [row]; financeDetailMode.value = 'reverse'; financeDetailVisible.value = true; };
+                const openBatchAmortize = () => {
+                    if (!selectedFinanceRows.value.length) { ElMessage.warning('请先勾选需要平摊的应付费用'); return; }
+                    const rows = selectedFinanceRows.value.filter(r => r.status === '待摊');
+                    if (!rows.length) { ElMessage.warning('勾选的行中没有「待摊」状态，只有待摊费用可平摊'); return; }
+                    financeDetailRows.value = rows;
+                    financeDetailMode.value = 'batchAmortize';
+                    financeDetailVisible.value = true;
+                };
+                const openBatchReverseAmortize = () => {
+                    if (!selectedFinanceRows.value.length) { ElMessage.warning('请先勾选需要撤销平摊的应付费用'); return; }
+                    const rows = selectedFinanceRows.value.filter(r => r.status === '已摊' && r.auditStatus !== '已审计' && !r.billNo);
+                    if (!rows.length) { ElMessage.warning('勾选的行中没有可撤销平摊的已摊应付费用（已审计或已进账单的不可撤销）'); return; }
+                    financeDetailRows.value = rows;
+                    financeDetailMode.value = 'batchReverse';
+                    financeDetailVisible.value = true;
+                };
+                const confirmFinanceDetail = () => {
+                    const mode = financeDetailMode.value;
+                    const rows = financeDetailRows.value;
+                    if (mode === 'amortize' || mode === 'batchAmortize') {
+                        // 平摊 = 往运单新增应付流水；目标运单「应付」已整票审计的不可平摊（先反审计应付），否则账目锁定被绕过
+                        const auditedWb = amortizeWaybills.filter(w => w.apAuditStatus === '已审计');
+                        if (auditedWb.length) {
+                            ElMessage.warning(`运单 ${auditedWb.map(w => w.waybillNo).join('、')} 应付已整票审计，不可平摊应付费用；如需平摊请先到「运单审计」反审计该运单的应付`);
+                            return;
+                        }
+                        // ③ 平摊查目标运单：任一目标运单已有同费用类型 → 平摊失败
+                        const conflictList = [];
+                        rows.forEach(r => {
+                            const conflictWb = amortizeWaybills.filter(w => (w.existingApTypes || []).includes(r.type));
+                            if (conflictWb.length) conflictList.push(`费用类型「${r.type}」→ 运单 ${conflictWb.map(w => w.waybillNo).join('、')} 已存在`);
+                        });
+                        if (conflictList.length) { ElMessage.warning(`${conflictList.join('；')}，平摊失败`); return; }
+                        rows.forEach(r => { r.status = '已摊'; r.remark = r.remark ? r.remark + '；已平摊' : '已平摊'; });
+                        ElMessage.success(`已按实收体积平摊 ${rows.length} 条应付费用到该提单下各运单（尾差已挂最后一个运单并备注）`);
+                        financeDetailVisible.value = false;
+                    } else if (mode === 'reverse' || mode === 'batchReverse') {
+                        // 撤销平摊（反分摊）= 删除平摊生成的运单应付流水；前置：① 该流水未审计 + 未关联账单（提单侧流水级）② 目标运单应付未整票审计（运单侧）
+                        const blockedFlow = rows.filter(r => r.auditStatus === '已审计' || r.billNo);
+                        if (blockedFlow.length) {
+                            ElMessage.warning(`应付费用「${blockedFlow.map(r => r.type).join('、')}」已审计或已进账单，不可撤销平摊；如需撤销请先反审计该流水`);
+                            return;
+                        }
+                        const auditedWb = amortizeWaybills.filter(w => w.apAuditStatus === '已审计');
+                        if (auditedWb.length) {
+                            ElMessage.warning(`运单 ${auditedWb.map(w => w.waybillNo).join('、')} 应付已整票审计，不可撤销平摊；如需撤销请先到「运单审计」反审计该运单的应付`);
+                            return;
+                        }
+                        ElMessageBox.confirm(`确定撤销平摊 ${rows.length} 条应付费用吗？撤销后其下未审计、未进账单的运单应付流水将被删除，费用退回提单「待摊」`, '撤销平摊二次确认', { type: 'warning', confirmButtonText: '确认撤销', cancelButtonText: '取消' })
+                            .then(() => {
+                                rows.forEach(r => { r.status = '待摊'; r.auditStatus = ''; });
+                                ElMessage.success(`已撤销平摊 ${rows.length} 条应付费用，退回提单「待摊」，可修改金额后重新平摊`);
+                                financeDetailVisible.value = false;
+                            })
+                            .catch(() => {});
+                    }
                 };
 
                 // Space Detail Logic
                 const spaceDetailVisible = ref(false);
-                const spaceDetailTab = ref('basic');
+                const spaceDetailTab = ref('finance');
                 const currentSpaceDetail = ref(null);
                 
                 const isSpaceEditing = ref(false);
@@ -1019,7 +1466,7 @@
                 const loadTotalBoxes = Vue.computed(() => loadItems.value.length);
                 const loadPage = ref(1);
                 const loadViewMode = ref('waybill');
-                const detailRightCollapsed = ref(false);
+                const detailRightCollapsed = ref(true);
                 const boxSearch = reactive({ user: '', boxNo: '' });
                 const waybillSearch = reactive({ user: '', waybillNo: '' });
                 const filteredBoxItems = Vue.computed(() => {
@@ -1314,8 +1761,10 @@
 
                 const openSpaceDetail = (row) => {
                     currentSpaceDetail.value = row;
-                    spaceDetailTab.value = 'basic';
+                    spaceDetailTab.value = 'finance';
                     isSpaceEditing.value = false;
+                    // 加载该提单的应付费用演示数据（已审计提单 → 全部已摊 + 带账单编号）
+                    financeData.value = genFinanceData(row);
                     // 根据 Space 状态预置配载数据（mock 演示）
                     const s = statusStep[row.status] || 0;
                     if (s >= 2) {
@@ -1347,7 +1796,6 @@
                 };
 
                 // Mocks
-                const mockFinanceData = ref([{ type: '海运费', unitPrice: 1000, currency: 'USD', desc: '基础海运费' }]);
                 const mockTicketData = ref([{ type: '查验异常', desc: '海关例行查验', status: '处理中' }]);
                 const mockSpaceLogData = ref([{ operator: '系统', action: '创建舱位', remark: '初始化数据', time: '2024-04-10' }]);
 
@@ -1357,8 +1805,9 @@
                      spaceDialogVisible, spaceDialogType, spaceFormData, agentOptions, trailerCompanyOptions, customsBrokerOptions, serviceOptions, specOptions, specToVolume, regionOptions, weekOptions, onSpecChange, openSpaceAddDialog,
                     copySpace,
                     markDialogVisible, markForm, statusDialogVisible, newStatus,
-                    selectedSpaces, onSpaceSelect, openStatusDialog, exportDialogVisible, exportForm, doExport,
-                    feeDialogVisible, feeType, feeForm, handleFeeCommand, auditDialogVisible, auditType, auditForm,
+                    selectedSpaces, onSpaceSelect, batchAuditSpaces, batchReverseAuditSpaces, openStatusDialog, exportDialogVisible, exportForm, doExport,
+                    feeDialogVisible, auditDialogVisible, auditType, auditForm,
+                    feeApList, newFeeApRow, feeAutoAmortize, supplierOptions, entityOptions, entityOptionsBySupplier, onFinanceSupplierChange, feeTypeApOptions, financeBlNo, financeVessel, financeData, selectedFinanceRows, onFinanceSelect, financeTotal, moneyText, financeCnyAmount, financeLocked, financeLockTip, canAuditFinance, auditFinanceTip, canReverseAuditFinance, reverseAuditFinanceTip, confirmAuditSpaces, rowAuditFinance, rowReverseAuditFinance, openFinanceAdd, saveFinance, canDeleteFinance, deleteFinanceTip, canReverseAmortize, reverseAmortizeTip, removeFinance, financeDetailVisible, financeDetailMode, financeDetailRows, financeDetailTitle, amortizePreview, viewFinance, singleAmortize, singleReverseAmortize, openBatchAmortize, openBatchReverseAmortize, confirmFinanceDetail,
                     
                     spaceDetailVisible, spaceDetailTab, currentSpaceDetail, openSpaceDetail, detailRightCollapsed,
                     isSpaceEditing, editSpaceForm, startSpaceEdit, cancelSpaceEdit, saveSpaceEdit,
@@ -1373,7 +1822,7 @@
                     createBatchDialogVisible, createBatchForm, loadPool, openCreateBatchDialog, loadPoolItems, saveCreateBatch,
                     batchDialogVisible, batchForm, batchDialogTitle, openBatchDialog, openEditBatch, saveBatch,
                     moveBatchVisible, moveBatchForm, openMoveBatch, doMoveBatch,
-                    mockFinanceData, mockTicketData, mockSpaceLogData
+                    mockTicketData, mockSpaceLogData
                 };
             }
         });

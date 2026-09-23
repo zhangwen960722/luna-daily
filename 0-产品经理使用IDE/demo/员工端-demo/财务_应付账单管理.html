@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应付账单管理 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; box-sizing: border-box; }
+        .search-area { display: flex; gap: 16px; margin-bottom: 0; align-items: flex-start; flex-wrap: nowrap; }
+        .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
+        .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+        .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .amount-cell { font-weight: 600; }
+        .toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+        .section-title { font-size: 15px; font-weight: bold; color: #303133; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #E4E7ED; display: flex; align-items: center; }
+        .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: var(--el-color-primary); margin-right: 8px; border-radius: 2px; }
+        .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
+        .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
+        .void-block { background: #fef0f0; border: 1px solid #fbc4c4; border-radius: 4px; padding: 12px 14px; color: #f56c6c; line-height: 1.6; margin-bottom: 16px; }
+        .bill-link { color: #409EFF; cursor: pointer; }
+        .bill-link:hover { text-decoration: underline; }
+        .timeline-item { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #ebeef5; }
+        .timeline-time { color: #909399; font-size: 12px; width: 150px; flex-shrink: 0; }
+        .timeline-text { color: #303133; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 上层卡片：查询区（按当前 Tab 切换条件） -->
+        <div class="content-card" style="margin-bottom: 16px;">
+            <div class="search-area">
+                <div class="search-conditions">
+                    <el-input v-model="search.billNo" placeholder="账单编号" class="search-control" clearable></el-input>
+                    <el-input v-model="search.supplier" placeholder="供应商" class="search-control" clearable></el-input>
+                    <el-select v-model="search.entity" placeholder="我司主体" class="search-control" clearable>
+                        <el-option v-for="e in entityOptions" :key="e" :label="e" :value="e"></el-option>
+                    </el-select>
+                    <el-input v-model="search.oaNo" placeholder="OA审批编号" class="search-control" clearable></el-input>
+                    <el-select v-if="searchExpanded" v-model="search.currency" placeholder="币种" class="search-control" clearable>
+                        <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                    </el-select>
+                </div>
+                <div class="search-actions">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
+                    </el-button>
+                    <el-button type="primary" link @click="searchExpanded = !searchExpanded">
+                        更多查询条件<el-icon class="el-icon--right"><ArrowDown v-if="!searchExpanded"></ArrowDown><ArrowUp v-else></ArrowUp></el-icon>
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：Tab + 工具栏 + 应付账单列表 -->
+        <div class="content-card">
+            <el-tabs v-model="activeTab">
+                <el-tab-pane :label="'待核销 (' + pendingBills.length + ')'" name="pending">
+                    <el-table :data="filteredPending" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单编号" min-width="200"></el-table-column>
+                        <el-table-column prop="supplier" label="供应商" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="我司主体" min-width="110" align="center"></el-table-column>
+                        <el-table-column prop="oaNo" label="OA审批编号" min-width="160"></el-table-column>
+                        <el-table-column label="币种" width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope"><span class="amount-cell">{{ money(scope.row.currency, scope.row.billAmount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="已核销金额" min-width="120" align="right">
+                            <template #default="scope">{{ money(scope.row.currency, scope.row.paidAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="未结清金额" min-width="120" align="right">
+                            <template #default="scope"><span style="color: #f56c6c; font-weight: 600;">{{ money(scope.row.currency, scope.row.unpaidAmount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="核销状态" width="110" align="center">
+                            <template #default="scope"><el-tag :type="writeoffTag(scope.row.writeoffStatus)" size="small">{{ scope.row.writeoffStatus }}</el-tag></template>
+                        </el-table-column>
+                        <el-table-column prop="generatedAt" label="生成时间" min-width="150" align="center"></el-table-column>
+                        <el-table-column label="操作" width="200" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
+                                <el-button link type="success" size="small" @click="openWriteoff(scope.row)">核销</el-button>
+                                <el-button v-if="scope.row.writeoffStatus === '未核销'" link type="danger" size="small" @click="openVoid(scope.row)">作废</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredPending.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+
+                <el-tab-pane :label="'已核销 (' + settledBills.length + ')'" name="settled">
+                    <el-table :data="filteredSettled" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单编号" min-width="200"></el-table-column>
+                        <el-table-column prop="supplier" label="供应商" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="我司主体" min-width="110" align="center"></el-table-column>
+                        <el-table-column prop="oaNo" label="OA审批编号" min-width="160"></el-table-column>
+                        <el-table-column label="币种" width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope"><span class="amount-cell">{{ money(scope.row.currency, scope.row.billAmount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="核销状态" width="110" align="center">
+                            <template #default="scope"><el-tag :type="writeoffTag(scope.row.writeoffStatus)" size="small">{{ scope.row.writeoffStatus }}</el-tag></template>
+                        </el-table-column>
+                        <el-table-column prop="generatedAt" label="生成时间" min-width="150" align="center"></el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredSettled.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+
+                <el-tab-pane :label="'已作废 (' + voidedBills.length + ')'" name="voided">
+                    <el-table :data="filteredVoided" border style="width: 100%">
+                        <el-table-column prop="billNo" label="账单编号" min-width="200"></el-table-column>
+                        <el-table-column prop="supplier" label="供应商" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="entityName" label="我司主体" min-width="110" align="center"></el-table-column>
+                        <el-table-column prop="oaNo" label="OA审批编号" min-width="160"></el-table-column>
+                        <el-table-column label="币种" width="80" align="center">
+                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                        </el-table-column>
+                        <el-table-column label="账单金额" min-width="120" align="right">
+                            <template #default="scope"><span class="amount-cell">{{ money(scope.row.currency, scope.row.billAmount) }}</span></template>
+                        </el-table-column>
+                        <el-table-column label="作废标记" width="110" align="center">
+                            <template #default="scope"><el-tag type="danger" size="small">已作废</el-tag></template>
+                        </el-table-column>
+                        <el-table-column prop="generatedAt" label="生成时间" min-width="150" align="center"></el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right" align="center">
+                            <template #default="scope">
+                                <el-button link type="primary" size="small" @click="openDetail(scope.row)">详情</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="pagination-area">
+                        <el-pagination background layout="total, prev, pager, next" :total="filteredVoided.length"></el-pagination>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
+        </div>
+
+        <!-- 弹窗 1：核销（付款给供应商） -->
+        <el-dialog v-model="writeoffVisible" title="核销付款" width="620px" destroy-on-close>
+            <template v-if="writeoffRow">
+                <div class="section-title">账单信息</div>
+                <el-row :gutter="16">
+                    <el-col :span="12"><span class="detail-label">账单编号</span><div class="detail-value">{{ writeoffRow.billNo }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">供应商</span><div class="detail-value">{{ writeoffRow.supplier }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><span class="detail-label">我司主体</span><div class="detail-value">{{ writeoffRow.entityName }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">OA审批编号</span><div class="detail-value">{{ writeoffRow.oaNo }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(writeoffRow.currency) }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">账单金额</span><div class="detail-value">{{ money(writeoffRow.currency, writeoffRow.billAmount) }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><span class="detail-label">未结清金额</span><div class="detail-value" style="color:#f56c6c;font-weight:600;">{{ money(writeoffRow.currency, writeoffRow.unpaidAmount) }}</div></el-col>
+                </el-row>
+                <div class="section-title" style="margin-top: 20px;">付款信息</div>
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <span class="detail-label">出款账户 <span style="color:#f56c6c;">*</span></span>
+                        <el-select v-model="woForm.bankAccountId" placeholder="请选择出款账户" style="width:100%" @change="onWoAccountChange">
+                            <el-option v-for="a in woBankAccounts" :key="a.id" :label="a.name + '（余额 ' + formatMoney(a.balance) + '）'" :value="a.id"></el-option>
+                        </el-select>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">核销金额 <span style="color:#f56c6c;">*</span></span>
+                        <el-input-number v-model="woForm.amount" :min="0.01" :precision="2" :controls="false" style="width:100%" placeholder="请输入核销金额"></el-input-number>
+                    </el-col>
+                </el-row>
+                <el-row :gutter="16" style="margin-top: 4px;">
+                    <el-col :span="12">
+                        <span class="detail-label">付款凭证</span>
+                        <el-upload action="#" :auto-upload="false" :limit="1" :on-change="onWoVoucherChange" :on-remove="onWoVoucherRemove" accept="image/*,.pdf">
+                            <el-button size="small">上传银行转账回单</el-button>
+                        </el-upload>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">备注</span>
+                        <el-input v-model="woForm.remark" placeholder="内部留痕"></el-input>
+                    </el-col>
+                </el-row>
+                <div v-if="woSelectedAccount" style="margin-top: 12px; background: #f8f9fa; border-radius: 4px; padding: 10px 14px; font-size: 13px; color: #606266;">
+                    出款账户余额：{{ money(writeoffRow.currency, woSelectedAccount.balance) }}
+                </div>
+            </template>
+            <template #footer>
+                <el-button @click="writeoffVisible = false">取消</el-button>
+                <el-button type="primary" @click="submitWriteoff">确认付款</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 弹窗 3：作废应付账单 -->
+        <el-dialog v-model="voidVisible" title="作废应付账单" width="620px" destroy-on-close>
+            <template v-if="voidRow">
+                <div class="section-title">账单信息</div>
+                <el-row :gutter="16">
+                    <el-col :span="12"><span class="detail-label">账单编号</span><div class="detail-value">{{ voidRow.billNo }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">供应商</span><div class="detail-value">{{ voidRow.supplier }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="12"><span class="detail-label">OA审批编号</span><div class="detail-value">{{ voidRow.oaNo }}</div></el-col>
+                    <el-col :span="12"><span class="detail-label">账单金额</span><div class="detail-value">{{ money(voidRow.currency, voidRow.billAmount) }}</div></el-col>
+                </el-row>
+                <div class="void-block" style="margin-top: 16px;">
+                    作废后其下 {{ (voidRow.flows || []).length }} 条应付流水将释放回可成账池；账单不可恢复、账单号不回收。
+                </div>
+                <span class="detail-label">作废原因 <span style="color:#f56c6c;">*</span></span>
+                <el-input v-model="voidReason" type="textarea" :rows="3" maxlength="200" show-word-limit placeholder="请填写作废原因"></el-input>
+            </template>
+            <template #footer>
+                <el-button @click="voidVisible = false">取消</el-button>
+                <el-button type="danger" @click="submitVoid">确认作废</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 弹窗 4：账单详情 -->
+        <el-dialog v-model="detailVisible" title="应付账单详情" width="1100px" destroy-on-close>
+            <template v-if="detailRow">
+                <div class="section-title">账单信息</div>
+                <el-row :gutter="16">
+                    <el-col :span="8"><span class="detail-label">账单编号</span><div class="detail-value">{{ detailRow.billNo }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">供应商</span><div class="detail-value">{{ detailRow.supplier }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">我司主体</span><div class="detail-value">{{ detailRow.entityName }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><span class="detail-label">OA审批编号</span><div class="detail-value">{{ detailRow.oaNo }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(detailRow.currency) }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">账单日</span><div class="detail-value">{{ detailRow.billingDate }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><span class="detail-label">到期日</span><div class="detail-value">{{ detailRow.dueDate }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">账期</span><div class="detail-value">{{ detailRow.paymentTerms }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">账单金额</span><div class="detail-value">{{ money(detailRow.currency, detailRow.billAmount) }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><span class="detail-label">已核销金额</span><div class="detail-value">{{ money(detailRow.currency, detailRow.paidAmount) }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">未结清金额</span><div class="detail-value" style="color:#f56c6c;font-weight:600;">{{ money(detailRow.currency, detailRow.unpaidAmount) }}</div></el-col>
+                    <el-col :span="8"><span class="detail-label">核销状态</span><div class="detail-value">{{ detailRow.writeoffStatus }}</div></el-col>
+                </el-row>
+                <el-row :gutter="16">
+                    <el-col :span="8"><span class="detail-label">作废标记</span><div class="detail-value">{{ detailRow.voidStatus }}</div></el-col>
+                </el-row>
+
+                <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="section-title" style="margin: 0;">应付明细</div>
+                    <el-button v-if="detailRow.writeoffStatus === '未核销'" type="primary" size="small" @click="openAddFlow(detailRow)">＋ 新增明细</el-button>
+                </div>
+                <el-table :data="detailRow.flows || []" border size="small" max-height="260" style="width: 100%">
+                    <el-table-column prop="waybillNo" label="运单号" min-width="140"></el-table-column>
+                    <el-table-column label="提单号" min-width="150" show-overflow-tooltip>
+                        <template #default="scope">{{ scope.row.blNo || '—' }}</template>
+                    </el-table-column>
+                    <el-table-column prop="feeType" label="费用类型" min-width="110"></el-table-column>
+                    <el-table-column label="转单号" min-width="150" show-overflow-tooltip>
+                        <template #default="scope">{{ scope.row.transferNo || '—' }}</template>
+                    </el-table-column>
+                    <el-table-column label="币种" width="70" align="center">
+                        <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                    </el-table-column>
+                    <el-table-column label="汇率" min-width="90" align="right">
+                        <template #default="scope">{{ formatRate(scope.row.rate) }}</template>
+                    </el-table-column>
+                    <el-table-column label="金额（原币）" min-width="110" align="right">
+                        <template #default="scope">{{ money(scope.row.currency, scope.row.amount) }}</template>
+                    </el-table-column>
+                    <el-table-column label="金额（本币）" min-width="110" align="right">
+                        <template #default="scope">¥{{ formatMoney(cnyAmount(scope.row)) }}</template>
+                    </el-table-column>
+                    <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip>
+                        <template #default="scope">{{ scope.row.remark || '—' }}</template>
+                    </el-table-column>
+                    <el-table-column v-if="detailRow.writeoffStatus === '未核销'" label="操作" width="80" align="center">
+                        <template #default="scope">
+                            <el-button link type="danger" size="small" :disabled="(detailRow.flows || []).length <= 1" @click="removeFlow(detailRow, scope.$index)">删除</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+
+                <div class="section-title" style="margin-top: 20px;">操作时间线</div>
+                <el-timeline style="padding-left: 2px;">
+                    <el-timeline-item v-for="(t, i) in detailTimeline" :key="i" :timestamp="t.time" :type="t.type" placement="top">
+                        <span>{{ t.action }}</span><span style="color: #909399; margin-left: 8px;">{{ t.detail }}</span>
+                        <span style="color: #909399; margin-left: 8px;">{{ t.operator }}</span>
+                    </el-timeline-item>
+                </el-timeline>
+            </template>
+            <template #footer>
+                <el-button @click="detailVisible = false">关 闭</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 弹窗 5：新增应付明细（仅未核销账单，从同维度已审计未成账流水勾选） -->
+        <el-dialog v-model="addFlowVisible" title="新增应付明细" width="760px" destroy-on-close>
+            <div class="import-tip" style="margin-bottom: 12px;">
+                仅展示与本账单「我司主体 × 供应商 × 币种 × OA审批编号」维度一致、且已审计 + 未成账的应付流水。
+            </div>
+            <el-table :data="addFlowCandidates" border size="small" max-height="300" style="width: 100%" @selection-change="onAddFlowSelection">
+                <el-table-column type="selection" width="46" align="center"></el-table-column>
+                <el-table-column prop="waybillNo" label="运单号" min-width="140"></el-table-column>
+                <el-table-column prop="feeType" label="费用类型" min-width="110"></el-table-column>
+                <el-table-column prop="supplier" label="供应商" min-width="120"></el-table-column>
+                <el-table-column label="审计状态" width="90" align="center">
+                    <template #default="scope">
+                        <el-tag v-if="scope.row.auditStatus" type="success" size="small">{{ scope.row.auditStatus }}</el-tag>
+                        <span v-else style="color:#909399;">—</span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="金额（原币）" min-width="110" align="right">
+                    <template #default="scope">{{ money(scope.row.currency, scope.row.amount) }}</template>
+                </el-table-column>
+            </el-table>
+            <template #footer>
+                <el-button @click="addFlowVisible = false">取消</el-button>
+                <el-button type="primary" :disabled="!addFlowSelected.length" @click="submitAddFlow">确认新增</el-button>
+            </template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatRate = (val) => (val === null || val === undefined || val === '') ? '—' : Number(val).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
+                const cnyAmount = (row) => Number(((Number(row && row.amount) || 0) * (Number(row && row.rate) || 1)).toFixed(2));
+                const money = (c, val) => currencySymbol(c) + formatMoney(val);
+                const writeoffTag = (s) => ({ '未核销': 'info', '部分核销': 'warning', '已核销': 'success' }[s] || 'info');
+                const nowStamp = () => {
+                    const d = new Date();
+                    const p = (n) => String(n).padStart(2, '0');
+                    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                };
+                const currentYm = () => {
+                    const d = new Date();
+                    return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0');
+                };
+
+                // 我司主体（供应商签约主体的可选项，4 家，无香港富力顿）
+                const entityOptions = ['广州飞点', '深圳飞点', '广东飞点', '墨链'];
+                // 我司银行账户（bank_account）—— 应付核销的出款账户（按「我司主体 × 币种」过滤启用账户）
+                const bankAccounts = reactive([
+                    { id: 1, name: '广州飞点-招商银行(7559 1234 5678)', entityId: '广州飞点', currency: 'CNY', balance: 500000.00, status: '启用' },
+                    { id: 2, name: '广州飞点-中国银行(7654 3210 9876)', entityId: '广州飞点', currency: 'USD', balance: 80000.00, status: '启用' },
+                    { id: 3, name: '深圳飞点-工商银行(4000 1111 2222)', entityId: '深圳飞点', currency: 'CNY', balance: 300000.00, status: '启用' },
+                    { id: 4, name: '广东飞点-建设银行(1234 5678 9012)', entityId: '广东飞点', currency: 'CNY', balance: 200000.00, status: '启用' },
+                    { id: 5, name: '香港富力顿-汇丰银行(123-456-789)', entityId: '香港富力顿', currency: 'HKD', balance: 120000.00, status: '启用' },
+                    { id: 6, name: '香港富力顿-汇丰银行美元户(123-456-790)', entityId: '香港富力顿', currency: 'USD', balance: 50000.00, status: '启用' }
+                ]);
+
+                // 应付账单（ap_bill）
+                const apBills = ref([
+                    { billNo: 'AP-GZ-202609-00001', supplier: '中远海运', entityName: '广州飞点', billingDate: '2026-09-01', dueDate: '2026-09-15', paymentTerms: '月结+15', currency: 'CNY', oaNo: 'OA-2026-0901-015', billAmount: 16000.00, paidAmount: 10000.00, unpaidAmount: 6000.00, writeoffStatus: '部分核销', voidStatus: '正常', generatedAt: '2026-09-05 10:00', flows: [
+                        { waybillNo: 'YD20260413005', blNo: 'BL20240405', feeType: '海运费', supplier: '中远海运', transferNo: 'EMT20260413005', currency: 'CNY', rate: 1, amount: 16000.00, remark: '按柜计收 · 1 柜' }
+                    ], writeoffs: [
+                        { writeoffNo: 'APW20260910001', amount: 10000.00, time: '2026-09-10 10:00' }
+                    ] },
+                    { billNo: 'AP-GZ-202609-00002', supplier: '广州报关行', entityName: '广州飞点', billingDate: '2026-09-01', dueDate: '2026-09-15', paymentTerms: '月结+15', currency: 'CNY', oaNo: 'OA-2026-0901-016', billAmount: 1000.00, paidAmount: 0, unpaidAmount: 1000.00, writeoffStatus: '未核销', voidStatus: '正常', generatedAt: '2026-09-05 11:00', flows: [
+                        { waybillNo: 'YD20260413006', blNo: 'BL20240405', feeType: '报关费', supplier: '广州报关行', transferNo: 'EMT20260413006', currency: 'CNY', rate: 1, amount: 1000.00, remark: '出口报关代垫' }
+                    ], writeoffs: [] },
+                    { billNo: 'AP-GZ-202609-00003', supplier: '广州港务', entityName: '广州飞点', billingDate: '2026-09-01', dueDate: '2026-09-15', paymentTerms: '月结+15', currency: 'CNY', oaNo: 'OA-2026-0901-017', billAmount: 700.00, paidAmount: 700.00, unpaidAmount: 0, writeoffStatus: '已核销', voidStatus: '正常', generatedAt: '2026-09-05 14:00', flows: [
+                        { waybillNo: 'YD20260413007', blNo: 'BL20240405', feeType: '操作费', supplier: '广州港务', transferNo: 'EMT20260413007', currency: 'CNY', rate: 1, amount: 700.00, remark: '港区操作' }
+                    ], writeoffs: [
+                        { writeoffNo: 'APW20260912001', amount: 700.00, time: '2026-09-12 15:00' }
+                    ] },
+                    { billNo: 'AP-SZ-202608-00004', supplier: '深圳拖车行', entityName: '深圳飞点', billingDate: '2026-08-01', dueDate: '2026-08-08', paymentTerms: '周结+7', currency: 'CNY', oaNo: 'OA-2026-0815-019', billAmount: 2600.00, paidAmount: 0, unpaidAmount: 2600.00, writeoffStatus: '未核销', voidStatus: '已作废', generatedAt: '2026-08-15 10:30', flows: [
+                        { waybillNo: 'YD20260413008', blNo: '', feeType: '拖车费', supplier: '深圳拖车行', transferNo: 'EMT20260413008', currency: 'CNY', rate: 1, amount: 2600.00, remark: '港口到仓拖车' }
+                    ], writeoffs: [], voidReason: '供应商重复请款，作废重开' },
+                    // 系统自动生成（账单周期 = 固定 · 每月 1 号跑批）
+                    { billNo: 'AP-GZ-202609-00008', supplier: '美森快船', entityName: '广州飞点', billingDate: '2026-09-01', dueDate: '2026-09-15', paymentTerms: '月结+15', currency: 'CNY', oaNo: 'OA-2026-0901-032', billAmount: 3500.00, paidAmount: 0, unpaidAmount: 3500.00, writeoffStatus: '未核销', voidStatus: '正常', generatedAt: '2026-09-01 00:30', generateSource: '系统自动', generatedBy: '系统跑批', flows: [
+                        { waybillNo: 'YD20260805003', blNo: '', feeType: '干线运输费', supplier: '美森快船', transferNo: 'EMT20260805003', currency: 'CNY', rate: 1, amount: 3500.00, remark: '按柜计收 · 1 柜' }
+                    ], writeoffs: [] },
+                    { billNo: 'AP-GD-202609-00009', supplier: '广州港务', entityName: '广东飞点', billingDate: '2026-09-01', dueDate: '2026-09-15', paymentTerms: '月结+15', currency: 'CNY', oaNo: 'OA-2026-0901-033', billAmount: 4200.00, paidAmount: 0, unpaidAmount: 4200.00, writeoffStatus: '未核销', voidStatus: '正常', generatedAt: '2026-09-01 00:30', generateSource: '系统自动', generatedBy: '系统跑批', flows: [
+                        { waybillNo: 'YD20260805004', blNo: 'BL20240403', feeType: '港杂费', supplier: '广州港务', transferNo: 'EMT20260805004', currency: 'CNY', rate: 1, amount: 4200.00, remark: '港口杂费 · 2 柜' }
+                    ], writeoffs: [] }
+                ]);
+
+                const activeTab = ref('pending');
+                const search = reactive({ billNo: '', supplier: '', entity: '', oaNo: '', currency: '' });
+                const searchExpanded = ref(false);
+
+                const pendingBills = computed(() => apBills.value.filter(b => b.voidStatus === '正常' && b.unpaidAmount > 0));
+                const settledBills = computed(() => apBills.value.filter(b => b.voidStatus === '正常' && b.unpaidAmount === 0));
+                const voidedBills = computed(() => apBills.value.filter(b => b.voidStatus === '已作废'));
+
+                const applyFilter = (rows) => {
+                    let d = rows;
+                    if (search.billNo) d = d.filter(r => r.billNo.includes(search.billNo));
+                    if (search.supplier) d = d.filter(r => (r.supplier || '').includes(search.supplier));
+                    if (search.entity) d = d.filter(r => r.entityName === search.entity);
+                    if (search.oaNo) d = d.filter(r => (r.oaNo || '').includes(search.oaNo));
+                    if (search.currency) d = d.filter(r => r.currency === search.currency);
+                    return d;
+                };
+                const filteredPending = computed(() => applyFilter(pendingBills.value));
+                const filteredSettled = computed(() => applyFilter(settledBills.value));
+                const filteredVoided = computed(() => applyFilter(voidedBills.value));
+
+                const handleSearch = () => { searchExpanded.value = false; ElMessage.success('执行查询'); };
+                const resetSearch = () => { Object.assign(search, { billNo: '', supplier: '', entity: '', oaNo: '', currency: '' }); searchExpanded.value = false; };
+
+                // ===== 核销 =====
+                const writeoffVisible = ref(false);
+                const writeoffRow = ref(null);
+                const woForm = reactive({ bankAccountId: null, amount: null, remark: '', voucher: '' });
+                const woBankAccounts = computed(() => writeoffRow.value ? bankAccounts.filter(a => a.entityId === writeoffRow.value.entityName && a.currency === writeoffRow.value.currency && a.status === '启用') : []);
+                const woSelectedAccount = computed(() => bankAccounts.find(a => a.id === woForm.bankAccountId) || null);
+                const openWriteoff = (row) => {
+                    writeoffRow.value = row;
+                    woForm.bankAccountId = null;
+                    woForm.amount = row.unpaidAmount;
+                    woForm.remark = '';
+                    woForm.voucher = '';
+                    writeoffVisible.value = true;
+                };
+                const onWoAccountChange = () => {};
+                const onWoVoucherChange = (file) => { woForm.voucher = file.name; };
+                const onWoVoucherRemove = () => { woForm.voucher = ''; };
+                const submitWriteoff = () => {
+                    const row = writeoffRow.value;
+                    if (!woForm.bankAccountId) { ElMessage.warning('请选择出款账户'); return; }
+                    if (!woForm.amount || woForm.amount <= 0) { ElMessage.warning('请输入核销金额'); return; }
+                    if (woForm.amount > row.unpaidAmount) { ElMessage.warning('核销金额不能大于未结清金额'); return; }
+                    const acc = woSelectedAccount.value;
+                    if (woForm.amount > acc.balance) { ElMessage.warning('出款账户余额不足，请更换账户或调整金额'); return; }
+                    ElMessageBox.confirm(
+                        '确认从「' + acc.name + '」付款 ' + money(row.currency, woForm.amount) + ' 给供应商「' + row.supplier
+                        + '」？付款后账单未结清金额由 ' + money(row.currency, row.unpaidAmount) + ' 减为 '
+                        + money(row.currency, Number((row.unpaidAmount - woForm.amount).toFixed(2))) + '、账户余额同步扣减。',
+                        '核销付款', { confirmButtonText: '确认付款', cancelButtonText: '取消', type: 'warning' }
+                    ).then(() => {
+                        acc.balance = Number((acc.balance - woForm.amount).toFixed(2));
+                        row.paidAmount = Number((row.paidAmount + woForm.amount).toFixed(2));
+                        row.unpaidAmount = Number((row.unpaidAmount - woForm.amount).toFixed(2));
+                        row.writeoffStatus = row.unpaidAmount === 0 ? '已核销' : '部分核销';
+                        const seq = String(row.writeoffs.length + 1).padStart(3, '0');
+                        row.writeoffs.unshift({ writeoffNo: 'APW' + nowStamp().slice(0, 10).replace(/-/g, '') + seq, amount: woForm.amount, time: nowStamp(), operator: '财务-李伟' });
+                        writeoffVisible.value = false;
+                        ElMessage.success('付款成功');
+                    }).catch(() => {});
+                };
+
+                // ===== 作废 =====
+                const voidVisible = ref(false);
+                const voidRow = ref(null);
+                const voidReason = ref('');
+                const openVoid = (row) => { voidRow.value = row; voidReason.value = ''; voidVisible.value = true; };
+                const submitVoid = () => {
+                    if (!voidReason.value || !voidReason.value.trim()) { ElMessage.warning('请填写作废原因'); return; }
+                    ElMessageBox.confirm('确认作废账单 ' + voidRow.value.billNo + '？作废后其下应付流水将释放回可成账池、账单号不回收。', '作废应付账单', { confirmButtonText: '确认作废', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        voidRow.value.voidStatus = '已作废';
+                        voidRow.value.voidReason = voidReason.value;
+                        voidRow.value.voidedBy = '财务-李伟';
+                        voidRow.value.voidedAt = nowStamp();
+                        ElMessage.success('账单已作废，应付流水已释放回可成账池');
+                        voidVisible.value = false;
+                    }).catch(() => {});
+                };
+
+                // ===== 详情 =====
+                const detailVisible = ref(false);
+                const detailRow = ref(null);
+                const detailTimeline = computed(() => {
+                    if (!detailRow.value) return [];
+                    const b = detailRow.value;
+                    const tl = [{ time: b.generatedAt, action: '生成账单', detail: b.billNo, operator: b.generateSource === '系统自动' ? '系统跑批' : (b.generatedBy || '财务'), type: 'primary' }];
+                    (b.writeoffs || []).forEach(w => tl.push({ time: w.time, action: '核销付款 ' + money(b.currency, w.amount), detail: w.writeoffNo, operator: w.operator || '财务', type: 'success' }));
+                    (b.flowEdits || []).forEach(e => tl.push({ time: e.time, action: e.action, detail: e.detail, operator: e.operator || '财务', type: 'warning' }));
+                    if (b.voidStatus === '已作废') tl.push({ time: b.voidedAt || b.generatedAt, action: '作废账单', detail: '原因：' + (b.voidReason || '—'), operator: b.voidedBy || '财务', type: 'danger' });
+                    return tl;
+                });
+                const openDetail = (row) => { detailRow.value = row; detailVisible.value = true; };
+
+                // ===== 明细增删（仅未核销账单）=====
+                const addFlowVisible = ref(false);
+                const addFlowRow = ref(null);
+                const addFlowSelected = ref([]);
+                // 可成账应付流水池（mock：与当前账单同 我司主体 × 供应商 × 币种 × OA审批编号 的「已审计 + 未成账」应付流水；新增明细只能新增「已审计」流水）
+                const addFlowPool = [
+                    { id: 'f1', waybillNo: 'YD20260413011', blNo: 'BL20240407', feeType: '海运费', supplier: '中远海运', entityName: '广州飞点', currency: 'CNY', rate: 1, amount: 22000.00, remark: '按柜计收 · 2 柜', transferNo: 'EMT20260413011', oaNo: 'OA-2026-0901-015', auditStatus: '已审计' },
+                    { id: 'f2', waybillNo: 'YD20260413012', blNo: 'BL20240407', feeType: '港杂费', supplier: '中远海运', entityName: '广州飞点', currency: 'CNY', rate: 1, amount: 1200.00, remark: '港口杂费', transferNo: 'EMT20260413012', oaNo: 'OA-2026-0901-015', auditStatus: '已审计' },
+                    { id: 'f3', waybillNo: 'YD20260413013', blNo: 'BL20240405', feeType: '报关费', supplier: '广州报关行', entityName: '广州飞点', currency: 'CNY', rate: 1, amount: 900.00, remark: '出口报关代垫', transferNo: 'EMT20260413013', oaNo: 'OA-2026-0901-016', auditStatus: '已审计' }
+                ];
+                const addFlowCandidates = computed(() => {
+                    if (!addFlowRow.value) return [];
+                    return addFlowPool.filter(f => f.supplier === addFlowRow.value.supplier && f.entityName === addFlowRow.value.entityName && f.currency === addFlowRow.value.currency && f.oaNo === addFlowRow.value.oaNo);
+                });
+                const openAddFlow = (row) => { addFlowRow.value = row; addFlowSelected.value = []; addFlowVisible.value = true; };
+                const onAddFlowSelection = (val) => { addFlowSelected.value = val; };
+                const submitAddFlow = () => {
+                    const row = addFlowRow.value;
+                    if (!addFlowSelected.value.length) { ElMessage.warning('请至少勾选 1 条应付流水'); return; }
+                    addFlowSelected.value.forEach(f => {
+                        row.flows.push({ waybillNo: f.waybillNo, blNo: f.blNo, feeType: f.feeType, supplier: f.supplier, transferNo: f.transferNo, currency: f.currency, rate: f.rate, amount: f.amount, remark: f.remark });
+                        row.billAmount = Number((row.billAmount + Number(f.amount)).toFixed(2));
+                    });
+                    row.unpaidAmount = Number((row.billAmount - row.paidAmount).toFixed(2));
+                    row.writeoffStatus = row.unpaidAmount === 0 ? '已核销' : '未核销';
+                    if (!row.flowEdits) row.flowEdits = [];
+                    row.flowEdits.unshift({ time: nowStamp(), action: '新增明细', detail: '新增 ' + addFlowSelected.value.length + ' 条应付流水', operator: '财务-李伟' });
+                    ElMessage.success('已新增 ' + addFlowSelected.value.length + ' 条应付明细');
+                    addFlowVisible.value = false;
+                };
+                const removeFlow = (row, index) => {
+                    const f = row.flows[index];
+                    row.flows.splice(index, 1);
+                    row.billAmount = Number((row.billAmount - Number(f.amount)).toFixed(2));
+                    row.unpaidAmount = Number((row.billAmount - row.paidAmount).toFixed(2));
+                    if (!row.flowEdits) row.flowEdits = [];
+                    row.flowEdits.unshift({ time: nowStamp(), action: '删除明细', detail: '删除 1 条应付流水（' + f.feeType + '）', operator: '财务-李伟' });
+                    ElMessage.success('已删除 1 条应付明细，流水释放回可成账池');
+                };
+
+                return {
+                    currencyOptions, currencyName, currencySymbol, formatMoney, formatRate, cnyAmount, money, writeoffTag,
+                    entityOptions,
+                    activeTab, search, searchExpanded, handleSearch, resetSearch,
+                    pendingBills, settledBills, voidedBills,
+                    filteredPending, filteredSettled, filteredVoided,
+                    writeoffVisible, writeoffRow, woForm, woBankAccounts, woSelectedAccount,
+                    openWriteoff, onWoAccountChange, onWoVoucherChange, onWoVoucherRemove, submitWriteoff,
+                    voidVisible, voidRow, voidReason, openVoid, submitVoid,
+                    detailVisible, detailRow, detailTimeline, openDetail,
+                    addFlowVisible, addFlowCandidates, addFlowSelected, openAddFlow, onAddFlowSelection, submitAddFlow, removeFlow
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

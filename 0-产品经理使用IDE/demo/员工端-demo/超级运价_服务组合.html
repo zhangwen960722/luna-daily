@@ -151,18 +151,13 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     <span>服务渠道：{{dChannel||'-'}}</span>
     <span>计费方式：<b>{{dBilling||'-'}}</b></span>
     <span>状态：<el-tag :type="dStatus==='正常'?'success':'danger'" size="small">{{dStatus}}</el-tag></span>
-    <span style="color:#909399;font-size:12px">优惠在费用生成时实时取数，此处改动只影响后续报价与费用流水，不追溯已生成数据</span>
   </div>
   <el-alert v-if="dLocked" type="warning" :closable="false" show-icon title="该服务组合已冻结，优惠规则仅可查看，不可编辑" style="margin-bottom:12px"></el-alert>
 
   <el-tabs v-model="dTab">
     <el-tab-pane name="freight">
       <template #label><span>运费优惠<el-tag v-if="dform.discountRules.length" size="small" type="success" effect="dark" round style="margin-left:6px">{{ dform.discountRules.length }}</el-tag></span></template>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px">
-        <span style="font-size:12px;color:var(--el-text-color-regular);line-height:1.7">
-          按 <b>客户等级</b> 或 <b>客户特批</b> 匹配（<b>均为一期</b>）。同一对象类型 + 同一目标只能有一条<b>生效中</b>规则；<b>客户特批优先级高于客户等级，命中即覆盖、不叠加</b>；客户特批须填<b>飞书审批编号</b>。<br>
-          优惠值为<b>带符号调整量</b>：<b>负数 = 减钱（正向优惠）</b>、<b>正数 = 加价（反向优惠）</b>，计算为「公布价 + 运费优惠值」。只作用于<b>运费侧</b>，不抵扣附加费。
-        </span>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
         <el-button type="primary" size="small" plain :disabled="dLocked" @click="addDiscountRow">+ 添加规则</el-button>
       </div>
       <div style="width:100%;overflow-x:auto">
@@ -205,11 +200,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
     <el-tab-pane name="density">
       <template #label><span>泡比优惠<el-tag v-if="dform.densityRules.length" size="small" type="info" effect="dark" round style="margin-left:6px">{{ dform.densityRules.length }}</el-tag></span></template>
       <el-alert v-if="dBilling!=='KG'" type="warning" :closable="false" show-icon title="该服务组合按 m³ 计费，泡比优惠只作用于按 KG 计价的运价行，配置后对该组合不生效" style="margin-bottom:8px"></el-alert>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:8px">
-        <span style="font-size:12px;color:var(--el-text-color-regular);line-height:1.7">
-          基于货物<b>泡比（实重 ÷ 体积）</b>的阶梯固定减免：泡比 ≥ 密度阈值即命中，<b>多条命中取阈值最大那一档（不是叠加）</b>。与<b>运费优惠叠加</b>（前者回答"货的密度"，后者回答"客户是谁"，两者维度正交）。<br>
-          优惠值为<b>带符号调整量</b>：<b>负数 = 减钱</b>、<b>正数 = 加价</b>。只作用于<b>运费侧</b>，<b>不得抵扣附加费</b>。
-        </span>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
         <el-button type="primary" size="small" plain :disabled="dLocked" @click="addDensityRow">+ 添加规则</el-button>
       </div>
       <div style="width:100%;overflow-x:auto">
@@ -262,7 +253,6 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
 
 <!-- 批量添加优惠弹窗 -->
 <el-dialog v-model="showBatchDiscountDialog" title="批量添加优惠" width="1180px" top="5vh" :close-on-click-modal="false" destroy-on-close>
-  <div style="margin-bottom:12px;padding:8px 14px;background:#F7F8FA;border:1px solid var(--el-border-color-lighter);border-radius:6px;font-size:12px;color:#909399">选择多个服务组合并配置优惠规则，保存后每条规则<b>批量应用到所有选中组合</b>（一条优惠挂多个组合）。优惠在费用生成时实时取数，改动只影响后续报价与费用流水。</div>
 
   <div style="margin-bottom:14px">
     <div style="font-weight:600;margin-bottom:6px;font-size:13px">作用范围（服务组合）<span style="color:#E6A23C"> *</span></div>
@@ -284,8 +274,7 @@ body{margin:0;padding:16px;background:var(--el-bg-color);font-family:-apple-syst
   <el-tabs v-model="batchTab">
     <el-tab-pane name="freight">
       <template #label><span>运费优惠<el-tag v-if="batchDiscountRules.length" size="small" type="success" effect="dark" round style="margin-left:6px">{{ batchDiscountRules.length }}</el-tag></span></template>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <span style="font-size:12px;color:var(--el-text-color-regular)">按客户等级或客户特批匹配（客户特批优先、命中覆盖不叠加）；优惠值为带符号调整量：负数=减钱、正数=加价，只作用于运费侧。</span>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
         <el-button type="primary" size="small" plain @click="addBatchDiscountRow">+ 添加规则</el-button>
       </div>
       <div style="width:100%;overflow-x:auto">

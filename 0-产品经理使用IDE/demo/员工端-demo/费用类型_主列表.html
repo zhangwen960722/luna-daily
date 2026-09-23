@@ -163,9 +163,10 @@
                     <el-input v-model="searchForm.feeName" placeholder="费用名称" clearable style="width: 220px;"></el-input>
                 </div>
                 <div class="search-item">
-                    <el-select v-model="searchForm.feeDirection" placeholder="费用方向" clearable style="width: 200px;">
+                    <el-select v-model="searchForm.feeDirection" placeholder="费用方向" clearable multiple collapse-tags style="width: 220px;">
                         <el-option label="应收" value="应收"></el-option>
                         <el-option label="应付" value="应付"></el-option>
+                        <el-option label="销售成本" value="销售成本"></el-option>
                     </el-select>
                 </div>
                 <div style="display: flex; gap: 10px;">
@@ -195,10 +196,15 @@
                     style="width: 100%" 
                     height="100%">
                     <el-table-column prop="feeName" label="费用名称" min-width="180"></el-table-column>
-                    <el-table-column prop="feeDirection" label="费用方向" min-width="120">
+                    <el-table-column prop="feeDirection" label="费用方向" min-width="170">
                         <template #default="scope">
-                            <el-tag :type="scope.row.feeDirection === '应收' ? 'success' : 'warning'">
-                                {{ scope.row.feeDirection }}
+                            <el-tag
+                                v-for="d in scope.row.feeDirection"
+                                :key="d"
+                                :type="directionTagType(d)"
+                                size="small"
+                                style="margin-right: 4px;">
+                                {{ d }}
                             </el-tag>
                         </template>
                     </el-table-column>
@@ -272,11 +278,13 @@
                     <el-select
                         id="fee-direction-select"
                         v-model="formData.feeDirection"
-                        placeholder="请选择费用方向"
+                        placeholder="请选择费用方向（可多选）"
+                        multiple
                         style="width: 100%;"
                         :disabled="isReadonly">
                         <el-option label="应收" value="应收"></el-option>
                         <el-option label="应付" value="应付"></el-option>
+                        <el-option label="销售成本" value="销售成本"></el-option>
                     </el-select>
                 </div>
             </div>
@@ -297,16 +305,17 @@
                 // 搜索表单
                 const searchForm = reactive({
                     feeName: '',
-                    feeDirection: ''
+                    feeDirection: []
                 });
 
                 // 表格数据
                 const tableData = ref([
-                    { id: 1, feeName: '运费', feeDirection: '应收', status: '正常', operator: '系统', isSystem: true },
-                    { id: 2, feeName: '周六派送费', feeDirection: '应收', status: '正常', operator: '张三', isSystem: false },
-                    { id: 3, feeName: '超时赔付', feeDirection: '应收', status: '正常', operator: '张三', isSystem: false },
-                    { id: 4, feeName: '货损赔偿', feeDirection: '应收', status: '正常', operator: '李四', isSystem: false },
-                    { id: 5, feeName: '超重费', feeDirection: '应付', status: '冻结', operator: '李四', isSystem: false }
+                    { id: 1, feeName: '运费', feeDirection: ['应收', '销售成本'], status: '正常', operator: '系统', isSystem: true },
+                    { id: 2, feeName: '头程海运费', feeDirection: ['应收', '销售成本'], status: '正常', operator: '张三', isSystem: false },
+                    { id: 3, feeName: '周六派送费', feeDirection: ['应收', '销售成本'], status: '正常', operator: '张三', isSystem: false },
+                    { id: 4, feeName: '超时赔付', feeDirection: ['应收'], status: '正常', operator: '张三', isSystem: false },
+                    { id: 5, feeName: '货损赔偿', feeDirection: ['应收'], status: '正常', operator: '李四', isSystem: false },
+                    { id: 6, feeName: '超重费', feeDirection: ['应付'], status: '冻结', operator: '李四', isSystem: false }
                 ]);
                 
                 const isReadonly = ref(false);
@@ -314,7 +323,7 @@
                 // 分页相关
                 const currentPage = ref(1);
                 const pageSize = ref(10);
-                const total = ref(5);
+                const total = ref(6);
                 
                 // 搜索逻辑
                 const handleSearch = () => {
@@ -322,7 +331,7 @@
                 };
                 const resetSearch = () => {
                     searchForm.feeName = '';
-                    searchForm.feeDirection = '';
+                    searchForm.feeDirection = [];
                     ElementPlus.ElMessage.success('已重置搜索条件');
                 };
 
@@ -330,8 +339,8 @@
                 const toggleStatus = (row) => {
                     const isEnable = row.status !== '正常';
                     const action = isEnable ? '启用' : '冻结';
-                    if (isEnable && hasActiveDuplicate(row.feeName, row.feeDirection, row.id)) {
-                        ElMessage.warning('该费用方向下已存在启用的同名费用类型，无法启用');
+                    if (isEnable && hasActiveDuplicate(row.feeName, row.id)) {
+                        ElMessage.warning('已存在启用的同名费用类型，无法启用');
                         return;
                     }
                     ElMessageBox.confirm(
@@ -357,15 +366,14 @@
                 const formData = reactive({
                     id: null,
                     feeName: '',
-                    feeDirection: ''
+                    feeDirection: []
                 });
 
-                // 唯一校验：同方向 + 同名 + 启用 只能有一个
-                const hasActiveDuplicate = (feeName, feeDirection, excludeId) => {
+                // 唯一校验：同名 + 启用 只能有一个（方向为多选属性，不再作为判重维度）
+                const hasActiveDuplicate = (feeName, excludeId) => {
                     return tableData.value.some(t =>
                         t.id !== excludeId &&
                         t.feeName === feeName &&
-                        t.feeDirection === feeDirection &&
                         t.status === '正常'
                     );
                 };
@@ -377,11 +385,11 @@
                     if (type === 'view' && row) {
                         formData.id = row.id;
                         formData.feeName = row.feeName;
-                        formData.feeDirection = row.feeDirection;
+                        formData.feeDirection = [...row.feeDirection];
                     } else {
                         formData.id = null;
                         formData.feeName = '';
-                        formData.feeDirection = '';
+                        formData.feeDirection = [];
                     }
                     dialogVisible.value = true;
                 };
@@ -392,17 +400,24 @@
                         ElementPlus.ElMessage.warning('请输入费用名称');
                         return;
                     }
-                    if (!formData.feeDirection) {
+                    if (!formData.feeDirection || formData.feeDirection.length === 0) {
                         ElementPlus.ElMessage.warning('请选择费用方向');
                         return;
                     }
-                    if (hasActiveDuplicate(formData.feeName, formData.feeDirection, formData.id)) {
-                        ElementPlus.ElMessage.warning('该费用方向下已存在启用的同名费用类型，请先禁用原费用类型再新增');
+                    if (hasActiveDuplicate(formData.feeName, formData.id)) {
+                        ElementPlus.ElMessage.warning('已存在启用的同名费用类型，请先禁用原费用类型再新增');
                         return;
                     }
 
                     ElementPlus.ElMessage.success('新增成功');
                     dialogVisible.value = false;
+                };
+
+                // 方向标签颜色：应收=绿、应付=橙、销售成本=红
+                const directionTagType = (dir) => {
+                    if (dir === '应收') return 'success';
+                    if (dir === '应付') return 'warning';
+                    return 'danger';
                 };
 
                 return {
@@ -419,7 +434,8 @@
                     isReadonly,
                     formData,
                     openDialog,
-                    saveData
+                    saveData,
+                    directionTagType
                 };
             }
         });

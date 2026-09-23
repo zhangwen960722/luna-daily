@@ -406,13 +406,12 @@
             </div>
         </div>
 
-        <!-- 新增/编辑弹窗 -->
-        <el-dialog v-model="dialogVisible" :title="dialogTitle" width="1000px" destroy-on-close>
-            <div :class="{'is-readonly': isReadonly}">
-            <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top">
-                <el-tabs tab-position="left" class="dialog-left-tabs">
-                    <!-- 基本信息 Tab：身份信息 + 联系人 -->
-                    <el-tab-pane label="基本信息">
+        <!-- 新增/编辑 Drawer（上方 Tab，同客户管理） -->
+        <el-drawer v-model="dialogVisible" :title="dialogTitle" direction="rtl" size="90%" destroy-on-close>
+            <el-tabs v-model="drawerActiveTab" class="drawer-tabs">
+                <!-- Tab 1: 基本信息（身份信息 + 联系地址 + 联系人） -->
+                <el-tab-pane label="基本信息" name="basicInfo">
+                <el-form ref="formRef" :model="formData" :rules="formRules" label-position="top">
                         <div class="section-title">身份信息</div>
                 <el-row :gutter="24">
                     <el-col :span="8">
@@ -472,6 +471,30 @@
                     </el-col>
                 </el-row>
 
+                        <div class="section-title" style="margin-top: 24px;">联系地址</div>
+                        <el-row :gutter="24">
+                            <el-col :span="6">
+                                <el-form-item label="省" prop="province">
+                                    <el-input v-model="formData.province" placeholder="请输入省"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-form-item label="市" prop="city">
+                                    <el-input v-model="formData.city" placeholder="请输入市"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-form-item label="区" prop="district">
+                                    <el-input v-model="formData.district" placeholder="请输入区"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-form-item label="联系地址" prop="address">
+                                    <el-input v-model="formData.address" placeholder="请输入联系地址"></el-input>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
                         <div class="section-title" style="margin-top: 24px;">联系人</div>
                         <div style="margin-bottom: 12px;">
                             <el-button type="primary" size="small" @click="addContact">
@@ -518,10 +541,15 @@
                                 </tr>
                             </tbody>
                         </table>
+                </el-form>
+                <div class="drawer-footer">
+                    <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+                    <el-button v-if="!isReadonly" type="primary" @click="confirmSave">确 定</el-button>
+                </div>
                     </el-tab-pane>
 
-                    <!-- 合同信息 Tab -->
-                    <el-tab-pane label="合同信息">
+                    <!-- Tab 2: 合同信息 -->
+                    <el-tab-pane label="合同信息" name="contractInfo">
                         <div style="margin-bottom: 12px;display:flex;align-items:center;gap:12px;">
                             <span style="color: var(--el-text-color-regular); font-size: 13px;">
                                 <el-icon><info-filled></info-filled></el-icon> 合同通过主列表「签约」按钮创建，签约完成后自动同步至此
@@ -562,10 +590,56 @@
                             </el-table-column>
                         </el-table>
                         <el-empty v-if="!formData.contracts || formData.contracts.length===0" description="暂无合同，请通过主列表「签约」按钮发起签约" :image-size="60" style="padding:20px 0;"></el-empty>
+                <div class="drawer-footer">
+                    <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+                </div>
                     </el-tab-pane>
 
-                    <!-- 资料 Tab -->
-                    <el-tab-pane label="资料">
+                    <!-- Tab 3: 账期 -->
+                    <el-tab-pane label="账期" name="billingInfo">
+                        <div style="margin-bottom: 12px;display:flex;align-items:center;gap:12px;">
+                            <span style="color: var(--el-text-color-regular); font-size: 13px;">
+                                <el-icon><info-filled></info-filled></el-icon> 账期在签约完成后由系统自动新增，可在此补填完善
+                            </span>
+                        </div>
+                        <el-table :data="formData.contracts" size="small" border v-if="formData.contracts && formData.contracts.length>0">
+                            <el-table-column prop="contractCompany" label="所属分公司" width="110"></el-table-column>
+                            <el-table-column label="账单周期" width="110">
+                                <template #default="scope">
+                                    <el-select v-model="scope.row.billingCycle" size="small" style="width:100%" placeholder="请选择" @change="(v) => onBillingCycleChange(scope.row, v)">
+                                        <el-option label="固定" value="固定"></el-option>
+                                        <el-option label="不固定" value="不固定"></el-option>
+                                    </el-select>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="账期" width="130">
+                                <template #default="scope">
+                                    <el-select v-model="scope.row.paymentTerm" size="small" style="width:100%" placeholder="请选择" @change="(v) => onPaymentTermChange(scope.row, v)">
+                                        <el-option v-for="term in paymentTermOptionsFor(scope.row)" :key="term" :label="term" :value="term"></el-option>
+                                    </el-select>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="结算类型" width="90">
+                                <template #default="scope"><span style="font-size:12px;">{{ scope.row.settlementType || '-' }}</span></template>
+                            </el-table-column>
+                            <el-table-column label="结算月" width="80">
+                                <template #default="scope"><span style="font-size:12px;">{{ scope.row.settlementMonth != null ? scope.row.settlementMonth : '-' }}</span></template>
+                            </el-table-column>
+                            <el-table-column label="天数/号" width="130">
+                                <template #default="scope">
+                                    <el-input-number v-model="scope.row.daysOrDate" :min="0" :precision="0" size="small" style="width:100%"></el-input-number>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <el-empty v-else description="暂无合同，签约后将自动生成账期" :image-size="60" style="padding:20px 0;"></el-empty>
+                        <div class="drawer-footer">
+                            <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
+                            <el-button v-if="!isReadonly" type="primary" @click="saveBillingInfo">保存</el-button>
+                        </div>
+                    </el-tab-pane>
+
+                    <!-- Tab 4: 资料 -->
+                    <el-tab-pane label="资料" name="materialInfo">
                         <div style="margin-bottom: 16px;">
                             <el-button type="primary" size="small" @click="addMaterial">
                                 <el-icon><Plus /></el-icon> 新增资料
@@ -596,27 +670,33 @@
                                 </el-button>
                             </div>
                         </div>
-                    </el-tab-pane>
-                </el-tabs>
-
-            </el-form>
-            </div>
-            <template #footer>
-                <span class="dialog-footer">
+                <div class="drawer-footer">
                     <el-button @click="dialogVisible = false">{{ isReadonly ? '关闭' : '取消' }}</el-button>
                     <el-button v-if="!isReadonly" type="primary" @click="confirmSave">确 定</el-button>
-                </span>
-            </template>
-        </el-dialog>
+                </div>
+                    </el-tab-pane>
+                </el-tabs>
+        </el-drawer>
 
         <!-- 合同签约弹窗 -->
         <el-dialog v-model="signDialogVisible" title="合同签约" width="550px" destroy-on-close>
             <el-form :model="signForm" :rules="signRules" ref="signFormRef" label-position="top">
-                <el-form-item label="我司合同抬头" prop="companyTitle" required>
-                    <el-select v-model="signForm.companyTitle" placeholder="请选择" style="width: 100%;">
-                        <el-option v-for="c in companyTitleOptions" :key="c" :label="c" :value="c"></el-option>
-                    </el-select>
-                </el-form-item>
+                <el-row :gutter="16">
+                    <el-col :span="12">
+                        <el-form-item label="我司合同抬头" prop="companyTitle" required>
+                            <el-select v-model="signForm.companyTitle" placeholder="请选择" style="width: 100%;">
+                                <el-option v-for="c in companyTitleOptions" :key="c" :label="c" :value="c"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label="账期" prop="paymentTerm" required>
+                            <el-select v-model="signForm.paymentTerm" placeholder="请选择" style="width: 100%;">
+                                <el-option v-for="t in paymentTermOptions" :key="t" :label="t" :value="t"></el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-col>
+                </el-row>
                 <el-row :gutter="16">
                     <el-col :span="12">
                         <el-form-item label="合同开始日期" prop="startDate">
@@ -938,11 +1018,21 @@
 
                 // 原始数据
                 const allData = ref([
-                    { supplierCode: 'G10001', supplierName: 'maston', supplierCategory: ['干线运输供应商'], supplierDetail: ['海运'], level: 'SS', serviceStatus: '正常' },
-                    { supplierCode: 'G10002', supplierName: '货拉拉', supplierCategory: ['揽货服务商'], supplierDetail: ['拖车'], level: 'S', serviceStatus: '正常' },
-                    { supplierCode: 'G10003', supplierName: 'FlexChain', supplierCategory: ['仓储供应商'], supplierDetail: ['保税仓'], level: 'A', serviceStatus: '正常' },
-                    { supplierCode: 'G10004', supplierName: '深圳市汇嘉达供应链有限公司', supplierCategory: ['关务供应商'], supplierDetail: ['报关行'], level: 'B', serviceStatus: '正常' },
-                    { supplierCode: 'G10005', supplierName: 'UPS', supplierCategory: ['尾程运输供应商'], supplierDetail: ['快递'], level: 'C', serviceStatus: '正常' },
+                    { supplierCode: 'G10001', supplierName: 'maston', supplierCategory: ['干线运输供应商'], supplierDetail: ['海运'], level: 'SS', serviceStatus: '正常', _contracts: [
+                        { contractCompany: '广州飞点', signStatus: '已签署', isPrimary: true, contractStartDate: '2026-01-01', contractEndDate: '2026-12-31', terminationDate: '', paymentTerm: '月结', billingCycle: '固定', settlementType: '按月', settlementMonth: 0, daysOrDate: 15, contractFiles: [{ name: '干线运输服务协议.pdf' }] }
+                    ] },
+                    { supplierCode: 'G10002', supplierName: '货拉拉', supplierCategory: ['揽货服务商'], supplierDetail: ['拖车'], level: 'S', serviceStatus: '正常', _contracts: [
+                        { contractCompany: '深圳飞点', signStatus: '已签署', isPrimary: true, contractStartDate: '2026-03-01', contractEndDate: '2027-02-28', terminationDate: '', paymentTerm: '周结', billingCycle: '不固定', settlementType: '按天', settlementMonth: null, daysOrDate: 7, contractFiles: [{ name: '揽货服务协议.pdf' }] }
+                    ] },
+                    { supplierCode: 'G10003', supplierName: 'FlexChain', supplierCategory: ['仓储供应商'], supplierDetail: ['保税仓'], level: 'A', serviceStatus: '正常', _contracts: [
+                        { contractCompany: '广州飞点', signStatus: '已签署', isPrimary: true, contractStartDate: '2026-06-01', contractEndDate: '2027-05-31', terminationDate: '', paymentTerm: '半月结', billingCycle: '不固定', settlementType: '按天', settlementMonth: null, daysOrDate: 15, contractFiles: [{ name: '仓储服务协议.pdf' }] }
+                    ] },
+                    { supplierCode: 'G10004', supplierName: '深圳市汇嘉达供应链有限公司', supplierCategory: ['关务供应商'], supplierDetail: ['报关行'], level: 'B', serviceStatus: '正常', _contracts: [
+                        { contractCompany: '广东飞点', signStatus: '已签署', isPrimary: true, contractStartDate: '2026-01-15', contractEndDate: '2026-12-31', terminationDate: '', paymentTerm: '月结', billingCycle: '固定', settlementType: '按月', settlementMonth: 0, daysOrDate: 15, contractFiles: [{ name: '关务服务协议.pdf' }] }
+                    ] },
+                    { supplierCode: 'G10005', supplierName: 'UPS', supplierCategory: ['尾程运输供应商'], supplierDetail: ['快递'], level: 'C', serviceStatus: '正常', _contracts: [
+                        { contractCompany: '深圳飞点', signStatus: '已签署', isPrimary: true, contractStartDate: '2026-04-01', contractEndDate: '2027-03-31', terminationDate: '', paymentTerm: '周结', billingCycle: '不固定', settlementType: '按天', settlementMonth: null, daysOrDate: 7, contractFiles: [{ name: '尾程运输服务协议.pdf' }] }
+                    ] },
                     { supplierCode: 'G10006', supplierName: '积米', supplierCategory: ['综合代理'], supplierDetail: ['同行'], level: 'D', serviceStatus: '正常' },
                     { supplierCode: 'G10007', supplierName: '飞点', supplierCategory: ['其他'], supplierDetail: ['其他'], level: 'E', serviceStatus: '正常' },
                     { supplierCode: 'G10008', supplierName: 'smart', supplierCategory: ['其他'], supplierDetail: ['其他'], level: 'F', serviceStatus: '正常' },
@@ -977,6 +1067,7 @@
                 const dialogTitle = ref('');
                 const isReadonly = ref(false);
                 const formRef = ref(null);
+                const drawerActiveTab = ref('basicInfo');
                 const { ElMessageBox } = ElementPlus;
                 
                 const formData = reactive({
@@ -988,6 +1079,10 @@
                     scac: '',
                     level: '',
                     isPeer: '',
+                    province: '',
+                    city: '',
+                    district: '',
+                    address: '',
                     contacts: [],
                     contractContactId: null,
                     accountContactId: null,
@@ -1012,7 +1107,11 @@
                     supplierDetail: [{ required: true, message: '必选', trigger: 'change' }],
                     level: [{ required: true, message: '必选', trigger: 'change' }],
                     isPeer: [{ required: true, message: '必选', trigger: 'change' }],
-                    scac: [{ validator: validateScac, trigger: ['blur', 'change'] }]
+                    scac: [{ validator: validateScac, trigger: ['blur', 'change'] }],
+                    province: [{ required: true, message: '必填', trigger: 'blur' }],
+                    city: [{ required: true, message: '必填', trigger: 'blur' }],
+                    district: [{ required: true, message: '必填', trigger: 'blur' }],
+                    address: [{ required: true, message: '必填', trigger: 'blur' }]
                 });
 
                 // 模拟 API 对接账号数据
@@ -1031,6 +1130,7 @@
                         Object.assign(formData, {
                             supplierCode: 'G' + (10001 + allData.value.length),
                             supplierName: '', supplierShortName: '', supplierCategory: [], supplierDetail: [], scac: '', level: 'G', isPeer: '是',
+                            province: '', city: '', district: '', address: '',
                             contacts: [{ id: Date.now(), name: '', phone: '', email: '' }],
                             contractContactId: null, accountContactId: null,
                             materials: [], contracts: []
@@ -1048,6 +1148,10 @@
                         formData.supplierShortName = row.supplierName.substring(0, 4);
                         formData.scac = '';
                         formData.isPeer = row.isPeer || '是';
+                        formData.province = row.province || '';
+                        formData.city = row.city || '';
+                        formData.district = row.district || '';
+                        formData.address = row.address || '';
                         formData.contacts = [
                             { id: 1, name: '联系人A', phone: '13800138000', email: 'test@exp.com' }
                         ];
@@ -1058,6 +1162,7 @@
 
                         formDetailOptions.value = formData.supplierCategory.flatMap(c => categoryMap[c] || []);
                     }
+                    drawerActiveTab.value = 'basicInfo';
                     dialogVisible.value = true;
                 };
 
@@ -1247,14 +1352,17 @@
                 const signFormRef = ref(null);
                 const currentSignRow = ref(null);
                 const companyTitleOptions = ['广州飞点', '深圳飞点', '广东飞点'];
+                const paymentTermOptions = ['月结', '周结', '半月结'];
                 const signForm = reactive({
                     companyTitle: '',
+                    paymentTerm: '',
                     startDate: '',
                     endDate: '',
                     contractFile: null
                 });
                 const signRules = reactive({
                     companyTitle: [{ required: true, message: '必选', trigger: 'change' }],
+                    paymentTerm: [{ required: true, message: '必选', trigger: 'change' }],
                     startDate: [{ required: true, message: '必选', trigger: 'change' }],
                     endDate: [{ required: true, message: '必选', trigger: 'change' }]
                 });
@@ -1262,6 +1370,7 @@
                 const openSignDialog = (row) => {
                     currentSignRow.value = row;
                     signForm.companyTitle = '';
+                    signForm.paymentTerm = '';
                     signForm.startDate = '';
                     signForm.endDate = '';
                     signForm.contractFile = null;
@@ -1283,19 +1392,55 @@
                             const row = currentSignRow.value;
                             if (!row._contracts) row._contracts = [];
                             const contractFile = signForm.contractFile ? [{ name: signForm.contractFile.name }] : [];
+                            // 账期级联推导：月结 → 固定/按月/结算月 0/号 15，半月结/周结 → 不固定/按天/结算月空（半月结天数 15、周结天数 7）
+                            const term = signForm.paymentTerm;
+                            const monthly = term === '月结';
+                            const billingCycle = monthly ? '固定' : '不固定';
+                            const settlementType = monthly ? '按月' : '按天';
+                            const settlementMonth = monthly ? 0 : null;
+                            const daysOrDate = term === '周结' ? 7 : 15;
                             row._contracts.push({
                                 contractCompany: signForm.companyTitle,
-                                signStatus: '签约中',
+                                signStatus: '已签署',
                                 isPrimary: row._contracts.length === 0,
                                 contractStartDate: signForm.startDate,
                                 contractEndDate: signForm.endDate,
                                 terminationDate: '',
+                                paymentTerm: term,
+                                billingCycle: billingCycle,
+                                settlementType: settlementType,
+                                settlementMonth: settlementMonth,
+                                daysOrDate: daysOrDate,
                                 contractFiles: contractFile
                             });
-                            ElMessage.success('合同签约成功！');
+                            ElMessage.success('合同签约成功！账期已自动新增一条');
                             signDialogVisible.value = false;
                         }
                     });
+                };
+
+                // ========== 账期 Tab 级联（同客户管理） ==========
+                const paymentTermOptionsFor = (contract) => {
+                    if (contract.billingCycle === '固定') return ['月结'];
+                    if (contract.billingCycle === '不固定') return ['周结', '半月结'];
+                    return paymentTermOptions;
+                };
+                const onBillingCycleChange = (contract, val) => {
+                    contract.paymentTerm = '';
+                    contract.settlementType = '';
+                    contract.settlementMonth = null;
+                };
+                const onPaymentTermChange = (contract, val) => {
+                    if (val === '月结') {
+                        contract.settlementType = '按月';
+                        contract.settlementMonth = 0;
+                    } else {
+                        contract.settlementType = '按天';
+                        contract.settlementMonth = null;
+                    }
+                };
+                const saveBillingInfo = () => {
+                    ElMessage.success('账期信息保存成功！');
                 };
 
                 const setSupplierPrimaryContract = (index) => {
@@ -1347,8 +1492,9 @@
                     activeTab, searchForm, tableData, currentPage, pageSize, total,
                     categoryOptions, searchDetailOptions, handleSearchCategoryChange,
                     handleTabClick, handleSearch, resetSearch,
-                    dialogVisible, dialogTitle, isReadonly, formRef, formData, formRules, formDetailOptions, handleFormCategoryChange,
+                    dialogVisible, dialogTitle, isReadonly, formRef, formData, formRules, formDetailOptions, handleFormCategoryChange, drawerActiveTab,
                     openDialog, addContact, removeContact, addMaterial, removeMaterial, confirmSave, toggleStatus,
+                    paymentTermOptions, paymentTermOptionsFor, onBillingCycleChange, onPaymentTermChange, saveBillingInfo,
                     selectedRows, handleSelectionChange, transferDialogVisible, transferDrawerTab, transferFormRef, transferFormData, transferFormRules, handleTransferToCustomer, confirmTransfer, handleTransferCustomerTypeChange,
                     addTransferCustomMaterial, removeTransferMaterialFile, handleTransferIdCardChange,
                     signDialogVisible, signForm, signRules, signFormRef, companyTitleOptions, openSignDialog, confirmSign, handleSignFileChange, handleSignFileRemove, setSupplierPrimaryContract, getSupplierEffectiveContract, getSupplierEffectiveContractId

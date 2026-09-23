@@ -207,12 +207,12 @@
                     <el-col :span="24"><div class="fee-add-field"><el-radio-group v-model="row.kind" size="small" @change="handleImportKindChange(row)"><el-radio-button label="nonsurcharge">直接填写</el-radio-button><el-radio-button label="surcharge">按规则</el-radio-button></el-radio-group></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.feeType" size="small" style="width:100%" placeholder="请选择" filterable clearable @change="handleImportFeeTypeChange(row)"><el-option v-for="t in importFeeTypesOf(row)" :key="t" :label="t" :value="t"></el-option></el-select></div></el-col>
                     <el-col :span="8" v-if="row.kind === 'surcharge'"><div class="fee-add-field"><span class="fee-add-field-label">来源规则（可选 · 按规则带出单价并自动打标）</span><el-select v-if="row.rules.length" v-model="row.ruleId" size="small" style="width:100%" clearable placeholder="不选则自由填写" @change="handleImportRuleChange(row)"><el-option v-for="r in row.rules" :key="r.id" :label="r.name" :value="r.id"></el-option></el-select><el-input v-else disabled placeholder="该费用类型未绑定规则" size="small"></el-input></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="row.currency" size="small" style="width:100%" :disabled="importRowLocked(row)" @change="handleImportCurrencyChange(row)"><el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="row.rate" size="small" :disabled="importRowLocked(row)"></el-input></div></el-col>
-                    <el-col :span="8" v-if="row.kind === 'surcharge'"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" @change="handleImportUnitPriceEdit(row)"></el-input-number></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位</span><el-select v-model="row.pricingUnit" size="small" style="width:100%" :disabled="importRowLocked(row)"><el-option v-for="p in pricingUnits" :key="p" :label="p" :value="p"></el-option></el-select></div></el-col>
-                    <el-col :span="8" v-if="row.kind === 'surcharge'"><div class="fee-add-field"><span class="fee-add-field-label">计费量 <i class="req">*</i></span><el-input-number v-model="row.quantity" size="small" style="width:100%" :controls="false" :min="0" @change="handleImportUnitPriceChange(row)"></el-input-number></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">{{ row.kind === 'nonsurcharge' ? '金额（原币 · 每票 · 直接填）' : '合计金额（原币 · 单价 × 计费量 × 票数）' }}</span><el-input-number v-if="row.kind === 'nonsurcharge'" v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number><div v-else class="fee-add-amount">{{ row.currency }} {{ importAmountText(row) }}</div></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种 <i class="req">*</i></span><el-select v-model="row.currency" size="small" style="width:100%" :disabled="importRowLocked(row)" @change="handleImportCurrencyChange(row)"><el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率 <i class="req">*</i></span><el-input v-model="row.rate" size="small" :disabled="importRowLocked(row)"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" @change="handleImportUnitPriceEdit(row)"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位 <i class="req">*</i></span><el-select v-model="row.pricingUnit" size="small" style="width:100%" :disabled="importRowLocked(row)"><el-option v-for="p in pricingUnits" :key="p" :label="p" :value="p"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计费量 <i class="req">*</i></span><el-input-number v-model="row.quantity" size="small" style="width:100%" :controls="false" :min="0" @change="handleImportUnitPriceChange(row)"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">{{ importRowAutoAmount(row) ? '合计金额（原币 · 单价 × 计费量 × 票数）' : '金额（原币 · 每票 · 直接填）' }} <i class="req">*</i></span><el-input-number v-if="!importRowAutoAmount(row)" v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number><div v-else class="fee-add-amount">{{ row.currency }} {{ importAmountText(row) }}</div></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（本币）</span><div class="fee-add-amount">¥ {{ importCnyAmountText(row) }}</div></div></el-col>
                     <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">描述（面向客户）</span><el-input v-model="row.description" size="small" placeholder="如：超重超长按实测尺寸计收"></el-input></div></el-col>
                     <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">备注（仅内部）</span><el-input v-model="row.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
@@ -416,17 +416,17 @@
                 });
                 const importRows = ref([newImportRow()]);
                 const importFeeTypesOf = (row) => (row && row.kind === 'surcharge') ? feeTypeSurchargeOptions : feeTypeNonSurchargeOptions;
-                const importRowLocked = (row) => !!(row && row.kind === 'surcharge' && row.ruleId);
+                const importRowLocked = (row) => !!(row && row.kind === 'surcharge' && row.ruleId); const importRowPriceFilled = (row) => !!(row && row.unitPrice !== null && row.unitPrice !== undefined && row.unitPrice !== '' && !isNaN(Number(row.unitPrice))); const importRowAutoAmount = (row) => (row && row.kind === 'surcharge') || importRowPriceFilled(row);
                 // 选中来源规则的附加费优惠（方案 2：手工新增也自动匹配附加费优惠）
                 const importDiscount = (row) => { const r = (row.rules || []).find(x => x.id === row.ruleId); return (r && r.discount) ? r.discount : null; };
                 const importAmountText = (row) => formatMoney(Number((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0)));
                 const importBatchAmountText = (row) => {
-                    const per = row.kind === 'nonsurcharge' ? (Number(row.amount) || 0) : ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0));
+                    const per = importRowAutoAmount(row) ? ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0)) : (Number(row.amount) || 0);
                     return formatMoney(per * (row.waybillNos || []).length);
                 };
                 // 金额（本币）= 金额（原币）× 汇率（只读、前端派生展示）
                 const importCnyAmountText = (row) => {
-                    const per = row.kind === 'nonsurcharge' ? (Number(row.amount) || 0) : ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0));
+                    const per = importRowAutoAmount(row) ? ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0)) : (Number(row.amount) || 0);
                     return formatMoney(Number((per * (Number(row.rate) || 1)).toFixed(2)));
                 };
                 const handleImportCurrencyChange = (row) => { row.rate = rateDefaults[row.currency] !== undefined ? rateDefaults[row.currency] : 1.0; };
@@ -468,9 +468,11 @@
                     if (!feeRows.length) { ElMessage.warning('请先选择费用类型'); return; }
                     for (const r of feeRows) {
                         if (!(r.waybillNos || []).length) { ElMessage.warning(`「${r.feeType}」请至少选择一票适用运单`); return; }
-                        if (r.kind === 'surcharge') {
-                            if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.feeType}」请填写计费量`); return; }
-                        } else {
+                        if (!r.currency) { ElMessage.warning(`「${r.feeType}」请选择币种`); return; }
+                        if (r.rate === null || r.rate === undefined || r.rate === '') { ElMessage.warning(`「${r.feeType}」请填写汇率`); return; }
+                        if (!r.pricingUnit) { ElMessage.warning(`「${r.feeType}」请选择计价单位`); return; }
+                        if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.feeType}」请填写计费量`); return; }
+                        if (r.kind !== 'surcharge' && !importRowPriceFilled(r)) {
                             if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.feeType}」请填写金额`); return; }
                         }
                     }
@@ -481,14 +483,14 @@
                         const waybills = (r.waybillNos || []).map(no => importWaybills.find(w => w.waybillNo === no)).filter(Boolean);
                         const rule = (r.rules || []).find(x => x.id === r.ruleId) || null;
                         const isSurcharge = r.kind === 'surcharge';
-                        const amount = isSurcharge ? Number(((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0)).toFixed(2)) : Number(r.amount || 0);
+                        const amount = importRowAutoAmount(r) ? Number(((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0)).toFixed(2)) : Number(r.amount || 0);
                         waybills.forEach(w => {
                             allFlows.push({
                                 flowNo: 'FLW' + now.replace(/[-: ]/g, '').substring(0, 8) + String(seq).padStart(3, '0'),
                                 waybillNo: w.waybillNo, customerNo: w.customerNo, customerNick: w.customerNick, customerName: w.customerName,
                                 salesRep: w.salesRep, entityName: w.entityName, currency: r.currency, rate: r.rate,
-                                feeType: r.feeType, flowKind: isSurcharge ? '附加费' : '手工新增', unitPrice: isSurcharge ? Number(r.unitPrice) : null,
-                                pricingUnit: r.pricingUnit, quantity: isSurcharge ? Number(r.quantity) : null, amount: amount,
+                                feeType: r.feeType, flowKind: isSurcharge ? '附加费' : '手工新增', unitPrice: importRowAutoAmount(r) ? Number(r.unitPrice) : null,
+                                pricingUnit: r.pricingUnit, quantity: Number(r.quantity), amount: amount,
                                 auditStatus: '待业务审计', billNo: '', pickTime: '', sourceRule: rule ? rule.name : '', source: rule ? '附加费规则' : '人工添加',
                                 createdBy: '财务-导入', createdAt: now, description: r.description, remark: r.remark
                             });
@@ -625,7 +627,7 @@
                     searchForm, searchExpanded, filteredFlows,
                     detailVisible, detailRow, openDetail, openWaybillAudit, openBill,
                     handleSearch, resetSearch,
-                    importVisible, importRows, newImportRow, importWaybills, waybillLabel, importFeeTypesOf, importRowLocked, importDiscount, importAmountText, importBatchAmountText, importCnyAmountText, handleImportCurrencyChange, handleImportKindChange, handleImportFeeTypeChange, handleImportRuleChange, handleImportUnitPriceChange, handleImportUnitPriceEdit, openImport, submitImport,
+                    importVisible, importRows, newImportRow, importWaybills, waybillLabel, importFeeTypesOf, importRowLocked, importRowAutoAmount, importDiscount, importAmountText, importBatchAmountText, importCnyAmountText, handleImportCurrencyChange, handleImportKindChange, handleImportFeeTypeChange, handleImportRuleChange, handleImportUnitPriceChange, handleImportUnitPriceEdit, openImport, submitImport,
                     handleExport,
                     selectedFlows, onSelectionChange, rowSelectable, handleDelete,
                     auditEligible, reverseEligible, deleteEligible, handleAudit, handleReverseAudit,

@@ -195,7 +195,7 @@
                 const searchForm = reactive({ customerName: '', entityName: '', currency: '', flowType: '', dateRange: [] });
                 const activeTab = ref('customer');
                 const companySearchForm = reactive({ entityName: '', currency: '', flowType: '', dateRange: [] });
-                const companyFlowTypes = ['充值', '充值退回', '提现'];   // 我司账户侧只有真实现金进出的三类（核销/冲账/转汇/贷记单结转不动我司账户）
+                const companyFlowTypes = ['充值', '充值退回', '提现', '支付供应商', '支付供应商撤销'];   // 我司账户侧 = 真实现金进出（充值/代充入账、提现/充值退回出账、支付供应商出款/撤销回补；核销/冲账/转汇/贷记单结转不动我司账户）
 
                 // 账户名称（= 钱包账号编号 + 币种代码）：按「客户 × 账户主体 × 币种」反查钱包，与「资金账户管理 → 客户资金账户」同一份数据
                 // 本页是跨客户跨账户流水，必须标明是哪本账户
@@ -271,6 +271,7 @@
 
                 // 我司账户流水（wallet_flow 的「我司账户侧」：bank_account_id 匹配 + company_amount ≠ 0）—— 与客户钱包流水的充值/提现是「同一条流水的两侧」
                 const companyFlows = reactive([
+                    { time: '2026-09-08 11:00', flowNo: 'WF20260908001', entityName: '广州飞点', currency: 'CNY', bankName: '广州飞点-招商银行(7559 1234 5678)', flowType: '支付供应商', companyAmount: -12800.00, companyBalanceAfter: 1276630.50, operator: '李伟', relatedNo: 'APW20260908001' },
                     { time: '2026-08-27 10:25', flowNo: 'WF20260827001', entityName: '广州飞点', currency: 'CNY', bankName: '广州飞点-招商银行(7559 1234 5678)', flowType: '充值', companyAmount: 3000.00, payTime: '2026-08-26 15:40', companyBalanceAfter: 1289430.50, operator: '张珊', relatedNo: 'FD20260827001' },
                     { time: '2026-08-25 14:12', flowNo: 'WF20260825001', entityName: '深圳飞点', currency: 'CNY', bankName: '深圳飞点-工商银行(4000 1111 2222)', flowType: '充值', companyAmount: 3200.00, payTime: '2026-08-25 10:05', companyBalanceAfter: 646000.00, operator: '张珊', relatedNo: 'FD20260825003' },
                     { time: '2026-08-24 09:50', flowNo: 'WF20260824001', entityName: '香港富力顿', currency: 'HKD', bankName: '香港富力顿-汇丰银行(123-456-789)', flowType: '充值', companyAmount: 15000.00, payTime: '2026-08-23 18:20', companyBalanceAfter: 905000.00, operator: '张珊', relatedNo: 'FD20260824003' },
@@ -295,7 +296,7 @@
                     return data;
                 });
                 const flowTypeTag = (type) => {
-                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '贷记单入账': 'success', '冲账': 'danger', '冲账撤销': 'danger' };
+                    const map = { '充值': 'success', '充值退回': 'info', '提现': 'warning', '收款核销': 'danger', '收款核销撤销': 'success', '转汇': 'primary', '贷记单入账': 'success', '冲账': 'danger', '冲账撤销': 'danger', '支付供应商': 'danger', '支付供应商撤销': 'success' };
                     return map[type] || 'info';
                 };
                 // 「贷记单入账」（贷记单结转）**没有撤销动作**：钱进了客户可用额度就是终态 —— 它可能已被用来核销别的账单，
