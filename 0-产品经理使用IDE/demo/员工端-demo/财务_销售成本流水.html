@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>销售成本流水 - 员工端</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css" />
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <style>
+        :root { --el-color-primary: #2DA44E; --el-bg-color: #F5F7FA; --el-text-color-regular: #606266; --el-text-color-primary: #303133; }
+        body { margin: 0; padding: 16px; background-color: var(--el-bg-color); font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; font-size: 14px; color: var(--el-text-color-primary); height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+        #app { flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+        .content-card { background-color: #fff; border-radius: 4px; padding: 16px; box-sizing: border-box; }
+
+        .search-area { display: flex; gap: 16px; margin-bottom: 0; align-items: flex-start; flex-wrap: nowrap; }
+        .search-conditions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; flex: 1 1 auto; min-width: 0; }
+        .search-control { width: 240px; flex: 1 1 150px; min-width: 140px; max-width: 240px; }
+        .search-area .el-date-editor.el-input__wrapper,
+        .search-area .el-date-editor--daterange { flex: 0 0 240px; min-width: 240px; max-width: 240px; width: 240px !important; }
+        .search-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: nowrap; white-space: nowrap; }
+        .btn-search-primary { background-color: #2DA44E !important; border-color: #2DA44E !important; color: #FFFFFF !important; }
+        .btn-search-reset { background-color: #FFFFFF !important; border-color: #DCDFE6 !important; color: #000000 !important; }
+        .el-table th.el-table__cell { background-color: #FAFAFA; color: #303133; font-weight: 500; }
+        .pagination-area { margin-top: 16px; display: flex; justify-content: flex-end; }
+        .link { color: #409EFF; cursor: pointer; }
+        .link:hover { text-decoration: underline; }
+        .amount-in { color: #67C23A; font-weight: 500; }
+        .amount-out { color: #F56C6C; font-weight: 500; }
+
+        .toolbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+        .import-tip { background: #F5F7FA; border-radius: 4px; padding: 10px 12px; margin-bottom: 16px; color: #606266; line-height: 1.6; }
+        .amount-cell { font-weight: 600; }
+
+        .fee-add-info { display: flex; gap: 28px; align-items: center; padding: 8px 14px; margin-bottom: 12px; background: #F7F8FA; border: 1px solid var(--el-border-color-lighter); border-radius: 6px; font-size: 13px; color: var(--el-text-color-regular); }
+        .fee-add-info .fee-add-label { color: var(--el-text-color-secondary); margin-right: 6px; }
+        .fee-add-card { border: 1px solid var(--el-border-color-lighter); border-radius: 8px; padding: 12px 14px 2px; margin-bottom: 12px; background: #fff; }
+        .fee-add-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .fee-add-card-title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; color: var(--el-text-color-primary); }
+        .fee-add-card-sub { font-size: 12px; font-weight: 400; color: var(--el-text-color-secondary); }
+        .fee-add-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+        .fee-add-field-label { font-size: 12px; color: var(--el-text-color-secondary); }
+        .fee-add-field-label .req { color: var(--el-color-danger); font-style: normal; }
+        .fee-add-amount { font-weight: 600; font-size: 15px; line-height: 32px; }
+        .fee-add-tag-note { color: var(--el-text-color-placeholder); }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- 上层卡片：查询区 -->
+        <div class="content-card" style="flex: none;">
+            <div class="search-area">
+                <div class="search-conditions">
+                    <el-input v-model="searchForm.customerNick" placeholder="客户昵称" class="search-control" clearable></el-input>
+                    <el-input v-model="searchForm.cusNo" placeholder="客户编号" class="search-control" clearable></el-input>
+                    <el-select v-model="searchForm.entityId" placeholder="我司主体" class="search-control" clearable>
+                        <el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option>
+                    </el-select>
+                    <template v-if="searchExpanded">
+                        <el-select v-model="searchForm.currency" placeholder="币种" class="search-control" clearable>
+                            <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
+                        </el-select>
+                        <el-select v-model="searchForm.feeTypeId" placeholder="费用类型" class="search-control" clearable>
+                            <el-option v-for="t in feeTypes" :key="t" :label="t" :value="t"></el-option>
+                        </el-select>
+                        <el-input v-model="searchForm.waybillNo" placeholder="运单号" class="search-control" clearable></el-input>
+                        <el-input v-model="searchForm.customerNo" placeholder="客户单号" class="search-control" clearable></el-input>
+                        <el-date-picker v-model="searchForm.pickTimeRange" type="daterange" value-format="YYYY-MM-DD" class="search-control" start-placeholder="拣货开始日期" end-placeholder="拣货结束日期"></el-date-picker>
+                    </template>
+                </div>
+                <div class="search-actions">
+                    <el-button class="btn-search-primary" @click="handleSearch">
+                        <el-icon style="margin-right: 4px;"><zoom-in></zoom-in></el-icon>查询
+                    </el-button>
+                    <el-button class="btn-search-reset" @click="resetSearch">
+                        <el-icon style="margin-right: 4px;"><refresh-right></refresh-right></el-icon>重置
+                    </el-button>
+                    <el-button type="primary" link @click="searchExpanded = !searchExpanded">
+                        更多查询条件<el-icon class="el-icon--right"><ArrowDown v-if="!searchExpanded"></ArrowDown><ArrowUp v-else></ArrowUp></el-icon>
+                    </el-button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 下层卡片：工具栏 + 销售成本流水列表 -->
+        <div class="content-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+            <div class="toolbar">
+                <el-button type="primary" @click="openAdd">
+                    <el-icon style="margin-right: 4px;"><Plus></Plus></el-icon>新增销售成本
+                </el-button>
+                <el-button type="success" @click="handleExport">
+                    <el-icon style="margin-right: 4px;"><Download></Download></el-icon>导出
+                </el-button>
+                <el-button type="danger" @click="handleDelete">
+                    <el-icon style="margin-right: 4px;"><Delete></Delete></el-icon>删除
+                </el-button>
+            </div>
+
+            <el-table :data="filteredFlows" border style="width: 100%; flex: 1;" height="100%" @selection-change="onSelectionChange">
+                <el-table-column type="selection" width="50" align="center"></el-table-column>
+                <el-table-column prop="flowNo" label="流水号" min-width="150"></el-table-column>
+                <el-table-column prop="waybillNo" label="运单号" min-width="150">
+                    <template #default="scope">
+                        <span class="link" @click="openWaybillAudit(scope.row)">{{ scope.row.waybillNo }}</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="customerNo" label="客户编号" min-width="100"></el-table-column>
+                <el-table-column prop="customerNick" label="客户昵称" min-width="110" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="customerName" label="客户名称" min-width="160" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="salesRep" label="销售代表" min-width="100"></el-table-column>
+                <el-table-column prop="entityName" label="我司主体" min-width="110"></el-table-column>
+                <el-table-column prop="feeType" label="费用类型" min-width="120"></el-table-column>
+                <el-table-column prop="currency" label="币种" min-width="70" align="center">
+                    <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
+                </el-table-column>
+                <el-table-column prop="rate" label="汇率" min-width="90" align="right">
+                    <template #default="scope">{{ formatRate(scope.row.rate) }}</template>
+                </el-table-column>
+                <el-table-column prop="unitPrice" label="单价" min-width="90" align="right">
+                    <template #default="scope">{{ formatMoney(scope.row.unitPrice) }}</template>
+                </el-table-column>
+                <el-table-column prop="pricingUnit" label="计价单位" min-width="90" align="center"></el-table-column>
+                <el-table-column prop="quantity" label="计费量" min-width="90" align="right">
+                    <template #default="scope">{{ formatQty(scope.row.quantity) }}</template>
+                </el-table-column>
+                <el-table-column label="金额（原币）" min-width="110" align="right">
+                    <template #default="scope">
+                        <span class="amount-cell" :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">
+                            {{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}
+                        </span>
+                    </template>
+                </el-table-column>
+                <el-table-column label="金额（本币）" min-width="110" align="right">
+                    <template #default="scope">
+                        <span class="amount-cell" :class="cnyAmount(scope.row) >= 0 ? 'amount-in' : 'amount-out'">
+                            {{ cnyAmount(scope.row) >= 0 ? '+' : '' }}¥{{ formatMoney(cnyAmount(scope.row)) }}
+                        </span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="createdBy" label="创建人" min-width="90"></el-table-column>
+                <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip>
+                    <template #default="scope">{{ scope.row.remark || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="拣货时间" min-width="150" align="center">
+                    <template #default="scope">{{ scope.row.pickTime || '—' }}</template>
+                </el-table-column>
+                <el-table-column label="创建时间" min-width="150" align="center">
+                    <template #default="scope">{{ scope.row.createdAt || '—' }}</template>
+                </el-table-column>
+            </el-table>
+            <div class="pagination-area">
+                <el-pagination background layout="total, prev, pager, next" :total="filteredFlows.length"></el-pagination>
+            </div>
+        </div>
+
+        <!-- 新增销售成本流水（独立台账，可手工新增；多票批量铺开，可多条录入） -->
+        <el-dialog v-model="costAddVisible" title="新增销售成本流水" width="900px" append-to-body>
+            <div class="fee-add-info" v-if="costWaybillOptions.length === 1">
+                <span><span class="fee-add-label">运单号</span><b style="color:var(--el-text-color-primary);">{{ costWaybillText }}</b></span>
+                <span><span class="fee-add-label">客户</span>{{ costCustomerText }}</span>
+                <span><span class="fee-add-label">服务组合</span>{{ costServiceText }}</span>
+                <span><span class="fee-add-label">收费重</span><b style="color:var(--el-color-primary);">{{ costChargeWeightText }}</b></span>
+            </div>
+            <div class="fee-add-field" style="margin-bottom:12px;">
+                <span class="fee-add-field-label">适用运单 <i class="req">*</i><span class="fee-add-tag-note">（一条费用 × N 票 = N 条流水）</span></span>
+                <el-select v-model="costWaybillNos" multiple filterable size="small" style="width:100%" collapse-tags collapse-tags-tooltip placeholder="输入运单号/客户编号/昵称/名称搜索">
+                    <el-option v-for="w in addWaybills" :key="w.waybillNo" :label="waybillLabel(w)" :value="w.waybillNo"></el-option>
+                </el-select>
+            </div>
+            <div v-for="(row, idx) in costList" :key="idx" class="fee-add-card">
+                <div class="fee-add-card-head">
+                    <span class="fee-add-card-title">
+                        流水 {{ idx + 1 }}
+                        <span v-if="costWaybillOptions.length > 1" class="fee-add-card-sub">× {{ costWaybillOptions.length }} 票 · 合计 {{ costBatchAmountText(row) }}</span>
+                    </span>
+                    <el-button link type="danger" size="small" :disabled="costList.length <= 1" :title="costList.length <= 1 ? '至少保留一条销售成本流水' : ''" @click="costList.splice(idx, 1)">删除</el-button>
+                </div>
+                <el-row :gutter="12">
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型</span><el-select v-model="row.type" size="small" style="width:100%"><el-option v-for="t in costTypeOptions" :key="t" :label="t" :value="t"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种 <i class="req">*</i></span><el-select v-model="row.currency" size="small" style="width:100%"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率 <i class="req">*</i></span><el-input v-model="row.rate" size="small"></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位 <i class="req">*</i></span><el-select v-model="row.unit" size="small" style="width:100%"><el-option v-for="u in pricingUnits" :key="u" :label="u" :value="u"></el-option></el-select></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计费量</span><el-input-number v-model="row.quantity" size="small" style="width:100%" :controls="false"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（原币） <i class="req">*</i></span><el-input-number v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（本币）</span><div class="fee-add-amount">¥ {{ costCnyAmountText(row) }}</div></div></el-col>
+                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">备注</span><el-input v-model="row.remark" size="small"></el-input></div></el-col>
+                </el-row>
+            </div>
+            <el-button plain size="small" style="width:100%;" @click="costList.push(newCostRow())">＋ 添加一行</el-button>
+            <template #footer><el-button @click="costAddVisible = false">取消</el-button><el-button type="primary" @click="saveCostAdd">保存</el-button></template>
+        </el-dialog>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed } = Vue;
+        const { ElMessage, ElMessageBox } = ElementPlus;
+
+        const app = createApp({
+            setup() {
+                const currencyMap = {
+                    'CNY': { symbol: '¥', name: '人民币' },
+                    'USD': { symbol: '$', name: '美元' },
+                    'HKD': { symbol: 'HK$', name: '港币' },
+                    'EUR': { symbol: '€', name: '欧元' }
+                };
+                const currencyOptions = ['CNY', 'USD', 'HKD', 'EUR'];
+                const currencySymbol = (c) => currencyMap[c] ? currencyMap[c].symbol : c;
+                const currencyName = (c) => currencyMap[c] ? currencyMap[c].name : c;
+                const formatMoney = (val) => Number(val || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatQty = (val) => (val === null || val === undefined || val === '') ? '—' : Number(val).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
+                const formatRate = (val) => (val === null || val === undefined || val === '') ? '—' : Number(val).toLocaleString('zh-CN', { maximumFractionDigits: 6 });
+                const cnyAmount = (row) => Number(((Number(row && row.amount) || 0) * (Number(row && row.rate) || 1)).toFixed(2));
+                const formatNow = () => {
+                    const d = new Date();
+                    const p = (n) => String(n).padStart(2, '0');
+                    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                };
+
+                const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
+                const feeTypes = ['运费', '周六派送费', '超重费', '地址附加费', '商品附加费', '报关费', '库内贴标费'];
+                const pricingUnits = ['KG', 'm³', '票', '箱', '数量'];
+
+                const searchForm = reactive({ customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
+                const searchExpanded = ref(false);
+
+                // 销售成本流水（flow_category=30）：由应收流水物理复制 + 财务手工新增，不参与审计 / 成账
+                const allFlows = reactive([
+                    { flowNo: 'FLW20260901001', waybillNo: 'YD20260901001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 8.50, pricingUnit: 'KG', quantity: 100, amount: 850.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-09-01 10:00', pickTime: '2026-09-01 14:20', remark: '' },
+                    { flowNo: 'FLW20260901002', waybillNo: 'YD20260901001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'CNY', rate: 1.0, feeType: '报关费', unitPrice: 150.00, pricingUnit: '票', quantity: 1, amount: 150.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-09-01 10:00', pickTime: '2026-09-01 14:20', remark: '' },
+                    { flowNo: 'FLW20260805001', waybillNo: 'YD20260805001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'USD', rate: 7.15, feeType: '运费', unitPrice: 6.20, pricingUnit: 'KG', quantity: 100, amount: 620.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-05 08:00', pickTime: '2026-08-05 09:10', remark: '' },
+                    { flowNo: 'FLW20260815001', waybillNo: 'YD20260815001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '深圳飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 8.00, pricingUnit: 'KG', quantity: 110, amount: 880.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-15 08:00', pickTime: '2026-08-15 10:30', remark: '' },
+                    { flowNo: 'FLW20260720001', waybillNo: 'YD20260720001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'CNY', rate: 1.0, feeType: '库内贴标费', unitPrice: 0.50, pricingUnit: '数量', quantity: 120, amount: 60.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-07-20 13:00', pickTime: '2026-07-20 11:00', remark: '' },
+                    { flowNo: 'FLW20260822001', waybillNo: 'YD20260822001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '香港富力顿', currency: 'HKD', rate: 0.92, feeType: '运费', unitPrice: 25.00, pricingUnit: 'KG', quantity: 100, amount: 2500.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-22 16:00', pickTime: '2026-08-22 18:00', remark: '' },
+                    { flowNo: 'FLW20260826001', waybillNo: 'YD20260826001', customerNo: 'KH1002', customerNick: '迅达贸易', customerName: '广州迅达贸易有限公司', salesRep: '销售-张伟', entityName: '香港富力顿', currency: 'HKD', rate: 0.92, feeType: '周六派送费', unitPrice: 150.00, pricingUnit: '票', quantity: 2, amount: 300.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-26 07:30', pickTime: '2026-08-26 09:00', remark: '' },
+                    { flowNo: 'FLW20260828001', waybillNo: 'YD20260828001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'USD', rate: 7.15, feeType: '超重费', unitPrice: 20.00, pricingUnit: '票', quantity: 5, amount: 100.00, source: '人工添加', createdBy: '财务-王强', createdAt: '2026-08-28 11:00', pickTime: '2026-08-28 10:00', remark: '销售成本手工补录' },
+                    { flowNo: 'FLW20260901003', waybillNo: 'YD20260901002', customerNo: 'KH1004', customerNick: '宏泰五金', customerName: '东莞市宏泰五金制品有限公司', salesRep: '销售-赵敏', entityName: '广东飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 9.30, pricingUnit: 'KG', quantity: 200, amount: 1860.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-09-01 14:00', pickTime: '2026-09-01 16:00', remark: '' }
+                ]);
+
+                const filteredFlows = computed(() => {
+                    let data = allFlows;
+                    if (searchForm.customerNick) data = data.filter(f => (f.customerNick + '|' + (f.customerNo || '')).includes(searchForm.customerNick));
+                    if (searchForm.cusNo) data = data.filter(f => (f.customerNo || '').includes(searchForm.cusNo));
+                    if (searchForm.entityId) data = data.filter(f => f.entityName === searchForm.entityId);
+                    if (searchForm.currency) data = data.filter(f => f.currency === searchForm.currency);
+                    if (searchForm.feeTypeId) data = data.filter(f => f.feeType === searchForm.feeTypeId);
+                    if (searchForm.waybillNo) data = data.filter(f => f.waybillNo.includes(searchForm.waybillNo));
+                    if (searchForm.customerNo) data = data.filter(f => (f.customerNo || '').includes(searchForm.customerNo));
+                    if (searchForm.pickTimeRange && searchForm.pickTimeRange.length === 2) {
+                        const start = searchForm.pickTimeRange[0];
+                        const end = searchForm.pickTimeRange[1];
+                        data = data.filter(f => {
+                            if (!f.pickTime) return false;
+                            const d = f.pickTime.substring(0, 10);
+                            return d >= start && d <= end;
+                        });
+                    }
+                    return data;
+                });
+
+                const openWaybillAudit = (row) => { window.open('财务_运单审计.html?waybillNo=' + encodeURIComponent(row.waybillNo), '_blank'); };
+
+                const handleSearch = () => { ElMessage.success('执行查询'); };
+                const resetSearch = () => {
+                    Object.assign(searchForm, { customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
+                };
+
+                // 新增销售成本流水（独立台账，可手工新增；多票批量铺开，可多条录入）
+                const costAddVisible = ref(false);
+                const costTypeOptions = ['运费', '头程海运费', '周六派送费', '海运费', '港杂费'];
+                const addWaybills = [
+                    { waybillNo: 'YD20260901001', customerName: '深圳市华美科技有限公司', customerNo: 'KH1001', customerNick: '华美科技', salesRep: '销售-李明', entityName: '广州飞点', service: '广州飞点-美西普货', billingType: 'kg', chargeWeight: 100 },
+                    { waybillNo: 'YD20260805001', customerName: '深圳市华美科技有限公司', customerNo: 'KH1001', customerNick: '华美科技', salesRep: '销售-李明', entityName: '广州飞点', service: '广州飞点-美东普货', billingType: 'kg', chargeWeight: 100 },
+                    { waybillNo: 'YD20260815001', customerName: '深圳市华美科技有限公司', customerNo: 'KH1001', customerNick: '华美科技', salesRep: '销售-李明', entityName: '深圳飞点', service: '深圳飞点-美西普货', billingType: 'kg', chargeWeight: 110 },
+                    { waybillNo: 'YD20260720001', customerName: '东莞新锐电子有限公司', customerNo: 'KH1003', customerNick: '新锐电子', salesRep: '销售-王强', entityName: '广东飞点', service: '广东飞点-美西普货', billingType: 'cbm', chargeWeight: 2.5 },
+                    { waybillNo: 'YD20260826001', customerName: '广州迅达贸易有限公司', customerNo: 'KH1002', customerNick: '迅达贸易', salesRep: '销售-张伟', entityName: '香港富力顿', service: '香港富力顿-美西普货', billingType: 'kg', chargeWeight: 100 },
+                    { waybillNo: 'YD20260828001', customerName: '东莞新锐电子有限公司', customerNo: 'KH1003', customerNick: '新锐电子', salesRep: '销售-王强', entityName: '广东飞点', service: '广东飞点-美东普货', billingType: 'kg', chargeWeight: 5 },
+                    { waybillNo: 'YD20260901002', customerName: '东莞市宏泰五金制品有限公司', customerNo: 'KH1004', customerNick: '宏泰五金', salesRep: '销售-赵敏', entityName: '广东飞点', service: '广东飞点-美西普货', billingType: 'kg', chargeWeight: 200 }
+                ];
+                const waybillLabel = (w) => w.waybillNo + ' · ' + w.customerName + ' · ' + w.customerNo + ' · ' + w.customerNick;
+                const costWaybillNos = ref([]);
+                const costWaybillOptions = computed(() => (costWaybillNos.value || []).filter(Boolean));
+                const costWaybillText = computed(() => {
+                    const opts = costWaybillOptions.value;
+                    if (!opts.length) return '—';
+                    if (opts.length === 1) return opts[0] + '（主运单号）';
+                    return `已选 ${opts.length} 票：${opts.slice(0, 3).join(' / ')}${opts.length > 3 ? ' …' : ''}`;
+                });
+                const costCustomerText = computed(() => costWaybillOptions.value.length === 1 ? (((addWaybills.find(w => w.waybillNo === costWaybillOptions.value[0]) || {}).customerNick) || '—') : (costWaybillOptions.value.length ? '多票 · 见各流水' : '—'));
+                const costServiceText = computed(() => costWaybillOptions.value.length === 1 ? (((addWaybills.find(w => w.waybillNo === costWaybillOptions.value[0]) || {}).service) || '—') : (costWaybillOptions.value.length ? '多票 · 见各流水' : '—'));
+                const costChargeWeightText = computed(() => {
+                    const ws = costWaybillOptions.value.map(no => addWaybills.find(w => w.waybillNo === no)).filter(Boolean);
+                    if (ws.length === 1) { const w = ws[0]; const u = (w && w.billingType === 'cbm') ? 'm³' : 'kg'; return (w && w.chargeWeight != null && w.chargeWeight !== '') ? (w.chargeWeight + ' ' + u) : '—'; }
+                    return ws.length ? '多票 · 见各流水' : '—';
+                });
+                const newCostRow = () => ({ type: '', currency: 'CNY', rate: 1, unitPrice: null, unit: '', quantity: null, amount: null, remark: '' });
+                const costList = ref([newCostRow()]);
+                const costBatchAmountText = (row) => formatMoney(Number((Number(row.amount) || 0) * costWaybillOptions.value.length));
+                const costCnyAmountText = (row) => formatMoney(Number(((Number(row.amount) || 0) * (Number(row.rate) || 1)).toFixed(2)));
+                const openAdd = () => {
+                    costWaybillNos.value = [];
+                    costList.value = [newCostRow()];
+                    costAddVisible.value = true;
+                };
+                const saveCostAdd = () => {
+                    const ways = costWaybillOptions.value.map(no => addWaybills.find(w => w.waybillNo === no)).filter(Boolean);
+                    if (!ways.length) { ElMessage.warning('请至少选择一票适用运单'); return; }
+                    for (const row of costList.value) {
+                        if (!row.type) { ElMessage.warning('请选择费用类型'); return; }
+                        if (!row.currency) { ElMessage.warning('请选择币种'); return; }
+                        if (row.rate === null || row.rate === undefined || row.rate === '') { ElMessage.warning('请填写汇率'); return; }
+                        if (!row.unit) { ElMessage.warning('请选择计价单位'); return; }
+                        if (row.amount == null || row.amount === '') { ElMessage.warning('请填写金额（原币）'); return; }
+                    }
+                    const now = formatNow();
+                    let seq = allFlows.length;
+                    costList.value.forEach(row => {
+                        ways.forEach(w => {
+                            allFlows.push({
+                                flowNo: 'FLW' + now.replace(/[-: ]/g, '').substring(0, 8) + String(++seq).padStart(3, '0'),
+                                waybillNo: w.waybillNo,
+                                customerNo: w.customerNo, customerNick: w.customerNick, customerName: w.customerName,
+                                salesRep: w.salesRep, entityName: w.entityName,
+                                currency: row.currency, rate: Number(row.rate), feeType: row.type,
+                                unitPrice: (row.unitPrice == null || row.unitPrice === '') ? null : Number(row.unitPrice),
+                                pricingUnit: row.unit, quantity: (row.quantity == null || row.quantity === '') ? null : Number(row.quantity),
+                                amount: Number(row.amount),
+                                source: '人工添加', createdBy: '财务-操作员', createdAt: now, pickTime: '', remark: row.remark
+                            });
+                        });
+                    });
+                    costAddVisible.value = false;
+                    ElMessage.success(`已新增 ${costList.value.length} 条费用 × ${ways.length} 票 = ${costList.value.length * ways.length} 条销售成本流水`);
+                };
+
+                // 导出
+                const handleExport = () => { ElMessage.success('销售成本流水导出中…'); };
+
+                // 删除（销售成本流水与应收解耦，不参与审计 / 成账，勾选即删）
+                const selectedFlows = ref([]);
+                const onSelectionChange = (val) => { selectedFlows.value = val; };
+                const handleDelete = () => {
+                    if (selectedFlows.value.length === 0) {
+                        ElMessage.warning('请先勾选要删除的销售成本流水');
+                        return;
+                    }
+                    ElMessageBox.confirm('确定删除选中的 ' + selectedFlows.value.length + ' 条销售成本流水吗？删除后不影响来源应收流水。', '删除确认', {
+                        confirmButtonText: '确定删除',
+                        cancelButtonText: '取消',
+                        type: 'warning'
+                    }).then(() => {
+                        const flowNos = selectedFlows.value.map(r => r.flowNo);
+                        allFlows.splice(0, allFlows.length, ...allFlows.filter(r => !flowNos.includes(r.flowNo)));
+                        selectedFlows.value = [];
+                        ElMessage.success('删除成功');
+                    }).catch(() => {});
+                };
+
+                return {
+                    currencyOptions, currencySymbol, currencyName, formatMoney, formatQty, formatRate, cnyAmount,
+                    entities, feeTypes, pricingUnits,
+                    searchForm, searchExpanded, filteredFlows,
+                    openWaybillAudit, handleSearch, resetSearch,
+                    costAddVisible, costTypeOptions, addWaybills, waybillLabel, costWaybillNos, costWaybillOptions, costWaybillText, costCustomerText, costServiceText, costChargeWeightText, newCostRow, costList, costBatchAmountText, costCnyAmountText, openAdd, saveCostAdd,
+                    handleExport,
+                    selectedFlows, onSelectionChange, handleDelete
+                };
+            }
+        });
+
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>
