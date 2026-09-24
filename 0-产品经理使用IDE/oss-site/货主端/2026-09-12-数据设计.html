@@ -41,7 +41,7 @@
 <tr><td>--</td><td>周船期批次</td><td><code>weekly_schedule_batch</code></td><td>引用</td><td>超级运价模块，查价时关联</td></tr>
 <tr><td>--</td><td>船期</td><td><code>sailing_schedule</code></td><td>引用</td><td>超级运价模块，查价时关联（运输详情弹窗的船期×截单矩阵）</td></tr>
 </table></div>
-<blockquote>货主端对超级运价侧各表（含 <code>density_discount</code> 泡比优惠、<code>sailing_schedule</code> 船期）<strong>全部为只读引用</strong>，不落库运价侧任何表。</blockquote></p><p><hr></p><p><h2 id="2-逐表字段清单">2. 逐表字段清单</h2></p><p><h3 id="2-1-子账号-sub_account">2.1 子账号 <code>sub_account</code></h3></p><p><blockquote><strong>设计说明</strong>：货主企业内部的员工登录账号。每个子账号属于一个企业（customer），可分配多个角色。登录认证通过 <code>sub_account</code> + 密码完成。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<blockquote>货主端对超级运价侧各表（含 <code>density_discount</code> 泡比优惠、<code>sailing_schedule</code> 船期）<strong>全部为只读引用</strong>，不落库运价侧任何表。</blockquote></p><p><hr></p><p><h2 id="2-逐表字段清单">2. 逐表字段清单</h2></p><p><blockquote>字段业务含义与需求背景见 RDD；页面校验规则与交互见 PRD。本 Schema 是字段结构（类型/约束/枚举值）的唯一权威。</blockquote></p><p><h3 id="2-1-子账号-sub_account">2.1 子账号 <code>sub_account</code></h3></p><p><blockquote><strong>设计说明</strong>：货主企业内部的员工登录账号。每个子账号属于一个企业（customer），可分配多个角色。登录认证通过 <code>sub_account</code> + 密码完成。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
@@ -167,7 +167,7 @@
 <li>船期/截单：查询 <code>sailing_schedule</code>（运输详情弹窗的当周船期×各交货地截单矩阵）</li>
 <li>以上均为<strong>只读查询</strong>，货主端不写入运价相关表</li>
 </ul>
-<blockquote><strong>三层询价数据安全</strong>（超级运价 PRD R27）：同一报价 API <code>POST /api/freight-rate/query</code>，请求体 <code>caller=shipper</code> 时<strong>只返回公布价+优惠，不返回成本底价/利润/盈亏标识</strong>；未登录 + <code>caller=shipper</code> → 401。</blockquote></p><p><h3 id="4-6-与共享实体的引用关系">4.6 与共享实体的引用关系</h3></p><p><div class="table-wrapper"><table><tr><td>货主端页面</td><td>引用实体</td><td>来源表</td><td>来源模块</td><td>引用方式</td></tr>
+<blockquote>报价接口的字段过滤口径（<code>caller=shipper</code> 只返回公布价+优惠、不下发成本底价/利润/盈亏标识）与未登录拦截见 PRD §6 R06e。</blockquote></p><p><h3 id="4-6-与共享实体的引用关系">4.6 与共享实体的引用关系</h3></p><p><div class="table-wrapper"><table><tr><td>货主端页面</td><td>引用实体</td><td>来源表</td><td>来源模块</td><td>引用方式</td></tr>
 <tr><td>-----------</td><td>---------</td><td>--------</td><td>---------</td><td>---------</td></tr>
 <tr><td>商品管理</td><td>商品</td><td><code>product</code></td><td>基础资料</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
 <tr><td>地址管理</td><td>收货地址</td><td><code>shipping_address</code></td><td>基础资料</td><td>按 <code>customer_id</code> 过滤，CRUD</td></tr>
@@ -199,62 +199,7 @@
 <li>角色冻结不影响已分配该角色的子账号——冻结仅阻止新分配，已有权限保持不变</li>
 <li><strong>角色类型枚举（原型口径）</strong>：<code>系统默认</code> / <code>自定义</code>（<code>角色管理.html</code> 搜索条件的下拉取值）</li>
 </ul>
-<h3 id="4-10-优惠三表匹配口径-货主端只读消费">4.10 优惠三表匹配口径（货主端只读消费）</h3></p><p><blockquote>货主端<strong>不配置、不落库</strong>任何优惠规则，只在查价时按当前登录客户匹配并展示；本节口径与「超级运价」一致。</blockquote>
->
-<blockquote><strong>优惠金额口径</strong>：固定减免的<strong>优惠值本身带符号</strong>——<strong>负数 = 减钱（正向优惠）</strong>、<strong>正数 = 加价（反向优惠）</strong>；计算为 <strong><code>结果金额 = 原金额 + 优惠值</code></strong>；显示：负 → <code>-¥X</code>、正 → <code>+¥X</code>、0 → 「全免」；附加费优惠的固定减免上限为 <strong><code>|优惠值| ≤ 应收单价</code></strong>（绝对值比较）。<strong>折扣率</strong>为乘数语义（<code><1</code> 折扣、<code>=1</code> 原价、<code>>1</code> 加价；一期 <code>0.01 ≤ 率 ≤ 1</code> 不支持加价），计算为 <strong><code>金额 × 率</code></strong>。</blockquote></p><p><strong>三张优惠表：运费优惠 <code>freight_discount</code> / 泡比优惠 <code>density_discount</code> / 附加费优惠 <code>surcharge_discount</code></strong></p><p><div class="table-wrapper"><table><tr><td>维度</td><td>运费优惠</td><td>泡比优惠</td><td>附加费优惠</td></tr>
-<tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
-<tr><td>父实体</td><td>服务组合</td><td>服务组合</td><td>附加费规则</td></tr>
-<tr><td>优惠对象类型</td><td><strong>一期同时开放</strong>：10 客户特批 / 20 客户等级</td><td>同左</td><td>同左</td></tr>
-<tr><td>目标</td><td>特批→客户（多选）；等级→客户等级（多选）</td><td>同左</td><td>同左</td></tr>
-<tr><td>优先级</td><td><strong>客户特批 > 客户等级，高覆盖低、不叠加</strong></td><td>同左</td><td>同左</td></tr>
-<tr><td>优惠方式</td><td>一期仅 20 固定减免（<strong>优惠值为带符号调整量</strong>：负数=减钱、正数=加价；计算 <code>金额 + 优惠值</code>）</td><td>同左</td><td>折扣率（<strong>乘数</strong>：<code>金额 × 率</code>；<code><1</code> 折扣、<code>=1</code> 原价、<code>>1</code> 加价；一期 <code>0.01 ≤ 率 ≤ 1</code> 不支持加价）/ 固定减免（同左，<strong>带符号优惠值</strong>）</td></tr>
-<tr><td>命中维度</td><td>组合 + 对象</td><td>组合 + 对象 + <strong>密度阈值</strong>（泡比 ≥ 阈值；多条命中取阈值最大档，不叠加）</td><td>附加费规则 + 对象</td></tr>
-<tr><td>叠加关系</td><td><strong>运费优惠 × 泡比优惠叠加</strong></td><td>与运费优惠叠加</td><td><strong>与运费优惠独立计算</strong></td></tr>
-<tr><td>有效期</td><td>一期：永久有效 / 固定期限</td><td>同左</td><td>同左</td></tr>
-<tr><td>飞书审批编号 <code>approval_no</code></td><td><strong>客户特批时必填</strong>；等级时为空。<strong>一期人工录入，不对接飞书审批流</strong>（不做审批单同步、不做「审批中/已通过」状态机），仅作追溯凭据</td><td>同左</td><td>同左</td></tr>
-<tr><td>费用方向</td><td>固定 10 应收</td><td>固定 10 应收</td><td>固定 10 应收</td></tr>
-</table></div>
-<strong>匹配伪代码（货主端侧消费口径）</strong>：</p><p><pre><code># 0. 优惠值符号约定
-#    固定减免 discount_value：负数 = 减钱（正向优惠）；正数 = 加价（反向优惠）
-#    结果金额 = 原金额 + discount_value
-#    折扣率 rate 为乘数：&lt;1 折扣 / =1 原价 / &gt;1 加价（一期 0.01 ≤ rate ≤ 1，不支持加价）
-#    折扣率计算 = 金额 × rate
-#    显示：discount_value &lt; 0 → "-¥X"；&gt; 0 → "+¥X"；= 0 → "全免"
-
-# 1. 运费优惠（特批 &gt; 等级，取一条）
-候选 = { d ∈ freight_discount | d.combination_id = 当前组合 且 d.status=生效 }
-特批命中 = 候选.where(target_type=10 客户特批 且 当前客户 ∈ d.target_customers)
-等级命中 = 候选.where(target_type=20 客户等级 且 当前客户等级 ∈ d.target_levels)
-运费优惠 = 特批命中.第一条() ?? 等级命中.第一条() ?? 无     # 只取一条，不累加
-运费优惠值 = 运费优惠.discount_value                       # 带符号：负数=减钱、正数=加价
-
-# 2. 泡比优惠（特批 &gt; 等级，再按密度阈值取最大档；仅 KG 计价行）
-泡比 = 总实重(kg) ÷ 总体积(m³)
-候选 = { d ∈ density_discount | d.combination_id = 当前组合 且 泡比 ≥ d.density_threshold }
-泡比优惠 = 候选.按(对象优先级, density_threshold 降序).第一条() ?? 无   # 多条命中取阈值最大档，不叠加
-泡比优惠值 = 泡比优惠.discount_value                       # 带符号，同上
-
-# 3. 附加费优惠（按附加费规则逐条匹配，与运费优惠独立）
-对每条命中的附加费规则 r：
-  候选 = { d ∈ surcharge_discount | d.rule_id = r.id 且 d.status=生效 }
-  特批命中 = 候选.where(target_type=10 且 当前客户 ∈ d.target_customers)
-  等级命中 = 候选.where(target_type=20 且 当前客户等级 ∈ d.target_levels)
-  附加费优惠 = 特批命中.第一条() ?? 等级命中.第一条() ?? 无
-  附加费优惠值 = 附加费优惠.discount_value                 # 带符号（固定减免时）
-  附加费优惠后单价 = r.应收单价 + 附加费优惠值
-  # 折扣率时：附加费优惠后单价 = r.应收单价 × 附加费优惠.rate（乘数）
-
-# 4. 最终报价（超级运价 PRD §7.4 的「折扣后运费 + 优惠后附加费」与此等价）
-最终报价 = (公布价 + 运费优惠值 + 泡比优惠值) + (Σ附加费原价 + Σ附加费优惠值)
-         # 分段式：先算完运费侧（公布价 + 运费优惠值 + 泡比优惠值），再单独加附加费侧
-约束：
-  a. 任一费用项最终金额不得为负（优惠上限截断 R31）——优惠值带符号，比较按绝对值
-     Σ|该费用项全部优惠值| ≤ 该费用项金额，超出按比例截断到 0
-  b. 附加费优惠的固定减免上限：|附加费优惠值| ≤ 应收单价（绝对值比较）
-  c. 泡比优惠只作用于运费侧，不得抵扣附加费
-</code></pre></p><p><blockquote><strong>超重超长在查价阶段的参与方式</strong>：查价阶段<strong>能否</strong>算出「超重超长」<strong>取决于包裹信息的录入方式</strong> —— ① <strong>按单箱录入</strong>（填了长/宽/高）→ <strong>可以算</strong>：超重超长按公式判定（该规则计价单位<strong>仅按箱</strong>）、<strong>体积重 = 长×宽×高 ÷ 计泡系数</strong> → <strong>在查价结果中作预估展示</strong>；② <strong>按总体重量与体积录入</strong>（无单箱长宽高）→ <strong>算不出，不展示该项</strong>。<strong>正式计费以「拣货实测」为准</strong>（客户自填尺寸仅供预估），故结果区提示条<strong>保留</strong>并声明"以拣货实测为准"；「字段&公式」型规则的<strong>正式触发与费用流水生成在「拣货」节点</strong>，查价阶段只是<strong>预估展示、不落库、不进账单</strong>。</blockquote>
->
-<blockquote><strong>费用叠加顺序</strong>：货主端口径为 <strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong>，与超级运价 PRD §7.4 的 <code>最终报价 = 折扣后运费 + 优惠后附加费</code> <strong>完全等价</strong>（<code>折扣后运费</code> 即 <code>公布价 + 运费优惠值 + 泡比优惠值</code>）；全系统同一写成法。</blockquote></p><p><hr></p><p><h2 id="5-枚举值集中定义">5. 枚举值集中定义</h2></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
+<h3 id="4-10-优惠三表匹配口径-货主端只读消费">4.10 优惠三表匹配口径（货主端只读消费）</h3></p><p><blockquote>货主端<strong>不配置、不落库</strong>任何优惠规则，只在查价时按当前登录客户匹配并展示。三张优惠表（<code>freight_discount</code> / <code>density_discount</code> / <code>surcharge_discount</code>）与父实体（服务组合 / 附加费规则）的归属见 §1 实体 x 表映射 与 §3 ER 图。匹配优先级（客户特批 > 客户等级）、优惠值带符号口径、最终报价公式、超重超长参与方式等<strong>业务规则与计算公式见 PRD §6（R06/R06a–d、R21–R23、R08a）与 §7.2</strong>。</blockquote></p><p><hr></p><p><h2 id="5-枚举值集中定义">5. 枚举值集中定义</h2></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
 <tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>---------</td></tr>
 <tr><td>Gender</td><td>10</td><td>MALE</td><td>男</td><td>sub_account</td></tr>
 <tr><td>Gender</td><td>20</td><td>FEMALE</td><td>女</td><td>sub_account</td></tr>
@@ -336,32 +281,7 @@
 <tr><td>查询客户信息</td><td>GET</td><td>/api/customer/{id}/profile</td><td>客商中心</td><td>货主端</td><td>—</td><td>2s</td></tr>
 <tr><td><strong>报价查询</strong></td><td><strong>POST</strong></td><td><strong><code>/api/freight-rate/query</code></strong>（统一报价接口；请求体 <strong><code>caller=shipper</code></strong>）</td><td><strong>超级运价</strong></td><td><strong>货主端</strong></td><td>—</td><td><strong>3s</strong></td></tr>
 </table></div>
-<blockquote><strong>全系统只保留一个统一报价接口</strong> <code>POST /api/freight-rate/query</code>，各端以请求体 <code>caller</code> 区分（<code>operator</code> / <code>shipper</code> / <code>public</code>）。</blockquote></p><p><h3 id="6-4-登录校验链-完整">6.4 登录校验链（完整）</h3></p><p><pre><code>货主端登录 POST /api/shipper/auth/login
-  ↓
-Step 1: 验证账号密码
-  → 匹配 sub_account.account 或 sub_account.email
-  → bcrypt.compare(password, password_hash)
-  → 失败 → 401 "账号或密码错误"
-  ↓
-Step 2: 校验子账号状态
-  → sub_account.status != 10 → 403 "账号已被冻结"
-  → sub_account.is_deleted = true → 401 "账号不存在"
-  ↓
-Step 3: 校验企业客户状态（跨模块调用）
-  → GET /api/customer/{customer_id}/status
-  → service_status != 10 → 403 "您的企业账户已被冻结，请联系客服"
-  → 超时(&gt;2s) → 降级: 允许登录但记录告警日志
-  ↓
-Step 4: 签发 JWT token
-  → payload: { sub_account_id, customer_id, is_root }
-  → expire: 24h
-  → 返回: { token, username, customer_name }
-</code></pre></p><p><h3 id="6-5-失败降级策略">6.5 失败降级策略</h3></p><p><ul><li><strong>create-root 调用失败</strong>（客商中心侧）：客商中心异步重试3次(10s/30s/60s)，仍失败进入 pending_sync 队列，定时任务补推</li>
-<li><strong>batch-freeze/enable 调用失败</strong>：不回滚客商中心操作，记录异常日志+运维告警</li>
-<li><strong>GET /api/customer/{id}/status 超时</strong>：允许登录（降级），但限制下单（必须同步校验通过才能下单），记录告警日志</li>
-<li><strong>报价查询接口超时/不可用</strong>（3s）：查价页提示"系统繁忙，请稍后重试"，<strong>不降级返回缓存价</strong>（价格时效性要求高，返回过期价会造成客诉）</li>
-</ul>
-<h3 id="6-6-共享实体字段变更同步">6.6 共享实体字段变更同步</h3></p><p><div class="table-wrapper"><table><tr><td>场景</td><td>客商中心变更</td><td>货主端影响</td><td>同步机制</td></tr>
+<blockquote><strong>全系统只保留一个统一报价接口</strong> <code>POST /api/freight-rate/query</code>，各端以请求体 <code>caller</code> 区分（<code>operator</code> / <code>shipper</code> / <code>public</code>）。</blockquote></p><p><h3 id="6-4-登录校验链-完整">6.4 登录校验链（完整）</h3></p><p><blockquote>登录校验链（本地认证 → 子账号状态 → 跨模块企业状态 → 签发 JWT）见 PRD §13.4。</blockquote></p><p><h3 id="6-5-失败降级策略">6.5 失败降级策略</h3></p><p><blockquote>跨模块接口的失败降级策略（create-root 重试、batch-freeze/enable 失败告警、客户状态超时降级、报价接口超时不降级返回缓存价）见 PRD §13（R-F01 / §13.4 / §13.5）。</blockquote></p><p><h3 id="6-6-共享实体字段变更同步">6.6 共享实体字段变更同步</h3></p><p><div class="table-wrapper"><table><tr><td>场景</td><td>客商中心变更</td><td>货主端影响</td><td>同步机制</td></tr>
 <tr><td>------</td><td>------------</td><td>-----------</td><td>---------</td></tr>
 <tr><td>客户名称变更</td><td>customer.customer_name 更新</td><td>首页欢迎语需反映最新名称</td><td>货主端每次登录/刷新时实时查询</td></tr>
 <tr><td>客户冻结</td><td>customer.service_status: 10→20</td><td>所有子账号冻结+禁止登录</td><td>batch-freeze 推送 + 登录时实时校验</td></tr>
@@ -370,18 +290,7 @@ Step 4: 签发 JWT token
 <tr><td>合同过期</td><td>customer.sign_status: 30→40</td><td>下单时提示续约</td><td>下单时实时查询 sign_status</td></tr>
 <tr><td><strong>客户等级变更</strong></td><td><strong>customer_level 更新</strong></td><td><strong>直接影响查价结果</strong>——三张优惠表按「客户等级」匹配的规则可能命中/失效，报价随之变化</td><td><strong>查价时实时取当前等级</strong>（不缓存等级；<code>customer</code> 状态接口每次查价同步调用）</td></tr>
 </table></div>
-<hr></p><p><h2 id="7-不一致处理标注">7. 不一致处理标注</h2></p><p><div class="table-wrapper"><table><tr><td>#</td><td>不一致点</td><td>超级运价 / 客商中心口径</td><td>货主端原型现状</td><td>处理</td></tr>
-<tr><td>---</td><td>---------</td><td>----------------------</td><td>--------------</td><td>------</td></tr>
-<tr><td>E9</td><td>超重超长是否在查价阶段计算</td><td>—</td><td>—</td><td><strong>按单箱录入</strong>（询价结果行含长/宽/高）时可算并作<strong>预估展示</strong>（<code>surcharge_amount</code> 计入预估、体积重 = 长×宽×高÷计泡系数）；<strong>按总体重量与体积录入</strong>时不计算、不展示。预估<strong>不落库为应付依据</strong>，正式计费以<strong>拣货实测</strong>为准</td></tr>
-<tr><td>D1</td><td>联系人邮箱必填</td><td>客商中心：客户联系人.email 必填</td><td>货主端子账号.email 非必填（原型必填项仅 账号/姓/名/性别/手机号）</td><td>ROOT 账号邮箱来自客户联系人（<code>is_account_receiver=true</code>，必填）；<strong>手动创建的子账号邮箱非必填</strong>。二者不矛盾，非缺陷</td></tr>
-<tr><td>D2</td><td>ROOT冻结</td><td>客商中心 R25"关联账户同步冻结"</td><td>货主端"ROOT不可冻结"</td><td>ROOT 不可被企业管理员<strong>单独</strong>冻结（前端隐藏按钮），但随客户冻结联动是系统级操作，不受此限制</td></tr>
-<tr><td>D3</td><td>角色表归属</td><td>客商中心不管理角色</td><td>货主端角色表引用系统设置模块</td><td>角色统一由系统设置模块管理，货主端只做引用和分配</td></tr>
-<tr><td>D4</td><td>报价查询接口路径</td><td>—</td><td>—</td><td>统一为 <code>POST /api/freight-rate/query</code>，<code>caller=shipper</code> 置于请求体</td></tr>
-<tr><td>D5</td><td>优惠后金额的展示顺序</td><td>超级运价 §7.4：<code>最终报价 = 折扣后运费 + 优惠后附加费</code>（先算折扣后运费，再加附加费净额）</td><td>原型费用明细弹窗的金额写法未按符号口径改造</td><td>货主端统一按 <strong><code>(公布价 + 运费优惠值 + 泡比优惠值) + (附加费合计 + 附加费优惠值合计)</code></strong> 表述，与超级运价 §7.4 <strong>完全等价</strong>（<code>折扣后运费</code> = <code>公布价 + 运费优惠值 + 泡比优惠值</code>）；⚠️ 原型 HTML 仍待按该口径改造（原型改造不在文档范围内）</td></tr>
-<tr><td>D6</td><td>附加费与泡比优惠的叠加口径</td><td>超级运价 §7.4：<code>折扣后运费 = 公布价 + Σ运费优惠值 + Σ泡比优惠值</code>（固定减免已是带符号值，用加号）</td><td>原型需按同一口径改造</td><td>正确口径为 <code>finalUnit = (公布价 + 运费优惠值 + 泡比优惠值) + (scTotal + 附加费优惠值合计)</code>——先算完<strong>运费侧</strong>，再单独加<strong>附加费侧</strong>。⚠️ 若把泡比优惠放在最后扣减、<strong>跨段抵扣附加费</strong>，即与「泡比优惠只作用运费侧、不得抵扣附加费」硬约束冲突（<strong>属口径错误，不只是展示顺序问题</strong>）</td></tr>
-<tr><td>D7</td><td>原型缺页</td><td>—</td><td><strong>页面文件不存在、菜单已摘除</strong>：<code>我的订单.html</code> / <code>草稿箱.html</code> / <code>异常订单.html</code> / <code>发票管理.html</code></td><td><strong>如实标注为「页面待建、菜单已摘除」</strong>，不计入已完成功能；本期不建设，<strong>后续做到该块时自然补充并挂回菜单</strong></td></tr>
-</table></div>
-<hr>
+<hr></p><p><h2 id="7-不一致处理标注">7. 不一致处理标注</h2></p><p><blockquote>跨模块口径不一致的处理结论（超重超长参与方式、接口路径、优惠金额展示顺序、泡比优惠抵扣约束、待建页面、实体归属等）见 RDD §12.5 不一致处理标注 / §12.6 跨模块口径结论 与 PRD §14 跨模块口径结论。本数据设计仅保留字段级口径（见 §2 Schema）。</blockquote></p><p><hr>
 <blockquote>执行完成后，若修改了任何设计文件，自动执行 <code>AGENTS.md</code> 的文件联动规则，确保关联文件一致性。</blockquote>
 </p></div></div>
 </div>

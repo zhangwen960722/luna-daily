@@ -17,7 +17,7 @@
 <span>数据设计</span>
 </div>
 <div class="layout">
-<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-关键设计说明">四、关键设计说明</a></li></ul></nav>
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-建模约定-表结构设计理由">四、建模约定（表结构设计理由）</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="数据设计-仓库管理">数据设计 — 仓库管理</h1></p><p><blockquote><strong>文档版本</strong>: v2.3 | <strong>日期</strong>: 2026-09-10 | <strong>作者</strong>: AI PM
 <strong>上游文档</strong>: <code>2026-09-10-用户需求.md</code>
 <strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 "平台仓库列表" + "仓库列表"</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
@@ -27,7 +27,7 @@
 <tr><td>OverseasWarehouse (海外平台仓库)</td><td><code>overseas_warehouse</code></td><td>独立表</td><td>各电商平台仓库主记录（平台下拉枚举），1:N 地址</td></tr>
 <tr><td>WarehouseAddress (仓库地址)</td><td><code>overseas_warehouse_address</code></td><td>子表</td><td>通过 <code>overseas_warehouse_id</code> 关联父表</td></tr>
 </table></div>
-<blockquote><strong>已恢复实体</strong>：Port (港口) — v2.0 曾基于 Excel 源数据缺失而移除。v2.1 经 Demo+Excel 数据融合后恢复：Demo <code>港口管理_主列表.html</code> 中存在完整的港口管理功能，Excel 无港口 Sheet 但不代表不需要。港口管理为运单系统的基础依赖数据。</blockquote></p><p><hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><h4 id="表0-port-对应实体-Port-港口">表0: <code>port</code> | 对应实体: Port (港口)</h4></p><p><blockquote><strong>设计说明</strong>: 存储海运港口和空运港口的基础数据。港口代码根据类型有不同长度约束（海港5位、空港3位），前后端均需校验。港口为运单系统的基础依赖数据，供起运港/目的港选择引用。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<blockquote>Port (港口) 为运单系统起运港/目的港的基础依赖数据，Demo 原型含完整港口管理功能，故保留独立表。</blockquote></p><p><hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><blockquote>字段业务含义与需求背景见 RDD；页面校验规则与交互见 PRD。本 Schema 是字段结构（类型/约束/枚举值）的唯一权威。</blockquote></p><p><h4 id="表0-port-对应实体-Port-港口">表0: <code>port</code> | 对应实体: Port (港口)</h4></p><p><blockquote><strong>设计说明</strong>: 存储海运港口和空运港口的基础数据。港口代码按类型区分长度（海港5位、空港3位），校验规则见 PRD。港口为运单系统的基础依赖数据，供起运港/目的港选择引用。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:----------</td><td>:----------</td><td>:-----------</td><td>:---</td><td>:--------</td><td>:--------</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
@@ -53,7 +53,7 @@
 <tr><td><code>warehouse_code</code></td><td>仓库代码</td><td>String(50)</td><td>Yes</td><td>Index</td><td>如"huadu""baiyun"</td></tr>
 <tr><td><code>warehouse_name</code></td><td>仓库名称</td><td>String(100)</td><td>Yes</td><td>—</td><td>如"花都仓""白云仓"</td></tr>
 <tr><td><code>contact_name</code></td><td>收货人</td><td>String(50)</td><td>Yes</td><td>—</td><td>—</td></tr>
-<tr><td><code>phone</code></td><td>手机号</td><td>String(11)</td><td>Yes</td><td>—</td><td>11位数字，前后端均需校验</td></tr>
+<tr><td><code>phone</code></td><td>手机号</td><td>String(11)</td><td>Yes</td><td>—</td><td>11位数字；校验规则见 PRD</td></tr>
 <tr><td><code>country</code></td><td>国家</td><td>String(50)</td><td>Yes</td><td>—</td><td>新增时默认"中国"</td></tr>
 <tr><td><code>province</code></td><td>省份</td><td>String(50)</td><td>Yes</td><td>—</td><td>如"广东省""浙江省"</td></tr>
 <tr><td><code>city</code></td><td>城市</td><td>String(50)</td><td>Yes</td><td>—</td><td>如"广州市""深圳市"</td></tr>
@@ -163,14 +163,14 @@
     }
 
     OVERSEAS_WAREHOUSE ||--o{ OVERSEAS_WAREHOUSE_ADDRESS : "1:N (overseas_warehouse_id)"
-</div></p><p><h3 id="四-关键设计说明">四、关键设计说明</h3></p><p><ul><li><strong>已恢复表</strong>：<code>port</code>（港口）表在 v2.1 中恢复。v2.0 因 Excel 源数据未包含港口管理而移除，v2.1 经 Demo+Excel 数据融合后恢复——Demo <code>港口管理_主列表.html</code> 中有完整的港口 CRUD 功能，港口数据为运单系统的起运港/目的港基础依赖。</li>
+</div></p><p><h3 id="四-建模约定-表结构设计理由">四、建模约定（表结构设计理由）</h3></p><p><ul><li><strong>port 表独立存在</strong>：港口数据为运单系统的起运港/目的港基础依赖，Demo 原型含完整港口 CRUD 功能，故保留独立表而非并入其他表。</li>
 <li><strong>软删除策略</strong>：4张表均使用 <code>is_deleted</code> 软删除。冻结（status=20）不等于删除——冻结是状态变更，被冻结的数据仍可查询但不可编辑；软删除是完全不可见。级联规则：删除 <code>overseas_warehouse</code> 时级联软删除其下所有 <code>overseas_warehouse_address</code> 记录。</li>
 <li><strong>乐观锁</strong>：4张表均需 <code>version</code> 字段，用于并发编辑控制。</li>
-<li><strong>唯一约束</strong>：<code>overseas_warehouse</code> 表在 <code>(tenant_id, warehouse_code)</code> 上建立联合唯一索引，确保同一租户下仓库代码不重复。前端提交前校验 + 后端唯一索引双重保障。</li>
-<li><strong>派生字段说明</strong>：<code>address_abbr</code> 由前端根据 <code>warehouse_code + zip_code</code> 实时计算，后端同时存储一份便于列表展示和搜索。更新仓库代码或邮编时需同步更新所有关联地址的 <code>address_abbr</code>。</li>
+<li><strong>唯一约束</strong>：<code>overseas_warehouse</code> 表在 <code>(tenant_id, warehouse_code)</code> 上建立联合唯一索引，确保同一租户下仓库代码不重复；前端校验规则见 PRD R01。</li>
+<li><strong>派生字段</strong>：<code>address_abbr</code> 后端冗余存储一份便于列表展示和搜索，生成公式见 PRD §7；更新仓库代码或邮编时需同步更新所有关联地址的 <code>address_abbr</code>。</li>
 <li><strong>country_code 冗余</strong>：<code>overseas_warehouse.country_code</code> 与首个地址的 <code>country_code</code> 保持同步，支持列表级别的国家代码搜索，避免每次查询都需要 JOIN 地址表。</li>
 <li><strong>状态分离</strong>：<code>warehouse.status</code> 的"正常/已冻结"是生命周期控制，独立流转。</li>
-<li><strong>手机号约束</strong>：<code>warehouse.phone</code> 限定为 <code>String(11)</code>，前端校验11位数字格式，后端 API 层同步校验。</li>
+<li><strong>手机号约束</strong>：<code>warehouse.phone</code> 限定为 <code>String(11)</code>；11位数字校验规则见 PRD R09。</li>
 <li><strong>外部接口</strong>：运单系统需通过 <code>GET /api/overseas-warehouses</code> 查询仓库列表，通过 <code>POST /api/overseas-warehouses</code> 新增仓库。新增接口需做幂等处理（基于 warehouse_code 去重），防止网络重试导致重复创建。</li>
 </ul></p></div></div>
 </div>

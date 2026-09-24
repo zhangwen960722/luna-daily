@@ -49,9 +49,9 @@
 </table></div>
 <blockquote><strong>FBA 单号（<code>fba_no</code>）</strong>：运单级<strong>派生多值</strong>（头程管理侧登记），<strong>财务侧不落库</strong> —— 草稿池列与账单明细列取数时<strong>按运单汇总、以 <code> / </code> 拼接展示</strong>，非 FBA 运单显示「—」。</blockquote>
 >
-<blockquote><strong>账单草稿池（实时视图，不建表）</strong>：池内成员 = <code>ar_flow</code> 里「<code>audit_status = 已审计(20)</code> + <code>bill_id</code> 为空」的行，<strong>没有临时表</strong>；草稿池展示的「<strong>账期</strong>」= <strong>实时读该 客户 × 我司主体 的合同签约账期</strong>（<code>customer_contract.payment_term</code> → 月结 / 双月结 / 三月结 / 周结 …，<strong>只显示签约账期名、不带「+ 天数/号」</strong>；<strong>合同账期段为空时显示 <code>待补录</code></strong>），属<strong>预估值</strong>；成账后以 <code>ar_bill</code> 上的<strong>快照</strong>为准。入池门槛 = <strong>已审计</strong> —— 只有 <code>audit_status = 已审计(20)</code> 的流水进池，<strong>未审计流水不进池、页面上也不给未审提示</strong>（要看未审流水走「运单审计」）；<strong>成账颗粒度 = 流水级</strong>，财务逐条勾选要成账的流水，<strong>同一运单的不同流水可以拆到不同账单</strong>（后续新增流水、赔付抵扣流水天然进入下一期账单，因此一个运单可关联多张账单）；<strong>不跨币种折合</strong>（只聚合与账单币种一致的流水）；<code>bill_id</code> 非空的流水不在池内。草稿池是<strong>流水视角的池子</strong>，财务手工成账仍不新增账单状态机（§4.5）；「账单周期 = 固定」的客户另由系统每月 1 号自动出账（§4.8）。</blockquote></p><p><hr></p><p><h2 id="二-逐表字段清单">二、逐表字段清单</h2></p><p><blockquote>所有表统一含公共字段：<code>id</code>(BigInt, PK, 雪花) · <code>tenant_id</code>(String, Index) · <code>created_at</code> · <code>created_by</code> · <code>updated_at</code> · <code>updated_by</code> · <code>is_deleted</code>(Boolean, 默认 false) · <code>version</code>(Int, 乐观锁)</blockquote></p><p><h3 id="表-1-应收业务流水-ar_flow">表 1：应收业务流水 <code>ar_flow</code></h3></p><p><blockquote>运单收货完成后系统自动生成，粒度=运单；<strong>一条费用项生成一条流水</strong>（运费 / 运费优惠 / 泡比优惠 / 各附加费 / 各附加费优惠各成一行，<strong>优惠独立成行，不并入费用行</strong>），按「费用类型 × 币种」可拆多条。账期与到期日是账单级字段，出账时从合同快照（见 §4.7）。费用类型引用头程管理 <code>fee_type</code> 字典（同方向名称唯一）。</blockquote>
+<blockquote><strong>账单草稿池（实时视图，不建表）</strong>：池内成员 = <code>ar_flow</code> 里「<code>audit_status = 已审计(20)</code> + <code>bill_id</code> 为空」的行，<strong>没有临时表</strong>；草稿池展示的「<strong>账期</strong>」= <strong>实时读该 客户 × 我司主体 的合同签约账期</strong>（<code>customer_contract.payment_term</code> → 月结 / 双月结 / 三月结 / 周结 …，<strong>只显示签约账期名、不带「+ 天数/号」</strong>；<strong>合同账期段为空时显示 <code>待补录</code></strong>），属<strong>预估值</strong>；成账后以 <code>ar_bill</code> 上的<strong>快照</strong>为准。入池门槛 = <strong>已审计</strong> —— 只有 <code>audit_status = 已审计(20)</code> 的流水进池，<strong>未审计流水不进池、页面上也不给未审提示</strong>（要看未审流水走「运单审计」）；<strong>成账颗粒度 = 流水级</strong>，财务逐条勾选要成账的流水，<strong>同一运单的不同流水可以拆到不同账单</strong>（后续新增流水、赔付抵扣流水天然进入下一期账单，因此一个运单可关联多张账单）；<strong>不跨币种折合</strong>（只聚合与账单币种一致的流水）；<code>bill_id</code> 非空的流水不在池内。草稿池是<strong>流水视角的池子</strong>，财务手工成账仍不新增账单状态机（PRD §3 状态机）；「账单周期 = 固定」的客户另由系统每月 1 号自动出账（PRD R65）。</blockquote></p><p><hr></p><p><h2 id="二-逐表字段清单">二、逐表字段清单</h2></p><p><blockquote>字段业务含义与需求背景见 RDD；页面校验规则与交互见 PRD。本 Schema 是字段结构（类型/约束/枚举值）的唯一权威。</blockquote></p><p><blockquote>所有表统一含公共字段：<code>id</code>(BigInt, PK, 雪花) · <code>tenant_id</code>(String, Index) · <code>created_at</code> · <code>created_by</code> · <code>updated_at</code> · <code>updated_by</code> · <code>is_deleted</code>(Boolean, 默认 false) · <code>version</code>(Int, 乐观锁)</blockquote></p><p><h3 id="表-1-应收业务流水-ar_flow">表 1：应收业务流水 <code>ar_flow</code></h3></p><p><blockquote>运单收货完成后系统自动生成，粒度=运单；<strong>一条费用项生成一条流水</strong>（运费 / 运费优惠 / 泡比优惠 / 各附加费 / 各附加费优惠各成一行，<strong>优惠独立成行，不并入费用行</strong>），按「费用类型 × 币种」可拆多条。账期与到期日是账单级字段，出账时从合同快照（见 PRD R14/R57）。费用类型引用头程管理 <code>fee_type</code> 字典（同方向名称唯一）。</blockquote>
 >
-<blockquote><strong>自动行去重键</strong>：<code>UNIQUE(waybill_id, flow_kind, fee_type_id, source_rule_id)</code>——运单信息变更触发<strong>重扫</strong>时覆盖更新已有行而非新增行，保证不重复计费。生成规则与账单草稿池见 §4.7。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<blockquote><strong>自动行去重键</strong>：<code>UNIQUE(waybill_id, flow_kind, fee_type_id, source_rule_id)</code>——运单信息变更触发<strong>重扫</strong>时覆盖更新已有行而非新增行，保证不重复计费。生成规则与账单草稿池见 PRD §6.1（R01–R61）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
 <tr><td>flow_no</td><td><strong>流水号</strong></td><td>String(32)</td><td>Yes</td><td><strong>Unique</strong></td><td>业务流水唯一编号，规则 <code>FLW + yyyyMMdd + 序号</code>（<strong>每天从 <code>001</code> 起</strong>，与 <code>ar_writeoff</code> 的 <code>WO+YYYYMMDD+序号</code> 同一套序列风格）；「应收 / 应付业务流水」主列表第 1 列</td></tr>
 <tr><td>waybill_id</td><td>运单ID</td><td>BigInt</td><td><strong>条件必填</strong></td><td>Index</td><td>引用运单模块；<strong>待摊应付行（提单平摊前）为空</strong>、分摊后回填；应收行 / 已摊应付行必填</td></tr>
@@ -74,13 +74,13 @@
 <tr><td>oa_no</td><td>OA审批编号</td><td>String(64)</td><td>No</td><td>—</td><td><strong>应付流水专属</strong>：财务 OA 审批编号，<strong>手工新增应付流水必填</strong>；应收流水留空</td></tr>
 <tr><td>pick_time</td><td>拣货时间</td><td>DateTime</td><td>No</td><td>Index</td><td><strong>该行所属运单的收货完成时间</strong>（运单级属性落在行上）。收货完成生成时直接写入（含人工添加行——只写时间、不动金额）；人工添加时由后端取运单收货完成时间写入。<strong>两端均展示</strong>（为空显示「—」）</td></tr>
 <tr><td>created_at</td><td>创建日期</td><td>DateTime</td><td>Yes</td><td>Index</td><td>该行的创建时间，<strong>后端自动写入</strong>（系统生成时=生成时间、人工新增时=提交时间）；<strong>运单费用流水页两端不展示</strong>，<strong>财务「账单草稿池」展示</strong>（对账取数用）</td></tr>
-<tr><td>source_type</td><td>来源类型</td><td>TinyInt</td><td>Yes</td><td>Index</td><td><strong>10:系统自动计算</strong>（运单收货 / 重算生成）、<strong>20:人工添加</strong>（运单审计「添加应付」——挂运单，可填提单号挂靠同步、审计仍归运单）、<strong>30:提单平摊</strong>（舱位管理「添加应付费用」/ 应付业务流水「新增」提单级录入落待摊 → 按实收体积平摊到运单）。<strong>是审计归属的唯一判据</strong>（见 <code>audit_status</code>）；同时决定该行能否被编辑（见 §4.7 编辑口径）</td></tr>
+<tr><td>source_type</td><td>来源类型</td><td>TinyInt</td><td>Yes</td><td>Index</td><td><strong>10:系统自动计算</strong>（运单收货 / 重算生成）、<strong>20:人工添加</strong>（运单审计「添加应付」——挂运单，可填提单号挂靠同步、审计仍归运单）、<strong>30:提单平摊</strong>（舱位管理「添加应付费用」/ 应付业务流水「新增」提单级录入落待摊 → 按实收体积平摊到运单）。<strong>是审计归属的唯一判据</strong>（见 <code>audit_status</code>）；同时决定该行能否被编辑（见 PRD R58/R61）</td></tr>
 <tr><td>source</td><td>数据来源</td><td>String(32)</td><td>Yes</td><td>—</td><td>报价 / 规则名 / 人工添加；只记第一次来源，后续变更不变。<strong>货主端不展示</strong></td></tr>
 <tr><td>source_rule_type</td><td>来源规则类型</td><td>TinyInt</td><td>No</td><td>—</td><td>10:运价行, 20:运费优惠规则, 30:泡比优惠规则, 40:附加费规则, 50:附加费优惠规则；手工新增行留空</td></tr>
 <tr><td>source_rule_id</td><td>来源规则ID</td><td>BigInt</td><td>No</td><td>Index</td><td>命中的规则主键（<strong>引用，不是快照</strong>），供运单审计下钻「这条规则现在长什么样」；手工新增行留空</td></tr>
 <tr><td>source_rule_name</td><td>来源规则名（快照）</td><td>String(64)</td><td>No</td><td>—</td><td><strong>命中时的规则名文本快照</strong> —— 规则改名 / 删除后仍可举证「当时是哪条规则给的」。<strong>列表不展示，收进行详情；货主端不展示</strong></td></tr>
 <tr><td>source_flow_id</td><td>来源应收流水ID</td><td>BigInt</td><td>No</td><td>Index</td><td><strong>销售成本流水（<code>flow_category=30</code>）专属</strong>：指向被复制的来源应收流水（<code>flow_category=10</code>）ID，<strong>只读追溯、不回写</strong>；复制后两者<strong>完全独立</strong>（编辑 / 删除互不影响）</td></tr>
-<tr><td>bill_id</td><td>关联账单ID</td><td>BigInt</td><td>No</td><td>Index</td><td><strong>应收流水专属</strong>：生成应收账单后回填；<strong>为空即处于「账单草稿池」</strong>（§4.7）；<strong>账单作废时置空 → 流水释放回草稿池</strong>（PRD R63）；<strong>销售成本流水（<code>flow_category=30</code>）恒空、不参与成账</strong></td></tr>
+<tr><td>bill_id</td><td>关联账单ID</td><td>BigInt</td><td>No</td><td>Index</td><td><strong>应收流水专属</strong>：生成应收账单后回填；<strong>为空即处于「账单草稿池」</strong>（PRD R11）；<strong>账单作废时置空 → 流水释放回草稿池</strong>（PRD R63）；<strong>销售成本流水（<code>flow_category=30</code>）恒空、不参与成账</strong></td></tr>
 <tr><td>ap_bill_id</td><td>关联应付账单ID</td><td>BigInt</td><td>No</td><td>Index</td><td><strong>应付流水专属</strong>：生成应付账单后回填；为空即「未成账」，可被「应付账单管理」归集；<strong>应付账单作废时置空 → 流水释放回可成账池</strong></td></tr>
 <tr><td>audit_status</td><td>审计状态</td><td>TinyInt</td><td>Yes</td><td>Index</td><td><strong>10:待审计, 20:已审计（只有两态；运单审计语境称「待业务审计」）</strong>；<strong>审计归属只看 <code>source_type</code>，不看提单号是否为空</strong>：<code>source_type=30 提单平摊</code> → <strong>已摊行（<code>amortize_status=20</code>）走提单审计（两态），待摊行（<code>amortize_status=10</code>）恒空、不可审计</strong>；<code>source_type=20 人工添加</code> → 走运单审计（两态），<strong>无论是否填了提单号</strong>（填提单号仅表示同步到该提单，不改审计归属）；<strong>销售成本流水（<code>flow_category=30</code>）恒空、不参与审计（无审计状态、无审计 / 反审计动作）</strong></td></tr>
 <tr><td>biz_audit_by / biz_audit_at</td><td>业务审计人/时间</td><td>—</td><td>No</td><td>—</td><td>业务侧「运单管理」操作</td></tr>
@@ -112,7 +112,7 @@
 <li><strong>不参与</strong>：审计（无审计状态、无审计 / 反审计）、应收账单成账、账龄台账、贷记单结转等应收侧口径一律不纳入。</li>
 <li><strong>展示</strong>：仅「运单审计」「运单管理」两页的「费用管理 → 销售成本」Tab 按运单展示该票销售成本流水（字段 = 应收字段去「审计状态」「关联账单」「描述」三列，顶部「流水条数 + 销售成本净额」汇总；运单审计侧「新增流水 / 编辑 / 删除」、运单管理侧只读）。</li>
 </ul>
-<h3 id="表-2-应收账单-ar_bill">表 2：应收账单 <code>ar_bill</code></h3></p><p><blockquote>财务在草稿池手工勾选已审计流水成账，或由系统每月 1 号对「账单周期 = 固定」的客户自动出账；<strong>客户 × 我司主体 × 币种</strong> 一张，<strong>不跨币种折合</strong>（§4.8）。<strong>账单生成后、发送前的「待发送」阶段，允许把单条流水移出账单</strong>（<code>ar_flow.bill_id</code> 置空回草稿池、账单金额重算、账单号不变、至少保留 1 条 —— 见 PRD R66）。</blockquote>
+<h3 id="表-2-应收账单-ar_bill">表 2：应收账单 <code>ar_bill</code></h3></p><p><blockquote>财务在草稿池手工勾选已审计流水成账，或由系统每月 1 号对「账单周期 = 固定」的客户自动出账；<strong>客户 × 我司主体 × 币种</strong> 一张，<strong>不跨币种折合</strong>（PRD R65）。<strong>账单生成后、发送前的「待发送」阶段，允许把单条流水移出账单</strong>（<code>ar_flow.bill_id</code> 置空回草稿池、账单金额重算、账单号不变、至少保留 1 条 —— 见 PRD R66）。</blockquote>
 >
 <blockquote><strong>账单是快照、草稿池是实时</strong>（★）：账单级字段（账单日期 / 账期（签约账期 + 天数/号）/ 账期天数 / 到期日期 / 金额 / 状态 / 生成来源 / 发送与确认与作废留痕）<strong>一律在 <code>ar_bill</code> 上落库存快照</strong>；合同之后改账期，<strong>已生成账单不受影响</strong>。与之相对，<strong>草稿池不建表</strong>，是 <code>ar_flow</code> 上「已审计 + <code>bill_id</code> 为空」的<strong>实时查询视图</strong>，其中展示的「账期」是<strong>实时读合同</strong>得来的预估值（见 §一 账单草稿池说明）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
@@ -124,7 +124,7 @@
 <tr><td>generated_at</td><td>生成时间</td><td>DateTime</td><td>No</td><td>—</td><td><strong>账单生成的时间戳</strong>（自动出账 = 跑批时刻、手工出账 = 确认生成时刻）；「操作时间线」的「生成账单」条目用它（<strong>回退 <code>billing_date</code></strong>）—— 账单日可被财务在待发送阶段修改，不能当生成时间用</td></tr>
 <tr><td>edited_at / edited_by / edit_action</td><td>最近一次编辑时间 / 操作人 / 动作</td><td>DateTime / String(32) / TinyInt</td><td>No</td><td>—</td><td><strong>待发送阶段的账单编辑留痕</strong>（见 PRD R66）：<code>edit_action</code> = 10 移除流水 / 20 添加流水 / 30 修改账单日期；「操作时间线」据此加一条 <code>编辑账单</code>（<strong>只记时间 / 操作人 / 动作，不记增减了几条流水</strong>）；一期只保留最近一次，完整编辑历史留二期</td></tr>
 <tr><td>billing_date</td><td>账单日</td><td>Date</td><td>Yes</td><td>Index</td><td>自动出账 = <strong>1 号</strong>（跑批日）；手工出账 = 财务指定，<strong>默认生成当月自然月末</strong>；<strong>「待发送」阶段可改</strong>（R66）—— 改后 <code>due_date</code> 与 <code>payment_terms_days</code> 同步重算，账期月变了则 <code>bill_no</code> 按新账期月重新取号</td></tr>
-<tr><td>due_date</td><td>到期日期</td><td>Date</td><td>Yes</td><td>Index</td><td><strong>最后支付日</strong>，按「签约账期 + 天数/号」推导（算法见 §4.7）；<strong>派生字段，随 <code>billing_date</code> 变动实时重算</strong>（待发送阶段改账单日期，见 R66）</td></tr>
+<tr><td>due_date</td><td>到期日期</td><td>Date</td><td>Yes</td><td>Index</td><td><strong>最后支付日</strong>，按「签约账期 + 天数/号」推导（算法见 PRD R57）；<strong>派生字段，随 <code>billing_date</code> 变动实时重算</strong>（待发送阶段改账单日期，见 R66）</td></tr>
 <tr><td>payment_terms_days</td><td>账期天数</td><td>Int</td><td>Yes</td><td>—</td><td><strong>账单级账期快照 = 到期日 − 账单日 + 1</strong>（如账单日 09-01、月结+15 → 15 天）；账龄台账按 <code>billing_date + 本字段</code> 推逾期；由到期日反推，<strong>合同账期推不出时不允许出账，不做补录</strong></td></tr>
 <tr><td>payment_terms_type</td><td><strong>签约账期（快照）</strong></td><td>TinyInt</td><td>No</td><td>—</td><td><strong>账单页「账期」列的取值来源</strong> —— 生成账单时从合同 <code>customer_contract.payment_term</code> 快照：101:月结, 102:双月结, 103:三月结, 201:周结, 202:到港前结, 203:签收月结, 204:到海外仓结, 205:签收结。<strong>合同账期段为空时不允许出账</strong>（页面直接阻断，见 PRD R14 / PRD R11），因此账单上本字段必然有值</td></tr>
 <tr><td>days_or_date</td><td><strong>天数/号（快照）</strong></td><td>Int</td><td>No</td><td>—</td><td>生成账单时从合同 <code>customer_contract.days_or_date</code> 快照。<strong>参与到期日计算</strong>：按月类（月结 / 双月结 / 三月结）→ 取账单月的第 N「号」（N 为 <strong>1–31 的数字</strong>；该月无该号 → 取该月月末；算出的日期不晚于账单日则顺延下一月同一号）；按天类（周结）→ 到期日 = 账单日 + N − 1 天。<strong>账单页「账期」列 = <code>{签约账期}+{天数/号}</code></strong>（如 <code>月结+15</code>）。<strong>「天数/号」只填数字（1–31），没有「月末 / 月初」这类文字值</strong>（客商中心合同账期字段）；<strong><code>0</code> / 空 = 未填 → 视为账期未完善、不允许出账</strong></td></tr>
@@ -216,7 +216,7 @@
 <tr><td>reverse_by / reverse_at / reverse_reason</td><td>最近一次反审计人 / 时间 / 原因</td><td>—</td><td>No</td><td>—</td><td>反审计留痕（标记回 <code>10 未审计</code>，但留痕保留）</td></tr>
 <tr><td>remark</td><td>备注</td><td>String(255)</td><td>No</td><td>—</td></tr>
 </table></div>
-<blockquote><strong>与流水的联动（★，两层解耦）</strong>：<strong>运单级审计（按方向整票审计）</strong> → ① 写本表该方向 <code>audit_status=20</code> + 审计人/时间；② 该运单<strong>该方向全部</strong>流水置 <code>audit_status=20 已审计</code>（<strong>提单平摊应付流水除外 —— <code>bl_amortize</code> 非空的流水审计状态恒为空、不随运单审计变动</strong>）。<strong>反审计（运单级、按方向 × 深度）</strong> → ① <strong>「仅运单」</strong>：本表该方向回 <code>audit_status=10 未审计</code>（写反审计留痕），<strong>流水不动</strong>（仍已审计、锁定编辑，只放开新增）；② <strong>「运单及流水」</strong>：本表该方向回 <code>10 未审计</code> + 该方向<strong>未进账单的</strong>流水回到 <code>10 待业务审计</code>（放开新增 + 编辑），<strong>已进账单的流水保持已审计、不回退</strong>。<strong>流水级审计 / 反审计</strong>（在运单费用 tab 勾选若干流水执行）<strong>只动 <code>ar_flow.audit_status</code>、不写本表</strong> —— 因此会出现「运单未审计、个别流水已审计」的中间态：该流水不可编辑，但<strong>运单仍可新增流水</strong>（见 PRD R61）。<strong>唯一键 <code>(waybill_id, fee_direction)</code></strong>：未审计的方向可以不建行（无记录 = 未审计），也可预置 <code>10</code>，实现取其一。</blockquote></p><p><h3 id="表-11-应付账单-ap_bill-供应商账单">表 11：应付账单 <code>ap_bill</code>（供应商账单）</h3></p><p><blockquote>财务按 <strong>我司主体 × 供应商 × 币种 × OA审批编号</strong> 归集「已审计且未成账」的应付流水，生成一张<strong>供应商账单</strong>；「账单周期 = 固定」的供应商另由系统<strong>每月 1 号自动出账</strong>（§4.8）。<strong>不发送供应商确认、无冲账、无贷记单</strong>：生成即进入「待核销」，财务直接核销（付款给供应商）。<strong>成账前置</strong>：归集范围内的应付流水必须全部满足「已审计」（流水级）——提单平摊已摊行、普通应付流水均看 <code>audit_status = 已审计(20)</code>，未审计流水不进候选。<strong>账单作废（仅未核销时）</strong> → 其下流水 <code>ap_bill_id</code> 置空释放回可成账池。</blockquote>
+<blockquote><strong>与流水的联动（★，两层解耦）</strong>：<strong>运单级审计（按方向整票审计）</strong> → ① 写本表该方向 <code>audit_status=20</code> + 审计人/时间；② 该运单<strong>该方向全部</strong>流水置 <code>audit_status=20 已审计</code>（<strong>提单平摊应付流水除外 —— <code>bl_amortize</code> 非空的流水审计状态恒为空、不随运单审计变动</strong>）。<strong>反审计（运单级、按方向 × 深度）</strong> → ① <strong>「仅运单」</strong>：本表该方向回 <code>audit_status=10 未审计</code>（写反审计留痕），<strong>流水不动</strong>（仍已审计、锁定编辑，只放开新增）；② <strong>「运单及流水」</strong>：本表该方向回 <code>10 未审计</code> + 该方向<strong>未进账单的</strong>流水回到 <code>10 待业务审计</code>（放开新增 + 编辑），<strong>已进账单的流水保持已审计、不回退</strong>。<strong>流水级审计 / 反审计</strong>（在运单费用 tab 勾选若干流水执行）<strong>只动 <code>ar_flow.audit_status</code>、不写本表</strong> —— 因此会出现「运单未审计、个别流水已审计」的中间态：该流水不可编辑，但<strong>运单仍可新增流水</strong>（见 PRD R61）。<strong>唯一键 <code>(waybill_id, fee_direction)</code></strong>：未审计的方向可以不建行（无记录 = 未审计），也可预置 <code>10</code>，实现取其一。</blockquote></p><p><h3 id="表-11-应付账单-ap_bill-供应商账单">表 11：应付账单 <code>ap_bill</code>（供应商账单）</h3></p><p><blockquote>财务按 <strong>我司主体 × 供应商 × 币种 × OA审批编号</strong> 归集「已审计且未成账」的应付流水，生成一张<strong>供应商账单</strong>；「账单周期 = 固定」的供应商另由系统<strong>每月 1 号自动出账</strong>（PRD R65）。<strong>不发送供应商确认、无冲账、无贷记单</strong>：生成即进入「待核销」，财务直接核销（付款给供应商）。<strong>成账前置</strong>：归集范围内的应付流水必须全部满足「已审计」（流水级）——提单平摊已摊行、普通应付流水均看 <code>audit_status = 已审计(20)</code>，未审计流水不进候选。<strong>账单作废（仅未核销时）</strong> → 其下流水 <code>ap_bill_id</code> 置空释放回可成账池。</blockquote>
 >
 <blockquote><strong>账单是快照、可成账池是实时</strong>（同应收）：账单级字段（账单日 / 账期快照 / 到期日 / 金额 / 状态 / 生成来源 / 作废留痕）一律在 <code>ap_bill</code> 上落库存快照；供应商合同之后改账期，<strong>已生成账单不受影响</strong>。「未成账」= <code>ar_flow.ap_bill_id</code> 为空，是实时查询视图（不建表）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>中文</td><td>类型</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
@@ -227,7 +227,7 @@
 <tr><td>oa_no</td><td>OA审批编号</td><td>String(64)</td><td>Yes</td><td>Index</td><td><strong>归集键之一</strong>，对应财务 OA 审批单；一张账单对应一个 OA 审批编号</td></tr>
 <tr><td>generate_source</td><td>生成来源</td><td>TinyInt</td><td>Yes</td><td>Index</td><td>10:系统自动（每月 1 号跑批，供应商合同 <code>billing_cycle = 固定(10)</code>）、20:财务手工（「生成应付账单」弹窗 4 维归集）</td></tr>
 <tr><td>billing_date</td><td>账单日</td><td>Date</td><td>Yes</td><td>Index</td><td>自动出账 = <strong>1 号</strong>（跑批日）；手工 = 财务指定，<strong>默认生成当月自然月末</strong></td></tr>
-<tr><td>due_date</td><td>到期日期</td><td>Date</td><td>Yes</td><td>Index</td><td><strong>最后付款日</strong>，按供应商合同「签约账期 + 天数/号」推导（算法同应收 §4.7）；派生字段，随 <code>billing_date</code> 变动实时重算</td></tr>
+<tr><td>due_date</td><td>到期日期</td><td>Date</td><td>Yes</td><td>Index</td><td><strong>最后付款日</strong>，按供应商合同「签约账期 + 天数/号」推导（算法同应收 PRD R57）；派生字段，随 <code>billing_date</code> 变动实时重算</td></tr>
 <tr><td>payment_terms_type</td><td><strong>签约账期（快照）</strong></td><td>TinyInt</td><td>No</td><td>—</td><td>生成账单时从供应商合同 <code>supplier_contract.payment_term</code> 快照：101:月结（账单周期=固定）, 104:半月结, 201:周结（账单周期=不固定）；<strong>账期段为空不允许出账</strong>（与应收同口径）</td></tr>
 <tr><td>days_or_date</td><td><strong>天数/号（快照）</strong></td><td>Int</td><td>No</td><td>—</td><td>生成账单时从 <code>supplier_contract.days_or_date</code> 快照；<strong>只填数字（1–31），0/空 = 未填 → 不允许出账</strong>；按月类当「号」用、按天类当「天数」用</td></tr>
 <tr><td>payment_terms_days</td><td>账期天数</td><td>Int</td><td>Yes</td><td>—</td><td><strong>账单级账期快照 = 到期日 − 账单日 + 1</strong>；应付账龄台账按 <code>billing_date + 本字段</code> 推逾期</td></tr>
@@ -376,104 +376,15 @@
 <h3 id="4-3-软删除策略">4.3 软删除策略</h3>
 核心业务数据（账单、流水、核销、转汇、钱包）一律软删除（<code>is_deleted</code>），不物理删除；资金流水为事实记录，<strong>不可软删不可改</strong>，出错靠反向流水。</p><p><h3 id="4-4-视图说明">4.4 视图说明</h3>
 账龄台账为实时视图，不落表；基于 <code>ar_bill.unreceived_amount</code> + <code>billing_date</code> + <code>payment_terms_days</code> 计算，<strong>范围限 <code>send_status = 已发送(20)</code></strong>（待发送账单不计入）。
-资金流水页（<code>财务_资金流水.html</code>）拆「客户 / 公司」两个 Tab：<strong>客户 Tab</strong> 展示 <code>wallet_flow</code> 的客户钱包侧、<strong>公司 Tab</strong> 展示 <code>wallet_flow</code> 的我司账户侧（<code>company_amount ≠ 0</code>，即充值/代充入账、提现/充值退回出账、<strong>支付供应商出账 / 支付供应商撤销回补</strong>）；「资金账户管理 → 我司账户」行操作「流水」查看同一份我司账户侧流水。</p><p><h3 id="4-5-状态机">4.5 状态机</h3></p><p><strong>业务流水 <code>audit_status</code></strong>（单审计 + 反审计）：
-<pre><code>待业务审计(10) --业务整单审计通过--&gt; 已审计(20)
-已审计(20) --财务反审计「运单及流水」(未关联账单)--&gt; 待业务审计(10)
-已审计(20) --财务反审计「仅运单」--&gt; 已审计(20)（流水不动，只反运单标记、放开新增）
-</code></pre></p><p><blockquote><strong>两层解耦</strong>：运单级标记（<code>waybill_fee_audit</code>）管「新增」、流水级标记（<code>ar_flow.audit_status</code>）管「编辑」；「仅运单」反审计只回运单标记、流水保持已审计（原流水仍锁定）。</blockquote></p><p><strong>账单状态 = 三个独立维度 + 一个作废标记</strong>（三个维度各自流转、互不覆盖）：
-<pre><code>① send_status     ：未发送(10) --&gt; 已发送(20)            （财务点「发送客户」）
-② confirm_status  ：未确认(10) --&gt; 已确认(20)            （客户在货主端确认）
-③ writeoff_status ：未核销(10) --&gt; 部分核销(20) --&gt; 已核销(30)
-                               ↑ 反核销 ↓ 已反核销(40) --&gt; 重新核销 --&gt; 部分核销(20) / 已核销(30)
-   （冲账不占核销状态位 —— 金额维度，见 `written_off_amount`）
-④ void_status     ：正常(10) --&gt; 已作废(20)（终态；须 未结清金额 = 账单金额（received = 0 且 written_off = 0），**且不能是「客户已确认的贷记单」** —— 贷记单是我司对客的付款承诺，客户认账后不给作废；未发送 / 已发送未确认仍可作废）
-</code></pre>
-<blockquote><strong>账单 4 个 Tab 的归属只看 ① 与 ④</strong>：草稿池 = 已审计且未成账的流水；待发送 = 未发送 + 正常；已发送 = 已发送 + 正常（不管确认与核销）；已作废 = 已作废。<strong>核销记录（读 <code>ar_writeoff</code> 核销单）与贷记单（<code>bill_type = 贷记(20)</code>）都已独立成菜单</strong>，不参与本表的 Tab 归属判定。<strong>③ 核销维度的「状态与金额」在「已发送」Tab 展示三列</strong>（核销状态 / 已核销金额 / 未结清金额），<strong>核销「动作」（行内核销 + 批量核销）在账单管理</strong>、<strong>核销「记录」与「反核销」在「核销记录」菜单</strong>、<strong>贷记单在「贷记单」菜单</strong> —— 三者各自独立，靠 <code>?billNo=</code> 互跳。</blockquote></p><p><strong>应付账单状态（<code>ap_bill</code>，比应收账单简单 —— 两个独立维度、无发送 / 确认）</strong>：
-<pre><code>① writeoff_status ：未核销(10) --&gt; 部分核销(20) --&gt; 已核销(30)
-                               ↑ 反核销 ↓ 已反核销 --&gt; 重新核销 --&gt; 部分核销(20) / 已核销(30)
-② void_status     ：正常(10) --&gt; 已作废(20)（终态；前置 = 未核销，作废后其下流水 `ap_bill_id` 置空释放回可成账池）
-</code></pre>
-<blockquote><strong>无冲账 / 贷记单</strong>：应付侧只有「付款核销」一种结清方式，出款联动我司银行账户；核销动作在「应付账单管理」页、核销记录与反核销在「应付核销管理」页。</blockquote></p><p><strong>充值申请 <code>status</code></strong>：
-<pre><code>待审核(10) --&gt; 已通过(20) / 已驳回(30)
-</code></pre></p><p><h3 id="4-6-外部引用-纯逻辑实体">4.6 外部引用（纯逻辑实体）</h3>
+资金流水页（<code>财务_资金流水.html</code>）拆「客户 / 公司」两个 Tab：<strong>客户 Tab</strong> 展示 <code>wallet_flow</code> 的客户钱包侧、<strong>公司 Tab</strong> 展示 <code>wallet_flow</code> 的我司账户侧（<code>company_amount ≠ 0</code>，即充值/代充入账、提现/充值退回出账、<strong>支付供应商出账 / 支付供应商撤销回补</strong>）；「资金账户管理 → 我司账户」行操作「流水」查看同一份我司账户侧流水。</p><p><h3 id="4-5-状态机">4.5 状态机</h3></p><p><blockquote>状态机定义见 PRD §3（状态机唯一权威，含业务流水审计、账单状态维度、充值申请、银行账户状态）。本数据设计仅在各表字段「枚举/备注」列保留状态枚举值作引用。</blockquote></p><p><h3 id="4-6-外部引用-纯逻辑实体">4.6 外部引用（纯逻辑实体）</h3>
 <ul><li>运单：引用运单模块（<code>waybill_id</code>）</li>
 <li>客户：引用客商中心（<code>customer_id</code>）</li>
 <li>主体：引用基础资料（<code>entity_id</code>）</li>
-<li>账期与账单周期：引用客商中心 <code>customer_contract</code>（合同级）—— <strong>账单周期</strong>（<code>billing_cycle</code> 固定/不固定）决定客户是否参与每月 1 号自动出账；<strong>账期</strong>（<code>payment_term</code> + 天数/号 <code>days_or_date</code>）决定到期日（§4.7）；财务生成账单时快照，不重复维护</li>
+<li>账期与账单周期：引用客商中心 <code>customer_contract</code>（合同级）—— <strong>账单周期</strong>（<code>billing_cycle</code> 固定/不固定）决定客户是否参与每月 1 号自动出账；<strong>账期</strong>（<code>payment_term</code> + 天数/号 <code>days_or_date</code>）决定到期日（PRD R57/R14）；财务生成账单时快照，不重复维护</li>
 <li>币种：枚举字典；汇率：调<strong>阿里汇率接口</strong>实时获取（不落库、不自建汇率表），币种互转时以接口值预填、允许财务手工覆盖，<code>api_rate</code> + <code>rate</code> + <code>rate_source</code> 三者随单留痕；接口异常时降级为手工填写（rate_source=20）</li>
 </ul>
-<h3 id="4-7-应收流水生成与账单草稿池">4.7 应收流水生成与账单草稿池</h3></p><p><strong>触发</strong>：运单状态进入「已收货」→ 财务 <code>POST /api/finance/ar-flows/generate</code>（触发节点=收货完成（10））自动生成应收业务流水（见 PRD R01）。<strong>收货完成一次性生成全部自动行</strong>：运费 / 运费优惠 / 泡比优惠 / 字段匹配型附加费 / 字段&公式型附加费（如超重费，按箱取收货过机数据）及各自附加费优惠；人工添加型由业务在运单「费用管理」手工新增。全部先进入账单草稿池。</p><p><strong>逐行构成（一次收货完成最多生成 5 类行）</strong>：</p><p><div class="table-wrapper"><table><tr><td>流水行</td><td>流水种类</td><td>费用类型来源</td><td>计价单位</td><td>单价</td><td>计费量</td><td>金额</td></tr>
-<tr><td>:---</td><td>:---:</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td><td>:---</td></tr>
-<tr><td>运费</td><td>10</td><td>预置费用类型「运费」</td><td>服务组合的计费方式（KG / m³）</td><td>当周公布价（元/计价单位）</td><td>计费重量 / 体积</td><td>公布价 × 计费量</td></tr>
-<tr><td>运费优惠</td><td>20</td><td><strong>优惠规则配置的费用类型</strong></td><td>同运费行</td><td>优惠值（带符号）</td><td>同运费行</td><td>优惠值 × 计费量</td></tr>
-<tr><td>泡比优惠</td><td>30</td><td><strong>优惠规则配置的费用类型</strong></td><td>同运费行（仅KG）</td><td>优惠值（带符号）</td><td>同运费行</td><td>优惠值 × 计费量（仅命中 KG 计价行）</td></tr>
-<tr><td>附加费</td><td>40</td><td>附加费规则计价明细「应收」行的费用类型</td><td><strong>该附加费规则的计价单位</strong>（票/箱/KG/m³/数量）</td><td>应收单价</td><td>票=1 / 箱=箱数 / KG=计费重量 / m³=计费体积 / 数量=人工填</td><td>应收单价 × 计费量</td></tr>
-<tr><td>附加费优惠</td><td>50</td><td><strong>该附加费规则计价明细「应收」行的费用类型</strong>（同附加费行）</td><td>同该附加费行</td><td>优惠值（单价级、带符号）</td><td>同该附加费行</td><td>优惠值 × 计费量</td></tr>
-</table></div>
-<strong>取价与优惠取数</strong>：运费取<strong>当周批次（当前批次）</strong>运价行（仓库组 + 重量段 + 交货地组）的公布价；优惠<strong>从超级运价三张优惠表实时匹配</strong>（不进周批次快照）——运费优惠按 服务组合 ×（客户特批 > 客户等级）取一条生效规则，泡比优惠按 泡比 ≥ 密度阈值 取阈值最大档，附加费优惠按 附加费规则 × 目标匹配。取数链路见 <code><a href="../超级运价/2026-09-23-PRD.html">PRD</a></code> §7.5。</p><p><strong>重扫与冻结</strong>：运单信息变更 → 来源类型=系统自动计算（10）且未审计的行<strong>重算覆盖</strong>；来源类型=人工添加（20）<strong>永久豁免重扫</strong>；<strong>业务审计后冻结</strong>（只能靠新增流水调整）、<strong>进账单后彻底冻结</strong>（调整 = 新增负数流水，下期抵扣）。</p><p><strong>账单草稿池</strong>：审计状态=已审计（20）且未关联账单的流水即处于草稿池；财务在「账单管理 → 草稿池」按 <strong>客户 × 我司主体 × 币种</strong> 查看，<strong>逐条勾选流水</strong>生成账单（<strong>成账颗粒度 = 流水级</strong>、<strong>不跨币种折合</strong>，账单日不参与分组，见 PRD R11）；账单作废时其下流水解除账单关联、回到池中（见 PRD R63）。</p><p><strong>到期日期算法（★ 账单级，不落在流水上）</strong>：</p><p>到期日是<strong>账单级字段</strong>（应收账单的到期日期）—— 账单日未确定就算不出到期日，因此<strong>流水上不存到期日期</strong>：</p><p><pre><code>按月类（101 月结 / 102 双月结 / 103 三月结）：
-    账单月 = 账单日所在月 + 结算月（月结 0 / 双月结 1 / 三月结 2）
-    到期日 = 账单月的第「天数/号」号（0 → 该月月末；算出的日期不晚于账单日 → 顺延到下一月同一「号」）
-按天类（201 周结）：
-    到期日 = 账单日 + 天数/号 − 1 天
-事件型（202 / 204 / 205）与 203 签收月结：
-    出账时算不出 → **该组不允许出账**
-账期天数   = 到期日 − 账单日 + 1   ← 存入应收账单的账期天数（仅供账龄，页面不展示）
-</code></pre></p><p><div class="table-wrapper"><table><tr><td>合同账期（账期类型 + 天数/号）</td><td>算法</td><td>到期日（以账单日 09-01 为例）</td></tr>
-<tr><td>:---</td><td>:---</td><td>:---</td></tr>
-<tr><td>101 月结 + 15</td><td>账单月 = 9 月，取 15 号</td><td><strong>09-15</strong>（账期天数 15）</td></tr>
-<tr><td>102 双月结 + 15</td><td>账单月 = 10 月，取 15 号</td><td><strong>10-15</strong>（45 天）</td></tr>
-<tr><td>103 三月结 + 15</td><td>账单月 = 11 月，取 15 号</td><td><strong>11-15</strong>（76 天）</td></tr>
-<tr><td>101 月结 + 0</td><td><code>0</code> → 该月月末</td><td><strong>09-30</strong>（30 天）</td></tr>
-<tr><td>201 周结 + 7</td><td>账单日 + 天数 − 1</td><td><strong>09-07</strong>（7 天）</td></tr>
-<tr><td>202 到港前结 / 203 签收月结 / 204 到海外仓结 / 205 签收结</td><td>事件型</td><td>算不出 → <strong>不允许出账</strong></td></tr>
-<tr><td>合同账期段为空 / 算不出到期日（含事件型）</td><td>—</td><td><strong>一律不能出账</strong>：自动出账<strong>跳过该组、页面不给提示</strong>（§4.8，靠草稿池「账期」列的「待补录」定位）；财务手工成账时<strong>直接阻断</strong>「该客户在该主体下的合同账期未完善，请先在客商中心补全合同账期」。<strong>不做账期补录</strong>，账期主数据唯一入口 = 客商中心</td></tr>
-</table></div>
-<blockquote><strong>账单日口径</strong>：自动出账 → 账单日 = <strong>每月 1 号</strong>（跑批日）；手工出账 → 财务在生成弹窗指定，<strong>默认 = 生成当月的自然月末</strong>。</blockquote>
->
-<blockquote><strong>与账龄口径的关系</strong>：账龄按 <strong>账单日 + 账期天数</strong> 起算（§4.4；见 PRD R24），而账期天数由到期日反推（= 到期日 − 账单日 + 1），两套口径天然一致，不需要两套算法。<strong>范围上只算已发送账单</strong> —— 发送状态=已发送（20）且未核销金额 > 0 且作废状态=正常（10）；<strong>待发送账单不计入</strong>（未发给客户，客户不知道这笔钱），已发送未确认的照常计入。</blockquote></p><p><strong>编辑前置条件（★，两层解耦，新增与编辑分两条线）</strong>：<strong>新增该方向流水</strong> = 运单状态支持费用操作（已收货 / 转运中 / 已到港 / 已清关 / 已到仓 / 已签收 / <strong>退件</strong>）<strong>且</strong>该运单<strong>该方向未整票审计</strong>（运单费用审计的审计状态=未审计（10））；<strong>编辑 / 删除某条流水</strong> = 运单状态支持 <strong>且</strong> 该行未审计（审计状态=未审计（10））<strong>且</strong> 未关联账单—— <strong>编辑不再要求该方向未整票审计</strong>（运单标记只管新增、流水标记只管编辑，见财务 PRD R61）。</p><p><strong>编辑口径（★，按字段分档）</strong>：<strong>来源类型=系统自动计算（10）的行仅可改描述与备注</strong> —— 金额口径字段（币种 / 单价 / 计价单位 / 计费量 / 金额 / 汇率）<strong>不可手改</strong>，由规则与重算唯一维护；<strong>来源类型=人工添加（20）的行可改全部字段</strong>。已审计冻结、已进账单彻底冻结。拣货时间 / 创建日期由<strong>后端维护</strong>（编辑接口不接受这两个字段）。字段可见性：描述两端可见；备注 / 数据来源 / 来源规则 / 创建人<strong>仅员工端可见</strong>（货主端不展示）；<strong>到期日期是账单级字段，流水上没有到期日期</strong>，展示于「账单管理」列表与详情。</p><p><strong>取数入参</strong>（调超级运价 <code>POST /api/pricing/calc</code>）：按五组传参 —— 调用上下文（触发节点 10收货完成 / 30运单信息变更、变更字段清单、批次）、运单与身份、服务与路径、货物参数（含收货过机实测值）、业务开关；<strong>运单只传自身字段</strong>，尾程派送方式 / 计费方式 / 包税方式 / 客户等级 / 可用优惠规则由超级运价<strong>服务端反查</strong>。完整参数清单、每类流水行的参数依赖见 <code><a href="../超级运价/2026-09-23-PRD.html">PRD</a></code> <strong>§7.5</strong>。</p><p><strong>手工新增应收的落库口径</strong>：<strong>任何费用类型都可手工新增</strong>（业务认为自动行不对时的标准动作 = <strong>先删除原自动行，再手工补录</strong>；与已有自动行命中同一去重键 → 阻断，不静默覆盖）。落库分两种：① <strong>选了来源规则</strong>（该费用类型有「人工添加型」附加费规则候选且业务选中）→ 流水种类=附加费（40）、来源规则类型=附加费规则（40）+ 来源规则 ID / 规则名、数据来源=附加费规则，币种 / 计价单位锚定规则的计价明细，<strong>单价默认取规则价、允许覆盖；改了单价（偏离规则价）→ 清空来源规则留痕、退化为手工新增（流水种类=手工新增（60）、来源规则留空、数据来源=人工添加、不打标）</strong>；<strong>选中来源规则且未改价 → 保存时自动匹配该规则的附加费优惠（附加费优惠规则，目标 = 当前客户、特批 > 等级），命中则另生成一条附加费优惠负流水（流水种类=附加费优惠（50）、来源规则类型=附加费优惠（50）、优惠值 × 计费量、费用类型同附加费行，优惠独立成行）</strong>；② <strong>未选来源规则</strong>（有候选主动清空，或无候选）→ 流水种类=手工新增（60）、来源规则留空、数据来源=人工添加，<strong>其中无候选（非附加费）计费量必填、单价选填（填了单价 → 金额 = 单价 × 计费量；未填单价 → 直接填金额）、有候选主动清空仍按单价 × 计费量</strong>。两者均为来源类型=人工添加（20），拣货时间 / 创建日期由服务端赋值。<strong>打标联动</strong>：选了来源规则的手工行，保存成功后调用头程管理「运单标识」接口，按附加费规则的附加费标识为运单打上该<strong>附加费标识</strong>（幂等：同标识不重复打；与规则自动命中时的打标口径一致）；打标失败写后台任务告警，<strong>不回滚流水</strong>；未选规则的手工行不打标。<strong>入口与批量</strong>：手工新增有<strong>两个入口、同一接口、都先选「类型」</strong> —— ① <strong>运单审计「添加应收」</strong>（<code>POST /api/finance/ar-flows</code>）；② <strong>应收业务流水「新增流水」</strong>（同 <code>POST /api/finance/ar-flows</code>）。两入口都先选「类型」：<strong>附加费</strong>（带规则 ID + 单价 + 计费量，金额 = 单价 × 计费量）/ <strong>非附加费</strong>（计费量必填 + 单价选填：填了单价 → 金额 = 单价 × 计费量；未填单价 → 直接填金额）。运单审计内又有 运单列表工具栏（上下文 = 勾选的运单，可多票）与运单详情 · 费用管理 tab（上下文 = 该运单，单票）两种进入方式。<strong>多票时按「费用 × 票」展开</strong>：卡片上的「适用运单」多选默认不选、留空，由操作员手动选择，保存时一条费用 × M 票 = <strong>M 行应收业务流水</strong>（每行带自己的运单，其余字段一致），因此<strong>批量铺费用的本质是 M 条独立流水</strong>；<strong>打标的目标运单永远取行上的运单</strong>（逐票判定，不取「当前打开的运单」）。</p><p><strong>重算触发</strong>：运单模块发「<strong>运单信息变更</strong>」事件（事件带<strong>变更字段清单</strong>）→ 财务 <code>POST /api/finance/ar-flows/recalculate</code> → 内部<strong>调一次 <code>calc</code> 整单重跑</strong> → 按去重键<strong>覆盖</strong>未审计的自动行（<strong>不新增行</strong>）。<strong>哪些字段变更要重算</strong>见超级运价 PRD §7.5 的变更重算矩阵：服务组合（五类全部重算）、目的仓 / 邮编、交货地、每箱实际过机数据（→ 收费重）、整单收费重、件数 / 箱数、泡比（→ 泡比优惠）、货物属性（SKU）、地址类型 / 偏远、报关方式、自送标识、是否 FBA、出口先查后装模式、客户 ID（→ 优惠 + 用户维度附加费）、我司主体（换合同）、单箱 / 总体录入；备注 / 附件 / 联系人 / 运单号不触发重算。</p><p><h3 id="4-8-自动出账跑批-每月-1-号">4.8 自动出账跑批（每月 1 号）</h3></p><p><strong>触发</strong>：系统定时任务，<strong>每月 1 号 00:30</strong>（见 PRD R65）。</p><p><strong>筛选与生成</strong>：</p><p><pre><code>客户范围 = 合同 billing_cycle = 固定(10) 的客户（月结 / 双月结 / 三月结）
-分组键   = 客户 × 我司主体 × 币种
-流水范围 = 组内 audit_status = 已审计(20) 且 bill_id 为空 的流水
-账单      = 账单日 = 跑批日（1 号）；due_date / payment_terms_days 按 §4.7 推导；
-            generate_source = 10 系统自动；send_status = 未发送(10) / confirm_status = 未确认(10) / writeoff_status = 未核销(10) / void_status = 正常(10)  → 直接进「待发送」
-bill_type = 组内流水净额 &gt; 0 → 应收账单(10)；净额 &lt; 0 → 贷记单(20)；净额 = 0 → 整组不出账
-            **同组流水打成一张单（净额轧差），明细允许异号，不按流水符号拆单**（见 PRD R72）
-幂等键    = 客户 × 我司主体 × 币种 × 账期月（已自动出账过则跳过，防跑批重试重复出账）
-</code></pre></p><p><strong>异常处理</strong>：</p><p><div class="table-wrapper"><table><tr><td>场景</td><td>处理</td></tr>
-<tr><td>:---</td><td>:---</td></tr>
-<tr><td>组内无可成账流水</td><td><strong>跳过</strong>，不生成 0 元空账单</td></tr>
-<tr><td>合同账期段为空 / <code>payment_term</code> 不为 101/102/103，<strong>且组内仍有已审计未成账流水</strong></td><td><strong>跳过该组</strong>，<strong>不猜账期、页面不给提示</strong> —— 该组流水留在草稿池，<strong>草稿池「账期」列实时取合同账期、取不到时显示「待补录」</strong>（草稿池不建表，是实时视图）；客户在客商中心补齐账期后该列自动变为正常账期名，下次跑批即可出账</td></tr>
-<tr><td>跑批重试 / 重复触发</td><td>按幂等键跳过</td></tr>
-</table></div>
-<blockquote><strong>「账单周期 = 不固定」的客户不参与自动出账</strong>，继续由财务在草稿池手工成账（§4.7）；自动出账之后新审计通过的流水，仍可由财务手工补出后续账单。</blockquote></p><p><h3 id="4-9-应付账单生成与核销">4.9 应付账单生成与核销</h3></p><p><strong>生成（财务手工 + 系统自动两种）</strong>：</p><p><pre><code>手工生成（「应付业务流水」工具栏「生成应付账单」）：
-分组键   = 我司主体 × 供应商 × 币种 × OA审批编号（弹窗逐级选 供应商 → 我司主体 → 币种 → OA审批编号）
-流水范围 = 组内「已审计 + ap_bill_id 为空」的应付流水
-成账前置 = 每条应付流水满足「已审计」（流水级）：
-           · 提单平摊已摊行（source_type=30 + amortize_status=已摊）→ audit_status = 已审计(20)
-           · 普通应付流水（source_type=20）→ audit_status = 已审计(20)（运单审计）
-账单     = 账单号 AP-{主体代码}-{yyyyMM}-5位序号；bill_amount = Σ 明细应付流水金额（正数）
-           billing_date = 财务指定（默认当月自然月末）；due_date / 账期快照按供应商合同推导
-           writeoff_status = 未核销(10)、void_status = 正常(10)；被归集流水 ap_bill_id 回填
-
-自动生成（每月 1 号 00:30 跑批，对齐应收 §4.8）：
-供应商范围 = 存在「有效合同（已签署 + 有效期内 + 未解约）且 billing_cycle = 固定(10)」的「供应商 × 我司主体」
-分组键   = 我司主体 × 供应商 × 币种 × OA审批编号
-流水范围 = 组内「已审计 + ap_bill_id 为空」的应付流水
-账单     = 账单日 = 1 号；due_date / payment_terms_days 按供应商合同账期推导；generate_source = 10 系统自动
-幂等键   = 我司主体 × 供应商 × 币种 × OA审批编号 × 账期月（已自动出账过则跳过）
-</code></pre></p><p><strong>未核销账单的应付明细增删（PRD R83）</strong>：</p><p><pre><code>仅 writeoff_status = 未核销(10) 的账单可增删明细（部分核销 / 已核销不可改）
-新增     = 从「同 我司主体 × 供应商 × 币种 × OA审批编号」下、已审计 + ap_bill_id 空 的应付流水里勾选加入
-           （候选维度与账单完全一致；流水 ap_bill_id 回填、账单 bill_amount 重算、账单号不变）
-删除     = 明细移除 → 流水 ap_bill_id 置空释放回可成账池、bill_amount 重算；至少保留 1 条
-留痕     = 增删明细进账单「操作时间线」（只记 时间 + 操作人 + 动作）
-</code></pre></p><p><strong>核销（付款给供应商，联动资金账户）</strong>：</p><p><pre><code>出款账户 = 核销弹窗里财务手动选的我司银行账户（bank_account，按「我司主体 × 币种」过滤启用账户）
-核销金额 = min(账单未结清金额, 账户余额) —— 不可透支；≤ 未结清金额、默认全额
-落库     = 写 ap_writeoff（核销单，四快照：bill_before/after + account_before/after）
-         + 写 wallet_flow（flow_type=100 支付供应商，wallet_id 空、company_amount = −N）
-         + bank_account.balance −= N
-反核销   = 账单未结清金额回补、账户余额回补，写 wallet_flow（flow_type=110）、
-           ap_writeoff 原记录置「已反核销」+ 新增一条「已反核销」记录
-作废     = 仅未核销（writeoff_status=未核销）时可作废，流水 ap_bill_id 置空释放
-</code></pre></p><p><blockquote><strong>应付账单挂主体</strong>：供应商签约后有「我司签约主体」，应付流水在新增 / 导入时指定我司主体（来源 = 供应商有效合同签约主体），账单归集键升级为 <strong>我司主体 × 供应商 × 币种 × OA审批编号</strong>、账单号带主体代码段，出款账户按「我司主体 × 币种」过滤 —— 同一供应商在不同主体下的应付账单、出款账户各归各的主体账套。</blockquote>
+<h3 id="4-7-应收流水生成与账单草稿池">4.7 应收流水生成与账单草稿池</h3></p><p><blockquote>应收流水生成 / 取价与优惠取数 / 重算与冻结 / 草稿池入池门槛 / 到期日算法 / 编辑口径 / 手工新增落库 / 取数入参等业务规则与计算公式见 PRD §6.1–6.2（R01–R61、R11–R14）与 §7（计算公式）。
+数据层要点：自动行去重键 <code>UNIQUE(waybill_id, flow_kind, fee_type_id, source_rule_id)</code>；账单草稿池 = <code>ar_flow</code> 上「<code>audit_status = 已审计(20)</code> + <code>bill_id</code> 为空」的实时视图（不建表，入池口径见 §一 账单草稿池说明）。</blockquote></p><p><h3 id="4-8-自动出账跑批-每月-1-号">4.8 自动出账跑批（每月 1 号）</h3></p><p><blockquote>自动出账跑批（每月 1 号 00:30）的业务规则见 PRD R65（§6.2）。数据层幂等键：应收 <code>ar_bill</code> = 客户 × 我司主体 × 币种 × 账期月；应付 <code>ap_bill</code> = 我司主体 × 供应商 × 币种 × OA审批编号 × 账期月。</blockquote></p><p><h3 id="4-9-应付账单生成与核销">4.9 应付账单生成与核销</h3></p><p><blockquote>应付账单生成 / 未核销明细增删 / 核销（付款） / 反核销 / 作废的业务规则见 PRD §6.5（R77–R83）。</blockquote>
 </p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>

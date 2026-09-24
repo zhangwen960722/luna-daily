@@ -17,7 +17,7 @@
 <span>数据设计</span>
 </div>
 <div class="layout">
-<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-关键设计说明">四、关键设计说明</a></li></ul></nav>
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-建模约定-表结构设计理由">四、建模约定（表结构设计理由）</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="数据设计-系统设置">数据设计 — 系统设置</h1></p><p><blockquote><strong>版本</strong>: v3.2 | <strong>日期</strong>: 2026-08-21 | <strong>作者</strong>: AI PM
 <strong>关联 RDD</strong>: <code>2026-08-21-用户需求.md</code> v3.2</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
@@ -32,7 +32,7 @@
 <tr><td>角色-员工关联</td><td><code>role_employee</code></td><td>N:N 关联表</td><td><code>role_id</code> + <code>employee_id</code></td></tr>
 <tr><td>角色-资源关联</td><td><code>role_resource</code></td><td>N:N 关联表</td><td><code>role_id</code> + <code>resource_id</code></td></tr>
 </table></div>
-<hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><h4 id="2-1-客户账号-customer_account">2.1 客户账号 (customer_account)</h4></p><p><strong>表名</strong>: <code>customer_account</code> | <strong>对应实体</strong>: 客户账号</p><p><blockquote><strong>设计说明</strong>: 存储客户登录账号信息及生命周期状态。客户公司主体信息从客户主数据（外部模块）引用，本表仅维护账号级属性。customer_region 决定入驻路径分流。合同信息已下沉至 customer_contract 表管理（1:N 关系）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><blockquote>字段业务含义与需求背景见 RDD；页面校验规则与交互见 PRD。本 Schema 是字段结构（类型/约束/枚举值）的唯一权威。</blockquote></p><p><h4 id="2-1-客户账号-customer_account">2.1 客户账号 (customer_account)</h4></p><p><strong>表名</strong>: <code>customer_account</code> | <strong>对应实体</strong>: 客户账号</p><p><blockquote><strong>设计说明</strong>: 存储客户登录账号信息及生命周期状态。客户公司主体信息从客户主数据（外部模块）引用，本表仅维护账号级属性。customer_region 决定入驻路径分流。合同信息已下沉至 customer_contract 表管理（1:N 关系）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:----------</td><td>:----------</td><td>:------------</td><td>:---</td><td>:---------</td><td>:-------------------------------------</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String(32)</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
@@ -398,7 +398,7 @@
         Int file_size
         String file_type
     }
-</div></p><p><hr></p><p><h3 id="四-关键设计说明">四、关键设计说明</h3></p><p><strong>1. 软删除策略</strong></p><p><ul><li><code>customer_account</code>、<code>customer_contract</code>、<code>account_application</code>、<code>employee</code>、<code>role</code> 均采用软删除（<code>is_deleted</code>）</li>
+</div></p><p><hr></p><p><h3 id="四-建模约定-表结构设计理由">四、建模约定（表结构设计理由）</h3></p><p><strong>1. 软删除策略</strong></p><p><ul><li><code>customer_account</code>、<code>customer_contract</code>、<code>account_application</code>、<code>employee</code>、<code>role</code> 均采用软删除（<code>is_deleted</code>）</li>
 <li><code>email_notification</code> 不设软删除，邮件记录仅用于追溯，保留2年后物理清理</li>
 <li>纯关联表 <code>role_employee</code>、<code>role_resource</code> 不设软删除，直接物理删除（解绑即为删除）</li>
 <li><code>application_attachment</code> 不设软删除，直接物理删除</li>
@@ -419,45 +419,19 @@
 <li>客户属地（customer_region）：从客户主数据模块获取，在本表中冗余存储以便快速判断入驻路径分流</li>
 <li>开户申请的 customer_type、customer_region：从 customer_account 和客户主数据带出，作为快照存储，审核时参考</li>
 </ul>
-<strong>5. 合同过期自动判断说明</strong></p><p><ul><li><code>customer_contract.sign_status</code> 中的"已过期"（40）状态不在签约时写入，而是每次读取列表时由后端或前端根据 <code>contract_end_date</code> 与当前日期对比动态判断</li>
-<li>仅当 <code>sign_status</code> 为"已签约"（30）且当前日期 > <code>contract_end_date</code> 时，展示为"已过期"</li>
-<li>不将"已过期"持久化到数据库，避免定时任务维护成本</li>
-<li>合同过期后的重新签约：在 contract_company 下创建新的 customer_contract 记录</li>
-</ul>
-<strong>6. 开户申请历史保留</strong></p><p><ul><li>每个 <code>customer_account</code> 可有多条 <code>account_application</code> 记录（1:N）</li>
+<strong>5. 合同过期动态判断</strong></p><p><blockquote>见 PRD R14（合同过期动态判断）与 §7 计算公式。</blockquote></p><p><strong>6. 开户申请历史保留</strong></p><p><ul><li>每个 <code>customer_account</code> 可有多条 <code>account_application</code> 记录（1:N）</li>
 <li>当审核拒绝后重新提交开户时，创建新的 <code>account_application</code> 记录而非覆盖</li>
 <li>重新开户时，前端从最新一条 <code>account_application</code> 中读取数据预填表单</li>
 <li>审核通过时，对应的 <code>account_application</code> 标记 <code>application_status=20, audit_result=10</code></li>
 </ul>
-<strong>7. 审核通过后的自动操作</strong></p><p><ul><li>审核通过后触发以下异步操作：</li>
-</ul>  1. 更新 <code>customer_account.account_status</code> → 50 (正常)
-  2. 客户管理模块插入正常状态数据（通过 MQ 或 API 调用），附件从 <code>application_attachment</code> 带入
-  3. 向 <code>email_notification</code> 插入一条待发送记录（send_status=10），异步邮件服务消费此记录发送邮件
-<ul><li>异步操作失败时记录日志，不回滚审核结果</li>
-</ul>
-<strong>8. 客户属地主路由</strong></p><p><ul><li><code>customer_region</code> 是入驻路径的关键分流字段</li>
-<li>提交档案时，大陆企业（10）→ <code>account_status = 10</code>（待签约）</li>
-<li>提交档案时，香港企业（20）→ <code>account_status = 20</code>（待开户），同时创建一条初始 <code>customer_contract</code> 记录（sign_status = 10 未签约）</li>
-<li>直接新增 → <code>account_status = 50</code>（正常），跳过所有中间状态</li>
-</ul>
-<strong>9. 冻结原因枚举</strong></p><p><ul><li><code>freeze_reason</code>：10:客户关联冻结（客户主数据冻结时联动）, 20:人为冻结（管理员手动操作）, 30:信控逾期冻结（二期信用控制模块触发）</li>
+<strong>7. 审核通过后的自动操作</strong></p><p><blockquote>见 PRD R07（审核通过）、R17（邮件通知）、R18（客户管理数据同步）。</blockquote></p><p><strong>8. 客户属地主路由</strong></p><p><blockquote>见 PRD R01（客户属地主路由）。</blockquote></p><p><strong>9. 冻结原因枚举</strong></p><p><ul><li><code>freeze_reason</code>：10:客户关联冻结（客户主数据冻结时联动）, 20:人为冻结（管理员手动操作）, 30:信控逾期冻结（二期信用控制模块触发）</li>
 <li>冻结时记录 <code>freeze_time</code>，用于统计冻结时长</li>
 </ul>
-<strong>10. 邮件通知可靠性</strong></p><p><ul><li><code>email_notification.send_status</code> 初始为"待发送"（10），异步邮件服务处理后更新为"已发送"（20）或"发送失败"（30）</li>
-<li>发送失败时记录 <code>fail_reason</code>，<code>retry_count</code> 递增</li>
-<li>MVP阶段：失败后不作自动重试，需手动通过后台重发</li>
-<li>Phase 2：支持自动重试3次 + 手动重发界面</li>
-</ul>
-<strong>11. 资源树权限继承说明</strong></p><p><ul><li>当前 MVP 阶段不实现父子资源权限继承——勾选父菜单不会自动勾选子菜单/按钮，需逐项勾选</li>
+<strong>10. 邮件通知可靠性</strong></p><p><blockquote>见 PRD R17（邮件通知）。</blockquote></p><p><strong>11. 资源树权限继承说明</strong></p><p><ul><li>当前 MVP 阶段不实现父子资源权限继承——勾选父菜单不会自动勾选子菜单/按钮，需逐项勾选</li>
 <li>Phase 2-3 可考虑增加"勾选父节点自动全选子节点"的交互优化</li>
 <li>权限校验时以 <code>role_resource</code> 表中的实际记录为准，不向上递归</li>
 </ul>
-<strong>12. 合同多份与唯一有效约束</strong></p><p><ul><li>一个客户通过 <code>account_id</code> 可关联多条 <code>customer_contract</code> 记录（1:N）</li>
-<li>约束：同一客户在飞点租户下有且仅能有一份处于"已签约"（30）或"签约中"（20）状态的合同</li>
-<li>签约时前端+后端双重校验：检查该 account_id 下是否已存在 sign_status IN (20, 30) 的合同记录，若存在则阻止并提示"该客户已存在有效合同"</li>
-<li>历史合同（已过期/已作废）保留不删除，用于审计追溯</li>
-</ul>
-<hr>
+<strong>12. 合同唯一有效约束</strong></p><p><blockquote>见 PRD R29（签约主体唯一校验）。</blockquote></p><p><hr>
 </p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>

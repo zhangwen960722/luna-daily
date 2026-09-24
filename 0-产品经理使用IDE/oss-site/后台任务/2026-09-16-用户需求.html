@@ -20,7 +20,8 @@
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv2"><a href="#1-核心洞察-Insight">1. 核心洞察 (Insight)</a></li><li class="toc-lv2"><a href="#2-业务全景图">2. 业务全景图</a></li><li class="toc-lv3"><a href="#2-1-角色与工作节奏">2.1 角色与工作节奏</a></li><li class="toc-lv3"><a href="#2-2-端到端业务链路">2.2 端到端业务链路</a></li><li class="toc-lv3"><a href="#2-3-实体依赖关系">2.3 实体依赖关系</a></li><li class="toc-lv2"><a href="#3-流程-导入任务监控">3. 流程：导入任务监控</a></li><li class="toc-lv3"><a href="#3-1-导入任务-ImportTask-公共实体-记录各模块导入任务">3.1 导入任务 (ImportTask) — 公共实体，记录各模块导入任务</a></li><li class="toc-lv2"><a href="#4-验收标准总览-AC">4. 验收标准总览 (AC)</a></li><li class="toc-lv2"><a href="#5-NFR-非功能性需求">5. NFR（非功能性需求）</a></li><li class="toc-lv2"><a href="#6-功能清单">6. 功能清单</a></li><li class="toc-lv2"><a href="#7-MVP-方案与建议">7. MVP 方案与建议</a></li><li class="toc-lv3"><a href="#下一步">下一步</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="需求定义卡片-RDD-后台任务">需求定义卡片 (RDD) — 后台任务</h1></p><p><blockquote><strong>原始需求</strong>：为飞点TMS搭建统一的<strong>任务</strong>监控模块（<strong>导入 + 导出</strong>），员工端和货主端均可查看各模块的任务结果 —— 导入任务下载错误数据，<strong>导出任务下载结果文件</strong>（导出任务由财务「账单管理 → 已发送 → 导出」发起，<strong>只在员工端展示</strong>）
 <strong>文档版本</strong>: v1.1 | <strong>日期</strong>: 2026-09-16 | <strong>作者</strong>: AI PM
-<strong>数据来源</strong>: 用户需求沟通</blockquote></p><p><hr></p><p><h2 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h2></p><p><strong>真实痛点</strong>：</p><p>各子应用模块（商品管理、地址管理、港口管理等）均涉及 Excel 导入功能，但导入任务分散在各模块内，缺乏统一入口查看导入结果。当导入出现部分失败时，用户需要到各自模块查找失败原因，无法集中下载错误数据，排查效率低。</p><p><strong>JTBD</strong>：</p><p><blockquote><code>员工/运营</code> 雇佣"后台任务"不是为了"看列表"，而是为了：<strong>当某个模块的导入任务跑完后，能在一个地方集中查看导入结果，若有失败数据可直接下载错误明细，不用逐个模块去翻。</strong></blockquote></p><p><blockquote><code>货主</code> 雇佣"后台任务"是为了：<strong>提交导入后能及时看到处理进度和结果，失败时能下载错误数据修正后重导。</strong></blockquote>
+<strong>数据来源</strong>: 用户需求沟通
+<strong>★ 文档分工（去哪看）</strong>：字段结构/类型/约束 → 数据设计；业务规则/校验/计算公式 → PRD；页面规格/字段校验/菜单 → PRD。本 RDD 独有：功能→AC 映射、业务全景与流程、分期与 MVP。本 RDD 字段表「类型」列已删，字段结构以数据设计为准。</blockquote></p><p><hr></p><p><h2 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h2></p><p><strong>真实痛点</strong>：</p><p>各子应用模块（商品管理、地址管理、港口管理等）均涉及 Excel 导入功能，但导入任务分散在各模块内，缺乏统一入口查看导入结果。当导入出现部分失败时，用户需要到各自模块查找失败原因，无法集中下载错误数据，排查效率低。</p><p><strong>JTBD</strong>：</p><p><blockquote><code>员工/运营</code> 雇佣"后台任务"不是为了"看列表"，而是为了：<strong>当某个模块的导入任务跑完后，能在一个地方集中查看导入结果，若有失败数据可直接下载错误明细，不用逐个模块去翻。</strong></blockquote></p><p><blockquote><code>货主</code> 雇佣"后台任务"是为了：<strong>提交导入后能及时看到处理进度和结果，失败时能下载错误数据修正后重导。</strong></blockquote>
 >
 <blockquote><code>财务专员</code> 看"后台任务"里的导出任务是为了：<strong>导出是异步跑批</strong>（一张账单一个 Excel，一次几十上百个文件）—— 点完不能干等页面，要能在一个地方看到「跑到哪了、成了几张」，完成后<strong>一次把结果文件拿走</strong>。</blockquote></p><p><strong>业务价值</strong>：</p><p><div class="table-wrapper"><table><tr><td>维度</td><td>当前</td><td>目标</td></tr>
 <tr><td>------</td><td>------</td><td>------</td></tr>
@@ -53,20 +54,20 @@
   └── 独立实体，公共模块，各子应用模块的导入任务统一记录
 </code></pre></p><p><hr></p><p><h2 id="3-流程-导入任务监控">3. 流程：导入任务监控</h2></p><p><blockquote><strong>触发</strong>：各模块发起导入任务
 <strong>频率</strong>：按需
-<strong>前置依赖</strong>：各模块已接入导入任务上报</blockquote></p><p><h3 id="3-1-导入任务-ImportTask-公共实体-记录各模块导入任务">3.1 导入任务 (ImportTask) — 公共实体，记录各模块导入任务</h3></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
-<tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
-<tr><td>task_no</td><td>文本</td><td>✅</td><td>任务编号，EXP + 年月日(8位) + 时间戳，如 EXP20260828143052123</td></tr>
-<tr><td>module_name</td><td>文本</td><td>✅</td><td>模块名称，各菜单名，如"商品管理""地址管理"</td></tr>
-<tr><td>task_type</td><td>枚举</td><td>✅</td><td>任务类型：10 <strong>导入</strong> / 20 <strong>导出</strong>（导出由财务「账单导出」发起、只在员工端展示）</td></tr>
-<tr><td>task_status</td><td>枚举</td><td>✅</td><td>任务状态：处理中 / 完成</td></tr>
-<tr><td>total_count</td><td>Int</td><td>✅</td><td>总数（导入 = 导入条数；导出 = 本次导出的<strong>账单张数</strong>）</td></tr>
-<tr><td>success_count</td><td>Int</td><td>✅</td><td>成功数（导出 = 成功出文件的账单张数）</td></tr>
-<tr><td>fail_count</td><td>Int</td><td>✅</td><td>失败数（导出 = 出文件失败的账单张数）</td></tr>
-<tr><td>error_file_url</td><td>文本</td><td>—</td><td>错误结果文件URL，仅<strong>导入</strong>任务且 fail_count > 0 时有值</td></tr>
-<tr><td>result_file_url</td><td>文本</td><td>—</td><td><strong>导出结果文件URL</strong> = <strong>一个 zip</strong>（内含每张账单一个 Excel；<strong>只勾 1 张时不打包、直出 xlsx</strong>；有失败时包内另附「导出失败清单.xlsx」），仅<strong>导出</strong>任务完成时有值、<strong>保留 7 天</strong>；与 <code>error_file_url</code> 互斥使用</td></tr>
-<tr><td>creator</td><td>文本</td><td>✅</td><td>创建人。员工端=本公司员工姓名（如张三、李四）；货主端=客户公司名称（如拼多多有限公司）；<strong>导出任务 = 提交导出的财务专员姓名</strong></td></tr>
-<tr><td>created_at</td><td>DateTime</td><td>✅</td><td>创建时间，任务开始时间</td></tr>
-<tr><td>finished_at</td><td>DateTime</td><td>—</td><td>完成时间，任务完成时间（处理中为空）</td></tr>
+<strong>前置依赖</strong>：各模块已接入导入任务上报</blockquote></p><p><h3 id="3-1-导入任务-ImportTask-公共实体-记录各模块导入任务">3.1 导入任务 (ImportTask) — 公共实体，记录各模块导入任务</h3></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>必填</td><td>说明</td></tr>
+<tr><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>task_no</td><td>✅</td><td>任务编号，EXP + 年月日(8位) + 时间戳，如 EXP20260828143052123</td></tr>
+<tr><td>module_name</td><td>✅</td><td>模块名称，各菜单名，如"商品管理""地址管理"</td></tr>
+<tr><td>task_type</td><td>✅</td><td>任务类型：10 <strong>导入</strong> / 20 <strong>导出</strong>（导出由财务「账单导出」发起、只在员工端展示）</td></tr>
+<tr><td>task_status</td><td>✅</td><td>任务状态：处理中 / 完成</td></tr>
+<tr><td>total_count</td><td>✅</td><td>总数（导入 = 导入条数；导出 = 本次导出的<strong>账单张数</strong>）</td></tr>
+<tr><td>success_count</td><td>✅</td><td>成功数（导出 = 成功出文件的账单张数）</td></tr>
+<tr><td>fail_count</td><td>✅</td><td>失败数（导出 = 出文件失败的账单张数）</td></tr>
+<tr><td>error_file_url</td><td>—</td><td>错误结果文件URL，仅<strong>导入</strong>任务且 fail_count > 0 时有值</td></tr>
+<tr><td>result_file_url</td><td>—</td><td><strong>导出结果文件URL</strong> = <strong>一个 zip</strong>（内含每张账单一个 Excel；<strong>只勾 1 张时不打包、直出 xlsx</strong>；有失败时包内另附「导出失败清单.xlsx」），仅<strong>导出</strong>任务完成时有值、<strong>保留 7 天</strong>；与 <code>error_file_url</code> 互斥使用</td></tr>
+<tr><td>creator</td><td>✅</td><td>创建人。员工端=本公司员工姓名（如张三、李四）；货主端=客户公司名称（如拼多多有限公司）；<strong>导出任务 = 提交导出的财务专员姓名</strong></td></tr>
+<tr><td>created_at</td><td>✅</td><td>创建时间，任务开始时间</td></tr>
+<tr><td>finished_at</td><td>—</td><td>完成时间，任务完成时间（处理中为空）</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R01：任务编号 = "EXP" + 年月日(YYYYMMDD) + 时间戳，全局唯一</li>

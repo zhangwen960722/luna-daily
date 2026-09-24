@@ -20,7 +20,8 @@
 <nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#1-核心洞察-Insight">1. 核心洞察 (Insight)</a></li><li class="toc-lv3"><a href="#2-业务全景图">2. 业务全景图</a></li><li class="toc-lv3"><a href="#3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</a></li><li class="toc-lv3"><a href="#4-流程二-本地仓管理-仓库列表">4. 流程二：本地仓管理（仓库列表）</a></li><li class="toc-lv3"><a href="#5-流程三-港口管理-港口管理_主列表">5. 流程三：港口管理（港口管理_主列表）</a></li><li class="toc-lv3"><a href="#6-验收标准总览-AC">6. 验收标准总览 (AC)</a></li><li class="toc-lv3"><a href="#7-NFR-非功能性需求">7. NFR（非功能性需求）</a></li><li class="toc-lv3"><a href="#7-功能清单">7. 功能清单</a></li><li class="toc-lv3"><a href="#8-MVP-方案与建议">8. MVP 方案与建议</a></li><li class="toc-lv3"><a href="#下一步">下一步</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="需求定义卡片-RDD-仓库管理">需求定义卡片 (RDD) — 仓库管理</h1></p><p><blockquote><strong>原始需求</strong>：为飞点TMS搭建仓库基础数据管理模块，支持港口管理、本地仓和海外平台仓库(FBA/其他)的结构化管理，供运单系统查询和引用
 <strong>文档版本</strong>: v2.2 | <strong>日期</strong>: 2026-08-28 | <strong>作者</strong>: AI PM
-<strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 "平台仓库列表" + "仓库列表"</blockquote></p><p><hr></p><p><h3 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h3></p><p><strong>真实痛点</strong>：跨境物流业务中，海外平台仓库(FBA/Walmart等)的地址信息复杂，一个仓库代码可能对应多个物理地址。当前数据分散管理在各业务人员的Excel表格和即时通讯记录中，没有统一的结构化管理入口。运单系统需要查询和新增仓库数据，但缺乏标准化的数据接口和唯一性校验，容易出现重复录入和数据不一致。</p><p>国内本地仓（集货仓/中转仓）的基础信息（收货人、手机号、地址）散落在不同业务人员手中，信息查找成本高。仓库名称、收货人、手机号等关键字段缺乏强制校验，录入不规范导致发货时联系不到收货人。</p><p><strong>JTBD</strong>：
+<strong>数据来源</strong>: Demo 原型（真相源）+ Excel 表单 "平台仓库列表" + "仓库列表"
+<strong>★ 文档分工（去哪看）</strong>：字段结构/类型/约束 → 数据设计；业务规则/校验/计算公式 → PRD；页面规格/字段校验/菜单 → PRD。本 RDD 独有：功能→AC 映射、业务全景与流程、分期与 MVP。本 RDD 字段表「类型」列已删，字段结构以数据设计为准。</blockquote></p><p><hr></p><p><h3 id="1-核心洞察-Insight">1. 核心洞察 (Insight)</h3></p><p><strong>真实痛点</strong>：跨境物流业务中，海外平台仓库(FBA/Walmart等)的地址信息复杂，一个仓库代码可能对应多个物理地址。当前数据分散管理在各业务人员的Excel表格和即时通讯记录中，没有统一的结构化管理入口。运单系统需要查询和新增仓库数据，但缺乏标准化的数据接口和唯一性校验，容易出现重复录入和数据不一致。</p><p>国内本地仓（集货仓/中转仓）的基础信息（收货人、手机号、地址）散落在不同业务人员手中，信息查找成本高。仓库名称、收货人、手机号等关键字段缺乏强制校验，录入不规范导致发货时联系不到收货人。</p><p><strong>JTBD</strong>：
 <blockquote><code>仓库管理员</code> 雇佣"仓库管理"不是为了"填表单存数据"，而是为了：<strong>当客户问"货到了哪个仓"时，能在一个系统里查到所有平台仓库的地址和归属，不用在Excel和网页后台之间来回切换。</strong></blockquote></p><p><blockquote><code>运单操作员</code> 雇佣"仓库管理"不是为了"管理仓库"，而是为了：<strong>创建运单时能直接查询已有仓库并新增新仓库，不用跳出运单页面去翻表格。</strong></blockquote></p><p><strong>业务价值</strong>：当前 vs 目标 的量化对比表</p><p><div class="table-wrapper"><table><tr><td>维度</td><td>当前</td><td>目标</td></tr>
 <tr><td>------</td><td>------</td><td>------</td></tr>
 <tr><td>海外仓库地址查询</td><td>翻Excel/聊天记录，平均3-5分钟</td><td>列表检索，30秒内</td></tr>
@@ -83,13 +84,13 @@ OverseasWarehouse (海外平台仓库)
     C2 --&gt; S1
     C5 --&gt; S2
     S2 --&gt; S3
-</div></p><p><hr></p><p><blockquote>以下按 <strong>2 条业务流程</strong> 组织，每条流程包含：流程概述 → 实体字段定义 → 业务规则 → 核心场景 → 相关 AC。</blockquote></p><p><h3 id="3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</h3></p><p><blockquote><strong>触发</strong>：新接入海外平台(FBA/Walmart等)需要录入仓库数据，或运单创建时需要引用/新增仓库 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>3.1 海外平台仓库 (OverseasWarehouse)</strong> — FBA或其他海外平台的仓库主记录</p><p><blockquote><strong>As a</strong> 仓库管理员 / 运单操作员 <strong>I want to</strong> 维护FBA和其他平台的仓库信息，一个仓库代码绑定多个收货地址 <strong>So that</strong> 运单创建时可以准确引用仓库数据</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
-<tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
-<tr><td>platform</td><td>下拉枚举</td><td>✅</td><td>仓库所属平台。枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
-<tr><td>warehouseCode</td><td>文本</td><td>✅</td><td>仓库代码，如"BWI1""MEM1s""IND2"。唯一性校验</td></tr>
-<tr><td>countryCode</td><td>文本</td><td>✅</td><td>国家代码，如 US/GB/DE/CN。列表展示和搜索用</td></tr>
-<tr><td>updateTime</td><td>文本</td><td>—</td><td>最后更新时间</td></tr>
-<tr><td>creator</td><td>文本</td><td>—</td><td>操作人</td></tr>
+</div></p><p><hr></p><p><blockquote>以下按 <strong>2 条业务流程</strong> 组织，每条流程包含：流程概述 → 实体字段定义 → 业务规则 → 核心场景 → 相关 AC。</blockquote></p><p><h3 id="3-流程一-海外平台仓库管理-平台仓库列表">3. 流程一：海外平台仓库管理（平台仓库列表）</h3></p><p><blockquote><strong>触发</strong>：新接入海外平台(FBA/Walmart等)需要录入仓库数据，或运单创建时需要引用/新增仓库 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>3.1 海外平台仓库 (OverseasWarehouse)</strong> — FBA或其他海外平台的仓库主记录</p><p><blockquote><strong>As a</strong> 仓库管理员 / 运单操作员 <strong>I want to</strong> 维护FBA和其他平台的仓库信息，一个仓库代码绑定多个收货地址 <strong>So that</strong> 运单创建时可以准确引用仓库数据</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>必填</td><td>说明</td></tr>
+<tr><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>platform</td><td>✅</td><td>仓库所属平台。枚举：Amazon/Walmart/eBay/SHEIN/Temu/TikTok Shop/AliExpress/Mercado Libre/OTTO/Newegg/Shopify</td></tr>
+<tr><td>warehouseCode</td><td>✅</td><td>仓库代码，如"BWI1""MEM1s""IND2"。唯一性校验</td></tr>
+<tr><td>countryCode</td><td>✅</td><td>国家代码，如 US/GB/DE/CN。列表展示和搜索用</td></tr>
+<tr><td>updateTime</td><td>—</td><td>最后更新时间</td></tr>
+<tr><td>creator</td><td>—</td><td>操作人</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R01：仓库代码唯一性校验，新增/编辑时检查是否与已有记录重复，重复时Toast提示"仓库代码已存在"</li>
@@ -97,16 +98,16 @@ OverseasWarehouse (海外平台仓库)
 <li>R05：列表查询条件：仓库代码(模糊搜索)、国家代码(下拉选择)</li>
 <li>R06：运单系统可通过接口查询已有仓库列表，也可通过接口新增仓库</li>
 </ul>
-<strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code></p><p><strong>3.2 仓库地址 (WarehouseAddress)</strong> — 一个海外平台仓库可绑定多个物理地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 为一个仓库代码绑定多个收货地址 <strong>So that</strong> 发货时可以根据实际派送地址选择对应仓库地址</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
-<tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
-<tr><td>countryCode</td><td>单选</td><td>✅</td><td>国家代码，如 US/GB/CN</td></tr>
-<tr><td>province</td><td>单选</td><td>✅</td><td>州/省，如 CA/TX/GD</td></tr>
-<tr><td>city</td><td>文本</td><td>✅</td><td>城市</td></tr>
-<tr><td>detail</td><td>文本</td><td>✅</td><td>详细地址，含街道门牌号</td></tr>
-<tr><td>zipCode</td><td>文本</td><td>✅</td><td>邮编</td></tr>
-<tr><td>addressAbbr</td><td>文本</td><td>—</td><td>地址简称，自动生成：<code>warehouseCode-zipCode</code></td></tr>
-<tr><td>isCarrierDedicated</td><td>枚举</td><td>✅</td><td>是否快递承运商专用地址：是/否</td></tr>
-<tr><td>carrierScac</td><td>数组</td><td>—</td><td>快递承运商SCAC数组，非必填；选项来自供应商明细含快递的供应商名称</td></tr>
+<strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code></p><p><strong>3.2 仓库地址 (WarehouseAddress)</strong> — 一个海外平台仓库可绑定多个物理地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 为一个仓库代码绑定多个收货地址 <strong>So that</strong> 发货时可以根据实际派送地址选择对应仓库地址</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>必填</td><td>说明</td></tr>
+<tr><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>countryCode</td><td>✅</td><td>国家代码，如 US/GB/CN</td></tr>
+<tr><td>province</td><td>✅</td><td>州/省，如 CA/TX/GD</td></tr>
+<tr><td>city</td><td>✅</td><td>城市</td></tr>
+<tr><td>detail</td><td>✅</td><td>详细地址，含街道门牌号</td></tr>
+<tr><td>zipCode</td><td>✅</td><td>邮编</td></tr>
+<tr><td>addressAbbr</td><td>—</td><td>地址简称，自动生成：<code>warehouseCode-zipCode</code></td></tr>
+<tr><td>isCarrierDedicated</td><td>✅</td><td>是否快递承运商专用地址：是/否</td></tr>
+<tr><td>carrierScac</td><td>—</td><td>快递承运商SCAC数组，非必填；选项来自供应商明细含快递的供应商名称</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R07：地址简称自动生成规则：<code>warehouseCode + "-" + zipCode</code>，仓库代码或邮编变化时实时更新；任一方为空时addressAbbr为空</li>
@@ -132,18 +133,18 @@ OverseasWarehouse (海外平台仓库)
   1. 新增仓库，输入仓库代码"BWI1"（已存在）
   2. 点击确定 → Toast"仓库代码已存在，请核对后重新输入"
   3. 提交被阻断
-</code></pre></p><p><strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code> <code>AC06</code></p><p><hr></p><p><h3 id="4-流程二-本地仓管理-仓库列表">4. 流程二：本地仓管理（仓库列表）</h3></p><p><blockquote><strong>触发</strong>：业务需要新增国内集货仓或中转仓 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>4.1 本地仓 (LocalWarehouse)</strong> — 国内仓库基础信息，含收货人联系方式和完整地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 维护本地仓库信息 <strong>So that</strong> 发货时可以准确填写收货地址和联系人</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
-<tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
-<tr><td>warehouseCode</td><td>文本</td><td>✅</td><td>仓库代码</td></tr>
-<tr><td>warehouseName</td><td>文本</td><td>✅</td><td>仓库名称，如"花都仓""白云仓"</td></tr>
-<tr><td>contactName</td><td>文本</td><td>✅</td><td>收货人姓名</td></tr>
-<tr><td>phone</td><td>文本</td><td>✅</td><td>收货人手机号，11位数字校验</td></tr>
-<tr><td>country</td><td>单选</td><td>✅</td><td>国家，新增时默认"中国"</td></tr>
-<tr><td>province</td><td>单选</td><td>✅</td><td>省份/州</td></tr>
-<tr><td>city</td><td>单选</td><td>✅</td><td>城市</td></tr>
-<tr><td>zipcode</td><td>文本</td><td>✅</td><td>邮编</td></tr>
-<tr><td>address</td><td>文本</td><td>✅</td><td>详细地址</td></tr>
-<tr><td>status</td><td>枚举</td><td>—</td><td>状态：正常 / 已冻结</td></tr>
+</code></pre></p><p><strong>相关 AC</strong>：<code>AC01</code> <code>AC02</code> <code>AC03</code> <code>AC04</code> <code>AC06</code></p><p><hr></p><p><h3 id="4-流程二-本地仓管理-仓库列表">4. 流程二：本地仓管理（仓库列表）</h3></p><p><blockquote><strong>触发</strong>：业务需要新增国内集货仓或中转仓 <strong>频率</strong>：按需 <strong>前置依赖</strong>：无</blockquote></p><p><strong>4.1 本地仓 (LocalWarehouse)</strong> — 国内仓库基础信息，含收货人联系方式和完整地址</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 维护本地仓库信息 <strong>So that</strong> 发货时可以准确填写收货地址和联系人</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>必填</td><td>说明</td></tr>
+<tr><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>warehouseCode</td><td>✅</td><td>仓库代码</td></tr>
+<tr><td>warehouseName</td><td>✅</td><td>仓库名称，如"花都仓""白云仓"</td></tr>
+<tr><td>contactName</td><td>✅</td><td>收货人姓名</td></tr>
+<tr><td>phone</td><td>✅</td><td>收货人手机号，11位数字校验</td></tr>
+<tr><td>country</td><td>✅</td><td>国家，新增时默认"中国"</td></tr>
+<tr><td>province</td><td>✅</td><td>省份/州</td></tr>
+<tr><td>city</td><td>✅</td><td>城市</td></tr>
+<tr><td>zipcode</td><td>✅</td><td>邮编</td></tr>
+<tr><td>address</td><td>✅</td><td>详细地址</td></tr>
+<tr><td>status</td><td>—</td><td>状态：正常 / 已冻结</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R10：页面以Tab区分"本地仓"（默认激活）和"海外仓"。海外仓Tab现阶段显示空状态"待梳理，敬请期待"</li>
@@ -175,13 +176,13 @@ OverseasWarehouse (海外平台仓库)
   1. 点击已冻结仓库的"编辑"按钮 → 弹窗标题"查看本地仓"
   2. 表单所有字段只读（is-readonly样式）
   3. 底部仅显示"关闭"按钮，无"确定"按钮
-</code></pre></p><p><strong>相关 AC</strong>：<code>AC07</code> <code>AC08</code> <code>AC09</code> <code>AC10</code> <code>AC11</code></p><p><hr></p><p><h3 id="5-流程三-港口管理-港口管理_主列表">5. 流程三：港口管理（港口管理_主列表）</h3></p><p><blockquote><strong>触发</strong>：业务需要新增海运/空运港口基础数据 <strong>频率</strong>：按需（新开航线时） <strong>前置依赖</strong>：无</blockquote></p><p><strong>5.1 港口 (Port)</strong> — 海运港口和空运港口的基础数据管理，供运单系统引用</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 维护港口基础数据（海港/空港），包括港口名称、代码、所属国家 <strong>So that</strong> 运单创建时可以准确选择起运港和目的港</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>类型</td><td>必填</td><td>说明</td></tr>
-<tr><td>------</td><td>------</td><td>------</td><td>------</td></tr>
-<tr><td>portName</td><td>文本</td><td>✅</td><td>港口名称，如"深圳港""上海港""杭州"</td></tr>
-<tr><td>portCode</td><td>文本</td><td>✅</td><td>港口代码。海港5位字符，空港3位字符。创建后不可修改（编辑只读）</td></tr>
-<tr><td>country</td><td>单选</td><td>✅</td><td>所属国家，filterable下拉选择。创建后不可修改（编辑只读）</td></tr>
-<tr><td>type</td><td>枚举</td><td>✅</td><td>港口类型：海港 / 空港。创建后不可修改（编辑只读）</td></tr>
-<tr><td>status</td><td>枚举</td><td>—</td><td>状态：正常 / 已冻结</td></tr>
+</code></pre></p><p><strong>相关 AC</strong>：<code>AC07</code> <code>AC08</code> <code>AC09</code> <code>AC10</code> <code>AC11</code></p><p><hr></p><p><h3 id="5-流程三-港口管理-港口管理_主列表">5. 流程三：港口管理（港口管理_主列表）</h3></p><p><blockquote><strong>触发</strong>：业务需要新增海运/空运港口基础数据 <strong>频率</strong>：按需（新开航线时） <strong>前置依赖</strong>：无</blockquote></p><p><strong>5.1 港口 (Port)</strong> — 海运港口和空运港口的基础数据管理，供运单系统引用</p><p><blockquote><strong>As a</strong> 仓库管理员 <strong>I want to</strong> 维护港口基础数据（海港/空港），包括港口名称、代码、所属国家 <strong>So that</strong> 运单创建时可以准确选择起运港和目的港</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段</td><td>必填</td><td>说明</td></tr>
+<tr><td>------</td><td>------</td><td>------</td></tr>
+<tr><td>portName</td><td>✅</td><td>港口名称，如"深圳港""上海港""杭州"</td></tr>
+<tr><td>portCode</td><td>✅</td><td>港口代码。海港5位字符，空港3位字符。创建后不可修改（编辑只读）</td></tr>
+<tr><td>country</td><td>✅</td><td>所属国家，filterable下拉选择。创建后不可修改（编辑只读）</td></tr>
+<tr><td>type</td><td>✅</td><td>港口类型：海港 / 空港。创建后不可修改（编辑只读）</td></tr>
+<tr><td>status</td><td>—</td><td>状态：正常 / 已冻结</td></tr>
 </table></div>
 <strong>业务规则</strong>：
 <ul><li>R18：海港代码必须为5位字符，空港代码必须为3位字符；保存时校验，不符合时Toast提示</li>
