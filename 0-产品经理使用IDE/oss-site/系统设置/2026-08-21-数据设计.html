@@ -17,9 +17,9 @@
 <span>数据设计</span>
 </div>
 <div class="layout">
-<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-建模约定-表结构设计理由">四、建模约定（表结构设计理由）</a></li></ul></nav>
+<nav class="toc"><div class="toc-title">本页目录</div><ul><li class="toc-lv3"><a href="#一-实体清单-表映射">一、实体清单 × 表映射</a></li><li class="toc-lv3"><a href="#二-逐表字段清单">二、逐表字段清单</a></li><li class="toc-lv3"><a href="#三-ER-关系图">三、ER 关系图</a></li><li class="toc-lv3"><a href="#四-建模约定-表结构设计理由">四、建模约定（表结构设计理由）</a></li><li class="toc-lv2"><a href="#枚举字典-研发必读">枚举字典 ★ 研发必读</a></li><li class="toc-lv2"><a href="#接口契约-字段级">接口契约（字段级）</a></li></ul></nav>
 <div class="content"><div class="doc-content"><p><h1 id="数据设计-系统设置">数据设计 — 系统设置</h1></p><p><blockquote><strong>版本</strong>: v3.2 | <strong>日期</strong>: 2026-08-21 | <strong>作者</strong>: AI PM
-<strong>关联 RDD</strong>: <code>2026-08-21-用户需求.md</code> v3.2</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
+<strong>关联文档</strong>: <code>2026-08-21-产品文档.md</code> v3.2</blockquote></p><p><hr></p><p><h3 id="一-实体清单-表映射">一、实体清单 × 表映射</h3></p><p><div class="table-wrapper"><table><tr><td>实体名称</td><td>对应表/子表</td><td>映射方式</td><td>说明</td></tr>
 <tr><td>----------</td><td>------------</td><td>---------</td><td>------</td></tr>
 <tr><td>客户账号</td><td><code>customer_account</code></td><td>独立表</td><td>系统设置核心聚合根，管理客户入驻全生命周期</td></tr>
 <tr><td>合同</td><td><code>customer_contract</code></td><td>1:N 子表</td><td>通过 <code>account_id</code> 关联 customer_account；一个客户可签多份合同</td></tr>
@@ -32,7 +32,7 @@
 <tr><td>角色-员工关联</td><td><code>role_employee</code></td><td>N:N 关联表</td><td><code>role_id</code> + <code>employee_id</code></td></tr>
 <tr><td>角色-资源关联</td><td><code>role_resource</code></td><td>N:N 关联表</td><td><code>role_id</code> + <code>resource_id</code></td></tr>
 </table></div>
-<hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><blockquote>字段业务含义与需求背景见 RDD；页面校验规则与交互见 PRD。本 Schema 是字段结构（类型/约束/枚举值）的唯一权威。</blockquote></p><p><h4 id="2-1-客户账号-customer_account">2.1 客户账号 (customer_account)</h4></p><p><strong>表名</strong>: <code>customer_account</code> | <strong>对应实体</strong>: 客户账号</p><p><blockquote><strong>设计说明</strong>: 存储客户登录账号信息及生命周期状态。客户公司主体信息从客户主数据（外部模块）引用，本表仅维护账号级属性。customer_region 决定入驻路径分流。合同信息已下沉至 customer_contract 表管理（1:N 关系）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
+<hr></p><p><h3 id="二-逐表字段清单">二、逐表字段清单</h3></p><p><blockquote>字段业务含义与需求背景见产品文档；业务规则与状态机见产品文档；页面交互见原型。本 Schema 是字段结构（类型/约束/枚举值）的唯一权威。</blockquote></p><p><h4 id="2-1-客户账号-customer_account">2.1 客户账号 (customer_account)</h4></p><p><strong>表名</strong>: <code>customer_account</code> | <strong>对应实体</strong>: 客户账号</p><p><blockquote><strong>设计说明</strong>: 存储客户登录账号信息及生命周期状态。客户公司主体信息从客户主数据（外部模块）引用，本表仅维护账号级属性。customer_region 决定入驻路径分流。合同信息已下沉至 customer_contract 表管理（1:N 关系）。</blockquote></p><p><div class="table-wrapper"><table><tr><td>字段名 (En)</td><td>字段名 (Cn)</td><td>类型 (Type)</td><td>必填</td><td>约束/索引</td><td>枚举/备注</td></tr>
 <tr><td>:----------</td><td>:----------</td><td>:------------</td><td>:---</td><td>:---------</td><td>:-------------------------------------</td></tr>
 <tr><td><code>id</code></td><td>主键</td><td>BigInt</td><td>Yes</td><td><strong>PK</strong></td><td>雪花ID</td></tr>
 <tr><td><code>tenant_id</code></td><td>租户ID</td><td>String(32)</td><td>Yes</td><td>Index</td><td>SaaS 数据隔离</td></tr>
@@ -155,7 +155,7 @@
 <tr><td><code>sender</code></td><td>发件箱</td><td>String(128)</td><td>Yes</td><td>—</td><td>注册虚拟邮箱</td></tr>
 <tr><td><code>recipient</code></td><td>收件人</td><td>String(128)</td><td>Yes</td><td>—</td><td>客户账号接收邮箱</td></tr>
 <tr><td><code>subject</code></td><td>邮件主题</td><td>String(256)</td><td>Yes</td><td>—</td><td>模板：<code>【入驻通知】欢迎使用【飞点/墨链】跨境供应链系统 - 账号已开通</code></td></tr>
-<tr><td><code>body</code></td><td>邮件内容</td><td>Text</td><td>Yes</td><td>—</td><td>含虚拟账号和初始密码的完整邮件正文，模板详见 RDD §3.5</td></tr>
+<tr><td><code>body</code></td><td>邮件内容</td><td>Text</td><td>Yes</td><td>—</td><td>含虚拟账号和初始密码的完整邮件正文，模板详见产品文档 §3.5</td></tr>
 <tr><td><code>send_status</code></td><td>发送状态</td><td>TinyInt</td><td>Yes</td><td>—</td><td>10:待发送, 20:已发送, 30:发送失败</td></tr>
 <tr><td><code>send_at</code></td><td>发送时间</td><td>DateTime</td><td>No</td><td>—</td><td>实际发送时间</td></tr>
 <tr><td><code>fail_reason</code></td><td>失败原因</td><td>Text</td><td>No</td><td>—</td><td>发送失败时的错误信息</td></tr>
@@ -419,19 +419,136 @@
 <li>客户属地（customer_region）：从客户主数据模块获取，在本表中冗余存储以便快速判断入驻路径分流</li>
 <li>开户申请的 customer_type、customer_region：从 customer_account 和客户主数据带出，作为快照存储，审核时参考</li>
 </ul>
-<strong>5. 合同过期动态判断</strong></p><p><blockquote>见 PRD R14（合同过期动态判断）与 §7 计算公式。</blockquote></p><p><strong>6. 开户申请历史保留</strong></p><p><ul><li>每个 <code>customer_account</code> 可有多条 <code>account_application</code> 记录（1:N）</li>
+<strong>5. 合同过期动态判断</strong></p><p><blockquote>见产品文档 R1.14（合同过期动态判断）与 §计算公式。</blockquote></p><p><strong>6. 开户申请历史保留</strong></p><p><ul><li>每个 <code>customer_account</code> 可有多条 <code>account_application</code> 记录（1:N）</li>
 <li>当审核拒绝后重新提交开户时，创建新的 <code>account_application</code> 记录而非覆盖</li>
 <li>重新开户时，前端从最新一条 <code>account_application</code> 中读取数据预填表单</li>
 <li>审核通过时，对应的 <code>account_application</code> 标记 <code>application_status=20, audit_result=10</code></li>
 </ul>
-<strong>7. 审核通过后的自动操作</strong></p><p><blockquote>见 PRD R07（审核通过）、R17（邮件通知）、R18（客户管理数据同步）。</blockquote></p><p><strong>8. 客户属地主路由</strong></p><p><blockquote>见 PRD R01（客户属地主路由）。</blockquote></p><p><strong>9. 冻结原因枚举</strong></p><p><ul><li><code>freeze_reason</code>：10:客户关联冻结（客户主数据冻结时联动）, 20:人为冻结（管理员手动操作）, 30:信控逾期冻结（二期信用控制模块触发）</li>
+<strong>7. 审核通过后的自动操作</strong></p><p><blockquote>见产品文档 R1.7（审核通过）、R1.21（邮件通知）、R1.22（客户管理数据同步）。</blockquote></p><p><strong>8. 客户属地主路由</strong></p><p><blockquote>见产品文档 R1.1（客户属地主路由）。</blockquote></p><p><strong>9. 冻结原因枚举</strong></p><p><ul><li><code>freeze_reason</code>：10:客户关联冻结（客户主数据冻结时联动）, 20:人为冻结（管理员手动操作）, 30:信控逾期冻结（二期信用控制模块触发）</li>
 <li>冻结时记录 <code>freeze_time</code>，用于统计冻结时长</li>
 </ul>
-<strong>10. 邮件通知可靠性</strong></p><p><blockquote>见 PRD R17（邮件通知）。</blockquote></p><p><strong>11. 资源树权限继承说明</strong></p><p><ul><li>当前 MVP 阶段不实现父子资源权限继承——勾选父菜单不会自动勾选子菜单/按钮，需逐项勾选</li>
+<strong>10. 邮件通知可靠性</strong></p><p><blockquote>见产品文档 R1.21（邮件通知）。</blockquote></p><p><strong>11. 资源树权限继承说明</strong></p><p><ul><li>当前 MVP 阶段不实现父子资源权限继承——勾选父菜单不会自动勾选子菜单/按钮，需逐项勾选</li>
 <li>Phase 2-3 可考虑增加"勾选父节点自动全选子节点"的交互优化</li>
 <li>权限校验时以 <code>role_resource</code> 表中的实际记录为准，不向上递归</li>
 </ul>
-<strong>12. 合同唯一有效约束</strong></p><p><blockquote>见 PRD R29（签约主体唯一校验）。</blockquote></p><p><hr>
+<strong>12. 合同唯一有效约束</strong></p><p><blockquote>见产品文档 R1.19（签约主体唯一校验）。</blockquote></p><p><hr></p><p><hr></p><p><h2 id="枚举字典-研发必读">枚举字典 ★ 研发必读</h2></p><p><blockquote>所有枚举字段的键值对集中定义，研发以此为准。与数据设计 Schema 中的 TinyInt 值保持一致。</blockquote></p><p><div class="table-wrapper"><table><tr><td>枚举名</td><td>值</td><td>常量名</td><td>中文</td><td>适用实体</td></tr>
+<tr><td>--------</td><td>----</td><td>--------</td><td>------</td><td>---------</td></tr>
+<tr><td>AccountStatus</td><td>10</td><td>PENDING_SIGN</td><td>待签约</td><td>customer_account</td></tr>
+<tr><td>AccountStatus</td><td>20</td><td>PENDING_OPEN</td><td>待开户</td><td>customer_account</td></tr>
+<tr><td>AccountStatus</td><td>30</td><td>PENDING_AUDIT</td><td>待审核</td><td>customer_account</td></tr>
+<tr><td>AccountStatus</td><td>40</td><td>REJECTED</td><td>已拒绝</td><td>customer_account</td></tr>
+<tr><td>AccountStatus</td><td>50</td><td>NORMAL</td><td>正常</td><td>customer_account</td></tr>
+<tr><td>AccountStatus</td><td>60</td><td>FROZEN</td><td>已冻结</td><td>customer_account</td></tr>
+<tr><td>ContractStatus</td><td>10</td><td>UNSIGNED</td><td>未签约</td><td>customer_contract</td></tr>
+<tr><td>ContractStatus</td><td>20</td><td>SIGNING</td><td>签约中</td><td>customer_contract</td></tr>
+<tr><td>ContractStatus</td><td>30</td><td>SIGNED</td><td>已签约</td><td>customer_contract</td></tr>
+<tr><td>ContractStatus</td><td>40</td><td>EXPIRED</td><td>已过期</td><td>customer_contract (动态计算)</td></tr>
+<tr><td>CustomerRegion</td><td>10</td><td>MAINLAND</td><td>大陆</td><td>customer_account, account_application</td></tr>
+<tr><td>CustomerRegion</td><td>20</td><td>HK</td><td>香港</td><td>customer_account, account_application</td></tr>
+<tr><td>FreezeReason</td><td>10</td><td>CUSTOMER_FREEZE</td><td>客户关联冻结</td><td>customer_account</td></tr>
+<tr><td>FreezeReason</td><td>20</td><td>MANUAL_FREEZE</td><td>人为冻结</td><td>customer_account</td></tr>
+<tr><td>FreezeReason</td><td>30</td><td>CREDIT_FREEZE</td><td>信控逾期冻结</td><td>customer_account</td></tr>
+<tr><td>UserType</td><td>10</td><td>CUSTOMER</td><td>客户</td><td>customer_account</td></tr>
+<tr><td>BusinessType</td><td>TMS</td><td>TMS</td><td>TMS运输管理</td><td>customer_account, account_application</td></tr>
+<tr><td>BusinessType</td><td>WMS</td><td>WMS</td><td>WMS仓储管理</td><td>customer_account, account_application</td></tr>
+<tr><td>YesNo</td><td>10</td><td>YES</td><td>是</td><td>customer_contract, account_application</td></tr>
+<tr><td>YesNo</td><td>20</td><td>NO</td><td>否</td><td>customer_contract, account_application</td></tr>
+<tr><td>PaymentTerm</td><td>10</td><td>MONTHLY</td><td>月结</td><td>customer_contract</td></tr>
+<tr><td>PaymentTerm</td><td>20</td><td>WEEKLY</td><td>周结</td><td>customer_contract</td></tr>
+<tr><td>ContractType</td><td>10</td><td>NORMAL</td><td>普通合同</td><td>customer_contract</td></tr>
+<tr><td>ContractType</td><td>20</td><td>HK_SPECIAL</td><td>香港特殊合同</td><td>customer_contract</td></tr>
+<tr><td>ContractCompany</td><td>10</td><td>GZ_FEIDIAN</td><td>广州飞点</td><td>customer_contract</td></tr>
+<tr><td>ContractCompany</td><td>20</td><td>SZ_FEIDIAN</td><td>深圳飞点</td><td>customer_contract</td></tr>
+<tr><td>ContractCompany</td><td>30</td><td>GD_FEIDIAN</td><td>广东飞点</td><td>customer_contract</td></tr>
+<tr><td>ContractCompany</td><td>40</td><td>MOLIAN</td><td>墨链</td><td>customer_contract</td></tr>
+<tr><td>ContractCompany</td><td>50</td><td>HK_FULIDUN</td><td>香港富力顿</td><td>customer_contract</td></tr>
+<tr><td>SignStatus</td><td>10</td><td>PENDING_SIGN</td><td>未签约</td><td>customer_contract</td></tr>
+<tr><td>SignStatus</td><td>20</td><td>SIGNING</td><td>签约中</td><td>customer_contract</td></tr>
+<tr><td>SignStatus</td><td>30</td><td>SIGNED</td><td>已签约</td><td>customer_contract</td></tr>
+<tr><td>SignStatus</td><td>40</td><td>EXPIRED</td><td>已过期</td><td>customer_contract (动态计算)</td></tr>
+<tr><td>BillingCycle</td><td>10</td><td>FIXED</td><td>固定</td><td>customer_contract</td></tr>
+<tr><td>BillingCycle</td><td>20</td><td>UNFIXED</td><td>不固定</td><td>customer_contract</td></tr>
+<tr><td>SettlementType</td><td>10</td><td>BY_MONTH</td><td>按月</td><td>customer_contract</td></tr>
+<tr><td>SettlementType</td><td>20</td><td>BY_DAY</td><td>按天</td><td>customer_contract</td></tr>
+<tr><td>CompanyType</td><td>10</td><td>STARTUP</td><td>初创企业（注册资金低于10万）</td><td>account_application</td></tr>
+<tr><td>CompanyType</td><td>20</td><td>AFFILIATE</td><td>关联公司（注册资金低于10万）</td><td>account_application</td></tr>
+<tr><td>CompanyType</td><td>30</td><td>REGISTERED_10W</td><td>注册资金大于等于10万</td><td>account_application</td></tr>
+<tr><td>CompanyType</td><td>40</td><td>INDIVIDUAL</td><td>个人</td><td>account_application</td></tr>
+<tr><td>PriceSensitivity</td><td>10</td><td>HIGH</td><td>高</td><td>account_application</td></tr>
+<tr><td>PriceSensitivity</td><td>20</td><td>MEDIUM</td><td>中</td><td>account_application</td></tr>
+<tr><td>PriceSensitivity</td><td>30</td><td>LOW</td><td>低</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>10</td><td>TANJI</td><td>探迹</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>20</td><td>REFERRAL</td><td>转介绍</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>30</td><td>EXHIBITION</td><td>展会</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>40</td><td>TELEMARKETING</td><td>电销</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>50</td><td>WECHAT_MP</td><td>公众号推广</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>60</td><td>COLD_VISIT</td><td>陌拜</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>70</td><td>BOSS_GROUP</td><td>老板拉群</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>80</td><td>EVENT</td><td>活动</td><td>account_application</td></tr>
+<tr><td>AcquaintanceMethod</td><td>90</td><td>OTHER</td><td>其他</td><td>account_application</td></tr>
+<tr><td>SendStatus</td><td>10</td><td>PENDING</td><td>待发送</td><td>email_notification</td></tr>
+<tr><td>SendStatus</td><td>20</td><td>SENT</td><td>已发送</td><td>email_notification</td></tr>
+<tr><td>SendStatus</td><td>30</td><td>FAILED</td><td>发送失败</td><td>email_notification</td></tr>
+<tr><td>TriggerEvent</td><td>10</td><td>AUDIT_PASS</td><td>审核通过</td><td>email_notification</td></tr>
+<tr><td>EmployeeStatus</td><td>0</td><td>DISABLED</td><td>禁用</td><td>employee</td></tr>
+<tr><td>EmployeeStatus</td><td>1</td><td>ENABLED</td><td>启用</td><td>employee</td></tr>
+<tr><td>Department</td><td>10</td><td>R_D</td><td>研发部</td><td>employee</td></tr>
+<tr><td>Department</td><td>20</td><td>PRODUCT</td><td>产品部</td><td>employee</td></tr>
+<tr><td>Department</td><td>30</td><td>DESIGN</td><td>设计部</td><td>employee</td></tr>
+<tr><td>Department</td><td>40</td><td>MARKETING</td><td>市场部</td><td>employee</td></tr>
+<tr><td>Department</td><td>50</td><td>SALES</td><td>销售部</td><td>employee</td></tr>
+<tr><td>Department</td><td>60</td><td>HR</td><td>人事部</td><td>employee</td></tr>
+<tr><td>Department</td><td>70</td><td>FINANCE</td><td>财务部</td><td>employee</td></tr>
+<tr><td>Department</td><td>80</td><td>OPS</td><td>运维部</td><td>employee</td></tr>
+<tr><td>Department</td><td>90</td><td>CS</td><td>客服部</td><td>employee</td></tr>
+<tr><td>Branch</td><td>10</td><td>GZ_FD</td><td>广州飞点供应链管理有限公司</td><td>employee</td></tr>
+<tr><td>Branch</td><td>20</td><td>GD_FD</td><td>广东省飞点跨境供应链有限公司</td><td>employee</td></tr>
+<tr><td>Branch</td><td>30</td><td>SZ_FD</td><td>飞点跨境供应链（深圳）有限公司</td><td>employee</td></tr>
+<tr><td>Branch</td><td>40</td><td>GD_ML</td><td>广东墨链跨境供应链有限公司</td><td>employee</td></tr>
+<tr><td>RoleType</td><td>10</td><td>SUPER_ADMIN</td><td>超级管理员</td><td>role</td></tr>
+<tr><td>RoleType</td><td>20</td><td>ADMIN</td><td>管理员</td><td>role</td></tr>
+<tr><td>RoleType</td><td>30</td><td>STAFF</td><td>员工</td><td>role</td></tr>
+<tr><td>RoleStatus</td><td>10</td><td>NORMAL</td><td>正常</td><td>role</td></tr>
+<tr><td>RoleStatus</td><td>20</td><td>FROZEN</td><td>冻结</td><td>role</td></tr>
+<tr><td>ResourceType</td><td>10</td><td>MENU</td><td>菜单</td><td>resource</td></tr>
+<tr><td>ResourceType</td><td>20</td><td>BUTTON</td><td>按钮</td><td>resource</td></tr>
+<tr><td>Country</td><td>US</td><td>US</td><td>美国</td><td>account_application</td></tr>
+<tr><td>Country</td><td>UK</td><td>UK</td><td>英国</td><td>account_application</td></tr>
+<tr><td>Country</td><td>DE</td><td>DE</td><td>德国</td><td>account_application</td></tr>
+<tr><td>Country</td><td>FR</td><td>FR</td><td>法国</td><td>account_application</td></tr>
+<tr><td>Country</td><td>CA</td><td>CA</td><td>加拿大</td><td>account_application</td></tr>
+<tr><td>Country</td><td>JP</td><td>JP</td><td>日本</td><td>account_application</td></tr>
+<tr><td>Country</td><td>AU</td><td>AU</td><td>澳大利亚</td><td>account_application</td></tr>
+<tr><td>PhoneCode</td><td>+86</td><td>CN</td><td>中国</td><td>employee</td></tr>
+<tr><td>PhoneCode</td><td>+852</td><td>HK</td><td>香港</td><td>employee</td></tr>
+<tr><td>PhoneCode</td><td>+886</td><td>TW</td><td>台湾</td><td>employee</td></tr>
+<tr><td>PhoneCode</td><td>+1</td><td>US</td><td>美国</td><td>employee</td></tr>
+</table></div>
+<hr></p><p><hr></p><p><h2 id="接口契约-字段级">接口契约（字段级）</h2></p><p><div class="table-wrapper"><table><tr><td>接口</td><td>方法</td><td>路径</td><td>触发页面</td><td>请求参数</td><td>返回字段</td><td>失败处理</td></tr>
+<tr><td>------</td><td>------</td><td>------</td><td>---------</td><td>---------</td><td>---------</td><td>---------</td></tr>
+<tr><td>查询客户账号列表</td><td>GET</td><td>/api/customer-accounts</td><td>用户管理_主列表</td><td>{ status, customerName, page, pageSize }</td><td>{ data: [...], total }</td><td>Toast"获取数据失败"</td></tr>
+<tr><td>新增客户账号</td><td>POST</td><td>/api/customer-accounts</td><td>新增账号弹窗</td><td>{ customerRefId, userType, email, businessTypes }</td><td>{ id, accountCode }</td><td>Toast对应错误信息</td></tr>
+<tr><td>编辑客户账号</td><td>PUT</td><td>/api/customer-accounts/{id}</td><td>编辑账号弹窗</td><td>{ businessTypes }</td><td>{ success }</td><td>Toast对应错误信息</td></tr>
+<tr><td>大陆线上签约</td><td>POST</td><td>/api/customer-accounts/{id}/contract/sign-mainland</td><td>大陆签约弹窗</td><td>{ contractCompany, isSimple, isStandard, paymentTerm, contractYears, startDate, endDate, signDate, modifyContent, attachments }</td><td>{ contractId }</td><td>校验失败提示具体字段；签约主体唯一校验失败提示"该客户已存在有效合同"</td></tr>
+<tr><td>香港线下签约</td><td>POST</td><td>/api/customer-accounts/{id}/contract/sign-hk</td><td>香港签约弹窗</td><td>{ contractCompany(固定=香港富力顿), startDate, endDate, attachments }</td><td>{ contractId }</td><td>附件未上传→阻断并提示</td></tr>
+<tr><td>查询合同列表</td><td>GET</td><td>/api/customer-accounts/{id}/contracts</td><td>合同数量Popover</td><td>—</td><td>{ contracts: [{ contractCompany, signStatus, startDate, endDate, paymentTerm, daysOrDate }] }</td><td>Toast"获取合同列表失败"</td></tr>
+<tr><td>提交开户申请</td><td>POST</td><td>/api/customer-accounts/{id}/application</td><td>开户申请弹窗</td><td>{ isPeer, companyScale, companyType, csRepresentative, salesSource, mainCountries, commonChannels, shippingVolume, shippingProducts, priceSensitivity, currentLogistics, hasVisited, acquaintanceMethod, remark }</td><td>{ applicationId }</td><td>校验失败提示具体字段</td></tr>
+<tr><td>获取最新开户申请</td><td>GET</td><td>/api/customer-accounts/{id}/applications/latest</td><td>开户申请弹窗（预填）</td><td>—</td><td>{ applicationData }</td><td>Toast"获取历史申请失败"</td></tr>
+<tr><td>审核开户</td><td>POST</td><td>/api/customer-accounts/{id}/audit</td><td>审核弹窗</td><td>{ result: "pass"\</td><td>"reject", auditRemark }</td><td>{ success }</td><td>Toast提示</td></tr>
+<tr><td>修改客户状态</td><td>PUT</td><td>/api/customer-accounts/{id}/status</td><td>冻结/启用操作</td><td>{ accountStatus, freezeReason }</td><td>{ success }</td><td>Toast"操作失败"</td></tr>
+<tr><td>删除客户账号</td><td>DELETE</td><td>/api/customer-accounts/{id}</td><td>删除操作</td><td>—</td><td>{ success }</td><td>Toast"删除失败"</td></tr>
+<tr><td>查询员工列表</td><td>GET</td><td>/api/employees</td><td>员工管理_主列表</td><td>{ username, email, phone, status, department, position, page, pageSize, sortField, sortOrder }</td><td>{ data: [...], total }</td><td>Toast"获取数据失败"</td></tr>
+<tr><td>编辑员工</td><td>PUT</td><td>/api/employees/{id}</td><td>编辑员工弹窗</td><td>{ email, phoneCode, phoneNumber, department, tenant, branch }</td><td>{ success }</td><td>Toast"修改失败"</td></tr>
+<tr><td>分配员工角色</td><td>PUT</td><td>/api/employees/{id}/roles</td><td>分配角色弹窗</td><td>{ roleIds: [...] }</td><td>{ success }</td><td>Toast"角色分配失败"</td></tr>
+<tr><td>同步员工</td><td>POST</td><td>/api/employees/sync</td><td>同步员工按钮</td><td>—</td><td>{ success, syncedCount }</td><td>Toast"同步失败"</td></tr>
+<tr><td>导出员工</td><td>GET</td><td>/api/employees/export</td><td>导出按钮</td><td>同查询参数</td><td>xlsx文件流</td><td>Toast"导出失败"</td></tr>
+<tr><td>查询角色列表</td><td>GET</td><td>/api/roles</td><td>角色管理_主列表</td><td>{ roleName, type, page, pageSize }</td><td>{ data: [...], total }</td><td>Toast"获取数据失败"</td></tr>
+<tr><td>新增角色</td><td>POST</td><td>/api/roles</td><td>新增角色弹窗</td><td>{ roleName, roleCode, tenant, type, isBuiltIn, remark }</td><td>{ id }</td><td>Toast对应错误信息</td></tr>
+<tr><td>编辑角色</td><td>PUT</td><td>/api/roles/{id}</td><td>编辑角色弹窗</td><td>{ roleName, roleCode, tenant, type, isBuiltIn, remark, status }</td><td>{ success }</td><td>Toast"编辑角色失败"</td></tr>
+<tr><td>分配角色资源</td><td>PUT</td><td>/api/roles/{id}/resources</td><td>分配资源弹窗</td><td>{ resourceIds: [...] }</td><td>{ success }</td><td>Toast"资源分配失败"</td></tr>
+<tr><td>批量删除角色</td><td>DELETE</td><td>/api/roles/batch</td><td>批量删除按钮</td><td>{ ids: [...] }</td><td>{ deletedCount, skippedBuiltin }</td><td>Toast"批量删除失败"</td></tr>
+</table></div>
+<hr>
 </p></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
