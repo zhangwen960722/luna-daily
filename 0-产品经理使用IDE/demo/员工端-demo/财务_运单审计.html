@@ -336,7 +336,7 @@
                                 <el-option label="是" value="是"></el-option>
                                 <el-option label="否" value="否"></el-option>
                             </el-select>
-                            <el-select v-model="search.customMark" placeholder="自定义标识" class="search-control" multiple clearable collapse-tags>
+                            <el-select v-model="search.customMark" placeholder="附加费标识" class="search-control" multiple clearable collapse-tags>
                                 <el-option label="加急件" value="加急件"></el-option>
                                 <el-option label="易碎品" value="易碎品"></el-option>
                             </el-select>
@@ -456,6 +456,32 @@
                         <span v-else style="color:var(--el-text-color-secondary);">—</span>
                     </template>
                     </el-table-column>
+                    <el-table-column label="销售成本" width="136" align="right">
+                    <template #default="scope">
+                        <el-popover v-if="rowDirFlows(scope.row, 'sc').length" placement="left" :width="720" trigger="hover">
+                            <template #reference>
+                                <span style="font-weight:600;cursor:pointer;color:var(--el-color-warning);">{{ rowDirTotalText(scope.row, 'sc') }}</span>
+                            </template>
+                            <div style="font-weight:600;margin-bottom:8px;">{{ scope.row.orderNo }} · 销售成本明细（{{ rowDirFlows(scope.row, 'sc').length }} 条）</div>
+                            <el-table :data="rowDirFlows(scope.row, 'sc')" size="small" border max-height="300">
+                                <el-table-column prop="type" label="费用类型" min-width="112" show-overflow-tooltip></el-table-column>
+                                <el-table-column label="审计状态" width="104" align="center">
+                                    <template #default="s"><el-tag size="small" :type="s.row.auditStatus === '已审计' ? 'success' : 'warning'">{{ s.row.auditStatus || '待业务审计' }}</el-tag></template>
+                                </el-table-column>
+                                <el-table-column label="金额（原币）" width="104" align="right"><template #default="s">{{ cnyFormat(s.row.amount) }}</template></el-table-column>
+                                <el-table-column label="币种" width="66" align="center"><template #default="s">{{ s.row.currency || 'CNY' }}</template></el-table-column>
+                                <el-table-column v-if="rowHasRate(scope.row, 'sc')" label="汇率" width="78" align="center"><template #default="s">{{ flowRate(s.row).toFixed(4) }}</template></el-table-column>
+                                <el-table-column v-if="rowHasRate(scope.row, 'sc')" label="金额（本币）" width="106" align="right"><template #default="s">{{ cnyFormat(flowCnyValue(s.row)) }}</template></el-table-column>
+                            </el-table>
+                            <div style="margin-top:8px;font-size:12px;color:var(--el-text-color-secondary);">
+                                总额 <b style="color:var(--el-text-color-primary);">{{ rowDirTotalText(scope.row, 'sc') }}</b>
+                                <span v-if="rowMultiCurrency(scope.row, 'sc')" style="margin-left:10px;">原币小计：{{ rowDirSubtotalText(scope.row, 'sc') }}</span>
+                                <span v-if="rowHasRate(scope.row, 'sc')" style="margin-left:10px;">金额（本币）= 金额（原币）× 汇率</span>
+                            </div>
+                        </el-popover>
+                        <span v-else style="color:var(--el-text-color-secondary);">—</span>
+                    </template>
+                    </el-table-column>
                     <el-table-column label="应付" width="136" align="right">
                     <template #default="scope">
                         <el-popover v-if="rowDirFlows(scope.row, 'ap').length" placement="left" :width="720" trigger="hover">
@@ -501,9 +527,11 @@
                         <el-tooltip :content="rowAuditState(scope.row)" placement="top">
                         <el-tag size="small" :type="scope.row.apAuditStatus === '已审计' ? 'success' : 'info'" effect="plain">应付 {{ scope.row.apAuditStatus || '未审计' }}<b v-if="rowApPartialAudited(scope.row)"> · 部分已审</b></el-tag>
                         </el-tooltip>
+                        <el-tooltip :content="rowAuditState(scope.row)" placement="top">
+                        <el-tag size="small" :type="scope.row.scAuditStatus === '已审计' ? 'success' : 'info'" effect="plain">销售成本 {{ scope.row.scAuditStatus || '未审计' }}</el-tag>
+                        </el-tooltip>
                     </template>
                     </el-table-column>
-                    <el-table-column prop="customMark" label="自定义标识" width="110" align="center"></el-table-column>
                     <el-table-column prop="mainProduct" label="商品主品名" width="120" show-overflow-tooltip></el-table-column>
                     <el-table-column label="产品属性" width="110" align="center">
                     <template #default="scope">{{ Array.isArray(scope.row.attrs) ? scope.row.attrs.join('、') : (scope.row.attrs || '—') }}</template>
@@ -2274,7 +2302,6 @@
                                             </el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="bizTime" label="业务时间" width="110" align="center"><template #default="scope">{{ scope.row.bizTime || '—' }}</template></el-table-column>
-                                            <el-table-column prop="createdAt" label="创建时间" width="140" align="center"><template #default="scope">{{ scope.row.createdAt || '—' }}</template></el-table-column>
                                             <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
                                             <el-table-column label="操作" width="120" align="center" fixed="right" class-name="fee-op-cell">
                                             <template #default="scope">
@@ -2296,9 +2323,12 @@
                                             </div>
                                             <div style="display:flex; align-items:center; gap:8px;">
                                                 <el-button type="primary" size="small" @click="openCostAddDialog('detail')">新增流水</el-button>
+                                                <el-button type="warning" size="small" :disabled="!canCostAudit" @click="submitCostAudit('audit')">审计</el-button>
+                                                <el-button size="small" :disabled="!canCostReverseAudit" @click="submitCostAudit('reverse')">反审计</el-button>
                                             </div>
                                         </div>
-                                        <el-table :data="currentCostFlows" border size="small" class="fee-flow-table">
+                                        <el-table :data="currentCostFlows" border size="small" class="fee-flow-table" @selection-change="handleCostSelectionChange">
+                                            <el-table-column type="selection" width="40" align="center"></el-table-column>
                                             <el-table-column prop="type" label="费用类型" min-width="112" fixed="left" show-overflow-tooltip></el-table-column>
                                             <el-table-column label="币种" width="64" align="center"><template #default="scope">{{ scope.row.currency }}</template></el-table-column>
                                             <el-table-column prop="rate" label="汇率" width="64" align="center"></el-table-column>
@@ -2308,13 +2338,14 @@
                                             <el-table-column label="金额（原币）" width="104" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
                                             <el-table-column label="金额（本币）" width="106" align="right"><template #default="scope"><span :style="{fontWeight:600, color: flowCnyValue(scope.row) < 0 ? 'var(--el-color-danger)' : ''}">¥ {{ cnyFormat(flowCnyValue(scope.row)) }}</span></template></el-table-column>
                                             <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
+                                            <el-table-column label="审计状态" width="96" align="center"><template #default="scope"><el-tag :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'" size="small">{{ scope.row.auditStatus || '待业务审计' }}</el-tag></template></el-table-column>
                                             <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
                                             <el-table-column label="操作" width="156" align="center" fixed="right" class-name="fee-op-cell">
                                                 <template #default="scope">
-                                                    <el-button link type="primary" size="small" @click="openCostEdit(scope.row)">编辑</el-button>
-                                                    <el-button link type="danger" size="small" @click="removeCostFlow(scope.$index)">删除</el-button>
+                                                    <el-button link type="primary" size="small" :disabled="scope.row.auditStatus === '已审计'" @click="openCostEdit(scope.row)">编辑</el-button>
+                                                    <el-button link type="danger" size="small" :disabled="scope.row.auditStatus === '已审计'" @click="removeCostFlow(scope.$index)">删除</el-button>
                                                 </template>
                                             </el-table-column>
                                         </el-table>
@@ -2989,6 +3020,7 @@
                         <el-checkbox-group v-model="waybillAuditDirs">
                             <el-checkbox label="应收" value="ar" :disabled="!waybillAuditDirUsable('ar')">应收（该运单全部应收流水统一审计）</el-checkbox>
                             <el-checkbox label="应付" value="ap" :disabled="!waybillAuditDirUsable('ap')">应付（该运单全部应付流水统一审计）</el-checkbox>
+                            <el-checkbox label="销售成本" value="sc" :disabled="!waybillAuditDirUsable('sc')">销售成本（该运单全部销售成本流水统一审计）</el-checkbox>
                         </el-checkbox-group>
                     </el-form-item>
                 </template>
@@ -2999,13 +3031,15 @@
                             <el-checkbox label="ap-marker" :disabled="!waybillReverseUsable('ap')">应付-仅运单</el-checkbox>
                             <el-checkbox label="ar-flows" :disabled="!waybillReverseUsable('ar')">应收-运单及流水</el-checkbox>
                             <el-checkbox label="ap-flows" :disabled="!waybillReverseUsable('ap')">应付-运单及流水</el-checkbox>
+                            <el-checkbox label="sc-marker" :disabled="!waybillReverseUsable('sc')">销售成本-仅运单</el-checkbox>
+                            <el-checkbox label="sc-flows" :disabled="!waybillReverseUsable('sc')">销售成本-运单及流水</el-checkbox>
                         </el-checkbox-group>
                     </el-form-item>
                 </template>
             </el-form>
             <div style="color:var(--el-text-color-regular); font-size:13px; line-height:1.7; padding-left:90px;">
                 <template v-if="waybillAuditMode === 'audit'">审计通过后：<b>该方向不能再新增费用</b>，原有流水全部锁定（不能再改）。</template>
-                <template v-else>反审计范围（可多选）：<b>仅运单</b> = 只反运单，反完后能新增费用、原流水仍不能改；<b>运单及流水</b> = 运单和流水一起反，反完后既能新增、也能改原流水。已进账单的流水始终不可反审计；同一方向两个都勾时，按「运单及流水」执行。<br>已选 {{ waybillReverseStat.total }} 票：应收方向 {{ waybillReverseStat.ar }} 票已审计、应付方向 {{ waybillReverseStat.ap }} 票已审计（未审计方向自动跳过）。</template>
+                <template v-else><div>反审计范围（可多选）：</div><div><b>仅运单</b> = 只反运单，反完后能新增费用、原流水仍不能改；</div><div><b>运单及流水</b> = 运单和流水一起反，反完后既能新增、也能改原流水。</div><div>已进账单的流水始终不可反审计；</div><div>同一方向两个都勾时，按「运单及流水」执行。</div><div style="color: #F56C6C; font-weight: 700;">反审计应收，请关注销售成本是否需要同时反审计。</div><div style="margin-top: 8px;">已选 {{ waybillReverseStat.total }} 票：应收方向 {{ waybillReverseStat.ar }} 票已审计、应付方向 {{ waybillReverseStat.ap }} 票已审计、销售成本方向 {{ waybillReverseStat.sc }} 票已审计（未审计方向自动跳过）。</div></template>
             </div>
             <template #footer>
                 <el-button @click="waybillAuditVisible = false">取消</el-button>
@@ -3054,7 +3088,7 @@
 
         <!-- 编辑应收流水：带规则（有来源规则）→ 单价 × 计费量；不带规则（无来源规则）→ 直接填金额；系统自动行只放行 描述 / 内部备注 -->
         <el-dialog :model-value="!!feeArEdit" title="编辑应收流水" width="860px" append-to-body @update:model-value="feeArEdit = null">
-            <el-alert v-if="feeArEdit && feeEditLocked" title="系统自动计算 · 金额口径字段只读，仅可修改「描述」与「内部备注」" type="info" :closable="false" show-icon style="margin-bottom: 16px;"></el-alert>
+            <el-alert v-if="feeArEdit && feeArEdit.sourceType === 10" title="系统自动计算 · 可修改金额口径字段" type="info" :closable="false" show-icon style="margin-bottom: 16px;"></el-alert>
             <div v-if="feeArEdit" class="fee-add-card" style="margin-bottom: 0;">
                 <el-row :gutter="12">
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型</span><el-input :value="feeArEdit.type" size="small" disabled></el-input></div></el-col>
@@ -3823,6 +3857,7 @@
                     // 运单级审计标记（**两态：未审计 / 已审计**，按费用方向各一条）—— 应收整票审计通过后，整票不允许新增应收费用
                     arAuditStatus: '未审计', arAuditBy: '', arAuditAt: '',
                     apAuditStatus: '未审计', apAuditBy: '', apAuditAt: '',
+                    scAuditStatus: '未审计', scAuditBy: '', scAuditAt: '',
                     companyName: isFba ? 'Amazon' : ('客户公司'+Math.floor(Math.random()*9+1)),
                     location: isFba ? ('A'+(Math.floor(Math.random()*20+1))+'-'+(Math.floor(Math.random()*5+1))) : '',
                     supplierOrderNo: '',
@@ -5355,7 +5390,7 @@
                 //   ① 运单审计标签（waybill_fee_audit）＝管「新增」—— 该方向已审计 → 整票不允许新增该方向费用
                 //   ② 流水审计标签（ar_flow.audit_status）＝管「编辑」—— 该条已审计 → 该条不可编辑（要改先反审计该条）
                 // 运单在该方向是否已整票审计（dir: 'ar' 应收 / 'ap' 应付）
-                const waybillFeeAudited = (w, dir) => !!w && (dir === 'ap' ? w.apAuditStatus : w.arAuditStatus) === '已审计';
+                const waybillFeeAudited = (w, dir) => !!w && (dir === 'ap' ? w.apAuditStatus : (dir === 'sc' ? w.scAuditStatus : w.arAuditStatus)) === '已审计';
                 // 行级冻结边界（优先级：运单状态 → 账单关联 → 流水级审计；编辑不看运单标记、只看该条流水自身）
                 const feeRowLockReason = (row) => {
                     const cur = currentRow.value || {};
@@ -6108,7 +6143,7 @@
                     if (Array.isArray(w.arFlows)) {
                         w.costFlows = w.arFlows
                             .filter(f => ['运费', '头程海运费', '周六派送费'].includes(f.type))
-                            .map(f => Object.assign({}, f, { id: (f.id || 0) + 100000 }));
+                            .map(f => Object.assign({}, f, { id: (f.id || 0) + 100000, auditStatus: '待业务审计' }));
                     }
                 });
                 const currentArFlows = computed(() => (currentRow.value && currentRow.value.arFlows) || []);
@@ -6118,7 +6153,7 @@
                 const rowApTotal = (row) => ((row && row.apFlows) || []).reduce((s, f) => s + Number(f.amount || 0), 0);
                 // 毛利 = 应收折合 − 应付折合（多币种时先按行汇率折算为本位币 CNY，否则直接相加会串币种）
                 // ── 应收 / 应付 列展示：总额（金额 + 币种）+ 悬浮费用明细（费用类型 + 金额（原币）+ 币种 [+ 汇率 / 金额（本币）]）
-                const rowDirFlows = (r, dir) => ((dir === 'ap' ? (r && r.apFlows) : (r && r.arFlows)) || []);
+                const rowDirFlows = (r, dir) => ((dir === 'ap' ? (r && r.apFlows) : (dir === 'sc' ? (r && r.costFlows) : (r && r.arFlows))) || []);
                 const flowRate = (f) => { const v = Number(f && f.rate); return v > 0 ? v : 1; };
                 const flowCnyValue = (f) => Number(((Number(f && f.amount) || 0) * flowRate(f)).toFixed(2));
                 const cnyFormat = (v) => { const n = Number(v) || 0; const abs = Math.abs(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return (n < 0 ? '-' : '') + abs; };
@@ -6153,7 +6188,7 @@
                     if (reason) { ElMessage.warning(reason); return; }
                     feeArEdit.value = Object.assign({}, row);
                 };
-                const feeEditLocked = computed(() => !!feeArEdit.value && feeArEdit.value.sourceType === 10);
+                const feeEditLocked = computed(() => !!feeArEdit.value && feeArEdit.value.auditStatus === '已审计');
                 const saveFeeArEdit = () => {
                     if (!feeArEdit.value) return;
                     if (!feeRowEditable(feeArEdit.value)) { ElMessage.warning(feeRowLockReason(feeArEdit.value)); feeArEdit.value = null; return; }
@@ -6183,7 +6218,19 @@
                 const removeArFlow = (index) => confirmRemoveFlow('ar', index);
                 const removeApFlow = (index) => confirmRemoveFlow('ap', index);
 
-                // ── 销售成本流水（应收流水的物理复制，独立台账、不参与审计 / 成账）──
+                // ── 销售成本流水（应收流水的物理复制，独立台账、参与审计（仅财务）、不参与成账）──
+                const costSelection = ref([]);
+                const handleCostSelectionChange = (v) => { costSelection.value = v || []; };
+                const canCostAudit = computed(() => costSelection.value.some(f => (f.auditStatus || '待业务审计') !== '已审计'));
+                const canCostReverseAudit = computed(() => costSelection.value.some(f => f.auditStatus === '已审计'));
+                const submitCostAudit = (mode) => {
+                    const sel = costSelection.value;
+                    const targets = sel.filter(f => mode === 'audit' ? ((f.auditStatus || '待业务审计') !== '已审计') : f.auditStatus === '已审计');
+                    if (!targets.length) { ElMessage.warning(mode === 'audit' ? '请勾选待业务审计的销售成本流水' : '请勾选已审计的销售成本流水'); return; }
+                    targets.forEach(f => { f.auditStatus = mode === 'audit' ? '已审计' : '待业务审计'; });
+                    ElMessage.success(`${mode === 'audit' ? '已审计' : '已反审计'} ${targets.length} 条销售成本流水`);
+                    costSelection.value = [];
+                };
                 const costEdit = ref(null);
                 const openCostEdit = (row) => { costEdit.value = Object.assign({}, row); };
                 const saveCostEdit = () => {
@@ -6240,7 +6287,7 @@
                     costList.value.forEach(row => {
                         ways.forEach(w => {
                             if (!Array.isArray(w.costFlows)) w.costFlows = [];
-                            w.costFlows.push(Object.assign({}, row, { id: Date.now() + (seq++) + Math.floor(Math.random() * 100), source: '人工添加', createdBy: '李四', pickTime: '', description: '' }));
+                            w.costFlows.push(Object.assign({}, row, { id: Date.now() + (seq++) + Math.floor(Math.random() * 100), source: '人工添加', createdBy: '李四', pickTime: '', description: '', auditStatus: '待业务审计' }));
                         });
                     });
                     costAddVisible.value = false;
@@ -6541,8 +6588,8 @@
                 const waybillAuditTargets = ref([]);
                 const waybillReverseOpts = ref([]);   // 反审计可选项：['ar-marker','ar-flows','ap-marker','ap-flows']
                 const auditStateOk = (w) => FEE_ALLOWED_STATES.includes((w || {}).status);
-                const canAudit = computed(() => selection.value.length > 0 && selection.value.every(auditStateOk) && selection.value.some(s => !waybillFeeAudited(s, 'ar') || !waybillFeeAudited(s, 'ap')));
-                const canReverseAudit = computed(() => selection.value.length > 0 && selection.value.every(auditStateOk) && selection.value.some(s => waybillFeeAudited(s, 'ar') || waybillFeeAudited(s, 'ap')));
+                const canAudit = computed(() => selection.value.length > 0 && selection.value.every(auditStateOk) && selection.value.some(s => !waybillFeeAudited(s, 'ar') || !waybillFeeAudited(s, 'ap') || !waybillFeeAudited(s, 'sc')));
+                const canReverseAudit = computed(() => selection.value.length > 0 && selection.value.every(auditStateOk) && selection.value.some(s => waybillFeeAudited(s, 'ar') || waybillFeeAudited(s, 'ap') || waybillFeeAudited(s, 'sc')));
                 const waybillAuditSummary = computed(() => {
                     const ws = waybillAuditTargets.value;
                     if (!ws.length) return '—';
@@ -6557,19 +6604,20 @@
                     total: waybillAuditTargets.value.length,
                     ar: waybillAuditTargets.value.filter(w => waybillFeeAudited(w, 'ar')).length,
                     ap: waybillAuditTargets.value.filter(w => waybillFeeAudited(w, 'ap')).length,
+                    sc: waybillAuditTargets.value.filter(w => waybillFeeAudited(w, 'sc')).length,
                 }));
                 const waybillAuditDirUsable = (dir) => waybillAuditTargets.value.some(w => waybillAuditMode.value === 'audit' ? !waybillFeeAudited(w, dir) : waybillFeeAudited(w, dir));
                 // 反审计时，某方向可反（该方向至少一票已整票审计）
                 const waybillReverseUsable = (dir) => waybillAuditTargets.value.some(w => waybillFeeAudited(w, dir));
                 // 某运单是否有「已审计」的方向可反（操作列「反审计」按钮据此置灰）
-                const waybillRowReversible = (row) => !!row && (waybillFeeAudited(row, 'ar') || waybillFeeAudited(row, 'ap'));
+                const waybillRowReversible = (row) => !!row && (waybillFeeAudited(row, 'ar') || waybillFeeAudited(row, 'ap') || waybillFeeAudited(row, 'sc'));
                 const openWaybillAudit = (mode, row) => {
                     waybillAuditMode.value = mode;
                     waybillAuditTargets.value = row ? [row] : selection.value.slice();
                     if (!waybillAuditTargets.value.length) { ElMessage.warning('请先勾选运单'); return; }
                     if (mode === 'audit') {
-                        const usable = ['ar', 'ap'].filter(d => waybillAuditTargets.value.some(w => !waybillFeeAudited(w, d)));
-                        waybillAuditDirs.value = usable.length ? [(usable[0] === 'ar' ? '应收' : '应付')] : [];
+                        const usable = ['ar', 'ap', 'sc'].filter(d => waybillAuditTargets.value.some(w => !waybillFeeAudited(w, d)));
+                        waybillAuditDirs.value = usable.length ? [(usable[0] === 'ar' ? '应收' : (usable[0] === 'sc' ? '销售成本' : '应付'))] : [];
                     } else {
                         waybillReverseOpts.value = [];
                     }
@@ -6584,20 +6632,21 @@
                     if (isAudit) {
                         if (!waybillAuditDirs.value.length) { ElMessage.warning('请至少选择一个费用方向'); return; }
                         // 方向取值归一化：本仓 Element Plus 的 el-checkbox 以 label 为值（value="ar" 不生效），勾选后拿到的是「应收 / 应付」中文
-                        const dirKeys = waybillAuditDirs.value.map(d => (d === 'ar' || d === '应收') ? 'ar' : 'ap');
+                        const dirKeys = waybillAuditDirs.value.map(d => (d === 'ar' || d === '应收') ? 'ar' : ((d === 'sc' || d === '销售成本') ? 'sc' : 'ap'));
                         const auditedWaybills = new Set();
                         waybillAuditTargets.value.forEach(w => {
                             dirKeys.forEach(dir => {
                                 if (waybillFeeAudited(w, dir)) return;
                                 auditedWaybills.add(w.orderNo);
                                 if (dir === 'ar') { w.arAuditStatus = '已审计'; w.arAuditBy = '陈晓'; w.arAuditAt = auditStamp(); }
+                                else if (dir === 'sc') { w.scAuditStatus = '已审计'; w.scAuditBy = '陈晓'; w.scAuditAt = auditStamp(); }
                                 else { w.apAuditStatus = '已审计'; w.apAuditBy = '陈晓'; w.apAuditAt = auditStamp(); }
                                 // 整票审计 = 该方向「全部流水」一并置已审计（两层联动：标记锁新增、流水锁编辑）；提单平摊流水（source=提单平摊）不参与审计、保持审计状态为空
-                                const flows = dir === 'ar' ? (w.arFlows || []) : (w.apFlows || []);
+                                const flows = dir === 'ar' ? (w.arFlows || []) : (dir === 'sc' ? (w.costFlows || []) : (w.apFlows || []));
                                 flows.forEach(f => { if (f.source !== '提单平摊') f.auditStatus = '已审计'; });
                             });
                         });
-                        ElMessage.success(`已审计 ${auditedWaybills.size} 票运单的${dirKeys.map(d => d === 'ar' ? '应收' : '应付').join(' / ')}流水`);
+                        ElMessage.success(`已审计 ${auditedWaybills.size} 票运单的${dirKeys.map(d => d === 'ar' ? '应收' : (d === 'sc' ? '销售成本' : '应付')).join(' / ')}流水`);
                         waybillAuditVisible.value = false;
                         return;
                     }
@@ -6607,18 +6656,20 @@
                     const plan = {};
                     if (opts.includes('ar-flows')) plan.ar = 'flows'; else if (opts.includes('ar-marker')) plan.ar = 'marker';
                     if (opts.includes('ap-flows')) plan.ap = 'flows'; else if (opts.includes('ap-marker')) plan.ap = 'marker';
+                    if (opts.includes('sc-flows')) plan.sc = 'flows'; else if (opts.includes('sc-marker')) plan.sc = 'marker';
                     const dirs = Object.keys(plan);
-                    const dirName = (d) => d === 'ar' ? '应收' : '应付';
+                    const dirName = (d) => d === 'ar' ? '应收' : (d === 'sc' ? '销售成本' : '应付');
                     const reversedWaybills = new Set();
                     waybillAuditTargets.value.forEach(w => {
                         dirs.forEach(dir => {
                             if (!waybillFeeAudited(w, dir)) return;   // 该票该方向本就未整票审计 → 跳过（幂等）
                             reversedWaybills.add(w.orderNo);
                             if (dir === 'ar') { w.arAuditStatus = '未审计'; w.arReverseBy = '陈晓'; w.arReverseAt = auditStamp(); }
+                            else if (dir === 'sc') { w.scAuditStatus = '未审计'; w.scReverseBy = '陈晓'; w.scReverseAt = auditStamp(); }
                             else { w.apAuditStatus = '未审计'; w.apReverseBy = '陈晓'; w.apReverseAt = auditStamp(); }
                             // 仅运单 = 只反标记（流水保持已审计，仍锁定编辑）；运单及流水 = 该方向「未进账单的」流水退回待业务审计（放开编辑），已进账单的流水彻底冻结、不反；提单平摊流水（source=提单平摊）不参与反审计、保持审计状态为空
                             if (plan[dir] === 'flows') {
-                                const flows = dir === 'ar' ? (w.arFlows || []) : (w.apFlows || []);
+                                const flows = dir === 'ar' ? (w.arFlows || []) : (dir === 'sc' ? (w.costFlows || []) : (w.apFlows || []));
                                 flows.forEach(f => { if (!f.billNo && f.source !== '提单平摊') f.auditStatus = '待业务审计'; });
                             }
                         });
@@ -6769,7 +6820,7 @@
                     canAudit, canReverseAudit, copyOrderNo, waybillAuditVisible, waybillAuditMode, waybillAuditDirs, waybillAuditSummary, waybillAuditMulti, waybillAuditFullHtml, waybillReverseStat, waybillAuditDirUsable, waybillReverseOpts, waybillReverseUsable, waybillRowReversible, openWaybillAudit, submitWaybillAudit,
                     feeArSelection, feeApSelection, handleFeeArSelectionChange, handleFeeApSelectionChange, canRowAudit, canRowReverseAudit, canRowAuditAp, canRowReverseAuditAp, submitRowAudit,
                     feeApEditRow, saveFeeAp, saveFeeApEdit,
-                    feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, removeArFlow, removeApFlow, costEdit, openCostEdit, saveCostEdit, removeCostFlow, costAddVisible, costList, newCostRow, costTypeOptions, openCostAddDialog, saveCostAdd, feeEditLocked, feeRowEditable, feeRowLockReason, feeApSelectable, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, feeRuleTypeLabel, openFeeArDialog, openFeeApDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, feeArDiscount, feeArRowIsDirect, feeArRowAutoAmount, feeTypeArOptionsOf, handleFeeArKindChange, handleFeeArTypeChange, handleFeeArRuleChange,
+                    feeArDetail, openFeeArDetail, feeArEdit, openFeeArEdit, saveFeeArEdit, removeArFlow, removeApFlow, costSelection, handleCostSelectionChange, canCostAudit, canCostReverseAudit, submitCostAudit, costEdit, openCostEdit, saveCostEdit, removeCostFlow, costAddVisible, costList, newCostRow, costTypeOptions, openCostAddDialog, saveCostAdd, feeEditLocked, feeRowEditable, feeRowLockReason, feeApSelectable, feeWaybillOperable, feeWaybillLockReason, FEE_ALLOWED_STATES, feeRuleTypeLabel, openFeeArDialog, openFeeApDialog, saveFeeAr, feeAddWaybillOptions, feeAddWaybillText, feeAddCustomerText, feeAddServiceText, feeRowWaybills, feeBatchAmountText, feeAddContext, canAddFeeAr, canAddFeeAp, canAddFeeByDir, feeAddWaybillDisabled, waybillFeeAudited,  feeArRowLocked, feeArDiscount, feeArRowIsDirect, feeArRowAutoAmount, feeTypeArOptionsOf, handleFeeArKindChange, handleFeeArTypeChange, handleFeeArRuleChange,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,

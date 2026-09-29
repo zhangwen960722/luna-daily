@@ -95,9 +95,6 @@
         <!-- 下层卡片：工具栏 + 流水列表 -->
         <div class="content-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
             <div class="toolbar">
-                <el-button type="primary" @click="openImport">
-                    <el-icon style="margin-right: 4px;"><Plus></Plus></el-icon>新增流水
-                </el-button>
                 <el-button type="primary" plain @click="openFileImport">
                     <el-icon style="margin-right: 4px;"><Upload></Upload></el-icon>导入
                 </el-button>
@@ -190,42 +187,6 @@
                 <el-pagination background layout="total, prev, pager, next" :total="filteredFlows.length"></el-pagination>
             </div>
         </div>
-
-        <!-- 新增流水弹窗：批量新增流水进运单（卡片式，与运单审计「添加应收」同结构） -->
-        <el-dialog v-model="importVisible" title="新增应收业务流水" width="900px" destroy-on-close>
-            <div class="import-tip">
-                一条费用可同时铺到多票运单：保存时按「费用 × 票数」展开为多条流水；可「＋添加一行」加多笔不同费用。<br>
-                <span style="color:#F56C6C;">运单「应收」已整票审计的不可导入（如需补收请先到「运单审计」反审计应收）。</span>
-            </div>
-            <div v-for="(row, idx) in importRows" :key="idx" class="fee-add-card">
-                <div class="fee-add-card-head">
-                    <span class="fee-add-card-title">流水 {{ idx + 1 }}<span class="fee-add-card-sub">× {{ (row.waybillNos || []).length }} 票 · 合计 {{ importBatchAmountText(row) }}</span></span>
-                    <el-button link type="danger" size="small" :disabled="importRows.length <= 1" :title="importRows.length <= 1 ? '至少保留一条业务流水' : ''" @click="importRows.splice(idx, 1)">删除</el-button>
-                </div>
-                <el-row :gutter="12">
-                    <el-col :span="24"><div class="fee-add-field"><span class="fee-add-field-label">适用运单 <i class="req">*</i><span style="font-size:12px;color:#909399;">（一条费用 × M 票 = M 条流水）</span></span><el-select v-model="row.waybillNos" multiple filterable size="small" style="width:100%" collapse-tags collapse-tags-tooltip placeholder="输入运单号/客户编号/昵称/名称搜索"><el-option v-for="w in importWaybills" :key="w.waybillNo" :label="waybillLabel(w)" :value="w.waybillNo" :disabled="w.arAudited"></el-option></el-select></div></el-col>
-                    <el-col :span="24"><div class="fee-add-field"><el-radio-group v-model="row.kind" size="small" @change="handleImportKindChange(row)"><el-radio-button label="nonsurcharge">直接填写</el-radio-button><el-radio-button label="surcharge">按规则</el-radio-button></el-radio-group></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="row.feeType" size="small" style="width:100%" placeholder="请选择" filterable clearable @change="handleImportFeeTypeChange(row)"><el-option v-for="t in importFeeTypesOf(row)" :key="t" :label="t" :value="t"></el-option></el-select></div></el-col>
-                    <el-col :span="8" v-if="row.kind === 'surcharge'"><div class="fee-add-field"><span class="fee-add-field-label">来源规则（可选 · 按规则带出单价并自动打标）</span><el-select v-if="row.rules.length" v-model="row.ruleId" size="small" style="width:100%" clearable placeholder="不选则自由填写" @change="handleImportRuleChange(row)"><el-option v-for="r in row.rules" :key="r.id" :label="r.name" :value="r.id"></el-option></el-select><el-input v-else disabled placeholder="该费用类型未绑定规则" size="small"></el-input></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种 <i class="req">*</i></span><el-select v-model="row.currency" size="small" style="width:100%" :disabled="importRowLocked(row)" @change="handleImportCurrencyChange(row)"><el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率 <i class="req">*</i></span><el-input v-model="row.rate" size="small" :disabled="importRowLocked(row)"></el-input></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">单价</span><el-input-number v-model="row.unitPrice" size="small" style="width:100%" :controls="false" :precision="2" @change="handleImportUnitPriceEdit(row)"></el-input-number></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计价单位 <i class="req">*</i></span><el-select v-model="row.pricingUnit" size="small" style="width:100%" :disabled="importRowLocked(row)"><el-option v-for="p in pricingUnits" :key="p" :label="p" :value="p"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">计费量 <i class="req">*</i></span><el-input-number v-model="row.quantity" size="small" style="width:100%" :controls="false" :min="0" @change="handleImportUnitPriceChange(row)"></el-input-number></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">{{ importRowAutoAmount(row) ? '合计金额（原币 · 单价 × 计费量 × 票数）' : '金额（原币 · 每票 · 直接填）' }} <i class="req">*</i></span><el-input-number v-if="!importRowAutoAmount(row)" v-model="row.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number><div v-else class="fee-add-amount">{{ row.currency }} {{ importAmountText(row) }}</div></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（本币）</span><div class="fee-add-amount">¥ {{ importCnyAmountText(row) }}</div></div></el-col>
-                    <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">描述（面向客户）</span><el-input v-model="row.description" size="small" placeholder="如：超重超长按实测尺寸计收"></el-input></div></el-col>
-                    <el-col :span="12"><div class="fee-add-field"><span class="fee-add-field-label">备注（仅内部）</span><el-input v-model="row.remark" size="small" placeholder="仅员工端可见"></el-input></div></el-col>
-                </el-row>
-                <div v-if="row.ruleTag" class="fee-add-tag">关联标识<el-tag size="small" type="danger" effect="plain">{{ row.ruleTag }}</el-tag><span class="fee-add-tag-note">保存后自动打在运单上（与规则自动命中时的打标口径一致）</span></div>
-                <div v-if="importDiscount(row)" class="fee-add-tag">连带优惠<el-tag size="small" type="success" effect="plain">{{ importDiscount(row).name }}</el-tag><span class="fee-add-tag-note">保存后自动生成一条附加费优惠流水（优惠值 {{ importDiscount(row).unitPrice }} × 计费量）</span></div>
-            </div>
-            <el-button plain size="small" style="width:100%;" @click="importRows.push(newImportRow())">＋ 添加一行</el-button>
-            <template #footer>
-                <el-button @click="importVisible = false">取消</el-button>
-                <el-button type="primary" @click="submitImport">确认导入</el-button>
-            </template>
-        </el-dialog>
 
         <!-- 文件导入弹窗：上传文件批量导入流水 -->
         <el-dialog v-model="fileImportVisible" title="导入应收业务流水" width="720px" destroy-on-close>
@@ -357,19 +318,6 @@
                     { flowNo: 'FLW20260828001', waybillNo: 'YD20260828001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'USD', rate: 7.15, feeType: '超重费', flowKind: '手工新增', unitPrice: 20.00, pricingUnit: '票', quantity: 5, amount: 100.00, auditStatus: '待业务审计', billNo: '', pickTime: '2026-08-28 10:00', sourceRule: '', source: '人工添加', createdBy: '业务-王强', createdAt: '2026-08-28 11:00', description: '超重超长实测后补录', remark: '' }
                 ]);
 
-                // 导入候选运单（含运单级应收审计标记）
-                const importWaybills = [
-                    { waybillNo: 'YD20260901001', customerName: '深圳市华美科技有限公司', customerNo: 'KH1001', customerNick: '华美科技', salesRep: '销售-李明', entityName: '广州飞点', arAudited: false },
-                    { waybillNo: 'YD20260805001', customerName: '深圳市华美科技有限公司', customerNo: 'KH1001', customerNick: '华美科技', salesRep: '销售-李明', entityName: '广州飞点', arAudited: false },
-                    { waybillNo: 'YD20260715001', customerName: '广州迅达贸易有限公司', customerNo: 'KH1002', customerNick: '迅达贸易', salesRep: '销售-张伟', entityName: '广州飞点', arAudited: true },
-                    { waybillNo: 'YD20260815001', customerName: '深圳市华美科技有限公司', customerNo: 'KH1001', customerNick: '华美科技', salesRep: '销售-李明', entityName: '深圳飞点', arAudited: false },
-                    { waybillNo: 'YD20260720001', customerName: '东莞新锐电子有限公司', customerNo: 'KH1003', customerNick: '新锐电子', salesRep: '销售-王强', entityName: '广东飞点', arAudited: false },
-                    { waybillNo: 'YD20260901002', customerName: '东莞市宏泰五金制品有限公司', customerNo: 'KH1004', customerNick: '宏泰五金', salesRep: '销售-赵敏', entityName: '广东飞点', arAudited: true },
-                    { waybillNo: 'YD20260826001', customerName: '广州迅达贸易有限公司', customerNo: 'KH1002', customerNick: '迅达贸易', salesRep: '销售-张伟', entityName: '香港富力顿', arAudited: false },
-                    { waybillNo: 'YD20260828001', customerName: '东莞新锐电子有限公司', customerNo: 'KH1003', customerNick: '新锐电子', salesRep: '销售-王强', entityName: '广东飞点', arAudited: false }
-                ];
-                const waybillLabel = (w) => w.waybillNo + ' · ' + w.customerName + ' · ' + w.customerNo + ' · ' + w.customerNick + (w.arAudited ? '（应收已审计，不可导入）' : '');
-
                 const filteredFlows = computed(() => {
                     let data = allFlows;
                     if (searchForm.customerNick) data = data.filter(f => (f.customerNick + '|' + (f.customerNo || '')).includes(searchForm.customerNick));
@@ -403,117 +351,6 @@
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetSearch = () => {
                     Object.assign(searchForm, { customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', auditStatus: '', billStatus: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
-                };
-
-                // 导入（卡片式，与运单审计「添加应收」同结构）
-                const importVisible = ref(false);
-                const rateDefaults = { 'CNY': 1.0, 'USD': 7.15, 'HKD': 0.92, 'EUR': 7.8 };
-                const newImportRow = () => ({
-                    waybillNos: [],
-                    kind: 'nonsurcharge', feeType: '', rules: [], ruleId: null, ruleTag: '',
-                    currency: 'CNY', rate: 1.0, unitPrice: null, pricingUnit: 'KG', quantity: null, amount: null,
-                    description: '', remark: ''
-                });
-                const importRows = ref([newImportRow()]);
-                const importFeeTypesOf = (row) => (row && row.kind === 'surcharge') ? feeTypeSurchargeOptions : feeTypeNonSurchargeOptions;
-                const importRowLocked = (row) => !!(row && row.kind === 'surcharge' && row.ruleId); const importRowPriceFilled = (row) => !!(row && row.unitPrice !== null && row.unitPrice !== undefined && row.unitPrice !== '' && !isNaN(Number(row.unitPrice))); const importRowAutoAmount = (row) => (row && row.kind === 'surcharge') || importRowPriceFilled(row);
-                // 选中来源规则的附加费优惠（方案 2：手工新增也自动匹配附加费优惠）
-                const importDiscount = (row) => { const r = (row.rules || []).find(x => x.id === row.ruleId); return (r && r.discount) ? r.discount : null; };
-                const importAmountText = (row) => formatMoney(Number((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0)));
-                const importBatchAmountText = (row) => {
-                    const per = importRowAutoAmount(row) ? ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0)) : (Number(row.amount) || 0);
-                    return formatMoney(per * (row.waybillNos || []).length);
-                };
-                // 金额（本币）= 金额（原币）× 汇率（只读、前端派生展示）
-                const importCnyAmountText = (row) => {
-                    const per = importRowAutoAmount(row) ? ((Number(row.unitPrice) || 0) * (Number(row.quantity) || 0)) : (Number(row.amount) || 0);
-                    return formatMoney(Number((per * (Number(row.rate) || 1)).toFixed(2)));
-                };
-                const handleImportCurrencyChange = (row) => { row.rate = rateDefaults[row.currency] !== undefined ? rateDefaults[row.currency] : 1.0; };
-                const handleImportKindChange = (row) => {
-                    row.feeType = ''; row.rules = []; row.ruleId = null; row.ruleTag = '';
-                    row.unitPrice = null; row.quantity = null; row.amount = null; row.pricingUnit = 'KG';
-                };
-                const handleImportFeeTypeChange = (row) => {
-                    row.ruleId = null; row.rules = []; row.ruleTag = ''; row.unitPrice = null; row.quantity = null; row.amount = null;
-                    if (row.kind === 'surcharge') {
-                        row.rules = (feeTypeArBindings[row.feeType] || {}).rules || [];
-                        if (row.rules.length === 1) { row.ruleId = row.rules[0].id; handleImportRuleChange(row); }
-                    }
-                };
-                const handleImportRuleChange = (row) => {
-                    const r = (row.rules || []).find(x => x.id === row.ruleId);
-                    if (!r) { row.unitPrice = null; row.pricingUnit = 'KG'; row.ruleTag = ''; return; }
-                    row.currency = r.currency; row.pricingUnit = r.unit; row.unitPrice = r.unitPrice; row.ruleTag = r.tagName || '';
-                    row.rate = r.currency === 'CNY' ? 1 : (row.rate || 1);
-                };
-                const handleImportUnitPriceChange = (row) => { row.amount = Number((Number(row.unitPrice || 0) * Number(row.quantity || 0)).toFixed(2)); };
-                // 改了单价：若偏离规则价，清空来源规则留痕，退化为「手工新增」（方案 C：不记 source_rule、不打标）
-                const handleImportUnitPriceEdit = (row) => {
-                    handleImportUnitPriceChange(row);
-                    if (!row.ruleId) return;
-                    const r = (row.rules || []).find(x => x.id === row.ruleId);
-                    if (r && Number(row.unitPrice) !== Number(r.unitPrice)) {
-                        row.ruleId = null;
-                        row.ruleTag = '';
-                        ElMessage.info('单价已修改，该流水退化为「手工新增」（不再关联来源规则、不打标）');
-                    }
-                };
-                const openImport = () => {
-                    importRows.value = [newImportRow()];
-                    importVisible.value = true;
-                };
-                const submitImport = () => {
-                    const feeRows = importRows.value.filter(r => r.feeType);
-                    if (!feeRows.length) { ElMessage.warning('请先选择费用类型'); return; }
-                    for (const r of feeRows) {
-                        if (!(r.waybillNos || []).length) { ElMessage.warning(`「${r.feeType}」请至少选择一票适用运单`); return; }
-                        if (!r.currency) { ElMessage.warning(`「${r.feeType}」请选择币种`); return; }
-                        if (r.rate === null || r.rate === undefined || r.rate === '') { ElMessage.warning(`「${r.feeType}」请填写汇率`); return; }
-                        if (!r.pricingUnit) { ElMessage.warning(`「${r.feeType}」请选择计价单位`); return; }
-                        if (!r.quantity || Number(r.quantity) <= 0) { ElMessage.warning(`「${r.feeType}」请填写计费量`); return; }
-                        if (r.kind !== 'surcharge' && !importRowPriceFilled(r)) {
-                            if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.feeType}」请填写金额`); return; }
-                        }
-                    }
-                    const now = formatNow();
-                    let seq = allFlows.length + 1;
-                    let total = 0;
-                    feeRows.forEach(r => {
-                        const waybills = (r.waybillNos || []).map(no => importWaybills.find(w => w.waybillNo === no)).filter(Boolean);
-                        const rule = (r.rules || []).find(x => x.id === r.ruleId) || null;
-                        const isSurcharge = r.kind === 'surcharge';
-                        const amount = importRowAutoAmount(r) ? Number(((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0)).toFixed(2)) : Number(r.amount || 0);
-                        waybills.forEach(w => {
-                            allFlows.push({
-                                flowNo: 'FLW' + now.replace(/[-: ]/g, '').substring(0, 8) + String(seq).padStart(3, '0'),
-                                waybillNo: w.waybillNo, customerNo: w.customerNo, customerNick: w.customerNick, customerName: w.customerName,
-                                salesRep: w.salesRep, entityName: w.entityName, currency: r.currency, rate: r.rate,
-                                feeType: r.feeType, flowKind: isSurcharge ? '附加费' : '手工新增', unitPrice: importRowAutoAmount(r) ? Number(r.unitPrice) : null,
-                                pricingUnit: r.pricingUnit, quantity: Number(r.quantity), amount: amount,
-                                auditStatus: '待业务审计', billNo: '', pickTime: '', sourceRule: rule ? rule.name : '', source: rule ? '附加费规则' : '人工添加',
-                                createdBy: '财务-导入', createdAt: now, description: r.description, remark: r.remark
-                            });
-                            seq += 1;
-                            total += 1;
-                            // 方案 2：选中来源规则后自动匹配附加费优惠，命中则生成一条优惠流水（优惠独立成行）
-                            if (rule && rule.discount) {
-                                allFlows.push({
-                                    flowNo: 'FLW' + now.replace(/[-: ]/g, '').substring(0, 8) + String(seq).padStart(3, '0'),
-                                    waybillNo: w.waybillNo, customerNo: w.customerNo, customerNick: w.customerNick, customerName: w.customerName,
-                                    salesRep: w.salesRep, entityName: w.entityName, currency: r.currency, rate: r.rate,
-                                    feeType: r.feeType, flowKind: '附加费优惠', unitPrice: rule.discount.unitPrice,
-                                    pricingUnit: r.pricingUnit, quantity: Number(r.quantity), amount: Number(((rule.discount.unitPrice || 0) * (Number(r.quantity) || 0)).toFixed(2)),
-                                    auditStatus: '待业务审计', billNo: '', pickTime: '', sourceRule: rule.discount.name, source: '附加费优惠规则',
-                                    createdBy: '财务-导入', createdAt: now, description: '', remark: ''
-                                });
-                                seq += 1;
-                                total += 1;
-                            }
-                        });
-                    });
-                    ElMessage.success('已导入 ' + feeRows.length + ' 条费用 = ' + total + ' 条应收流水');
-                    importVisible.value = false;
                 };
 
                 // 导出
@@ -627,7 +464,6 @@
                     searchForm, searchExpanded, filteredFlows,
                     detailVisible, detailRow, openDetail, openWaybillAudit, openBill,
                     handleSearch, resetSearch,
-                    importVisible, importRows, newImportRow, importWaybills, waybillLabel, importFeeTypesOf, importRowLocked, importRowAutoAmount, importDiscount, importAmountText, importBatchAmountText, importCnyAmountText, handleImportCurrencyChange, handleImportKindChange, handleImportFeeTypeChange, handleImportRuleChange, handleImportUnitPriceChange, handleImportUnitPriceEdit, openImport, submitImport,
                     handleExport,
                     selectedFlows, onSelectionChange, rowSelectable, handleDelete,
                     auditEligible, reverseEligible, deleteEligible, handleAudit, handleReverseAudit,

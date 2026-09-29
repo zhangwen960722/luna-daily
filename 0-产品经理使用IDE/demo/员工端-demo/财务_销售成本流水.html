@@ -89,6 +89,8 @@
                 <el-button type="primary" @click="openAdd">
                     <el-icon style="margin-right: 4px;"><Plus></Plus></el-icon>新增销售成本
                 </el-button>
+                <el-button @click="handleAudit">审计</el-button>
+                <el-button type="danger" plain @click="handleReverseAudit">反审计</el-button>
                 <el-button type="success" @click="handleExport">
                     <el-icon style="margin-right: 4px;"><Download></Download></el-icon>导出
                 </el-button>
@@ -110,6 +112,11 @@
                 <el-table-column prop="customerName" label="客户名称" min-width="160" show-overflow-tooltip></el-table-column>
                 <el-table-column prop="salesRep" label="销售代表" min-width="100"></el-table-column>
                 <el-table-column prop="entityName" label="我司主体" min-width="110"></el-table-column>
+                <el-table-column label="审计状态" min-width="90" align="center">
+                    <template #default="scope">
+                        <el-tag :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'" size="small">{{ scope.row.auditStatus || '待业务审计' }}</el-tag>
+                    </template>
+                </el-table-column>
                 <el-table-column prop="feeType" label="费用类型" min-width="120"></el-table-column>
                 <el-table-column prop="currency" label="币种" min-width="70" align="center">
                     <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
@@ -225,17 +232,17 @@
                 const searchForm = reactive({ customerNick: '', cusNo: '', entityId: '', currency: '', feeTypeId: '', waybillNo: '', customerNo: '', pickTimeRange: [] });
                 const searchExpanded = ref(false);
 
-                // 销售成本流水（flow_category=30）：由应收流水物理复制 + 财务手工新增，不参与审计 / 成账
+                // 销售成本流水（flow_category=30）：由应收流水物理复制 + 财务手工新增，参与审计（仅财务）、不参与成账
                 const allFlows = reactive([
-                    { flowNo: 'FLW20260901001', waybillNo: 'YD20260901001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 8.50, pricingUnit: 'KG', quantity: 100, amount: 850.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-09-01 10:00', pickTime: '2026-09-01 14:20', remark: '' },
-                    { flowNo: 'FLW20260901002', waybillNo: 'YD20260901001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'CNY', rate: 1.0, feeType: '报关费', unitPrice: 150.00, pricingUnit: '票', quantity: 1, amount: 150.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-09-01 10:00', pickTime: '2026-09-01 14:20', remark: '' },
-                    { flowNo: 'FLW20260805001', waybillNo: 'YD20260805001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'USD', rate: 7.15, feeType: '运费', unitPrice: 6.20, pricingUnit: 'KG', quantity: 100, amount: 620.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-05 08:00', pickTime: '2026-08-05 09:10', remark: '' },
-                    { flowNo: 'FLW20260815001', waybillNo: 'YD20260815001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '深圳飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 8.00, pricingUnit: 'KG', quantity: 110, amount: 880.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-15 08:00', pickTime: '2026-08-15 10:30', remark: '' },
-                    { flowNo: 'FLW20260720001', waybillNo: 'YD20260720001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'CNY', rate: 1.0, feeType: '库内贴标费', unitPrice: 0.50, pricingUnit: '数量', quantity: 120, amount: 60.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-07-20 13:00', pickTime: '2026-07-20 11:00', remark: '' },
-                    { flowNo: 'FLW20260822001', waybillNo: 'YD20260822001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '香港富力顿', currency: 'HKD', rate: 0.92, feeType: '运费', unitPrice: 25.00, pricingUnit: 'KG', quantity: 100, amount: 2500.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-22 16:00', pickTime: '2026-08-22 18:00', remark: '' },
-                    { flowNo: 'FLW20260826001', waybillNo: 'YD20260826001', customerNo: 'KH1002', customerNick: '迅达贸易', customerName: '广州迅达贸易有限公司', salesRep: '销售-张伟', entityName: '香港富力顿', currency: 'HKD', rate: 0.92, feeType: '周六派送费', unitPrice: 150.00, pricingUnit: '票', quantity: 2, amount: 300.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-08-26 07:30', pickTime: '2026-08-26 09:00', remark: '' },
-                    { flowNo: 'FLW20260828001', waybillNo: 'YD20260828001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'USD', rate: 7.15, feeType: '超重费', unitPrice: 20.00, pricingUnit: '票', quantity: 5, amount: 100.00, source: '人工添加', createdBy: '财务-王强', createdAt: '2026-08-28 11:00', pickTime: '2026-08-28 10:00', remark: '销售成本手工补录' },
-                    { flowNo: 'FLW20260901003', waybillNo: 'YD20260901002', customerNo: 'KH1004', customerNick: '宏泰五金', customerName: '东莞市宏泰五金制品有限公司', salesRep: '销售-赵敏', entityName: '广东飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 9.30, pricingUnit: 'KG', quantity: 200, amount: 1860.00, source: '自动复制', createdBy: '系统自动', createdAt: '2026-09-01 14:00', pickTime: '2026-09-01 16:00', remark: '' }
+                    { flowNo: 'FLW20260901001', waybillNo: 'YD20260901001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 8.50, pricingUnit: 'KG', quantity: 100, amount: 850.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-09-01 10:00', pickTime: '2026-09-01 14:20', remark: '' },
+                    { flowNo: 'FLW20260901002', waybillNo: 'YD20260901001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'CNY', rate: 1.0, feeType: '报关费', unitPrice: 150.00, pricingUnit: '票', quantity: 1, amount: 150.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-09-01 10:00', pickTime: '2026-09-01 14:20', remark: '' },
+                    { flowNo: 'FLW20260805001', waybillNo: 'YD20260805001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '广州飞点', currency: 'USD', rate: 7.15, feeType: '运费', unitPrice: 6.20, pricingUnit: 'KG', quantity: 100, amount: 620.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-08-05 08:00', pickTime: '2026-08-05 09:10', remark: '' },
+                    { flowNo: 'FLW20260815001', waybillNo: 'YD20260815001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '深圳飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 8.00, pricingUnit: 'KG', quantity: 110, amount: 880.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-08-15 08:00', pickTime: '2026-08-15 10:30', remark: '' },
+                    { flowNo: 'FLW20260720001', waybillNo: 'YD20260720001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'CNY', rate: 1.0, feeType: '库内贴标费', unitPrice: 0.50, pricingUnit: '数量', quantity: 120, amount: 60.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-07-20 13:00', pickTime: '2026-07-20 11:00', remark: '' },
+                    { flowNo: 'FLW20260822001', waybillNo: 'YD20260822001', customerNo: 'KH1001', customerNick: '华美科技', customerName: '深圳市华美科技有限公司', salesRep: '销售-李明', entityName: '香港富力顿', currency: 'HKD', rate: 0.92, feeType: '运费', unitPrice: 25.00, pricingUnit: 'KG', quantity: 100, amount: 2500.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-08-22 16:00', pickTime: '2026-08-22 18:00', remark: '' },
+                    { flowNo: 'FLW20260826001', waybillNo: 'YD20260826001', customerNo: 'KH1002', customerNick: '迅达贸易', customerName: '广州迅达贸易有限公司', salesRep: '销售-张伟', entityName: '香港富力顿', currency: 'HKD', rate: 0.92, feeType: '周六派送费', unitPrice: 150.00, pricingUnit: '票', quantity: 2, amount: 300.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-08-26 07:30', pickTime: '2026-08-26 09:00', remark: '' },
+                    { flowNo: 'FLW20260828001', waybillNo: 'YD20260828001', customerNo: 'KH1003', customerNick: '新锐电子', customerName: '东莞新锐电子有限公司', salesRep: '销售-王强', entityName: '广东飞点', currency: 'USD', rate: 7.15, feeType: '超重费', unitPrice: 20.00, pricingUnit: '票', quantity: 5, amount: 100.00, source: '人工添加', auditStatus: '待业务审计', createdBy: '财务-王强', createdAt: '2026-08-28 11:00', pickTime: '2026-08-28 10:00', remark: '销售成本手工补录' },
+                    { flowNo: 'FLW20260901003', waybillNo: 'YD20260901002', customerNo: 'KH1004', customerNick: '宏泰五金', customerName: '东莞市宏泰五金制品有限公司', salesRep: '销售-赵敏', entityName: '广东飞点', currency: 'CNY', rate: 1.0, feeType: '运费', unitPrice: 9.30, pricingUnit: 'KG', quantity: 200, amount: 1860.00, source: '自动复制', auditStatus: '已审计', createdBy: '系统自动', createdAt: '2026-09-01 14:00', pickTime: '2026-09-01 16:00', remark: '' }
                 ]);
 
                 const filteredFlows = computed(() => {
@@ -326,7 +333,7 @@
                                 unitPrice: (row.unitPrice == null || row.unitPrice === '') ? null : Number(row.unitPrice),
                                 pricingUnit: row.unit, quantity: (row.quantity == null || row.quantity === '') ? null : Number(row.quantity),
                                 amount: Number(row.amount),
-                                source: '人工添加', createdBy: '财务-操作员', createdAt: now, pickTime: '', remark: row.remark
+                                source: '人工添加', auditStatus: '待业务审计', createdBy: '财务-操作员', createdAt: now, pickTime: '', remark: row.remark
                             });
                         });
                     });
@@ -337,12 +344,17 @@
                 // 导出
                 const handleExport = () => { ElMessage.success('销售成本流水导出中…'); };
 
-                // 删除（销售成本流水与应收解耦，不参与审计 / 成账，勾选即删）
+                // 删除（销售成本流水与应收解耦、不参与成账；受审计冻结——已审计须先反审计）
                 const selectedFlows = ref([]);
                 const onSelectionChange = (val) => { selectedFlows.value = val; };
                 const handleDelete = () => {
                     if (selectedFlows.value.length === 0) {
                         ElMessage.warning('请先勾选要删除的销售成本流水');
+                        return;
+                    }
+                    const locked = selectedFlows.value.filter(r => r.auditStatus === '已审计');
+                    if (locked.length > 0) {
+                        ElMessage.warning('已审计的销售成本流水不可删除，请先反审计：' + locked.map(r => r.flowNo).join('、'));
                         return;
                     }
                     ElMessageBox.confirm('确定删除选中的 ' + selectedFlows.value.length + ' 条销售成本流水吗？删除后不影响来源应收流水。', '删除确认', {
@@ -357,13 +369,41 @@
                     }).catch(() => {});
                 };
 
+                // 审计 / 反审计（销售成本流水：仅财务，待业务审计 → 已审计 → 反审计）
+                const handleAudit = () => {
+                    if (selectedFlows.value.length === 0) {
+                        ElMessage.warning('请先勾选要审计的销售成本流水');
+                        return;
+                    }
+                    const already = selectedFlows.value.filter(r => r.auditStatus === '已审计');
+                    if (already.length > 0) {
+                        ElMessage.warning('选中的流水中含已审计流水：' + already.map(r => r.flowNo).join('、'));
+                        return;
+                    }
+                    selectedFlows.value.forEach(r => { r.auditStatus = '已审计'; });
+                    ElMessage.success('已审计 ' + selectedFlows.value.length + ' 条销售成本流水');
+                };
+                const handleReverseAudit = () => {
+                    if (selectedFlows.value.length === 0) {
+                        ElMessage.warning('请先勾选要反审计的销售成本流水');
+                        return;
+                    }
+                    const notYet = selectedFlows.value.filter(r => r.auditStatus !== '已审计');
+                    if (notYet.length > 0) {
+                        ElMessage.warning('选中的流水中含未审计流水：' + notYet.map(r => r.flowNo).join('、'));
+                        return;
+                    }
+                    selectedFlows.value.forEach(r => { r.auditStatus = '待业务审计'; });
+                    ElMessage.success('已反审计 ' + selectedFlows.value.length + ' 条销售成本流水');
+                };
+
                 return {
                     currencyOptions, currencySymbol, currencyName, formatMoney, formatQty, formatRate, cnyAmount,
                     entities, feeTypes, pricingUnits,
                     searchForm, searchExpanded, filteredFlows,
                     openWaybillAudit, handleSearch, resetSearch,
                     costAddVisible, costTypeOptions, addWaybills, waybillLabel, costWaybillNos, costWaybillOptions, costWaybillText, costCustomerText, costServiceText, costChargeWeightText, newCostRow, costList, costBatchAmountText, costCnyAmountText, openAdd, saveCostAdd,
-                    handleExport,
+                    handleExport, handleAudit, handleReverseAudit,
                     selectedFlows, onSelectionChange, handleDelete
                 };
             }

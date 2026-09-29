@@ -481,11 +481,6 @@
 
                             <el-button @click="openDialog('dialogEdit')" :disabled="!canMarkOrRoute">资料修改</el-button>
                             <el-button @click="openDialog('dialogMark')" :disabled="!canMarkOrRoute">标识</el-button>
-                            <el-tooltip :disabled="!waybillAuditBlockReason" :content="waybillAuditBlockReason" placement="top">
-                                <span>
-                                    <el-button :disabled="!!waybillAuditBlockReason" @click="openWaybillAudit()">运单审计</el-button>
-                                </span>
-                            </el-tooltip>
 
                             <el-dropdown trigger="click" @command="handleCommand">
                                 <el-button :disabled="!hasSelection">供应商互联<el-icon class="el-icon--right"><arrow-down ></arrow-down></el-icon></el-button>
@@ -3023,28 +3018,6 @@
             <template #footer><el-button @click="dialogAddVat = false">取消</el-button><el-button type="primary" @click="handleSaveVat">保存</el-button></template>
         </el-dialog>
 
-        <!-- 运单级审计（按费用方向整票审计）—— **业务侧入口**：审计通过后该方向标记置「已审计」、该方向流水全部冻结、整票不允许再新增该方向费用；
-             反审计仅财务角色可执行，入口在「财务中心 → 运单审计」（本页不提供，避免"自己审的单自己撤"） -->
-        <el-dialog v-model="waybillAuditVisible" title="运单审计" width="560px" append-to-body>
-            <div class="fee-add-info" style="margin-bottom:14px;">
-                <span><span class="fee-add-label">运单</span><b style="color:var(--el-text-color-primary);">{{ waybillAuditSummary }}</b></span>
-            </div>
-            <el-form label-width="90px">
-                <el-form-item label="审计范围">
-                    <el-checkbox-group v-model="waybillAuditDirs">
-                        <el-checkbox label="应收" value="ar" :disabled="!waybillAuditDirUsable('ar')">应收（该运单全部应收流水统一审计）</el-checkbox>
-                        <el-checkbox label="应付" value="ap" :disabled="!waybillAuditDirUsable('ap')">应付（该运单全部应付流水统一审计）</el-checkbox>
-                    </el-checkbox-group>
-                </el-form-item>
-            </el-form>
-            <div style="color:var(--el-text-color-regular); font-size:13px; line-height:1.7; padding-left:90px;">
-                审计通过后：运单该方向标记置「已审计」，<b>整票不允许再新增该方向费用</b>，该方向流水全部冻结。如需补收或更正，请先由财务到「财务中心 → 运单审计」反审计该方向（<b>反审计仅财务角色可执行</b>）。
-            </div>
-            <template #footer>
-                <el-button @click="waybillAuditVisible = false">取消</el-button>
-                <el-button type="primary" :disabled="!waybillAuditDirs.length" @click="submitWaybillAudit">确认审计</el-button>
-            </template>
-        </el-dialog>
 
         <!-- 状态调整 -->
         <el-dialog v-model="dialogStatusAdj" title="状态调整" width="400px" append-to-body>
@@ -5699,61 +5672,6 @@
                     if(dialogs[dialogRef]) dialogs[dialogRef].value = true;
                 };
 
-                // ===== 运单级审计（**业务侧**：按费用方向整票审计）=====
-                // 口径（头程管理 PRD 权限矩阵）：业务专员可做「审计」；**反审计仅财务角色**，入口在「财务中心 → 运单审计」。
-                // 审计通过 → ① 运单该方向标记置「已审计」（写审计人 / 时间）② 该方向全部流水置「已审计」→ 整票不允许再新增该方向费用（见费用新增校验）。
-                const AUDIT_OPERATOR = '业务-李娜';
-                const waybillAuditVisible = ref(false);
-                const waybillAuditDirs = ref([]);
-                const waybillAuditTargets = ref([]);
-                const waybillAuditCandidates = (ways) => (ways || []).filter(w => FEE_ALLOWED_STATES.includes(w.status || ''));
-                const waybillAuditSummary = computed(() => {
-                    const ws = waybillAuditTargets.value;
-                    if (!ws.length) return '—';
-                    if (ws.length === 1) return ws[0].orderNo;
-                    return '已选 ' + ws.length + ' 票：' + ws.slice(0, 3).map(w => w.orderNo).join(' / ') + (ws.length > 3 ? ' …' : '');
-                });
-                const waybillAuditDirUsable = (dir) => waybillAuditTargets.value.some(w => !waybillFeeAudited(w, dir));
-                // 按钮置灰原因走 tooltip（与「核销」「作废」同一套规范：入口要看得见，不靠"按钮消失"表达不可用）
-                const waybillAuditBlockReason = computed(() => {
-                    const ways = selection.value || [];
-                    if (!ways.length) return '请先勾选要审计的运单';
-                    if (!waybillAuditCandidates(ways).length) return '所选运单状态不支持费用操作（收货完成后才产生计费）';
-                    if (!waybillAuditCandidates(ways).some(w => !waybillFeeAudited(w, 'ar') || !waybillFeeAudited(w, 'ap'))) return '所选运单的「应收」「应付」都已是「已审计」';
-                    return '';
-                });
-                const openWaybillAudit = () => {
-                    const ways = waybillAuditCandidates(selection.value || []);
-                    if (!ways.length) { ElMessage.warning(waybillAuditBlockReason.value); return; }
-                    if (!ways.some(w => !waybillFeeAudited(w, 'ar') || !waybillFeeAudited(w, 'ap'))) { ElMessage.warning('所选运单的「应收」「应付」都已是「已审计」'); return; }
-                    waybillAuditTargets.value = ways;
-                    waybillAuditDirs.value = [];          // 危险操作默认值规范：审计会冻结整票该方向流水 → **不预选**，由人主动勾
-                    waybillAuditVisible.value = true;
-                };
-                const waybillAuditStamp = () => {
-                    const d = new Date(); const p = (n) => String(n).padStart(2, '0');
-                    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
-                };
-                const submitWaybillAudit = () => {
-                    if (!waybillAuditDirs.value.length) { ElMessage.warning('请至少选择一个费用方向'); return; }
-                    const stamp = waybillAuditStamp();
-                    // 方向取值归一化：本仓 Element Plus 的 el-checkbox 以 label 为值（value="ar" 不生效），勾选后拿到的是「应收 / 应付」中文
-                    const dirs = waybillAuditDirs.value.map(d => (d === 'ar' || d === '应收') ? 'ar' : 'ap');
-                    let done = 0;
-                    waybillAuditTargets.value.forEach(w => {
-                        dirs.forEach(dir => {
-                            if (waybillFeeAudited(w, dir)) return;          // 已是已审计 → 跳过（幂等）
-                            if (dir === 'ar') { w.arAuditStatus = '已审计'; w.arAuditBy = AUDIT_OPERATOR; w.arAuditAt = stamp; }
-                            else { w.apAuditStatus = '已审计'; w.apAuditBy = AUDIT_OPERATOR; w.apAuditAt = stamp; }
-                            const flows = dir === 'ar' ? (w.arFlows || []) : (w.apFlows || []);
-                            flows.forEach(f => { f.auditStatus = '已审计'; });
-                            done++;
-                        });
-                    });
-                    waybillAuditVisible.value = false;
-                    ElMessage.success('已审计 ' + waybillAuditTargets.value.length + ' 票运单的' + dirs.map(d => d === 'ar' ? '应收' : '应付').join(' / ') + '流水（共 ' + done + ' 个方向）：流水已冻结，整票不允许再新增该方向费用');
-                };
-
                 const handleCommand = (command) => {
                     // 权限拦截
                     if (command === 'cancelOrder' && !canCancel.value) { ElMessage.warning('所选运单状态不支持取消操作'); return; }
@@ -5855,7 +5773,6 @@
                     dialogRouteAdd, dialogRouteDel, dialogEdit, dialogMark,
                     dialogSupPush, dialogSupExtract, dialogSupPrint, dialogSupPod,
                     dialogStatusAdj,
-                    waybillAuditVisible, waybillAuditDirs, waybillAuditSummary, waybillAuditDirUsable, waybillAuditBlockReason, openWaybillAudit, submitWaybillAudit,
                     dialogPick, dialogTransferNo, dialogAddBoxDetail, boxData, productActiveTab, isEditProduct, isEditBox, productData, nameData, brandOptions, attrOptions, boxLogisticsMap, boxLogisticsTag, getBoxStatusLabel, canRemoveBox, canReturnBox, canOperateBox, dialogEditFbaBox, dialogEditNonFbaBox, dialogEditMeasure, editMeasureBoxes, openEditMeasureDialog, confirmEditMeasure, dialogTagCompare, showTagCompareResult, dialogAddFbaAddr, dialogAddOtherAddr, dialogAddPrivateAddr, dialogAddSku, dialogAddVat, dialogEditSkuDetail,
                     pickBoxes, pickWarehouse, useCustomerData, pickSnapshot, openPickDialog, calcPickFields, onCustomerDataCheck, confirmPick, pickDataLabel, formatPickData, getBoxChargeableWeight,
                     dialogDeclInfo, declForm, declDialogTitle, openDeclDialog, saveDeclInfo,

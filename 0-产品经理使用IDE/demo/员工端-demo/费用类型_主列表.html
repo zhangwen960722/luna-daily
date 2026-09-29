@@ -163,7 +163,7 @@
                     <el-input v-model="searchForm.feeName" placeholder="费用名称" clearable style="width: 220px;"></el-input>
                 </div>
                 <div class="search-item">
-                    <el-select v-model="searchForm.feeDirection" placeholder="费用方向" clearable multiple collapse-tags style="width: 220px;">
+                    <el-select v-model="searchForm.feeDirection" placeholder="收付类型" clearable multiple collapse-tags style="width: 220px;">
                         <el-option label="应收" value="应收"></el-option>
                         <el-option label="应付" value="应付"></el-option>
                         <el-option label="销售成本" value="销售成本"></el-option>
@@ -196,7 +196,7 @@
                     style="width: 100%" 
                     height="100%">
                     <el-table-column prop="feeName" label="费用名称" min-width="180"></el-table-column>
-                    <el-table-column prop="feeDirection" label="费用方向" min-width="170">
+                    <el-table-column prop="feeDirection" label="收付类型" min-width="170">
                         <template #default="scope">
                             <el-tag
                                 v-for="d in scope.row.feeDirection"
@@ -210,7 +210,7 @@
                     </el-table-column>
                     <el-table-column prop="syncSalesCostForPeer" label="同行客户同步销售成本" min-width="160" align="center">
                         <template #default="scope">
-                            <template v-if="scope.row.feeDirection.includes('销售成本')">
+                            <template v-if="scope.row.feeDirection.includes('应收') && scope.row.feeDirection.includes('销售成本')">
                                 <el-tag :type="scope.row.syncSalesCostForPeer ? 'success' : 'info'" size="small">
                                     {{ scope.row.syncSalesCostForPeer ? '同步' : '不同步' }}
                                 </el-tag>
@@ -283,12 +283,12 @@
                 
                 <div class="a11y-form-group">
                     <label for="fee-direction-select" class="a11y-form-label">
-                        <span style="color: #F56C6C; margin-right: 4px;">*</span>费用方向
+                        <span style="color: #F56C6C; margin-right: 4px;">*</span>收付类型
                     </label>
                     <el-select
                         id="fee-direction-select"
                         v-model="formData.feeDirection"
-                        placeholder="请选择费用方向（可多选）"
+                        placeholder="请选择收付类型（可多选）"
                         multiple
                         style="width: 100%;"
                         :disabled="dialogType !== 'add'"
@@ -305,10 +305,11 @@
                         v-model="formData.syncSalesCostForPeer"
                         active-text="同步"
                         inactive-text="不同步"
-                        inline-prompt>
+                        inline-prompt
+                        :disabled="!canEditSyncSalesCost">
                     </el-switch>
                     <div style="font-size: 12px; color: #909399; margin-top: 6px;">
-                        同行客户的应收流水是否复制销售成本流水，默认「不同步」
+                        同行客户的应收流水是否复制销售成本流水，默认「不同步」；仅收付类型同时含「应收」+「销售成本」时可配置
                     </div>
                 </div>
             </div>
@@ -322,7 +323,7 @@
     </div>
 
     <script>
-        const { createApp, ref, reactive } = Vue;
+        const { createApp, ref, reactive, computed } = Vue;
 
         const app = createApp({
             setup() {
@@ -434,7 +435,7 @@
                         return;
                     }
                     if (!formData.feeDirection || formData.feeDirection.length === 0) {
-                        ElementPlus.ElMessage.warning('请选择费用方向');
+                        ElementPlus.ElMessage.warning('请选择收付类型');
                         return;
                     }
                     if (hasActiveDuplicate(formData.feeName, formData.id)) {
@@ -463,12 +464,14 @@
                     return 'danger';
                 };
 
-                // 费用方向变化时：不含销售成本则重置「同行客户同步销售成本」为默认（不同步）
+                // 收付类型变化时：不同时含「应收 + 销售成本」则重置「同行客户同步销售成本」为默认（不同步）
                 const handleDirectionChange = () => {
-                    if (!formData.feeDirection.includes('销售成本')) {
+                    if (!(formData.feeDirection.includes('应收') && formData.feeDirection.includes('销售成本'))) {
                         formData.syncSalesCostForPeer = false;
                     }
                 };
+                // 仅收付类型同时含「应收」+「销售成本」时，同行客户同步销售成本才可配置
+                const canEditSyncSalesCost = computed(() => (formData.feeDirection || []).includes('应收') && (formData.feeDirection || []).includes('销售成本'));
 
                 return {
                     searchForm,
@@ -485,7 +488,7 @@
                     openDialog,
                     saveData,
                     directionTagType,
-                    handleDirectionChange
+                    handleDirectionChange, canEditSyncSalesCost
                 };
             }
         });
