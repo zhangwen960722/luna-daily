@@ -1806,7 +1806,8 @@
                                     <el-table-column label="单价" width="90" align="right"><template #default="scope"><span :style="{color: scope.row.unitPrice < 0 ? 'var(--el-color-danger)' : ''}">{{ scope.row.unitPrice }}</span></template></el-table-column>
                                     <el-table-column label="计价单位" width="80" align="center"><template #default="scope">{{ scope.row.unit || '—' }}</template></el-table-column>
                                     <el-table-column label="计费量" width="80" align="center"><template #default="scope">{{ scope.row.quantity }}</template></el-table-column>
-                                    <el-table-column label="金额" width="100" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
+                                    <el-table-column label="金额（原币）" width="104" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
+                                    <el-table-column label="金额（本币）" width="106" align="right"><template #default="scope"><span :style="{fontWeight:600, color: flowCnyValue(scope.row) < 0 ? 'var(--el-color-danger)' : ''}">¥ {{ cnyFormat(flowCnyValue(scope.row)) }}</span></template></el-table-column>
                                     <el-table-column prop="description" label="描述" min-width="220" show-overflow-tooltip></el-table-column>
                                     <el-table-column prop="pickTime" label="拣货时间" width="150" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
                                 </el-table>
@@ -4609,6 +4610,8 @@
                     const abs = Math.abs(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     return (v < 0 ? '-' : '') + abs;
                 };
+                const flowCnyValue = (f) => Number(((Number(f && f.amount) || 0) * (Number(f && f.rate) > 0 ? Number(f.rate) : 1)).toFixed(2));
+                const cnyFormat = (v) => { const n = Number(v) || 0; const abs = Math.abs(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return (n < 0 ? '-' : '') + abs; };
 
                 const handleSelectionChange = (val) => { selection.value = val; };
                 const isEditMode = ref(false);
@@ -4804,7 +4807,7 @@
                     dialogWorkOrder, dialogUploadFile, dialogModifyFile,
                     dialogExport, exportSelected, exportScope, exportTemplates, executeExport,
                     openPrintDialog, openDialog, handleCommand, handleDelete, serviceOptions, editPermChecks, onEditDialogOpen, canEditData, canCompareOrPrint, canMarkOrRoute, canCancel, canReturn, canFee,
-                    compareChecks, printFormat, printFormatInv, markType, insureType, buyInsurance, fileVisible, feeArFlows, feeArNet, feeAmountText,
+                    compareChecks, printFormat, printFormatInv, markType, insureType, buyInsurance, fileVisible, feeArFlows, feeArNet, feeAmountText, flowCnyValue, cnyFormat,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,

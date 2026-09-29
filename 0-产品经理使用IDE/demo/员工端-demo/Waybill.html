@@ -2336,10 +2336,9 @@
                                             <el-table-column prop="rate" label="汇率" width="64" align="center"></el-table-column>
                                             <el-table-column label="金额（原币）" width="104" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
                                             <el-table-column label="金额（本币）" width="106" align="right"><template #default="scope"><span :style="{fontWeight:600, color: flowCnyValue(scope.row) < 0 ? 'var(--el-color-danger)' : ''}">¥ {{ cnyFormat(flowCnyValue(scope.row)) }}</span></template></el-table-column>
-                                            <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip></el-table-column>
-                                            <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
                                             <el-table-column prop="supplier" label="供应商" width="110" align="center" show-overflow-tooltip></el-table-column>
-                                            <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
+                                            <el-table-column prop="entityName" label="我司主体" width="96" align="center"><template #default="scope">{{ scope.row.entityName || '—' }}</template></el-table-column>
+                                            <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
                                             <el-table-column label="关联账单" width="180" align="center">
                                                 <template #default="scope">
                                                     <el-tag v-if="scope.row.billNo" size="small" type="warning">{{ scope.row.billNo }}</el-tag>
@@ -2347,7 +2346,8 @@
                                                 </template>
                                             </el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip></el-table-column>
-                                            <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
+                                            <el-table-column prop="bizTime" label="业务时间" width="110" align="center"><template #default="scope">{{ scope.row.bizTime || '—' }}</template></el-table-column>
+                                            <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
                                         </el-table>
                                     </el-tab-pane>
                                     <el-tab-pane label="销售成本">
@@ -2367,6 +2367,7 @@
                                             <el-table-column label="金额（原币）" width="104" align="right"><template #default="scope"><span :style="{fontWeight:600, color: scope.row.amount < 0 ? 'var(--el-color-danger)' : ''}">{{ feeAmountText(scope.row) }}</span></template></el-table-column>
                                             <el-table-column label="金额（本币）" width="106" align="right"><template #default="scope"><span :style="{fontWeight:600, color: flowCnyValue(scope.row) < 0 ? 'var(--el-color-danger)' : ''}">¥ {{ cnyFormat(flowCnyValue(scope.row)) }}</span></template></el-table-column>
                                             <el-table-column prop="source" label="数据来源" width="96" align="center"></el-table-column>
+                                            <el-table-column label="审计状态" width="96" align="center"><template #default="scope"><el-tag :type="scope.row.auditStatus === '已审计' ? 'success' : 'warning'" size="small">{{ scope.row.auditStatus || '待业务审计' }}</el-tag></template></el-table-column>
                                             <el-table-column prop="createdBy" label="创建人" width="84" align="center"></el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
@@ -5479,7 +5480,7 @@
                     return (v < 0 ? '-' : '') + abs;
                 };
                 const feeApFlows = ref([
-                    { id: 8001, auditStatus: '待业务审计', type: '操作费', kindLabel: '手工新增', currency: 'CNY', unitPrice: 10.00, unit: '票', quantity: 8, amount: 80.00, rate: 1, description: '分拣操作费', remark: '分拣操作', blAmortize: '', supplier: 'UPS', createdBy: '李四', billNo: '', pickTime: '2026-04-13 10:00', source: '人工添加' }
+                    { id: 8001, auditStatus: '待业务审计', type: '操作费', kindLabel: '手工新增', currency: 'CNY', unitPrice: 10.00, unit: '票', quantity: 8, amount: 80.00, rate: 1, description: '分拣操作费', remark: '分拣操作', blAmortize: '', supplier: 'UPS', entityName: '广州飞点', createdBy: '李四', billNo: '', bizTime: '2026-04-13', source: '人工添加' }
                 ]);
 
                 // 演示：把上面的流水挂到「已收货」那票运单（其余运单按各自状态自然为空）
