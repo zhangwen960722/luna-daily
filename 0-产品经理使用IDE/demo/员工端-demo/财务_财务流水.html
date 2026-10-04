@@ -26,20 +26,39 @@
         .section-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background-color: #2DA44E; margin-right: 8px; border-radius: 2px; }
         .detail-label { color: #909399; font-size: 13px; margin-bottom: 6px; display: block; }
         .detail-value { color: #303133; font-size: 14px; padding: 6px 10px; background-color: #f8f9fa; border-radius: 4px; border: 1px solid #e4e7ed; min-height: 20px; word-break: break-all; }
+        .amount-compare { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr); gap: 12px; align-items: center; margin: 8px 0 18px; }
+        .amount-panel { min-width: 0; padding: 14px 16px; border: 1px solid #E4E7ED; border-radius: 8px; background: #fff; }
+        .amount-panel.editable { border-color: #A8D5B0; box-shadow: 0 2px 8px rgba(45,164,78,.08); }
+        .amount-panel .amount-label { color: #606266; font-size: 13px; margin-bottom: 8px; }
+        .amount-panel .amount-value { color: #303133; font-size: 23px; line-height: 32px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .amount-panel .amount-unit { color: #909399; font-size: 12px; font-weight: 400; margin-left: 4px; }
+        .amount-panel .amount-state { color: #909399; font-size: 12px; margin-top: 7px; }
+        .amount-panel .el-input-number { width: 100%; }
+        .amount-panel .el-input-number .el-input__wrapper { min-height: 32px; border-radius: 6px; padding: 1px 10px; }
+        .amount-panel .el-input__inner { font-size: 20px; font-weight: 600; }
+        .amount-delta { text-align: center; color: #909399; font-size: 12px; line-height: 18px; }
+        .amount-delta.changed { color: #E6A23C; font-weight: 600; }
+        .amount-delta.invalid, .amount-feedback.invalid { color: #F56C6C; }
+        .amount-feedback { margin: -6px 0 18px; color: #909399; font-size: 12px; text-align: center; }
+        @media (max-width: 720px) { .amount-compare { grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr); gap: 6px; } .amount-panel { padding: 12px 10px; } .amount-panel .amount-value { font-size: 19px; } .amount-panel .el-input__inner { font-size: 17px; } }
     </style>
 </head>
 <body>
     <div id="app">
-        <!-- 上层卡片：查询区（按当前 Tab 切换条件；代充/提现 Tab 无查询条件时不渲染） -->
+        <!-- 上层卡片：充值审核独立查询区 -->
         <div class="content-card" style="height: auto; margin-bottom: 16px;" v-if="activeTab === 'audit'">
             <div class="search-area" style="flex-wrap: nowrap;">
                 <div style="display: flex; flex-wrap: wrap; gap: 16px; flex: 1;">
-                    <el-input v-model="auditSearch.customerName" placeholder="客户名称" clearable style="width: 200px;"></el-input>
-                    <el-select v-model="auditSearch.status" placeholder="状态" clearable style="width: 130px;">
-                        <el-option label="待审核" value="待审核"></el-option>
-                        <el-option label="已通过" value="已通过"></el-option>
-                        <el-option label="已驳回" value="已驳回"></el-option>
-                    </el-select>
+                    <el-input v-model="auditSearch.customerName" placeholder="客户名称" clearable style="width: 180px;"></el-input>
+                    <el-select v-model="auditSearch.entityName" placeholder="账户主体" clearable style="width: 140px;"><el-option v-for="e in entities" :key="e" :label="e" :value="e"></el-option></el-select>
+                    <el-select v-model="auditSearch.currency" placeholder="币种" clearable style="width: 120px;"><el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option></el-select>
+                    <el-date-picker v-model="auditSearch.timeRange" type="daterange" value-format="YYYY-MM-DD" start-placeholder="申请开始" end-placeholder="申请结束" style="width:240px"></el-date-picker>
+                    <template v-if="auditSearchExpanded">
+                        <el-input v-model="auditSearch.applyNo" placeholder="充值申请编号" clearable style="width:170px"></el-input>
+                        <el-input-number v-model="auditSearch.minAmount" :min="0" :controls="false" placeholder="申请金额最小值" style="width:150px"></el-input-number>
+                        <el-input-number v-model="auditSearch.maxAmount" :min="0" :controls="false" placeholder="申请金额最大值" style="width:150px"></el-input-number>
+                        <el-select v-model="auditSearch.hasVoucher" placeholder="是否有打款凭证" clearable style="width:150px"><el-option label="有凭证" value="yes"></el-option><el-option label="无凭证" value="no"></el-option></el-select>
+                    </template>
                 </div>
                 <div style="display: flex; gap: 12px; flex-shrink: 0;">
                     <el-button class="btn-search-primary" @click="handleSearch">
@@ -51,101 +70,136 @@
                     <el-button @click="handleExport">
                         <el-icon style="margin-right: 4px;"><Download /></el-icon>导出
                     </el-button>
+                    <el-button @click="auditSearchExpanded = !auditSearchExpanded">{{ auditSearchExpanded ? '收起' : '更多' }}</el-button>
                 </div>
             </div>
         </div>
 
+        <div v-if="activeTab !== 'audit'" class="content-card" style="height:auto;margin-bottom:16px">
+            <div class="search-area">
+                <div style="display:flex;flex-wrap:wrap;gap:16px;flex:1;min-width:0">
+                    <template v-for="field in recordQueryFields" :key="field.key">
+                        <template v-if="field.common || recordSearchExpanded">
+                            <el-input v-if="field.type === 'text'" v-model="currentSearch[field.key]" :placeholder="field.label" clearable style="width:180px"></el-input>
+                            <el-input-number v-else-if="field.type === 'number'" v-model="currentSearch[field.key]" :min="0" :controls="false" :placeholder="field.label" style="width:160px"></el-input-number>
+                            <el-date-picker v-else-if="field.type === 'date'" v-model="currentSearch[field.key]" type="daterange" value-format="YYYY-MM-DD" :start-placeholder="field.label + '开始'" :end-placeholder="field.label + '结束'" style="width:240px"></el-date-picker>
+                            <el-select v-else v-model="currentSearch[field.key]" :placeholder="field.label" clearable style="width:160px"><el-option v-for="option in field.options" :key="option.value || option" :label="option.label || option" :value="option.value || option"></el-option></el-select>
+                        </template>
+                    </template>
+                </div>
+                <div style="display:flex;gap:8px;flex-shrink:0"><el-button class="btn-search-primary" @click="handleSearch">查询</el-button><el-button @click="resetRecordSearch">重置</el-button><el-button @click="recordSearchExpanded = !recordSearchExpanded">{{ recordSearchExpanded ? '收起' : '更多' }}</el-button><el-button @click="handleExport">导出</el-button></div>
+            </div>
+        </div>
         <!-- 下层卡片：Tab + 表格 -->
         <div class="content-card" style="height: calc(100vh - 106px);">
             <el-tabs v-model="activeTab">
                 <!-- Tab 1: 充值审核 -->
                 <el-tab-pane :label="'充值审核 (' + pendingApplies.length + ')'" name="audit">
-                    <el-table :data="filteredApplies" border style="width: 100%">
+                    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px"><el-button type="primary" @click="openRecharge">代客户充值</el-button><el-button @click="importRulesVisible = true">导入</el-button></div>
+                    <el-table :data="filteredApplies.slice((auditPage-1)*10,auditPage*10)" border style="width: 100%">
+                        <el-table-column prop="source" label="充值来源" min-width="100"></el-table-column>
                         <el-table-column prop="applyNo" label="充值单号" min-width="140"></el-table-column>
                         <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
                         <el-table-column prop="currency" label="币种" min-width="80" align="center">
                             <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                         </el-table-column>
-                        <el-table-column label="金额" min-width="120" align="right">
+                        <el-table-column label="客户申请金额" min-width="130" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
                         </el-table-column>
+                        <el-table-column label="审核确认金额" min-width="130" align="right"><template #default="scope">{{ scope.row.confirmedAmount == null ? '—' : currencySymbol(scope.row.currency) + formatMoney(scope.row.confirmedAmount) }}</template></el-table-column>
+                        <el-table-column prop="bankAccount" label="客户原始打款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="confirmedBankAccount" label="审核确认打款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="operator" label="申请人" min-width="100"></el-table-column>
                         <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
                         <el-table-column prop="status" label="状态" min-width="90" align="center">
                             <template #default="scope">
                                 <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')" size="small">{{ scope.row.status }}</el-tag>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="170" fixed="right" align="center">
+                        <el-table-column label="操作" width="120" fixed="right" align="center">
                             <template #default="scope">
-                                <el-button link type="primary" size="small" @click="openApplyDetail(scope.row)">详情</el-button>
-                                <template v-if="scope.row.status === '待审核'">
-                                    <el-button link type="success" size="small" @click="approveApply(scope.row)">通过</el-button>
-                                    <el-button link type="danger" size="small" @click="rejectApply(scope.row)">驳回</el-button>
-                                </template>
+                                <el-button v-if="['待审核','审核中'].includes(scope.row.status)" type="primary" size="small" @click="openApplyDetail(scope.row)">审核</el-button>
+                                <el-button v-else link type="primary" size="small" @click="openApplyDetail(scope.row)">详情</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                     <div class="pagination-area">
-                        <el-pagination background layout="total, prev, pager, next" :total="filteredApplies.length"></el-pagination>
+                        <el-pagination v-model:current-page="auditPage" background layout="total, prev, pager, next" :page-size="10" :total="filteredApplies.length"></el-pagination>
                     </div>
                 </el-tab-pane>
 
-                <!-- Tab 2: 客户充值（代充） -->
-                <el-tab-pane label="客户充值" name="recharge">
-                    <div class="search-area">
-                        <el-button type="primary" @click="openRecharge">
-                            <el-icon style="margin-right: 4px;"><Plus /></el-icon>代客户充值
-                        </el-button>
-                        <span style="color: #909399; font-size: 13px;">客户线下打款到账后，财务在此手动为客户入池</span>
-                    </div>
-                    <el-table :data="rechargeRecords" border style="width: 100%">
-                        <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
-                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
+                <!-- Tab 2: 客户充值记录 -->
+                <el-tab-pane label="客户充值记录" name="recharge">
+                    <el-table :data="filteredRechargeRecords.slice((rechargePage-1)*10,rechargePage*10)" border style="width: 100%" min-width="1500">
+                        <el-table-column prop="source" label="充值来源" min-width="100"></el-table-column>
+                        <el-table-column prop="payTime" label="客户支付时间" min-width="150"></el-table-column>
+                        <el-table-column prop="applyNo" label="充值申请编号" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="customerName" label="客户名称" min-width="190" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
                         <el-table-column prop="currency" label="币种" min-width="80" align="center">
                             <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                         </el-table-column>
-                        <el-table-column label="金额" min-width="120" align="right">
+                        <el-table-column label="客户申请金额" min-width="130" align="right">
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
                         </el-table-column>
-                        <el-table-column prop="operator" label="操作人" min-width="100"></el-table-column>
-                        <el-table-column prop="time" label="操作时间" min-width="150"></el-table-column>
+                        <el-table-column label="审核确认金额" min-width="130" align="right"><template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.confirmedAmount) }}</template></el-table-column>
+                        <el-table-column prop="bankAccount" label="客户填写的打款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="confirmedBankAccount" label="审核确认打款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="customerRemark" label="客户备注" min-width="160" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="status" label="审核状态" min-width="100" align="center"></el-table-column>
+                        <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
+                        <el-table-column prop="reviewer" label="审核人" min-width="100"></el-table-column>
+                        <el-table-column prop="reviewTime" label="审核时间" min-width="150"></el-table-column>
+                        <el-table-column label="操作" width="80" fixed="right" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openRechargeDetail(scope.row)">详情</el-button></template></el-table-column>
                     </el-table>
+                    <div class="pagination-area"><el-pagination v-model:current-page="rechargePage" background layout="total, prev, pager, next" :page-size="10" :total="filteredRechargeRecords.length"></el-pagination></div>
                 </el-tab-pane>
 
                 <!-- Tab 3: 客户提现 -->
                 <el-tab-pane label="客户提现" name="withdraw">
                     <div class="search-area">
-                        <el-button type="warning" @click="openWithdraw">
+                    <el-button type="warning" @click="openWithdraw">
                             <el-icon style="margin-right: 4px;"><Remove /></el-icon>客户提现
                         </el-button>
-                        <span style="color: #909399; font-size: 13px;">客户线下申请提现，财务核对后在此扣减钱包余额</span>
+                        <span style="color: #909399; font-size: 13px;">财务创建客户提现单，确认打款后直接扣减客户钱包余额</span>
                     </div>
-                    <el-table :data="withdrawRecords" border style="width: 100%">
-                        <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
-                        <el-table-column prop="customerName" label="客户" min-width="190" show-overflow-tooltip></el-table-column>
-                        <el-table-column prop="entityName" label="主体" min-width="110"></el-table-column>
-                        <el-table-column prop="currency" label="币种" min-width="80" align="center">
-                            <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
-                        </el-table-column>
-                        <el-table-column label="金额" min-width="120" align="right">
-                            <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
-                        </el-table-column>
-                        <el-table-column prop="operator" label="操作人" min-width="100"></el-table-column>
-                        <el-table-column prop="time" label="操作时间" min-width="150"></el-table-column>
+                    <el-table :data="filteredWithdrawRecords.slice((withdrawPage-1)*10,withdrawPage*10)" border style="width: 100%" min-width="1700">
+                        <el-table-column prop="flowNo" label="提现申请编号" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="customerName" label="客户名称" min-width="190" show-overflow-tooltip></el-table-column>
+                        <el-table-column label="提现金额" min-width="130" align="right"><template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template></el-table-column>
+                        <el-table-column prop="bankAccount" label="提现账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="oaNo" label="OA审批编号" min-width="160" show-overflow-tooltip></el-table-column>
+                        <el-table-column label="打款记录" min-width="110" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openPaymentFileDetail(scope.row)">{{ paymentFileStatus(scope.row) }}</el-button></template></el-table-column>
+                        <el-table-column label="打款记录状态" min-width="120" align="center"><template #default="scope"><el-tag :type="scope.row.paymentFile ? 'success' : 'warning'" size="small">{{ paymentFileStatus(scope.row) }}</el-tag></template></el-table-column>
+                        <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
+                        <el-table-column prop="paidTime" label="打款完成时间" min-width="150"></el-table-column>
+                        <el-table-column label="操作" width="100" fixed="right" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openWithdrawDetail(scope.row)">详情</el-button></template></el-table-column>
                     </el-table>
+                    <div class="pagination-area"><el-pagination v-model:current-page="withdrawPage" background layout="total, prev, pager, next" :page-size="10" :total="filteredWithdrawRecords.length"></el-pagination></div>
                 </el-tab-pane>
 
-                <!-- Tab 4: 支付供应商 -->
-                <el-tab-pane label="支付供应商" name="supplier">
-                    <el-empty description="应付管理细节待展开，支付供应商功能后续上线" :image-size="120"></el-empty>
-                </el-tab-pane>
             </el-tabs>
         </div>
 
+        <el-dialog v-model="importRulesVisible" title="充值导入规则" width="720px" destroy-on-close>
+            <div style="line-height:1.8">
+                <div class="section-title">导入用途</div>
+                <p>批量创建代客户充值申请。每条成功导入的数据形成一条独立的待审核申请，不直接入账。</p>
+                <div class="section-title">导入字段</div>
+                <p>客户、入账主体、币种、申请金额、客户实际支付时间、入账账户、打款凭证、备注。具体字段以正式导入模板为准。</p>
+                <div class="section-title">打款凭证</div>
+                <ul><li>支持在Excel对应数据行中嵌入打款凭证图片。</li><li>未附图片的记录也允许导入并进入待审核。</li><li>无凭证的申请需在审核详情中补传凭证。</li><li>审核通过前必须具备可查看的打款凭证；缺少凭证时禁止审核通过，并提示“请先补充打款凭证”。</li><li>一份凭证可以关联多条充值申请，不能仅因图片相同判定为重复充值。</li></ul>
+                <div class="section-title">数据校验</div>
+                <ul><li>校验客户、主体、币种、申请金额、支付时间和入账账户。</li><li>沿用现有客户、主体、币种及可用入账账户的业务限制。</li><li>申请金额必须大于0，最多两位小数。</li><li>支持部分成功：有效记录导入，失败记录说明具体原因，并支持导出错误数据。</li><li>缺少凭证图片不作为导入失败原因。</li><li>重试失败数据时，应避免重复创建此前已成功导入的申请。</li></ul>
+                <div class="section-title">审核与追溯</div>
+                <ul><li>充值来源为“财务代充”。</li><li>录入方式为“批量导入”，与“单笔新增”区分。</li><li>保存申请人、导入时间和导入批次号。</li><li>使用现有逐单审核流程。</li><li>审核通过即入账，审核驳回不入账。</li></ul>
+                <el-alert title="以上仅为未来正式导入功能的规则说明，本次不实现这些导入能力。" type="info" :closable="false"></el-alert>
+            </div>
+            <template #footer><el-button @click="importRulesVisible = false">关闭</el-button></template>
+        </el-dialog>
         <!-- 充值申请详情弹窗 -->
-        <el-dialog v-model="applyDetailVisible" title="充值申请详情" width="620px" destroy-on-close>
+        <el-dialog v-model="applyDetailVisible" :title="currentApply && ['待审核','审核中'].includes(currentApply.status) ? '充值审核' : '充值详情'" width="980px" destroy-on-close>
             <div v-if="currentApply">
                 <div class="section-title">申请信息</div>
                 <el-row :gutter="20">
@@ -156,26 +210,73 @@
                     <el-col :span="12"><span class="detail-label">主体</span><div class="detail-value">{{ currentApply.entityName }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(currentApply.currency) }}</div></el-col>
                 </el-row>
+                <el-row :gutter="20"><el-col :span="12"><span class="detail-label">打款账户</span><div class="detail-value">{{ currentApply.bankAccount }}</div></el-col></el-row>
+                <div class="section-title" style="margin-top: 20px;">审核确认信息</div>
                 <el-row :gutter="20">
-                    <el-col :span="12"><span class="detail-label">金额</span><div class="detail-value">{{ currencySymbol(currentApply.currency) }}{{ formatMoney(currentApply.amount) }}</div></el-col>
-                    <el-col :span="12"><span class="detail-label">打款账户</span><div class="detail-value">{{ currentApply.bankAccount }}</div></el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">客户填写的打款账户</span>
+                        <div class="detail-value">{{ currentApply.bankAccount }}</div>
+                        <div class="detail-label" style="margin-top:6px">只读 · 客户原始选择</div>
+                    </el-col>
+                    <el-col :span="12">
+                        <span class="detail-label">审核确认打款账户</span>
+                        <el-form-item prop="confirmedBankAccount" style="margin-bottom:6px">
+                            <el-select v-model="currentApply.confirmedBankAccount" style="width:100%" :disabled="currentApply.status !== '待审核'" placeholder="请选择最终归属账户">
+                                <el-option v-for="account in reviewBankAccounts" :key="account.id" :label="account.name" :value="account.name"></el-option>
+                            </el-select>
+                        </el-form-item>
+                        <div class="detail-label">{{ bankAccountChanged ? '已调整' : '未调整' }} · {{ currentApply.status === '待审核' ? '可修改' : '已锁定' }}</div>
+                    </el-col>
                 </el-row>
+                <el-form-item v-if="bankAccountChanged" label="账户调整原因" prop="accountAdjustmentReason">
+                    <el-input v-model="currentApply.accountAdjustmentReason" type="textarea" :rows="2" maxlength="200" show-word-limit :disabled="currentApply.status !== '待审核'" placeholder="请输入账户调整原因（必填）"></el-input>
+                </el-form-item>
+                <div v-if="bankAccountChanged" style="background:#f8f9fa;color:#606266;padding:10px 12px;border-radius:4px;margin-bottom:12px;font-size:12px">审核确认打款账户与客户原始选择不一致，审核通过后将以审核确认打款账户作为本次充值归属账户。</div>
+                <div class="section-title" style="margin-top: 20px;">充值金额</div>
+                <div class="amount-compare">
+                    <div class="amount-panel">
+                        <div class="amount-label">客户申请金额</div>
+                        <div class="amount-value">{{ currencySymbol(currentApply.currency) }}{{ formatMoney(currentApply.amount) }}<span class="amount-unit">{{ currentApply.currency }}</span></div>
+                        <div class="amount-state">只读 · 货主原始申请</div>
+                    </div>
+                    <div :class="['amount-delta', { changed: amountChanged, invalid: !isConfirmedAmountValid }]">{{ amountChanged ? '调整 ' + signedDelta : (isConfirmedAmountValid ? '金额未修改' : '金额无效') }}</div>
+                    <div class="amount-panel editable">
+                        <div class="amount-label">审核确认金额</div>
+                        <el-input-number v-model="currentApply.confirmedAmount" :min="0.01" :precision="2" :step="100" :disabled="currentApply.status !== '待审核'" :controls="false" aria-label="审核确认金额"></el-input-number>
+                        <div class="amount-state">{{ currentApply.status === '待审核' ? '可修改 · 最多 2 位小数' : '已锁定 · 不可修改' }}</div>
+                    </div>
+                </div>
+                <div :class="['amount-feedback', { invalid: !isConfirmedAmountValid }]">{{ isConfirmedAmountValid ? '审核通过后将按审核确认金额入账' : '审核确认金额必须大于 0 且最多保留 2 位小数' }}</div>
+                <el-row :gutter="20" style="margin-bottom:16px">
+                    <el-col :xs="24" :sm="12"><span class="detail-label">客户备注</span><el-input :model-value="currentApply.customerRemark || '—'" type="textarea" :rows="2" readonly resize="none"></el-input></el-col>
+                    <el-col :xs="24" :sm="12"><span class="detail-label">审核备注</span><el-input v-model="currentApply.reviewRemark" type="textarea" :rows="2" maxlength="200" show-word-limit :disabled="currentApply.status !== '待审核'" resize="none" placeholder="请输入审核意见（非必填）"></el-input></el-col>
+                </el-row>
+                <el-row v-if="currentApply.status !== '待审核'" :gutter="20"><el-col :span="12"><span class="detail-label">审核人</span>{{ currentApply.reviewer || '—' }}</el-col><el-col :span="12"><span class="detail-label">审核时间</span>{{ currentApply.reviewTime || '—' }}</el-col></el-row>
+                <div v-if="currentApply.status === '待审核'" style="background:#fff7e6;color:#8a5a00;padding:10px 12px;border-radius:4px;margin-bottom:12px">修改审核金额或打款账户后，货主端充值记录、资金账户入账金额及归属账户将以审核确认信息为准。</div>
                 <el-row :gutter="20">
                     <el-col :span="12"><span class="detail-label">申请时间</span><div class="detail-value">{{ currentApply.time }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">状态</span><div class="detail-value">{{ currentApply.status }}</div></el-col>
                 </el-row>
                 <div class="section-title" style="margin-top: 20px;">打款凭证</div>
-                <div style="background: #f8f9fa; border-radius: 4px; padding: 20px; text-align: center; color: #909399;">
-                    <el-icon style="font-size: 40px;"><tickets></tickets></el-icon>
-                    <div style="margin-top: 8px;">{{ currentApply.voucher }}</div>
-                    <div style="font-size: 12px; margin-top: 4px;">财务线下核对银行流水，确认到账后点击「通过」</div>
+                <div style="background:#f8f9fa;border-radius:4px;padding:10px 12px">
+                    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+                        <div v-for="file in reviewVoucherFiles" :key="file.url || file.name" style="width:150px">
+                            <el-image v-if="file.url && file.type !== 'application/pdf'" :src="file.url" :preview-src-list="reviewVoucherFiles.filter(f => f.url && f.type !== 'application/pdf').map(f => f.url)" style="width:120px;height:72px" fit="contain"></el-image>
+                            <a v-else-if="file.url" :href="file.url" target="_blank" rel="noopener">查看 PDF 凭证</a>
+                            <span v-else style="font-size:12px;color:#909399">演示附件 · 仅文件信息</span>
+                            <div :title="file.name" style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px">{{ file.name }}</div>
+                        </div>
+                        <span v-if="!reviewVoucherFiles.length" style="color:#909399">未上传打款凭证</span>
+                    </div>
+                    <el-upload v-if="['待审核','审核中'].includes(currentApply.status)" action="#" :auto-upload="false" :show-file-list="false" :on-change="onReviewVoucherChange" accept="image/*,.pdf" style="margin-top:12px"><el-button type="primary" plain>{{ currentApply.voucher ? '更换打款凭证' : '补传打款凭证' }}</el-button><template #tip><div class="el-upload__tip">图片或 PDF，最大 5MB；仅保存在本次原型会话中</div></template></el-upload>
+                    <div style="font-size:12px;margin-top:6px;color:#909399">核对凭证与实际到账后审核。</div>
                 </div>
             </div>
             <template #footer>
                 <span class="dialog-footer">
-                    <el-button @click="applyDetailVisible = false">关 闭</el-button>
-                    <el-button v-if="currentApply && currentApply.status === '待审核'" type="danger" @click="rejectApply(currentApply)">驳 回</el-button>
-                    <el-button v-if="currentApply && currentApply.status === '待审核'" type="primary" @click="approveApply(currentApply)">通过并入池</el-button>
+                    <el-button @click="applyDetailVisible = false">取消</el-button>
+                    <el-button v-if="currentApply && ['待审核','审核中'].includes(currentApply.status)" type="danger" @click="rejectApply(currentApply)">驳回</el-button>
+                    <el-button v-if="currentApply && ['待审核','审核中'].includes(currentApply.status)" type="primary" @click="approveApply(currentApply)">审核通过</el-button>
                 </span>
             </template>
         </el-dialog>
@@ -248,14 +349,15 @@
             <template #footer>
                 <span class="dialog-footer">
                     <el-button @click="rechargeVisible = false">取消</el-button>
-                    <el-button type="primary" @click="submitRecharge">确认入池</el-button>
+                    <el-button type="primary" @click="submitRecharge">提交申请</el-button>
                 </span>
             </template>
         </el-dialog>
 
         <!-- 提现弹窗 -->
-        <el-dialog v-model="withdrawVisible" title="客户提现" width="560px" destroy-on-close>
+        <el-dialog v-model="withdrawVisible" title="创建客户提现单" width="760px" destroy-on-close>
             <el-form ref="withdrawFormRef" :model="withdrawForm" :rules="opRules" label-position="top">
+                <div class="section-title">客户钱包信息</div>
                 <el-row :gutter="20">
                     <el-col :span="12">
                         <el-form-item label="客户" prop="customerName">
@@ -272,39 +374,60 @@
                         </el-form-item>
                     </el-col>
                 </el-row>
+                <el-form-item label="币种" prop="currency">
+                    <el-select v-model="withdrawForm.currency" placeholder="请选择币种" style="width:100%"><el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option></el-select>
+                </el-form-item>
+                <div v-if="withdrawForm.customerName && withdrawForm.entityName && withdrawForm.currency" style="background:#f8f9fa;border-radius:4px;padding:12px 16px;color:#606266;font-size:13px;margin-top:8px;">提现前钱包余额：{{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(currentBalance) }}　可提现余额：{{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(currentAvailableBalance) }}</div>
+                <div class="section-title" style="margin-top:20px;">提现信息</div>
                 <el-row :gutter="20">
-                    <el-col :span="12">
-                        <el-form-item label="币种" prop="currency">
-                            <el-select v-model="withdrawForm.currency" placeholder="请选择币种" style="width: 100%">
-                                <el-option v-for="c in currencyOptions" :key="c" :label="currencyName(c)" :value="c"></el-option>
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                        <el-form-item label="金额" prop="amount">
-                            <el-input-number v-model="withdrawForm.amount" :min="0.01" :precision="2" :step="100" style="width: 100%" :controls="false" placeholder="请输入金额"></el-input-number>
-                        </el-form-item>
-                    </el-col>
+                    <el-col :span="12"><el-form-item label="提现金额" prop="amount"><el-input-number v-model="withdrawForm.amount" :min="0.01" :precision="2" :step="100" style="width:100%" :controls="false" placeholder="请输入提现金额"></el-input-number></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="出款账户" prop="bankAccountId"><el-select v-model="withdrawForm.bankAccountId" placeholder="请选择出款账户" style="width:100%" :disabled="!withdrawForm.entityName || !withdrawForm.currency"><el-option v-for="a in withdrawBankAccounts" :key="a.id" :label="a.name" :value="a.id"></el-option></el-select></el-form-item></el-col>
                 </el-row>
-                <el-row :gutter="20">
-                    <el-col :span="12">
-                        <el-form-item label="出款账户" prop="bankAccountId">
-                            <el-select v-model="withdrawForm.bankAccountId" placeholder="请选择出款账户" style="width: 100%" :disabled="!withdrawForm.entityName || !withdrawForm.currency">
-                                <el-option v-for="a in withdrawBankAccounts" :key="a.id" :label="a.name" :value="a.id"></el-option>
-                            </el-select>
-                        </el-form-item>
-                    </el-col>
-                </el-row>
-                <div v-if="withdrawForm.customerName && withdrawForm.entityName && withdrawForm.currency" style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #606266; font-size: 13px;">
-                    当前钱包余额：{{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(currentBalance) }}
-                </div>
+                <div v-if="withdrawForm.amount" style="background:#fff7e6;border-radius:4px;padding:12px 16px;color:#8a5a00;font-size:13px;">提现前钱包余额 {{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(currentBalance) }} − 本次提现 {{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(withdrawForm.amount) }} = 提现后余额 {{ currencySymbol(withdrawForm.currency) }}{{ formatMoney(withdrawAfterBalance) }}</div>
+                <div class="section-title" style="margin-top:20px;">打款信息</div>
+                <el-form-item label="OA审批编号" prop="oaNo"><el-input v-model="withdrawForm.oaNo" maxlength="64" placeholder="请输入OA审批编号，确认打款时必填"></el-input></el-form-item>
+                <el-form-item label="上传打款记录" prop="paymentFile">
+                    <el-upload action="#" :auto-upload="false" :limit="1" v-model:file-list="paymentFileList" :on-change="onPaymentFileChange" :on-remove="onPaymentFileRemove" accept="image/*,.pdf,.xls,.xlsx,.csv">
+                        <el-button type="primary" plain>上传打款记录</el-button>
+                        <template #tip><div class="el-upload__tip">支持图片、PDF、Excel、CSV，单个文件不超过 10MB</div></template>
+                    </el-upload>
+                    <div v-if="withdrawForm.paymentFile" style="font-size:12px;color:#909399;margin-top:6px">{{ withdrawForm.paymentFile.name }} · {{ formatFileSize(withdrawForm.paymentFile.size) }} · 上传人：{{ withdrawForm.paymentFile.uploader }} · {{ withdrawForm.paymentFile.uploadTime }}</div>
+                </el-form-item>
+                <el-form-item label="操作备注" prop="operationRemark"><el-input v-model="withdrawForm.operationRemark" type="textarea" :rows="2" maxlength="200" placeholder="请输入操作备注（非必填）"></el-input></el-form-item>
             </el-form>
             <template #footer>
                 <span class="dialog-footer">
                     <el-button @click="withdrawVisible = false">取消</el-button>
-                    <el-button type="primary" @click="submitWithdraw">确认提现</el-button>
+                    <el-button type="primary" @click="submitWithdraw">确认打款</el-button>
                 </span>
             </template>
+        </el-dialog>
+        <el-dialog v-model="withdrawDetailVisible" title="提现详情" width="680px" destroy-on-close>
+            <div v-if="currentWithdraw">
+                <div class="section-title">提现信息</div>
+                <el-row :gutter="20"><el-col :span="8"><span class="detail-label">提现流水号</span><div class="detail-value">{{ currentWithdraw.flowNo }}</div></el-col><el-col :span="8"><span class="detail-label">客户</span><div class="detail-value">{{ currentWithdraw.customerName }}</div></el-col><el-col :span="8"><span class="detail-label">状态</span><div class="detail-value">{{ currentWithdraw.status }}</div></el-col></el-row>
+                <el-row :gutter="20"><el-col :span="8"><span class="detail-label">主体 / 币种</span><div class="detail-value">{{ currentWithdraw.entityName }} / {{ currencyName(currentWithdraw.currency) }}</div></el-col><el-col :span="8"><span class="detail-label">提现金额</span><div class="detail-value">{{ currencySymbol(currentWithdraw.currency) }}{{ formatMoney(currentWithdraw.amount) }}</div></el-col><el-col :span="8"><span class="detail-label">出款账户</span><div class="detail-value">{{ currentWithdraw.bankAccount || '—' }}</div></el-col></el-row>
+                <el-row :gutter="20"><el-col :span="12"><span class="detail-label">提现前钱包余额</span><div class="detail-value">{{ currencySymbol(currentWithdraw.currency) }}{{ formatMoney(currentWithdraw.balanceBefore || 0) }}</div></el-col><el-col :span="12"><span class="detail-label">提现后钱包余额</span><div class="detail-value">{{ currencySymbol(currentWithdraw.currency) }}{{ formatMoney(currentWithdraw.balanceAfter || 0) }}</div></el-col></el-row>
+                <div class="section-title" style="margin-top:20px">打款信息</div>
+                <el-row :gutter="20"><el-col :span="12"><span class="detail-label">OA审批编号</span><div class="detail-value">{{ currentWithdraw.oaNo || '—' }}</div></el-col><el-col :span="12"><span class="detail-label">操作时间</span><div class="detail-value">{{ currentWithdraw.paidTime || currentWithdraw.time }}</div></el-col></el-row>
+                <div class="detail-value" style="margin-top:8px">{{ currentWithdraw.paymentFile ? `${currentWithdraw.paymentFile.name} · ${formatFileSize(currentWithdraw.paymentFile.size)} · ${currentWithdraw.paymentFile.uploader} · ${currentWithdraw.paymentFile.uploadTime}` : '未上传' }}</div>
+                <div class="section-title" style="margin-top:20px">资金流水信息</div><div class="detail-value">关联钱包流水号：{{ currentWithdraw.walletFlowNo || '生成中' }}；扣款金额：{{ currencySymbol(currentWithdraw.currency) }}{{ formatMoney(currentWithdraw.amount) }}；资金来源可通过「资金流水」追溯贷记单结转记录，不绑定特定贷记单。</div>
+                <div class="section-title" style="margin-top:20px">操作备注</div><div class="detail-value">{{ currentWithdraw.operationRemark || '—' }}</div>
+            </div><template #footer><el-button @click="withdrawDetailVisible=false">关闭</el-button></template>
+        </el-dialog>
+        <el-dialog v-model="paymentFileDetailVisible" title="打款记录详情" width="620px" destroy-on-close>
+            <div v-if="currentWithdraw && currentWithdraw.paymentFile">
+                <el-descriptions :column="1" border>
+                    <el-descriptions-item label="文件名称">{{ currentWithdraw.paymentFile.name }}</el-descriptions-item>
+                    <el-descriptions-item label="文件类型">{{ currentWithdraw.paymentFile.type || '未标注' }}</el-descriptions-item>
+                    <el-descriptions-item label="文件大小">{{ formatFileSize(currentWithdraw.paymentFile.size) }}</el-descriptions-item>
+                    <el-descriptions-item label="上传人">{{ currentWithdraw.paymentFile.uploader }}</el-descriptions-item>
+                    <el-descriptions-item label="上传时间">{{ currentWithdraw.paymentFile.uploadTime }}</el-descriptions-item>
+                </el-descriptions>
+                <div style="margin-top:16px;text-align:right"><el-button type="primary" plain>预览</el-button><el-button type="primary" plain>下载</el-button></div>
+            </div>
+            <el-empty v-else description="暂无打款记录"></el-empty>
+            <template #footer><el-button @click="paymentFileDetailVisible=false">关闭</el-button></template>
         </el-dialog>
     </div>
 
@@ -339,40 +462,124 @@
                 ];
 
                 const activeTab = ref('audit');
+                const auditPage = ref(1), rechargePage = ref(1), withdrawPage = ref(1);
 
                 // === 充值审核 ===
-                const auditSearch = reactive({ customerName: '', status: '' });
+                const emptySearch = () => ({ customerName:'', entityName:'', currency:'', applyNo:'', flowNo:'', status:'', source:'', bankAccount:'', operator:'', oaNo:'', hasVoucher:'', paymentStatus:'', minAmount:null, maxAmount:null, timeRange:[], payRange:[], paidRange:[] });
+                const auditSearch = reactive(emptySearch());
+                const rechargeSearch = reactive(emptySearch());
+                const withdrawSearch = reactive(emptySearch());
+                const auditSearchExpanded = ref(false);
+                const recordSearchExpanded = ref(false);
+                const currentSearch = computed(() => activeTab.value === 'recharge' ? rechargeSearch : withdrawSearch);
+                const recordQueryFields = computed(() => [
+                    {key:'customerName',label:'客户名称',type:'text',common:true},
+                    {key:'entityName',label:'账户主体',options:entities,common:true},
+                    {key:'currency',label:'币种',options:currencyOptions,common:true},
+                    ...(activeTab.value === 'recharge' ? [{key:'status',label:'处理结果',options:['已通过','已驳回'],common:true}] : []),
+                    {key:activeTab.value === 'recharge' ? 'applyNo' : 'flowNo',label:activeTab.value === 'recharge' ? '充值申请编号' : '提现申请编号',type:'text'},
+                    {key:'minAmount',label:'金额最小值',type:'number'}, {key:'maxAmount',label:'金额最大值',type:'number'},
+                    {key:'timeRange',label:'申请/创建时间',type:'date'},
+                    {key:activeTab.value === 'recharge' ? 'payRange' : 'paidRange',label:activeTab.value === 'recharge' ? '客户支付时间' : '打款完成时间',type:'date'},
+                    {key:'bankAccount',label:activeTab.value === 'recharge' ? '入账账户' : '出款账户',type:'text'},
+                    {key:'operator',label:activeTab.value === 'recharge' ? '处理人' : '操作人',type:'text'},
+                    ...(activeTab.value === 'recharge' ? [{key:'source',label:'充值来源',options:['客户申请','财务代充']}] : [{key:'oaNo',label:'OA审批编号',type:'text'},{key:'paymentStatus',label:'打款记录状态',options:[{label:'已上传',value:'yes'},{label:'未上传',value:'no'}]}])
+                ]);
+                const inRange = (value, range) => !range || range.length !== 2 || (!!value && value.slice(0,10) >= range[0] && value.slice(0,10) <= range[1]);
+                const matchesSearch = (row, query) => {
+                    for (const key of ['customerName','applyNo','flowNo','oaNo']) if(query[key] && !String(row[key] || '').includes(query[key].trim())) return false;
+                    for (const key of ['entityName','currency','status','source']) if(query[key] && row[key] !== query[key]) return false;
+                    if(query.bankAccount && !String(row.confirmedBankAccount || row.bankAccount || '').includes(query.bankAccount.trim())) return false;
+                    if(query.operator && !String(row.reviewer || row.operator || '').includes(query.operator.trim())) return false;
+                    const amount = Number(activeTab.value === 'recharge' && row.status !== '已驳回' ? row.confirmedAmount ?? row.amount : row.amount);
+                    if(query.minAmount != null && amount < query.minAmount) return false;
+                    if(query.maxAmount != null && amount > query.maxAmount) return false;
+                    if(query.hasVoucher && Boolean(row.voucher) !== (query.hasVoucher === 'yes')) return false;
+                    if(query.paymentStatus && Boolean(row.paymentFile) !== (query.paymentStatus === 'yes')) return false;
+                    return inRange(row.time,query.timeRange) && inRange(row.payTime,query.payRange) && inRange(row.paidTime,query.paidRange);
+                };
                 const rechargeApplies = reactive([
-                    { applyNo: 'FD20260827001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', voucher: '转账回单-华美-0827.png', time: '2026-08-27 10:23', status: '待审核' },
-                    { applyNo: 'FD20260827002', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', amount: 2000.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', voucher: '转账回单-迅达-0827.png', time: '2026-08-27 09:10', status: '待审核' },
-                    { applyNo: 'FD20260826003', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, bankAccount: '广东飞点-工商银行(4000 1111 2222)', voucher: '转账回单-新锐-0826.pdf', time: '2026-08-26 15:40', status: '已通过' },
-                    { applyNo: 'FD20260825004', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', voucher: '转账回单-华美-0825.png', time: '2026-08-25 14:10', status: '已通过' }
+                    { applyNo: 'FD20260827001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, confirmedAmount: 3000.00, customerRemark: '用于本周海运账单预存', reviewRemark: '', bankAccount: '广州飞点-招商银行(7559 1234 5678)', confirmedBankAccount: '广州飞点-招商银行(7559 1234 5678)', accountAdjustmentReason: '', voucher: '转账回单-华美-0827.png', time: '2026-08-27 10:23', status: '待审核' },
+                    { applyNo: 'FD20260827002', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', amount: 2000.00, confirmedAmount: 2000.00, customerRemark: '客户误选账户', reviewRemark: '', bankAccount: '广州飞点-招商银行(7559 1234 5678)', confirmedBankAccount: '深圳飞点-工商银行(4000 1111 2222)', accountAdjustmentReason: '客户实际打款至深圳主体账户', voucher: '转账回单-迅达-0827.png', time: '2026-08-27 09:10', status: '待审核' },
+                    { applyNo: 'FD20260827003', customerName: '无可用账户演示客户', entityName: '墨链', currency: 'EUR', amount: 500.00, confirmedAmount: 500.00, customerRemark: '无可用账户场景', reviewRemark: '', bankAccount: '历史账户-已停用', confirmedBankAccount: '历史账户-已停用', accountAdjustmentReason: '', voucher: '转账回单-无账户.png', time: '2026-08-27 08:50', status: '待审核' },
+                    { applyNo: 'FD20260826003', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, confirmedAmount: 8000.00, customerRemark: '', reviewRemark: '到账核对无误', bankAccount: '广东飞点-工商银行(4000 1111 2222)', confirmedBankAccount: '广东飞点-工商银行(4000 1111 2222)', accountAdjustmentReason: '', voucher: '转账回单-新锐-0826.pdf', time: '2026-08-26 15:40', status: '已通过', reviewer:'张珊', reviewTime:'2026-08-26 16:12' },
+                    { applyNo: 'FD20260825004', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, confirmedAmount: 3200.00, customerRemark: '', reviewRemark: '凭证不清晰，暂不入账', bankAccount: '深圳飞点-招商银行(7559 2222 3333)', confirmedBankAccount: '深圳飞点-招商银行(7559 2222 3333)', accountAdjustmentReason: '', voucher: '转账回单-华美-0825.png', time: '2026-08-25 14:10', status: '已驳回', reviewer:'张珊', reviewTime:'2026-08-25 14:30' }
                 ]);
                 const pendingApplies = computed(() => rechargeApplies.filter(a => a.status === '待审核'));
+                rechargeApplies.push({applyNo:'FD20261004001',customerName:'深圳市华美科技有限公司',entityName:'广州飞点',currency:'CNY',amount:1200,confirmedAmount:1200,bankAccount:bankAccounts[0].name,confirmedBankAccount:bankAccounts[0].name,voucher:'',voucherUrl:'',source:'财务代充',operator:'张珊',payTime:'2026-10-04 09:00',time:'2026-10-04 09:10',status:'待审核',customerRemark:'缺少凭证的待审核演示',reviewRemark:'',accountAdjustmentReason:''});
                 const filteredApplies = computed(() => {
-                    let data = rechargeApplies;
-                    if (auditSearch.customerName) data = data.filter(a => a.customerName.includes(auditSearch.customerName));
-                    if (auditSearch.status) data = data.filter(a => a.status === auditSearch.status);
-                    return data;
+                    return pendingApplies.value.filter(a => matchesSearch(a, auditSearch));
                 });
-                const handleExport = () => { ElMessage.warning('导出功能开发中，导出范围待确认'); };
-                const handleSearch = () => { ElMessage.success('执行查询'); };
-                const resetAuditSearch = () => { auditSearch.customerName = ''; auditSearch.status = ''; };
+                const handleExport = () => { const rows = activeTab.value === 'audit' ? filteredApplies.value : activeTab.value === 'recharge' ? filteredRechargeRecords.value : filteredWithdrawRecords.value; ElMessage.success((activeTab.value === 'audit' ? '充值审核' : activeTab.value === 'recharge' ? '客户充值记录' : '客户提现') + '：已按当前筛选条件准备导出 ' + rows.length + ' 条（演示提示）'); };
+                const handleSearch = () => { const query = activeTab.value === 'audit' ? auditSearch : currentSearch.value; if(query.minAmount != null && query.maxAmount != null && query.minAmount > query.maxAmount) { ElMessage.warning('金额最小值不能大于最大值'); return; } ElMessage.success('列表已按当前条件筛选'); };
+                const resetAuditSearch = () => { Object.assign(auditSearch, emptySearch()); };
+                const resetRecordSearch = () => { Object.assign(currentSearch.value, emptySearch()); };
 
                 const applyDetailVisible = ref(false);
+                const importRulesVisible = ref(false);
+                const onReviewVoucherChange = (file) => {
+                    const row = currentApply.value;
+                    if (!row || !['待审核','审核中'].includes(row.status)) return;
+                    const raw = file.raw;
+                    if (!raw || !(raw.type.startsWith('image/') || raw.type === 'application/pdf') || raw.size > 5 * 1024 * 1024) { ElMessage.warning('请上传不超过5MB的图片或PDF'); return; }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        if (!['待审核','审核中'].includes(row.status)) return;
+                        row.voucher = file.name; row.voucherUrl = reader.result; row.voucherType = raw.type; row.hasVoucher = true;
+                        row.voucherFiles = [...(row.voucherFiles || []), {name:file.name,url:reader.result,type:raw.type}];
+                        ElMessage.success('打款凭证已补充');
+                    };
+                    reader.onerror = () => ElMessage.error('凭证读取失败，请重新选择');
+                    reader.readAsDataURL(raw);
+                };
                 const currentApply = ref(null);
+                const reviewVoucherFiles = computed(() => { const row = currentApply.value; return !row ? [] : row.voucherFiles || (row.voucher ? [{name:row.voucher,url:row.voucherUrl,type:row.voucherType}] : []); });
                 const openApplyDetail = (row) => { currentApply.value = row; applyDetailVisible.value = true; };
+                const amountChanged = computed(() => !!currentApply.value && Number(currentApply.value.confirmedAmount) !== Number(currentApply.value.amount));
+                const signedDelta = computed(() => {
+                    if (!currentApply.value) return '0.00';
+                    const delta = Number(currentApply.value.confirmedAmount || 0) - Number(currentApply.value.amount || 0);
+                    return `${delta >= 0 ? '+' : '-'}${formatMoney(Math.abs(delta))}`;
+                });
+                const isConfirmedAmountValid = computed(() => {
+                    const amount = currentApply.value && Number(currentApply.value.confirmedAmount);
+                    return Number.isFinite(amount) && amount > 0 && Math.round(amount * 100) === amount * 100;
+                });
+                const reviewBankAccounts = computed(() => {
+                    if (!currentApply.value) return [];
+                    return bankAccounts.filter(account => account.entityName === currentApply.value.entityName && account.currency === currentApply.value.currency && account.status === '启用');
+                });
+                const bankAccountChanged = computed(() => !!currentApply.value && currentApply.value.confirmedBankAccount !== currentApply.value.bankAccount);
 
                 const approveApply = (row) => {
-                    ElMessageBox.confirm(`确认已核对银行到账，将 ${currencySymbol(row.currency)}${formatMoney(row.amount)} 入池到「${row.customerName}-${row.entityName}-${currencyName(row.currency)}」钱包？`, '充值审核通过', { confirmButtonText: '确认通过', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                    if (!['待审核','审核中'].includes(row.status)) { ElMessage.warning('该记录已审核完成，不可重复审核或修改金额'); return; }
+                    if (!row.voucher || !row.voucherUrl) { ElMessage.warning('请先补充打款凭证'); return; }
+                    if (!row.confirmedAmount || Number(row.confirmedAmount) <= 0 || Math.round(Number(row.confirmedAmount) * 100) !== Number(row.confirmedAmount) * 100) { ElMessage.warning('审核确认金额必须大于0且最多保留2位小数'); return; }
+                    if (!reviewBankAccounts.value.length) { ElMessage.warning('该客户当前没有可用打款账户，无法提交审核'); return; }
+                    if (!row.confirmedBankAccount || !reviewBankAccounts.value.some(account => account.name === row.confirmedBankAccount)) { ElMessage.warning('请选择客户已配置且可用的审核确认打款账户'); return; }
+                    if (row.confirmedBankAccount !== row.bankAccount && !String(row.accountAdjustmentReason || '').trim()) { ElMessage.warning('修改打款账户时必须填写账户调整原因'); return; }
+                    const confirmText = Number(row.confirmedAmount) !== Number(row.amount)
+                        ? '审核确认金额与客户申请金额不一致，审核通过后将按审核确认金额入账，是否继续？'
+                        : `确认将 ${currencySymbol(row.currency)}${formatMoney(row.confirmedAmount)} 入池到「${row.customerName}-${row.entityName}-${currencyName(row.currency)}」钱包？`;
+                    ElMessageBox.confirm(confirmText, '充值审核通过', { confirmButtonText: '确认通过', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                        if (!['待审核','审核中'].includes(row.status)) return;
+                        if (!row.voucher || !row.voucherUrl) { ElMessage.warning('请先补充打款凭证'); return; }
+                        const walletKey = row.customerName + '-' + row.entityName + '-' + row.currency;
+                        row.balanceBefore = walletBalances[walletKey] || 0;
+                        walletBalances[walletKey] = Number((row.balanceBefore + Number(row.confirmedAmount)).toFixed(2));
+                        row.balanceAfter = walletBalances[walletKey];
+                        row.walletFlowNo = 'WF' + Date.now();
                         row.status = '已通过';
+                        row.reviewer = '当前员工'; row.reviewTime = new Date().toLocaleString('zh-CN', { hour12: false });
                         applyDetailVisible.value = false;
-                        ElMessage.success('已通过并入池');
+                        ElMessage.success('审核通过，已入池');
                     }).catch(() => {});
                 };
                 const rejectApply = (row) => {
-                    ElMessageBox.confirm('确认驳回该充值申请？', '驳回充值', { confirmButtonText: '确认驳回', cancelButtonText: '取消', type: 'warning' }).then(() => {
-                        row.status = '已驳回';
+                    if (!['待审核','审核中'].includes(row.status)) { ElMessage.warning('该记录已审核完成，不可重复审核'); return; }
+                    ElMessageBox.prompt('请输入驳回原因（必填）', '驳回充值', { confirmButtonText: '确认驳回', cancelButtonText: '取消', inputPlaceholder: '请填写具体原因', inputValidator: (v) => String(v || '').trim() ? true : '驳回原因不能为空' }).then(({ value }) => {
+                        if (!['待审核','审核中'].includes(row.status)) return;
+                        row.status = '已驳回'; row.rejectReason = value.trim(); row.reviewer = '当前员工'; row.reviewTime = new Date().toLocaleString('zh-CN', { hour12: false });
                         applyDetailVisible.value = false;
                         ElMessage.success('已驳回');
                     }).catch(() => {});
@@ -384,9 +591,23 @@
                 const rechargeForm = reactive({ customerName: '', entityName: '', currency: '', amount: null, payTime: '', bankAccountId: null, voucher: '' });
                 const voucherList = ref([]);
                 const rechargeRecords = reactive([
-                    { flowNo: 'WF20260826002', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, operator: '张珊', time: '2026-08-26 15:45' },
-                    { flowNo: 'WF20260825001', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, operator: '张珊', time: '2026-08-25 14:15' }
+                    { applyNo: 'FD20260826003', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 8000.00, confirmedAmount: 8000.00, bankAccount: '广东飞点-工商银行(4000 1111 2222)', confirmedBankAccount: '广东飞点-工商银行(4000 1111 2222)', customerRemark: '补充本月海运账单预存', reviewRemark: '到账核对无误', accountAdjustmentReason: '', time: '2026-08-26 15:40', status: '已通过', reviewer: '张珊', reviewTime: '2026-08-26 16:12' },
+                    { applyNo: 'FD20260825004', customerName: '深圳市华美科技有限公司', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, confirmedAmount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', confirmedBankAccount: '深圳飞点-招商银行(7559 2222 3333)', customerRemark: '客户误选主体账户', reviewRemark: '凭证不清晰，暂不入账', accountAdjustmentReason: '', time: '2026-08-25 14:10', status: '已驳回', reviewer: '张珊', reviewTime: '2026-08-25 14:30' }
                 ]);
+                const openRechargeDetail = (row) => { currentApply.value = row; applyDetailVisible.value = true; };
+                // 将历史记录补充回同一申请集合，保留原历史备注及审核结果。
+                rechargeRecords.forEach(history => {
+                    const existing = rechargeApplies.find(row => row.applyNo === history.applyNo);
+                    if(existing) Object.assign(existing, history); else rechargeApplies.push(history);
+                });
+                rechargeApplies.forEach((row, index) => {
+                    row.source = row.source || (row.customerName === '东莞新锐电子有限公司' ? '财务代充' : '客户申请');
+                    row.payTime = row.payTime || row.time;
+                    row.operator = row.operator || row.reviewer || (row.source === '财务代充' ? '张珊' : '客户');
+                    row.hasVoucher = Boolean(row.voucher);
+                    // 仅文件名的历史演示附件保持为文件信息，真实补传后可预览。
+                });
+                const filteredRechargeRecords = computed(() => rechargeApplies.filter(row => ['已通过','已驳回'].includes(row.status) && matchesSearch(row,rechargeSearch)));
 
                 const opRules = {
                     customerName: [{ required: true, message: '请选择客户', trigger: 'change' }],
@@ -445,32 +666,60 @@
                     if (!rechargeForm.customerName || !rechargeForm.entityName || !rechargeForm.currency || !rechargeForm.amount || !rechargeForm.payTime || !rechargeForm.bankAccountId || !rechargeForm.voucher) {
                         ElMessage.warning('请填写完整信息'); return;
                     }
-                    ElMessageBox.confirm(`确认将 ${currencySymbol(rechargeForm.currency)}${formatMoney(rechargeForm.amount)} 入池到「${rechargeForm.customerName}-${rechargeForm.entityName}-${currencyName(rechargeForm.currency)}」钱包？`, '确认代充', { confirmButtonText: '确认入池', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                    if (!Number.isFinite(Number(rechargeForm.amount)) || Number(rechargeForm.amount) <= 0) { ElMessage.warning('充值金额必须大于0'); return; }
+                    const selectedAccount = rechargeBankAccounts.value.find(a => a.id === rechargeForm.bankAccountId);
+                    if (!selectedAccount) { ElMessage.warning('请选择匹配主体和币种的可用入账账户'); return; }
+                    ElMessageBox.confirm('提交后生成待审核的代客户充值申请，审核通过后入账。', '提交代充申请', { confirmButtonText: '提交申请', cancelButtonText: '取消', type: 'warning' }).then(() => {
                         const now = new Date();
                         const pad = (n) => String(n).padStart(2, '0');
                         const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-                        rechargeRecords.unshift({
-                            flowNo: `WF${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
+                        rechargeApplies.unshift({
+                            applyNo: 'FD' + Date.now(), status: '待审核', source: '财务代充',
+                            confirmedAmount: Number(rechargeForm.amount), bankAccount: selectedAccount.name, confirmedBankAccount: selectedAccount.name,
+                            voucher: rechargeForm.voucher, hasVoucher: true, customerRemark: '', reviewRemark: '', accountAdjustmentReason: '', reviewer: '', reviewTime: '',
+                            voucherUrl: voucherList.value[0] && voucherList.value[0].raw ? URL.createObjectURL(voucherList.value[0].raw) : '', voucherType: voucherList.value[0] && voucherList.value[0].raw ? voucherList.value[0].raw.type : '',
                             customerName: rechargeForm.customerName, entityName: rechargeForm.entityName,
                             currency: rechargeForm.currency, amount: rechargeForm.amount, payTime: rechargeForm.payTime, bankAccountId: rechargeForm.bankAccountId, operator: '张珊', time: timeStr
                         });
                         rechargeVisible.value = false;
-                        ElMessage.success('已入池');
+                        activeTab.value = 'audit';
+                        resetAuditSearch();
+                        ElMessage.success('代客户充值申请已提交，待审核');
                     }).catch(() => {});
                 };
 
                 // === 客户提现 ===
                 const withdrawVisible = ref(false);
                 const withdrawFormRef = ref(null);
-                const withdrawForm = reactive({ customerName: '', entityName: '', currency: '', amount: null, bankAccountId: null });
+                const withdrawForm = reactive({ customerName: '', entityName: '', currency: '', amount: null, bankAccountId: null, oaNo: '', paymentFile: null, operationRemark: '' });
+                const paymentFileList = ref([]);
+                const formatFileSize = (size) => size ? (size < 1024 * 1024 ? `${Math.ceil(size / 1024)}KB` : `${(size / 1024 / 1024).toFixed(2)}MB`) : '未知大小';
+                const onPaymentFileChange = (file) => {
+                    const allowed = ['image/', 'application/pdf', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'];
+                    const okType = allowed.some(type => file.raw && (type.endsWith('/') ? file.raw.type.startsWith(type) : file.raw.type === type));
+                    if (!okType) { ElMessage.error('不支持的文件格式，请上传图片、PDF、Excel或CSV'); paymentFileList.value = []; return; }
+                    if (file.size > 10 * 1024 * 1024) { ElMessage.error('文件大小不能超过10MB'); paymentFileList.value = []; return; }
+                    const now = new Date();
+                    withdrawForm.paymentFile = { name: file.name, type: file.raw ? (file.raw.type || '未知') : '未知', size: file.size, uploader: '李伟', uploadTime: now.toLocaleString('zh-CN', { hour12: false }) };
+                };
+                const onPaymentFileRemove = () => { withdrawForm.paymentFile = null; };
                 // 入账/出款账户 = 我司账户（bank_account）里「主体 + 币种匹配」且「启用」的账户（双边流水我司侧落账账户）
                 const rechargeBankAccounts = computed(() => bankAccounts.filter(a => a.entityName === rechargeForm.entityName && a.currency === rechargeForm.currency && a.status === '启用'));
                 const withdrawBankAccounts = computed(() => bankAccounts.filter(a => a.entityName === withdrawForm.entityName && a.currency === withdrawForm.currency && a.status === '启用'));
                 const withdrawRecords = reactive([
-                    { flowNo: 'WF20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, operator: '李伟', time: '2026-08-20 11:05' }
+                    { flowNo: 'WF20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', operator: '李伟', time: '2026-08-20 11:05', oaNo: 'OA-20260820-001', paymentFile: { name: '华美-提现回单.pdf', type: 'PDF', size: 483120, uploader: '李伟', uploadTime: '2026-08-20 11:04' }, status: '已完成', paidTime: '2026-08-20 11:05', reviewer: '李伟', reviewTime: '2026-08-20 10:50', operationLog: '李伟于 2026-08-20 11:05 确认打款' },
+                    { flowNo: 'WF20260820002', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', amount: 800.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', operator: '李伟', time: '2026-08-20 10:15', oaNo: 'OA-20260820-002', paymentFile: { name: '迅达-提现回单.xlsx', type: 'Excel', size: 218000, uploader: '李伟', uploadTime: '2026-08-20 10:20' }, status: '已完成', paidTime: '2026-08-20 10:22', balanceBefore: 6600, balanceAfter: 5800, walletFlowNo: 'WF20260820002', operationRemark: '线下打款完成', operationLog: '李伟于 2026-08-20 10:22 确认打款' },
+                    { flowNo: 'WF20260820003', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 1200.00, bankAccount: '广东飞点-建设银行(4400 2222 3333)', operator: '李伟', time: '2026-08-20 09:40', oaNo: 'OA-20260820-003', paymentFile: { name: '新锐-提现回单.csv', type: 'CSV', size: 80400, uploader: '李伟', uploadTime: '2026-08-20 09:45' }, status: '已完成', paidTime: '2026-08-20 09:48', balanceBefore: 13200, balanceAfter: 12000, walletFlowNo: 'WF20260820003', operationRemark: '', operationLog: '李伟于 2026-08-20 09:48 确认打款' }
                 ]);
+                const paymentFileStatus = (row) => !row.paymentFile ? '未上传' : (Array.isArray(row.paymentFiles) && row.paymentFiles.length > 1 ? '多个文件' : '已上传');
+                const filteredWithdrawRecords = computed(() => withdrawRecords.filter(row => matchesSearch(row,withdrawSearch)));
+                const paymentFileDetailVisible = ref(false);
+                const openPaymentFileDetail = (row) => { currentWithdraw.value = row; paymentFileDetailVisible.value = true; };
+                const withdrawDetailVisible = ref(false);
+                const currentWithdraw = ref(null);
+                const openWithdrawDetail = (row) => { currentWithdraw.value = row; withdrawDetailVisible.value = true; };
 
-                const walletBalances = {
+                const walletBalances = reactive({
                     '深圳市华美科技有限公司-广州飞点-CNY': 3719.50,
                     '深圳市华美科技有限公司-深圳飞点-CNY': 3200.00,
                     '深圳市华美科技有限公司-广东飞点-CNY': 1100.00,
@@ -478,34 +727,41 @@
                     '广州迅达贸易有限公司-广州飞点-CNY': 5800.00,
                     '广州迅达贸易有限公司-香港富力顿-HKD': 25000.00,
                     '东莞新锐电子有限公司-广东飞点-CNY': 12000.00
-                };
+                });
                 const currentBalance = computed(() => {
                     const key = `${withdrawForm.customerName}-${withdrawForm.entityName}-${withdrawForm.currency}`;
                     return walletBalances[key] || 0;
                 });
+                const currentAvailableBalance = computed(() => currentBalance.value);
+                const withdrawAfterBalance = computed(() => Math.max(0, Number(currentAvailableBalance.value || 0) - Number(withdrawForm.amount || 0)));
                 const onWithdrawCustomerChange = () => {};
 
                 const openWithdraw = () => {
-                    withdrawForm.customerName = ''; withdrawForm.entityName = ''; withdrawForm.currency = ''; withdrawForm.amount = null; withdrawForm.bankAccountId = null;
+                    withdrawForm.customerName = ''; withdrawForm.entityName = ''; withdrawForm.currency = ''; withdrawForm.amount = null; withdrawForm.bankAccountId = null; withdrawForm.oaNo = ''; withdrawForm.paymentFile = null; withdrawForm.operationRemark = ''; paymentFileList.value = [];
                     withdrawVisible.value = true;
                 };
                 const submitWithdraw = () => {
                     if (!withdrawForm.customerName || !withdrawForm.entityName || !withdrawForm.currency || !withdrawForm.amount || !withdrawForm.bankAccountId) {
                         ElMessage.warning('请填写完整信息'); return;
                     }
-                    if (withdrawForm.amount > currentBalance.value) {
-                        ElMessage.warning('提现金额不能大于钱包余额'); return;
+                    if (!String(withdrawForm.oaNo || '').trim()) { ElMessage.warning('请填写OA审批编号'); return; }
+                    if (withdrawRecords.some(item => item.oaNo === withdrawForm.oaNo.trim())) { ElMessage.warning('该OA审批编号已被使用，请勿重复填写'); return; }
+                    if (!withdrawForm.paymentFile) { ElMessage.warning('请先上传打款记录。'); return; }
+                    if (Number(withdrawForm.amount) <= 0 || Number(withdrawForm.amount) > currentAvailableBalance.value) {
+                        ElMessage.warning('提现金额必须大于0且不能超过可提现余额'); return;
                     }
-                    ElMessageBox.confirm(`确认从「${withdrawForm.customerName}-${withdrawForm.entityName}-${currencyName(withdrawForm.currency)}」钱包提现 ${currencySymbol(withdrawForm.currency)}${formatMoney(withdrawForm.amount)}？`, '确认提现', { confirmButtonText: '确认提现', cancelButtonText: '取消', type: 'warning' }).then(() => {
+                    const beforeBalance = currentAvailableBalance.value;
+                    ElMessageBox.confirm('确认打款后将扣减客户钱包余额，并将本次提现记录标记为已完成，是否继续？', '确认打款', { confirmButtonText: '确认打款', cancelButtonText: '取消', type: 'warning' }).then(() => {
                         const now = new Date();
                         const pad = (n) => String(n).padStart(2, '0');
                         const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
                         const key = `${withdrawForm.customerName}-${withdrawForm.entityName}-${withdrawForm.currency}`;
+                        if (currentAvailableBalance.value < withdrawForm.amount) { ElMessage.warning('当前钱包余额已变化，请重新确认'); return; }
                         walletBalances[key] = Number((walletBalances[key] - withdrawForm.amount).toFixed(2));
                         withdrawRecords.unshift({
                             flowNo: `WF${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`,
                             customerName: withdrawForm.customerName, entityName: withdrawForm.entityName,
-                            currency: withdrawForm.currency, amount: withdrawForm.amount, bankAccountId: withdrawForm.bankAccountId, operator: '李伟', time: timeStr
+                            currency: withdrawForm.currency, amount: withdrawForm.amount, bankAccount: (withdrawBankAccounts.value.find(a => a.id === withdrawForm.bankAccountId) || {}).name, bankAccountId: withdrawForm.bankAccountId, operator: '李伟', time: timeStr, oaNo: withdrawForm.oaNo.trim(), paymentFile: withdrawForm.paymentFile, operationRemark: withdrawForm.operationRemark, status: '已完成', paidTime: timeStr, balanceBefore: beforeBalance, balanceAfter: Number((beforeBalance - withdrawForm.amount).toFixed(2)), walletFlowNo: `WF${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getSeconds())}`, operationLog: `李伟于 ${timeStr} 确认打款${withdrawForm.operationRemark ? '：' + withdrawForm.operationRemark : ''}`
                         });
                         withdrawVisible.value = false;
                         ElMessage.success('提现成功');
@@ -514,16 +770,21 @@
 
                 return {
                     activeTab, currencyOptions, entities, customers,
+                    auditPage, rechargePage, withdrawPage,
                     currencySymbol, currencyName, formatMoney,
                     auditSearch, rechargeApplies, pendingApplies, filteredApplies,
+                    auditSearchExpanded, recordSearchExpanded, currentSearch, recordQueryFields, resetRecordSearch, filteredRechargeRecords, filteredWithdrawRecords,
                     handleExport, handleSearch, resetAuditSearch,
-                    applyDetailVisible, currentApply, openApplyDetail, approveApply, rejectApply,
+                    applyDetailVisible, currentApply, openApplyDetail, openRechargeDetail, approveApply, rejectApply,
+                    importRulesVisible, onReviewVoucherChange, reviewVoucherFiles,
+                    amountChanged, signedDelta, isConfirmedAmountValid, reviewBankAccounts, bankAccountChanged,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRecords, opRules,
                     voucherList, onVoucherChange, onVoucherRemove, onVoucherPaste,
                     openRecharge, submitRecharge,
-                    withdrawVisible, withdrawFormRef, withdrawForm, withdrawRecords,
+                    withdrawVisible, withdrawFormRef, withdrawForm, withdrawRecords, paymentFileList, formatFileSize, onPaymentFileChange, onPaymentFileRemove,
+                    withdrawDetailVisible, currentWithdraw, openWithdrawDetail, paymentFileStatus, paymentFileDetailVisible, openPaymentFileDetail,
                     bankAccounts, rechargeBankAccounts, withdrawBankAccounts,
-                    currentBalance, onWithdrawCustomerChange, openWithdraw, submitWithdraw
+                    currentBalance, currentAvailableBalance, withdrawAfterBalance, onWithdrawCustomerChange, openWithdraw, submitWithdraw
                 };
             }
         });

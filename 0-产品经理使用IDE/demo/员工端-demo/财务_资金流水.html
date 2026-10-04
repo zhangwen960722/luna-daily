@@ -51,6 +51,10 @@
                                 <el-option v-for="t in flowTypes" :key="t" :label="t" :value="t"></el-option>
                             </el-select>
                             <el-date-picker v-model="searchForm.dateRange" type="daterange" value-format="YYYY-MM-DD" class="search-control" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
+                            <el-select v-model="searchForm.direction" placeholder="收支方向" class="search-control" clearable><el-option label="收入" value="in"></el-option><el-option label="支出" value="out"></el-option></el-select>
+                            <el-input v-model="searchForm.flowNo" placeholder="资金流水号" class="search-control" clearable></el-input>
+                            <el-input v-model="searchForm.relatedNo" placeholder="关联业务单号" class="search-control" clearable></el-input>
+                            <el-input v-model="searchForm.accountName" placeholder="账户名称" class="search-control" clearable></el-input>
                         </template>
                     </template>
                     <template v-else-if="activeTab === 'company'">
@@ -64,6 +68,10 @@
                             <el-option v-for="t in companyFlowTypes" :key="t" :label="t" :value="t"></el-option>
                         </el-select>
                         <el-date-picker v-model="companySearchForm.dateRange" type="daterange" value-format="YYYY-MM-DD" class="search-control" start-placeholder="开始日期" end-placeholder="结束日期"></el-date-picker>
+                        <el-select v-model="companySearchForm.direction" placeholder="收支方向" class="search-control" clearable><el-option label="收入" value="in"></el-option><el-option label="支出" value="out"></el-option></el-select>
+                        <el-input v-model="companySearchForm.flowNo" placeholder="资金流水号" class="search-control" clearable></el-input>
+                        <el-input v-model="companySearchForm.relatedNo" placeholder="关联业务单号" class="search-control" clearable></el-input>
+                        <el-input v-model="companySearchForm.accountName" placeholder="账户名称 / 银行账号" class="search-control" clearable></el-input>
                     </template>
                 </div>
                 <div class="search-actions">
@@ -110,7 +118,7 @@
                     <el-tag v-if="scope.row.status === '已撤销'" type="info" size="small" style="margin-left: 4px;">已撤销</el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="入账金额" min-width="120" align="right">
+                <el-table-column label="收入/支出金额" min-width="120" align="right">
                     <template #default="scope">
                         <span :class="scope.row.amount >= 0 ? 'amount-in' : 'amount-out'">
                             {{ scope.row.amount >= 0 ? '+' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}
@@ -128,6 +136,7 @@
                         </el-tooltip>
                     </template>
                 </el-table-column>
+                <el-table-column label="操作" width="80" fixed="right" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openDetail(scope.row, 'customer')">详情</el-button></template></el-table-column>
             </el-table>
             <div class="pagination-area">
                 <el-pagination background layout="total, prev, pager, next" :total="filteredFlows.length"></el-pagination>
@@ -142,6 +151,7 @@
                 </el-table-column>
                 <el-table-column prop="flowNo" label="流水号" min-width="140"></el-table-column>
                 <el-table-column prop="entityName" label="账户主体" min-width="110"></el-table-column>
+                <el-table-column prop="customerName" label="客户名称" min-width="170"><template #default="scope">{{ scope.row.customerName || '—' }}</template></el-table-column>
                 <el-table-column prop="currency" label="币种" min-width="80" align="center">
                     <template #default="scope">{{ currencyName(scope.row.currency) }}</template>
                 </el-table-column>
@@ -151,7 +161,7 @@
                         <el-tag :type="flowTypeTag(scope.row.flowType)" size="small">{{ scope.row.flowType }}</el-tag>
                     </template>
                 </el-table-column>
-                <el-table-column label="入账金额" min-width="120" align="right">
+                <el-table-column label="收入/支出金额" min-width="120" align="right">
                     <template #default="scope">
                         <span :class="scope.row.companyAmount >= 0 ? 'amount-in' : 'amount-out'">
                             {{ scope.row.companyAmount >= 0 ? '+' : '' }}{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.companyAmount) }}
@@ -163,6 +173,7 @@
                 </el-table-column>
                 <el-table-column prop="operator" label="操作人" min-width="110"></el-table-column>
                 <el-table-column prop="relatedNo" label="关联单号" min-width="150"></el-table-column>
+                <el-table-column label="操作" width="80" fixed="right" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openDetail(scope.row, 'company')">详情</el-button></template></el-table-column>
             </el-table>
             <div class="pagination-area">
                 <el-pagination background layout="total, prev, pager, next" :total="filteredCompanyFlows.length"></el-pagination>
@@ -170,6 +181,26 @@
                 </el-tab-pane>
             </el-tabs>
         </div>
+        <el-drawer v-model="detailVisible" title="资金流水详情" size="460px" destroy-on-close>
+            <div class="section-title">流水信息</div>
+            <el-descriptions :column="1" border>
+                <el-descriptions-item label="资金流水号">{{ detailRow.flowNo }}</el-descriptions-item>
+                <el-descriptions-item label="流水类型">{{ detailRow.flowType }}</el-descriptions-item>
+                <el-descriptions-item label="收支方向">{{ detailRow.amount >= 0 ? '收入' : '支出' }}</el-descriptions-item>
+                <el-descriptions-item label="发生金额"><span :class="detailRow.amount >= 0 ? 'amount-in' : 'amount-out'">{{ detailRow.amount >= 0 ? '+' : '-' }}{{ currencySymbol(detailRow.currency) }}{{ formatMoney(Math.abs(detailRow.amount)) }}</span></el-descriptions-item>
+                <el-descriptions-item label="变动前余额">{{ currencySymbol(detailRow.currency) }}{{ formatMoney(detailRow.balanceBefore || (detailRow.balanceAfter - detailRow.amount)) }}</el-descriptions-item>
+                <el-descriptions-item label="变动后余额">{{ currencySymbol(detailRow.currency) }}{{ formatMoney(detailRow.balanceAfter || detailRow.companyBalanceAfter) }}</el-descriptions-item>
+                <el-descriptions-item label="支付时间">{{ payTimeOf(detailRow) }}</el-descriptions-item>
+                <el-descriptions-item label="创建时间">{{ detailRow.time }}</el-descriptions-item>
+                <el-descriptions-item label="关联业务单号">{{ detailRow.relatedNo || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="客户名称">{{ detailRow.customerName || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="账户主体">{{ detailRow.entityName || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="账户名称">{{ detailRow.accountName || detailRow.bankName || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="币种">{{ currencyName(detailRow.currency) }}</el-descriptions-item>
+                <el-descriptions-item label="备注">{{ detailRow.remark || '—' }}</el-descriptions-item>
+                <el-descriptions-item label="创建人">{{ detailRow.operator || '—' }}</el-descriptions-item>
+            </el-descriptions>
+        </el-drawer>
     </div>
 
     <script>
@@ -192,9 +223,13 @@
                 const entities = ['广州飞点', '深圳飞点', '广东飞点', '香港富力顿', '墨链'];
                 const flowTypes = ['充值', '充值退回', '提现', '收款核销', '收款核销撤销', '转汇', '贷记单入账', '冲账', '冲账撤销'];   // 「贷记单入账」= 贷记单（负数账单）结转钱包；**结转即终态、没有对向的撤销流水**；「冲账 / 冲账撤销」= 坏账冲销（账面流水、不动钱包余额，反冲账对称）
 
-                const searchForm = reactive({ customerName: '', entityName: '', currency: '', flowType: '', dateRange: [] });
-                const activeTab = ref('customer');
-                const companySearchForm = reactive({ entityName: '', currency: '', flowType: '', dateRange: [] });
+                const urlParams = new URLSearchParams(window.location.search);
+                const accountType = urlParams.get('accountType') || '';
+                const scopeSummary = reactive({ customerName: urlParams.get('customerName') || '', entityName: urlParams.get('entityName') || '', accountName: urlParams.get('accountName') || '', accountNo: urlParams.get('accountNo') || '', currency: urlParams.get('currency') || '' });
+                const accountTypeLabel = accountType === 'company' ? '我司账户' : accountType === 'customer' ? '客户资金账户' : '全部账户';
+                const searchForm = reactive({ customerName: scopeSummary.customerName, entityName: scopeSummary.entityName, currency: scopeSummary.currency, accountName: scopeSummary.accountName, flowType: '', direction: '', flowNo: '', relatedNo: '', dateRange: [] });
+                const activeTab = ref(accountType === 'company' ? 'company' : 'customer');
+                const companySearchForm = reactive({ entityName: scopeSummary.entityName, currency: scopeSummary.currency, accountName: scopeSummary.accountName, accountNo: scopeSummary.accountNo, flowType: '', direction: '', flowNo: '', relatedNo: '', dateRange: [] });
                 const companyFlowTypes = ['充值', '充值退回', '提现', '支付供应商', '支付供应商撤销'];   // 我司账户侧 = 真实现金进出（充值/代充入账、提现/充值退回出账、支付供应商出款/撤销回补；核销/冲账/转汇/贷记单结转不动我司账户）
 
                 // 账户名称（= 钱包账号编号 + 币种代码）：按「客户 × 账户主体 × 币种」反查钱包，与「资金账户管理 → 客户资金账户」同一份数据
@@ -258,6 +293,10 @@
                     if (searchForm.entityName) data = data.filter(f => f.entityName === searchForm.entityName);
                     if (searchForm.currency) data = data.filter(f => f.currency === searchForm.currency);
                     if (searchForm.flowType) data = data.filter(f => f.flowType === searchForm.flowType);
+                    if (searchForm.accountName) data = data.filter(f => accountNameOf(f).includes(searchForm.accountName));
+                    if (searchForm.flowNo) data = data.filter(f => f.flowNo.includes(searchForm.flowNo));
+                    if (searchForm.relatedNo) data = data.filter(f => f.relatedNo && f.relatedNo.includes(searchForm.relatedNo));
+                    if (searchForm.direction) data = data.filter(f => searchForm.direction === 'in' ? f.amount >= 0 : f.amount < 0);
                     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
                         const start = searchForm.dateRange[0];
                         const end = searchForm.dateRange[1];
@@ -285,6 +324,10 @@
                     if (companySearchForm.entityName) data = data.filter(f => f.entityName === companySearchForm.entityName);
                     if (companySearchForm.currency) data = data.filter(f => f.currency === companySearchForm.currency);
                     if (companySearchForm.flowType) data = data.filter(f => f.flowType === companySearchForm.flowType);
+                    if (companySearchForm.accountName || companySearchForm.accountNo) data = data.filter(f => (companySearchForm.accountName && f.bankName.includes(companySearchForm.accountName)) || (companySearchForm.accountNo && f.bankName.includes(companySearchForm.accountNo)));
+                    if (companySearchForm.flowNo) data = data.filter(f => f.flowNo.includes(companySearchForm.flowNo));
+                    if (companySearchForm.relatedNo) data = data.filter(f => f.relatedNo && f.relatedNo.includes(companySearchForm.relatedNo));
+                    if (companySearchForm.direction) data = data.filter(f => companySearchForm.direction === 'in' ? f.companyAmount >= 0 : f.companyAmount < 0);
                     if (companySearchForm.dateRange && companySearchForm.dateRange.length === 2) {
                         const start = companySearchForm.dateRange[0];
                         const end = companySearchForm.dateRange[1];
@@ -306,6 +349,14 @@
                 const pad = (n) => String(n).padStart(2, '0');
                 const nowStamp = () => { const d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
                 const searchExpanded = ref(false);
+                const detailVisible = ref(false);
+                const detailRow = reactive({});
+                const openDetail = (row, type) => {
+                    Object.keys(detailRow).forEach(k => delete detailRow[k]);
+                    Object.assign(detailRow, type === 'company' ? { ...row, amount: row.companyAmount, balanceAfter: row.companyBalanceAfter, accountName: row.bankName } : row);
+                    detailVisible.value = true;
+                };
+                const backToAccounts = () => { window.location.href = '财务_资金账户管理.html'; };
                 // 「更多查询条件」仅在客户 Tab 存在（流水类型 / 日期范围收在展开区）；公司 Tab 4 个条件全部常显
                 const hasMoreCondition = computed(() => activeTab.value === 'customer');
                 // 「贷记单入账」的关联单号 = 贷记单号 → 可点开「贷记单」菜单并定位该单据（两页互查：贷记单详情的时间线里反过来给出资金流水号）
@@ -317,18 +368,18 @@
                 const handleSearch = () => { ElMessage.success('执行查询'); };
                 const resetSearch = () => {
                     if (activeTab.value === 'company') {
-                        companySearchForm.entityName = ''; companySearchForm.currency = ''; companySearchForm.flowType = ''; companySearchForm.dateRange = [];
+                        companySearchForm.entityName = ''; companySearchForm.currency = ''; companySearchForm.accountName = ''; companySearchForm.accountNo = ''; companySearchForm.flowType = ''; companySearchForm.direction = ''; companySearchForm.flowNo = ''; companySearchForm.relatedNo = ''; companySearchForm.dateRange = [];
                     } else {
-                        searchForm.customerName = ''; searchForm.entityName = ''; searchForm.currency = ''; searchForm.flowType = ''; searchForm.dateRange = [];
+                        searchForm.customerName = ''; searchForm.entityName = ''; searchForm.currency = ''; searchForm.accountName = ''; searchForm.flowType = ''; searchForm.direction = ''; searchForm.flowNo = ''; searchForm.relatedNo = ''; searchForm.dateRange = [];
                     }
                 };
 
                 return {
-                    currencyOptions, entities, flowTypes, companyFlowTypes,
+                    currencyOptions, entities, flowTypes, companyFlowTypes, accountTypeLabel, scopeSummary,
                     currencySymbol, currencyName, formatMoney, accountNameOf, payTimeOf,
                     searchForm, searchExpanded, hasMoreCondition, filteredFlows, flowTypeTag,
                     handleExport, handleSearch, resetSearch, openCreditBill,
-                    activeTab, companySearchForm, filteredCompanyFlows
+                    activeTab, companySearchForm, filteredCompanyFlows, detailVisible, detailRow, openDetail, backToAccounts
                 };
             }
         });
