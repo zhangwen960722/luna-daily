@@ -108,8 +108,8 @@
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
                         </el-table-column>
                         <el-table-column label="审核确认金额" min-width="130" align="right"><template #default="scope">{{ scope.row.confirmedAmount == null ? '—' : currencySymbol(scope.row.currency) + formatMoney(scope.row.confirmedAmount) }}</template></el-table-column>
-                        <el-table-column prop="bankAccount" label="客户原始打款账户" min-width="210" show-overflow-tooltip></el-table-column>
-                        <el-table-column prop="confirmedBankAccount" label="审核确认打款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="bankAccount" label="客户原选收款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="confirmedBankAccount" label="审核确认收款账户" min-width="210" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="operator" label="申请人" min-width="100"></el-table-column>
                         <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
                         <el-table-column prop="status" label="状态" min-width="90" align="center">
@@ -144,8 +144,8 @@
                             <template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template>
                         </el-table-column>
                         <el-table-column label="审核确认金额" min-width="130" align="right"><template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.confirmedAmount) }}</template></el-table-column>
-                        <el-table-column prop="bankAccount" label="客户填写的打款账户" min-width="210" show-overflow-tooltip></el-table-column>
-                        <el-table-column prop="confirmedBankAccount" label="审核确认打款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="bankAccount" label="客户原选收款账户" min-width="210" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="confirmedBankAccount" label="审核确认收款账户" min-width="210" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="customerRemark" label="客户备注" min-width="160" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="status" label="审核状态" min-width="100" align="center"></el-table-column>
                         <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
@@ -165,14 +165,14 @@
                         <span style="color: #909399; font-size: 13px;">财务创建客户提现单，确认打款后直接扣减客户钱包余额</span>
                     </div>
                     <el-table :data="filteredWithdrawRecords.slice((withdrawPage-1)*10,withdrawPage*10)" border style="width: 100%" min-width="1700">
-                        <el-table-column prop="flowNo" label="提现申请编号" min-width="150" show-overflow-tooltip></el-table-column>
+                        <el-table-column prop="flowNo" label="提现单编号" min-width="150" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="customerName" label="客户名称" min-width="190" show-overflow-tooltip></el-table-column>
                         <el-table-column label="提现金额" min-width="130" align="right"><template #default="scope">{{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}</template></el-table-column>
                         <el-table-column prop="bankAccount" label="提现账户" min-width="210" show-overflow-tooltip></el-table-column>
                         <el-table-column prop="oaNo" label="OA审批编号" min-width="160" show-overflow-tooltip></el-table-column>
                         <el-table-column label="打款记录" min-width="110" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openPaymentFileDetail(scope.row)">{{ paymentFileStatus(scope.row) }}</el-button></template></el-table-column>
                         <el-table-column label="打款记录状态" min-width="120" align="center"><template #default="scope"><el-tag :type="scope.row.paymentFile ? 'success' : 'warning'" size="small">{{ paymentFileStatus(scope.row) }}</el-tag></template></el-table-column>
-                        <el-table-column prop="time" label="申请时间" min-width="150"></el-table-column>
+                        <el-table-column prop="operator" label="操作人" min-width="100"></el-table-column>
                         <el-table-column prop="paidTime" label="打款完成时间" min-width="150"></el-table-column>
                         <el-table-column label="操作" width="100" fixed="right" align="center"><template #default="scope"><el-button link type="primary" size="small" @click="openWithdrawDetail(scope.row)">详情</el-button></template></el-table-column>
                     </el-table>
@@ -210,16 +210,16 @@
                     <el-col :span="12"><span class="detail-label">主体</span><div class="detail-value">{{ currentApply.entityName }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">币种</span><div class="detail-value">{{ currencyName(currentApply.currency) }}</div></el-col>
                 </el-row>
-                <el-row :gutter="20"><el-col :span="12"><span class="detail-label">打款账户</span><div class="detail-value">{{ currentApply.bankAccount }}</div></el-col></el-row>
+                <el-row :gutter="20"><el-col :span="12"><span class="detail-label">客户原选收款账户</span><div class="detail-value">{{ currentApply.bankAccount }}</div></el-col></el-row>
                 <div class="section-title" style="margin-top: 20px;">审核确认信息</div>
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <span class="detail-label">客户填写的打款账户</span>
+                        <span class="detail-label">客户原选收款账户</span>
                         <div class="detail-value">{{ currentApply.bankAccount }}</div>
                         <div class="detail-label" style="margin-top:6px">只读 · 客户原始选择</div>
                     </el-col>
                     <el-col :span="12">
-                        <span class="detail-label">审核确认打款账户</span>
+                        <span class="detail-label">审核确认收款账户</span>
                         <el-form-item prop="confirmedBankAccount" style="margin-bottom:6px">
                             <el-select v-model="currentApply.confirmedBankAccount" style="width:100%" :disabled="currentApply.status !== '待审核'" placeholder="请选择最终归属账户">
                                 <el-option v-for="account in reviewBankAccounts" :key="account.id" :label="account.name" :value="account.name"></el-option>
@@ -231,7 +231,7 @@
                 <el-form-item v-if="bankAccountChanged" label="账户调整原因" prop="accountAdjustmentReason">
                     <el-input v-model="currentApply.accountAdjustmentReason" type="textarea" :rows="2" maxlength="200" show-word-limit :disabled="currentApply.status !== '待审核'" placeholder="请输入账户调整原因（必填）"></el-input>
                 </el-form-item>
-                <div v-if="bankAccountChanged" style="background:#f8f9fa;color:#606266;padding:10px 12px;border-radius:4px;margin-bottom:12px;font-size:12px">审核确认打款账户与客户原始选择不一致，审核通过后将以审核确认打款账户作为本次充值归属账户。</div>
+                <div v-if="bankAccountChanged" style="background:#f8f9fa;color:#606266;padding:10px 12px;border-radius:4px;margin-bottom:12px;font-size:12px">审核确认收款账户与客户原选收款账户不一致，审核通过后按确认账户入账；原选账户仍保留。</div>
                 <div class="section-title" style="margin-top: 20px;">充值金额</div>
                 <div class="amount-compare">
                     <div class="amount-panel">
@@ -252,7 +252,7 @@
                     <el-col :xs="24" :sm="12"><span class="detail-label">审核备注</span><el-input v-model="currentApply.reviewRemark" type="textarea" :rows="2" maxlength="200" show-word-limit :disabled="currentApply.status !== '待审核'" resize="none" placeholder="请输入审核意见（非必填）"></el-input></el-col>
                 </el-row>
                 <el-row v-if="currentApply.status !== '待审核'" :gutter="20"><el-col :span="12"><span class="detail-label">审核人</span>{{ currentApply.reviewer || '—' }}</el-col><el-col :span="12"><span class="detail-label">审核时间</span>{{ currentApply.reviewTime || '—' }}</el-col></el-row>
-                <div v-if="currentApply.status === '待审核'" style="background:#fff7e6;color:#8a5a00;padding:10px 12px;border-radius:4px;margin-bottom:12px">修改审核金额或打款账户后，货主端充值记录、资金账户入账金额及归属账户将以审核确认信息为准。</div>
+                <div v-if="currentApply.status === '待审核'" style="background:#fff7e6;color:#8a5a00;padding:10px 12px;border-radius:4px;margin-bottom:12px">修改审核金额或确认收款账户后，货主端充值记录、资金账户入账金额及归属账户将以审核确认信息为准。</div>
                 <el-row :gutter="20">
                     <el-col :span="12"><span class="detail-label">申请时间</span><div class="detail-value">{{ currentApply.time }}</div></el-col>
                     <el-col :span="12"><span class="detail-label">状态</span><div class="detail-value">{{ currentApply.status }}</div></el-col>
@@ -477,7 +477,7 @@
                     {key:'entityName',label:'账户主体',options:entities,common:true},
                     {key:'currency',label:'币种',options:currencyOptions,common:true},
                     ...(activeTab.value === 'recharge' ? [{key:'status',label:'处理结果',options:['已通过','已驳回'],common:true}] : []),
-                    {key:activeTab.value === 'recharge' ? 'applyNo' : 'flowNo',label:activeTab.value === 'recharge' ? '充值申请编号' : '提现申请编号',type:'text'},
+                    {key:activeTab.value === 'recharge' ? 'applyNo' : 'flowNo',label:activeTab.value === 'recharge' ? '充值申请编号' : '提现单编号',type:'text'},
                     {key:'minAmount',label:'金额最小值',type:'number'}, {key:'maxAmount',label:'金额最大值',type:'number'},
                     {key:'timeRange',label:'申请/创建时间',type:'date'},
                     {key:activeTab.value === 'recharge' ? 'payRange' : 'paidRange',label:activeTab.value === 'recharge' ? '客户支付时间' : '打款完成时间',type:'date'},
@@ -555,9 +555,9 @@
                     if (!['待审核','审核中'].includes(row.status)) { ElMessage.warning('该记录已审核完成，不可重复审核或修改金额'); return; }
                     if (!row.voucher || !row.voucherUrl) { ElMessage.warning('请先补充打款凭证'); return; }
                     if (!row.confirmedAmount || Number(row.confirmedAmount) <= 0 || Math.round(Number(row.confirmedAmount) * 100) !== Number(row.confirmedAmount) * 100) { ElMessage.warning('审核确认金额必须大于0且最多保留2位小数'); return; }
-                    if (!reviewBankAccounts.value.length) { ElMessage.warning('该客户当前没有可用打款账户，无法提交审核'); return; }
-                    if (!row.confirmedBankAccount || !reviewBankAccounts.value.some(account => account.name === row.confirmedBankAccount)) { ElMessage.warning('请选择客户已配置且可用的审核确认打款账户'); return; }
-                    if (row.confirmedBankAccount !== row.bankAccount && !String(row.accountAdjustmentReason || '').trim()) { ElMessage.warning('修改打款账户时必须填写账户调整原因'); return; }
+                    if (!reviewBankAccounts.value.length) { ElMessage.warning('当前充值主体及币种下没有可用的我司收款账户，无法提交审核'); return; }
+                    if (!row.confirmedBankAccount || !reviewBankAccounts.value.some(account => account.name === row.confirmedBankAccount)) { ElMessage.warning('请选择当前充值主体及币种下可用的我司收款账户'); return; }
+                    if (row.confirmedBankAccount !== row.bankAccount && !String(row.accountAdjustmentReason || '').trim()) { ElMessage.warning('修改审核确认收款账户时必须填写账户调整原因'); return; }
                     const confirmText = Number(row.confirmedAmount) !== Number(row.amount)
                         ? '审核确认金额与客户申请金额不一致，审核通过后将按审核确认金额入账，是否继续？'
                         : `确认将 ${currencySymbol(row.currency)}${formatMoney(row.confirmedAmount)} 入池到「${row.customerName}-${row.entityName}-${currencyName(row.currency)}」钱包？`;
@@ -707,7 +707,7 @@
                 const rechargeBankAccounts = computed(() => bankAccounts.filter(a => a.entityName === rechargeForm.entityName && a.currency === rechargeForm.currency && a.status === '启用'));
                 const withdrawBankAccounts = computed(() => bankAccounts.filter(a => a.entityName === withdrawForm.entityName && a.currency === withdrawForm.currency && a.status === '启用'));
                 const withdrawRecords = reactive([
-                    { flowNo: 'WF20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', operator: '李伟', time: '2026-08-20 11:05', oaNo: 'OA-20260820-001', paymentFile: { name: '华美-提现回单.pdf', type: 'PDF', size: 483120, uploader: '李伟', uploadTime: '2026-08-20 11:04' }, status: '已完成', paidTime: '2026-08-20 11:05', reviewer: '李伟', reviewTime: '2026-08-20 10:50', operationLog: '李伟于 2026-08-20 11:05 确认打款' },
+                    { flowNo: 'WF20260820001', customerName: '深圳市华美科技有限公司', entityName: '广州飞点', currency: 'CNY', amount: 500.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', operator: '李伟', time: '2026-08-20 11:05', oaNo: 'OA-20260820-001', paymentFile: { name: '华美-提现回单.pdf', type: 'PDF', size: 483120, uploader: '李伟', uploadTime: '2026-08-20 11:04' }, status: '已完成', paidTime: '2026-08-20 11:05', operationLog: '李伟于 2026-08-20 11:05 确认打款' },
                     { flowNo: 'WF20260820002', customerName: '广州迅达贸易有限公司', entityName: '广州飞点', currency: 'CNY', amount: 800.00, bankAccount: '广州飞点-招商银行(7559 1234 5678)', operator: '李伟', time: '2026-08-20 10:15', oaNo: 'OA-20260820-002', paymentFile: { name: '迅达-提现回单.xlsx', type: 'Excel', size: 218000, uploader: '李伟', uploadTime: '2026-08-20 10:20' }, status: '已完成', paidTime: '2026-08-20 10:22', balanceBefore: 6600, balanceAfter: 5800, walletFlowNo: 'WF20260820002', operationRemark: '线下打款完成', operationLog: '李伟于 2026-08-20 10:22 确认打款' },
                     { flowNo: 'WF20260820003', customerName: '东莞新锐电子有限公司', entityName: '广东飞点', currency: 'CNY', amount: 1200.00, bankAccount: '广东飞点-建设银行(4400 2222 3333)', operator: '李伟', time: '2026-08-20 09:40', oaNo: 'OA-20260820-003', paymentFile: { name: '新锐-提现回单.csv', type: 'CSV', size: 80400, uploader: '李伟', uploadTime: '2026-08-20 09:45' }, status: '已完成', paidTime: '2026-08-20 09:48', balanceBefore: 13200, balanceAfter: 12000, walletFlowNo: 'WF20260820003', operationRemark: '', operationLog: '李伟于 2026-08-20 09:48 确认打款' }
                 ]);

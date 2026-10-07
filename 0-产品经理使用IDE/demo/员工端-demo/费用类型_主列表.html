@@ -208,16 +208,6 @@
                             </el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="syncSalesCostForPeer" label="同行客户同步销售成本" min-width="160" align="center">
-                        <template #default="scope">
-                            <template v-if="scope.row.feeDirection.includes('应收') && scope.row.feeDirection.includes('销售成本')">
-                                <el-tag :type="scope.row.syncSalesCostForPeer ? 'success' : 'info'" size="small">
-                                    {{ scope.row.syncSalesCostForPeer ? '同步' : '不同步' }}
-                                </el-tag>
-                            </template>
-                            <span v-else>—</span>
-                        </template>
-                    </el-table-column>
                     <el-table-column prop="isSystem" label="是否系统预置" min-width="110" align="center">
                         <template #default="scope">
                             <el-tag v-if="scope.row.isSystem" type="info" size="small">系统预置</el-tag>
@@ -291,26 +281,11 @@
                         placeholder="请选择收付类型（可多选）"
                         multiple
                         style="width: 100%;"
-                        :disabled="dialogType !== 'add'"
-                        @change="handleDirectionChange">
+                        :disabled="dialogType !== 'add'">
                         <el-option label="应收" value="应收"></el-option>
                         <el-option label="应付" value="应付"></el-option>
                         <el-option label="销售成本" value="销售成本"></el-option>
                     </el-select>
-                </div>
-
-                <div class="a11y-form-group">
-                    <label class="a11y-form-label">同行客户同步销售成本</label>
-                    <el-switch
-                        v-model="formData.syncSalesCostForPeer"
-                        active-text="同步"
-                        inactive-text="不同步"
-                        inline-prompt
-                        :disabled="!canEditSyncSalesCost">
-                    </el-switch>
-                    <div style="font-size: 12px; color: #909399; margin-top: 6px;">
-                        同行客户的应收流水是否复制销售成本流水，默认「不同步」；仅收付类型同时含「应收」+「销售成本」时可配置
-                    </div>
                 </div>
             </div>
             <template #footer>
@@ -335,12 +310,12 @@
 
                 // 表格数据
                 const tableData = ref([
-                    { id: 1, feeName: '运费', feeDirection: ['应收', '销售成本'], syncSalesCostForPeer: false, status: '正常', operator: '系统', isSystem: true },
-                    { id: 2, feeName: '头程海运费', feeDirection: ['应收', '销售成本'], syncSalesCostForPeer: true, status: '正常', operator: '张三', isSystem: false },
-                    { id: 3, feeName: '周六派送费', feeDirection: ['应收', '销售成本'], syncSalesCostForPeer: false, status: '正常', operator: '张三', isSystem: false },
-                    { id: 4, feeName: '超时赔付', feeDirection: ['应收'], syncSalesCostForPeer: false, status: '正常', operator: '张三', isSystem: false },
-                    { id: 5, feeName: '货损赔偿', feeDirection: ['应收'], syncSalesCostForPeer: false, status: '正常', operator: '李四', isSystem: false },
-                    { id: 6, feeName: '超重费', feeDirection: ['应付'], syncSalesCostForPeer: false, status: '冻结', operator: '李四', isSystem: false }
+                    { id: 1, feeName: '运费', feeDirection: ['应收', '销售成本'], status: '正常', operator: '系统', isSystem: true },
+                    { id: 2, feeName: '头程海运费', feeDirection: ['应收', '销售成本'], status: '正常', operator: '张三', isSystem: false },
+                    { id: 3, feeName: '周六派送费', feeDirection: ['应收', '销售成本'], status: '正常', operator: '张三', isSystem: false },
+                    { id: 4, feeName: '超时赔付', feeDirection: ['应收'], status: '正常', operator: '张三', isSystem: false },
+                    { id: 5, feeName: '货损赔偿', feeDirection: ['应收'], status: '正常', operator: '李四', isSystem: false },
+                    { id: 6, feeName: '超重费', feeDirection: ['应付'], status: '冻结', operator: '李四', isSystem: false }
                 ]);
 
                 // 分页相关
@@ -389,8 +364,7 @@
                 const formData = reactive({
                     id: null,
                     feeName: '',
-                    feeDirection: [],
-                    syncSalesCostForPeer: false
+                    feeDirection: []
                 });
 
                 // 唯一校验：同名 + 启用 只能有一个（方向为多选属性，不再作为判重维度）
@@ -409,12 +383,10 @@
                         formData.id = row.id;
                         formData.feeName = row.feeName;
                         formData.feeDirection = [...row.feeDirection];
-                        formData.syncSalesCostForPeer = !!row.syncSalesCostForPeer;
                     } else {
                         formData.id = null;
                         formData.feeName = '';
                         formData.feeDirection = [];
-                        formData.syncSalesCostForPeer = false;
                     }
                     dialogVisible.value = true;
                 };
@@ -422,11 +394,6 @@
                 // 保存数据
                 const saveData = () => {
                     if (dialogType.value === 'edit') {
-                        const row = tableData.value.find(t => t.id === formData.id);
-                        if (row) {
-                            row.syncSalesCostForPeer = formData.syncSalesCostForPeer;
-                        }
-                        ElementPlus.ElMessage.success('保存成功');
                         dialogVisible.value = false;
                         return;
                     }
@@ -447,7 +414,6 @@
                         id: Date.now(),
                         feeName: formData.feeName.trim(),
                         feeDirection: [...formData.feeDirection],
-                        syncSalesCostForPeer: formData.syncSalesCostForPeer,
                         status: '正常',
                         operator: '当前用户',
                         isSystem: false
@@ -464,15 +430,6 @@
                     return 'danger';
                 };
 
-                // 收付类型变化时：不同时含「应收 + 销售成本」则重置「同行客户同步销售成本」为默认（不同步）
-                const handleDirectionChange = () => {
-                    if (!(formData.feeDirection.includes('应收') && formData.feeDirection.includes('销售成本'))) {
-                        formData.syncSalesCostForPeer = false;
-                    }
-                };
-                // 仅收付类型同时含「应收」+「销售成本」时，同行客户同步销售成本才可配置
-                const canEditSyncSalesCost = computed(() => (formData.feeDirection || []).includes('应收') && (formData.feeDirection || []).includes('销售成本'));
-
                 return {
                     searchForm,
                     tableData,
@@ -487,8 +444,7 @@
                     formData,
                     openDialog,
                     saveData,
-                    directionTagType,
-                    handleDirectionChange, canEditSyncSalesCost
+                    directionTagType
                 };
             }
         });

@@ -1440,7 +1440,13 @@
                     }
                 };
                 const saveBillingInfo = () => {
-                    ElMessage.success('账期信息保存成功！');
+                    try {
+                        const terms=JSON.parse(localStorage.getItem('luna-supplier-contract-terms')||'{}');
+                        (formData.contracts||[]).forEach(c=>{terms[formData.supplierName+'|'+c.contractCompany]={term:c.paymentTerm,code:{'月结':101,'半月结':104,'周结':201}[c.paymentTerm]||null,daysOrDate:c.daysOrDate,monthly:c.paymentTerm==='月结'};});
+                        localStorage.setItem('luna-supplier-contract-terms',JSON.stringify(terms));
+                        const row=allData.value.find(r=>r.supplierName===formData.supplierName);if(row)row._contracts=JSON.parse(JSON.stringify(formData.contracts));
+                        ElMessage.success('账期信息保存成功，请返回应付出账预览点击重新预览');
+                    } catch(e) {ElMessage.error('保存供应商合同账期失败，请检查浏览器存储权限');}
                 };
 
                 const setSupplierPrimaryContract = (index) => {
@@ -1487,6 +1493,27 @@
                         }
                     });
                 };
+
+                // 出账异常定位到供应商与签约主体，在合同账期页维护，不在出账弹窗临时填写。
+                const apParams=new URLSearchParams(window.location.search);
+                if(apParams.get('action')==='edit'&&apParams.get('tab')==='billingInfo'){
+                    const supplier=apParams.get('supplierName'),entity=apParams.get('entityName');
+                    const seeds={
+                        '中远海运|广州飞点':['月结',15],'中远海运|深圳飞点':['月结',20],
+                        '美森快船|广州飞点':['月结',15],'美森快船|深圳飞点':['月结',null],
+                        '广州港务|广州飞点':['月结',15],'广州港务|广东飞点':['月结',15],
+                        '广州报关行|广州飞点':['半月结',15],'深圳拖车行|深圳飞点':['周结',7]
+                    };
+                    if(seeds[supplier+'|'+entity]){
+                        let row=allData.value.find(r=>r.supplierName===supplier);
+                        if(!row){row={supplierCode:'G'+(10001+allData.value.length),supplierName:supplier,supplierCategory:['其他'],supplierDetail:['其他'],level:'B',serviceStatus:'正常'};allData.value.push(row)}
+                        let saved={};try{saved=JSON.parse(localStorage.getItem('luna-supplier-contract-terms')||'{}')}catch(e){ElMessage.error('读取供应商合同账期失败')}
+                        const [term,days]=seeds[supplier+'|'+entity],t=saved[supplier+'|'+entity];
+                        const paymentTerm=t?t.term:term;
+                        row._contracts=[{contractCompany:entity,signStatus:'已签署',isPrimary:true,billingCycle:paymentTerm==='月结'?'固定':'不固定',paymentTerm,settlementType:paymentTerm==='月结'?'按月':'按天',settlementMonth:paymentTerm==='月结'?0:null,daysOrDate:t?t.daysOrDate:days}];
+                        openDialog('edit',row);drawerActiveTab.value='billingInfo';
+                    }else ElMessage.warning('未找到对应供应商合同，请从供应商列表核对');
+                }
 
                 return {
                     activeTab, searchForm, tableData, currentPage, pageSize, total,

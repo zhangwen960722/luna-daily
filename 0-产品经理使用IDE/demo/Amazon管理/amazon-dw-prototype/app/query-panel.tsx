@@ -1,0 +1,22 @@
+"use client";
+import * as React from "react";
+import {Collapsible,CollapsibleTrigger,CollapsibleContent} from "@/components/ui/collapsible";
+import {ChevronDown,ChevronUp} from "lucide-react";
+import {Button} from "@/components/ui/button";
+import {Popover,PopoverTrigger,PopoverContent} from "@/components/ui/popover";
+import {Textarea} from "@/components/ui/textarea";
+import {Input} from "@/components/ui/input";
+import {Checkbox} from "@/components/ui/checkbox";
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from "@/components/ui/select";
+export const numbers=(v:string)=>Array.from(new Set(v.toUpperCase().split(/[\s,，;；]+/).map(v=>v.trim()).filter(Boolean)));
+export const matches=(value:string,q:string)=>!numbers(q).length||numbers(q).includes(value.toUpperCase());
+export type Query=Record<string,string>;
+export function QueryPanel({fields,selects=[],dates=[],warehouses,compact=false,collapsible=false,onApply}:{fields:Array<[string,string]>;selects?:Array<{key:string;label:string;options:string[]}>;dates?:Array<[string,string]>;warehouses?:string[];compact?:boolean;collapsible?:boolean;onApply:(q:Query)=>void}){
+ const [expanded,setExpanded]=React.useState(true);const [appliedCount,setAppliedCount]=React.useState(0);
+ const [draft,setDraft]=React.useState<Query>({});
+ const [warehouseSearch,setWarehouseSearch]=React.useState("");
+ const update=(key:string,value:string)=>setDraft(q=>({...q,[key]:value}));
+ const picked=numbers(draft.fc||"");
+ const panel=<section className={"filter multi-query"+(compact?" compact-query":"")}>{fields.map(([key,label])=><label key={key}><span>{label}</span>{compact?<Input aria-label={label} placeholder="多个号码用逗号或空格分隔" value={draft[key]||""} onChange={e=>update(key,e.target.value)} onPaste={e=>{const text=e.clipboardData.getData("text");if(/[\r\n]/.test(text)){e.preventDefault();const input=e.currentTarget;update(key,(draft[key]||"").slice(0,input.selectionStart||0)+text.replace(/[\r\n]+/g,",")+(draft[key]||"").slice(input.selectionEnd||0));}}}/>:<Textarea aria-label={label} rows={2} placeholder="支持多个，换行、逗号或分号分隔" value={draft[key]||""} onChange={e=>update(key,e.target.value)}/>}</label>)}{selects.map(s=><label key={s.key}><span>{s.label}</span><Select value={draft[s.key]||"all"} onValueChange={v=>update(s.key,v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">全部</SelectItem>{s.options.map(o=><SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></label>)}{dates.map(([key,label])=><label key={key}><span>{label}</span><Input aria-label={label} type="date" value={draft[key]||""} onChange={e=>update(key,e.target.value)}/></label>)}{warehouses&&<div className="warehouse-select"><span>仓点（多选）</span><Popover><PopoverTrigger asChild><Button variant="outline" className="warehouse-trigger">{picked.length?"已选 "+picked.length+" 个仓点":"全部仓点"}<span aria-hidden="true">⌄</span></Button></PopoverTrigger><PopoverContent align="start" className="warehouse-menu"><Input aria-label="搜索仓点" placeholder="搜索仓点代码" value={warehouseSearch} onChange={e=>setWarehouseSearch(e.target.value)}/><div className="warehouse-options">{warehouses.filter(fc=>fc.toUpperCase().includes(warehouseSearch.trim().toUpperCase())).map(fc=><label key={fc}><Checkbox checked={picked.includes(fc)} onCheckedChange={v=>update("fc",(v?[...picked,fc]:picked.filter(x=>x!==fc)).join(","))}/>{fc}</label>)}{!warehouses.some(fc=>fc.toUpperCase().includes(warehouseSearch.trim().toUpperCase()))&&<p>没有匹配的仓点</p>}</div><Button variant="ghost" onClick={()=>update("fc","")}>清空选择</Button></PopoverContent></Popover></div>}<div className="query-actions"><Button className="primary" onClick={()=>{onApply(draft);setAppliedCount(Object.values(draft).filter(v=>v.trim()&&v!=="all").length);if(collapsible)setExpanded(false)}}>查询</Button><Button variant="outline" onClick={()=>{setDraft({});setWarehouseSearch("");setAppliedCount(0);onApply({})}}>重置</Button></div></section>;
+ return collapsible?<Collapsible open={expanded} onOpenChange={setExpanded} className="query-collapse"><div className="query-collapse-head"><span>查询条件{appliedCount>0&&<small>已应用 {appliedCount} 项条件</small>}</span><CollapsibleTrigger asChild><Button variant="ghost" size="sm">{expanded?"收起":"展开"}{expanded?<ChevronUp size={16}/>:<ChevronDown size={16}/>}</Button></CollapsibleTrigger></div><CollapsibleContent>{panel}</CollapsibleContent></Collapsible>:panel;
+}

@@ -413,6 +413,12 @@
                                     <template #title>{{ item.name }}</template>
                                 </el-menu-item>
                             </el-sub-menu>
+                            <el-sub-menu index="2-8">
+                                <template #title><span>Amazon管理</span></template>
+                                <el-menu-item v-for="item in headTransportMenuList.amazonManagement" :key="item.index" :index="item.index">
+                                    <template #title>{{ item.name }}</template>
+                                </el-menu-item>
+                            </el-sub-menu>
                             <!-- 保持同级的其他菜单 -->
                             <el-menu-item v-for="item in headTransportMenuList.others" :key="item.index" :index="item.index">
                                 <template #title>{{ item.name }}</template>
@@ -575,6 +581,12 @@
 
                 // 头程管理菜单列表 (按二级结构划分)
                 const headTransportMenuList = {
+                    amazonManagement: [
+                        { index: 'Amazon_DW货件列表.html', name: 'DW货件列表', view: 'dw', permission: '头程管理' },
+                        { index: 'Amazon_DW提单列表.html', name: 'DW提单列表', view: 'bols', permission: '头程管理' },
+                        { index: 'Amazon_Amazon任务中心.html', name: 'Amazon任务中心', view: 'tasks', permission: '头程管理' },
+                        { index: 'Amazon_Smart Reroute.html', name: 'Smart Reroute（二期）', view: 'smart', permission: '头程管理' }
+                    ].filter(item => hasPermission(item.permission)),
                     orderManagement: [
                         { index: 'Waybill.html', name: '运单管理', permission: '运单管理' },
                         { index: '异常处理池.html', name: '异常处理池', permission: '异常处理池' },
@@ -688,6 +700,8 @@
                 const currentIframeSrc = ref('首页.html');
 
                 const currentMenuName = computed(() => {
+                    const amazonItem = headTransportMenuList.amazonManagement.find(m => m.index === activeMenu.value);
+                    if (amazonItem) return amazonItem.name;
                     if (activeMenu.value === '首页.html') return '数据看板';
                     if (activeMenu.value === '后台任务.html') return '后台任务';
                     let item = menuList.find(m => m.index === activeMenu.value);
@@ -734,6 +748,7 @@
                 });
 
                 const currentSecondMenuName = computed(() => {
+                    if (headTransportMenuList.amazonManagement.some(m => m.index === activeMenu.value)) return 'Amazon管理';
                     if (headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value)) {
                         return '订单管理';
                     }
@@ -779,7 +794,8 @@
                     if (menuList.find(m => m.index === activeMenu.value)) {
                         return '基础资料';
                     }
-                    if (headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value) ||
+                    if (headTransportMenuList.amazonManagement.find(m => m.index === activeMenu.value) ||
+                        headTransportMenuList.orderManagement.find(m => m.index === activeMenu.value) ||
                         headTransportMenuList.serviceManagement.find(m => m.index === activeMenu.value) ||
                         headTransportMenuList.costManagement.find(m => m.index === activeMenu.value) ||
                         headTransportMenuList.freightRate.find(m => m.index === activeMenu.value) ||
@@ -805,14 +821,41 @@
                     return '基础资料';
                 });
 
-                const handleSelect = (index) => {
+                let amazonReady = false;
+                let pendingAmazonView = null;
+                const sendAmazonView = () => {
+                    if (amazonReady && pendingAmazonView) document.getElementById('mainIframe').contentWindow.postMessage({type:'amazon:navigate', view:pendingAmazonView}, location.protocol === 'file:' ? '*' : location.origin);
+                };
+                const handleSelect = (index, fromHistory = false) => {
+                    if (fromHistory !== true && index !== '公开计算器.html') {
+                        const hash = '#page=' + encodeURIComponent(index);
+                        if (location.hash !== hash) history.pushState(null, '', hash);
+                    }
+                    const target = headTransportMenuList.amazonManagement.find(m => m.index === index);
+                    const current = headTransportMenuList.amazonManagement.find(m => m.index === activeMenu.value);
+                    if (target && current) {
+                        activeMenu.value = index;
+                        pendingAmazonView = target.view;
+                        sendAmazonView();
+                        return;
+                    }
                     if (index === '公开计算器.html') {
                         window.open(index, '_blank');
                         return;
                     }
                     activeMenu.value = index;
+                    amazonReady = false;
+                    pendingAmazonView = target ? target.view : null;
                     currentIframeSrc.value = index;
                 };
+
+                const restoreRoute = () => {
+                    if (location.hash.startsWith('#page=')) {
+                        try { handleSelect(decodeURIComponent(location.hash.slice(6)), true); } catch (_) {}
+                    } else handleSelect('首页.html', true);
+                };
+                window.addEventListener('popstate', restoreRoute);
+                restoreRoute();
 
                 // 邀请入驻弹窗逻辑
                 const inviteDialogVisible = ref(false);
@@ -844,6 +887,13 @@
 
                     // 监听 iframe 内部发送的消息，实现跨页面路由切换及标签页控制
                     window.addEventListener('message', (event) => {
+                        if (event.source === document.getElementById('mainIframe').contentWindow && (event.origin === location.origin || location.protocol === 'file:') && event.data?.type === 'amazon:ready') { amazonReady = true; sendAmazonView(); return; }
+                        if (event.source === document.getElementById('mainIframe').contentWindow && event.data?.type === 'amazon:page') {
+                            if (pendingAmazonView && event.data.view !== pendingAmazonView) return;
+                            const item = headTransportMenuList.amazonManagement.find(m => m.view === event.data.view);
+                            if (item) activeMenu.value = item.index;
+                            return;
+                        }
                         if (event.data && event.data.type === 'navigate') {
                             const targetUrl = event.data.url;
                             if (targetUrl) {
@@ -851,6 +901,7 @@
                                 let targetName = targetUrl;
                                 const allMenus = [
                                     ...menuList, 
+                                    ...headTransportMenuList.amazonManagement,
                                     ...headTransportMenuList.orderManagement,
                                     ...headTransportMenuList.serviceManagement,
                                     ...headTransportMenuList.costManagement,

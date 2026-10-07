@@ -99,6 +99,11 @@
                                     <el-option label="已标识" value="已标识"></el-option>
                                 </el-select>
                             </el-form-item>
+                            <el-form-item label="费用类型">
+                                <el-select v-model="spaceSearchForm.feeType" placeholder="全部" style="width: 140px;" clearable>
+                                    <el-option v-for="t in feeTypeApOptions" :key="t.name" :label="t.name" :value="t.name"></el-option>
+                                </el-select>
+                            </el-form-item>
                             <el-form-item label="创建时间"><el-date-picker v-model="spaceSearchForm.createTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
                             <el-form-item label="转柜时间"><el-date-picker v-model="spaceSearchForm.transferTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
                             <el-form-item label="开船时间"><el-date-picker v-model="spaceSearchForm.departureTime" type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束" value-format="YYYY-MM-DD" style="width: 240px;"></el-date-picker></el-form-item>
@@ -947,7 +952,7 @@
                 const handleAction = (msg) => { ElMessage.success(msg); };
 
                 // ================= Space Logic (舱位管理) =================
-                const spaceSearchForm = reactive({ channel: '', agent: '', blNo: '', containerNo: '', vesselVoyage: '', route: '', markStatus: '', createTime: [], transferTime: [], departureTime: [], arrivalTime: [], clearanceTime: [], finishTime: [] });
+                const spaceSearchForm = reactive({ channel: '', agent: '', blNo: '', containerNo: '', vesselVoyage: '', route: '', markStatus: '', feeType: '', createTime: [], transferTime: [], departureTime: [], arrivalTime: [], clearanceTime: [], finishTime: [] });
                 const channelOptions = ['美森360', '美森限时达', '以星普船', '加拿大海派'];
                 const isSpaceSearchExpanded = ref(false);
                 const spaceActiveTab = ref('配载中');
@@ -1013,11 +1018,19 @@
                 const spaceLoadLocked = Vue.computed(() => {
                     return currentSpaceDetail.value ? (statusStep[currentSpaceDetail.value.status] || 0) >= 2 : false;
                 });
+                const applySpaceFilter = () => {
+                    spaceTableData.value = allSpaceData.filter(item => {
+                        if (item.status !== spaceActiveTab.value) return false;
+                        if (spaceSearchForm.feeType) {
+                            const fees = agentFees[item.agent] || agentFees['万海代理'] || [];
+                            if (!fees.some(f => f[0] === spaceSearchForm.feeType)) return false;
+                        }
+                        return true;
+                    });
+                };
                 const spaceTableData = ref(allSpaceData.filter(item => item.status === '配载中'));
 
-                Vue.watch(spaceActiveTab, (newTab) => {
-                    spaceTableData.value = allSpaceData.filter(item => item.status === newTab);
-                });
+                Vue.watch(spaceActiveTab, () => applySpaceFilter());
 
                 // Space Global Dialogs
                 const spaceDialogVisible = ref(false);

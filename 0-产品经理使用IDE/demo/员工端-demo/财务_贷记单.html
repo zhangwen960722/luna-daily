@@ -179,7 +179,7 @@
                     </div>
                 </el-tab-pane>
 
-                <!-- Tab 4：已作废（只读）—— 其下赔付流水已释放回「账单管理 → 草稿池」，可重新成账（新单号） -->
+                <!-- Tab 4：已作废（只读）—— 其下赔付流水已释放回「账单管理 → 待出账流水」，可重新成账（新单号） -->
                 <el-tab-pane :label="'已作废 (' + voidedBills.length + ')'" name="voided">
                     <el-table :data="voidedBills" border style="width: 100%;">
                         <el-table-column prop="billNo" label="贷记单编号" width="200"></el-table-column>
@@ -317,10 +317,10 @@
             </template>
         </el-dialog>
 
-        <!-- 弹窗 2：添加流水（仅「待发送」Tab）—— 从草稿池挑同 客户 × 我司主体 × 币种 的已审计 · 未成账流水（默认全选，可逐条取消） -->
+        <!-- 弹窗 2：添加流水（仅「待发送」Tab）—— 从待出账流水挑同 客户 × 我司主体 × 币种 的已审计 · 未成账流水（默认全选，可逐条取消） -->
         <el-dialog v-model="addFlowVisible" title="添加流水" width="900px" append-to-body destroy-on-close @opened="onAddFlowOpened">
             <div v-if="!addFlowCandidates.length" style="padding: 26px 0; text-align: center; color: #909399; font-size: 14px; background: #f8f9fa; border: 1px dashed #dcdfe6; border-radius: 4px;">
-                草稿池里没有该 客户 × 我司主体 × 币种 的可成账流水
+                待出账流水里没有该 客户 × 我司主体 × 币种 的可成账流水
             </div>
             <template v-else>
                 <el-table ref="addFlowTableRef" :data="addFlowCandidates" border style="width: 100%;" max-height="320" row-key="key" @selection-change="onAddFlowSelectionChange">
@@ -339,7 +339,7 @@
                     <span>已选<b>{{ addFlowPicked.length }}</b>条流水</span>
                     <span>并入后贷记金额<b style="color: #F56C6C;">{{ moneySigned(currentBill ? currentBill.currency : 'CNY', previewCreditAmount) }}</b></span>
                 </div>
-                <div class="void-block"><b>可以并入正数流水</b>（如同期的补收运费）—— 单据类型只看<b>整单净额</b>；但并入后净额若变为正数，单据类型会变成「应收账单」，届时<b>不允许并入</b>，请改用「账单管理 → 草稿池 → 生成账单」重新出账。</div>
+                <div class="void-block"><b>可以并入正数流水</b>（如同期的补收运费）—— 单据类型只看<b>整单净额</b>；但并入后净额若变为正数，单据类型会变成「应收账单」，届时<b>不允许并入</b>，请改用「账单管理 → 待出账流水 → 生成账单」重新出账。</div>
             </template>
             <template #footer>
                 <span class="dialog-footer">
@@ -351,7 +351,7 @@
             </template>
         </el-dialog>
 
-        <!-- 弹窗 3：作废（作废原因必填 —— 不可恢复、单据号不回收，必须留痕；其下赔付流水释放回草稿池） -->
+        <!-- 弹窗 3：作废（作废原因必填 —— 不可恢复、单据号不回收，必须留痕；其下赔付流水释放回待出账流水） -->
         <el-dialog v-model="voidVisible" title="作废贷记单" width="620px" destroy-on-close>
             <div class="section-title">单据信息</div>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 32px;">
@@ -361,7 +361,7 @@
                 <div><span class="detail-label">贷记金额</span><div class="detail-value" style="color: #F56C6C;">{{ voidForm.billAmount }}</div></div>
             </div>
             <div class="void-block">
-                作废后其下 <b>{{ voidForm.flowCount }}</b> 条赔付流水将释放回「账单管理 → 草稿池」；<b>单据不可恢复、单据号不回收</b>（如需重新出账请重新生成，会得到新单号）。
+                作废后其下 <b>{{ voidForm.flowCount }}</b> 条赔付流水将释放回「账单管理 → 待出账流水」；<b>单据不可恢复、单据号不回收</b>（如需重新出账请重新生成，会得到新单号）。
             </div>
             <div class="section-title" style="margin-top: 20px;">作废原因<span style="color: #F56C6C; margin-left: 4px;">*</span></div>
             <el-input v-model="voidForm.reason" type="textarea" :rows="3" maxlength="200" show-word-limit placeholder="请填写作废原因（如：赔付金额录入有误 / 客户主体挂错 / 重复出账）"></el-input>
@@ -399,50 +399,50 @@
                 // ===== 贷记单（净额 < 0 的账单，`bill_type = 贷记(20)`）：**没有核销维度、没有账期与到期日、不进账龄** =====
                 const bills = reactive([
                     // 待发送：华美 09 月广东飞点组合本期只有 2 条赔付抵扣流水（运费已随 08 期出账）→ 净额 −450.00 → 出贷记单；此时可改内容、可作废
-                    { billNo: 'AR-GD-202609-00001', generatedAt: '2026-09-15 11:20', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '系统自动', sendStatus: '未发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -450.00 },
+                    { billType: '贷记', billNo: 'AR-GD-202609-00001', generatedAt: '2026-09-15 11:20', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '系统自动', sendStatus: '未发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -450.00 },
                     // 已发送 · 待客户确认：迅达 09 月一笔超时赔付；结转前置 = 客户已确认（发送满 7 天未确认由系统自动确认，R16）
-                    { billNo: 'AR-GZ-202609-00001', generatedAt: '2026-09-15 10:05', customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -260.00, sentAt: '2026-09-15 10:30' },
+                    { billType: '贷记', billNo: 'AR-GZ-202609-00003', generatedAt: '2026-09-15 10:05', customerName: '广州迅达贸易有限公司', customerNick: 'gzeda', customerNo: 'KH1002', entityName: '广州飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -260.00, sentAt: '2026-09-15 10:30' },
                     // 已发送 · 待客户确认：华美 09 月第二笔赔付（破损赔付）—— 货主端「贷记单」Tab「待确认」态的演示案例
-                    { billNo: 'AR-GD-202609-00003', generatedAt: '2026-09-16 09:30', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -150.00, sentAt: '2026-09-16 10:00' },
+                    { billType: '贷记', billNo: 'AR-GD-202609-00003', generatedAt: '2026-09-16 09:30', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '未确认', voidStatus: '正常', billAmount: -150.00, sentAt: '2026-09-16 10:00' },
                     // 已发送 · 已确认 · 未结转（★ 演示「结转钱包」按钮）：客户当天就确认了这笔赔付金额 → 财务可在「已发送」Tab 行末点「结转钱包」把钱计入客户可用额度
-                    { billNo: 'AR-GD-202609-00002', generatedAt: '2026-09-15 13:40', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', billAmount: -180.00, sentAt: '2026-09-15 14:00', confirmedAt: '2026-09-15 15:20', confirmType: '客户确认' },
+                    { billType: '贷记', billNo: 'AR-GD-202609-00002', generatedAt: '2026-09-15 13:40', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-09-01', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', billAmount: -180.00, sentAt: '2026-09-15 14:00', confirmedAt: '2026-09-15 15:20', confirmType: '客户确认' },
                     // 已发送 · 已确认 · 已结转（终态）：8 月那张 —— 客户未确认、满 7 天由系统自动确认 → 财务结转钱包 → 客户可用额度 +300
-                    { billNo: 'AR-GD-202608-00003', generatedAt: '2026-08-31 16:00', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-31', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', billAmount: -300.00, sentAt: '2026-08-31 16:30', confirmedAt: '2026-09-07 00:30', confirmType: '系统自动确认' },
-                    // 已作废：赔付金额录入有误 → 作废重出；其下赔付流水已释放回草稿池
-                    { billNo: 'AR-GD-202608-00004', generatedAt: '2026-08-31 15:10', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-31', generateSource: '财务手工', sendStatus: '未发送', confirmStatus: '未确认', voidStatus: '已作废', billAmount: -200.00, voidedAt: '2026-08-31 15:40', voidedBy: '财务-李伟', voidReason: '赔付金额录入有误（应为 −100），作废后重新出账' }
+                    { billType: '贷记', billNo: 'AR-GD-202608-00003', generatedAt: '2026-08-31 16:00', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-31', generateSource: '财务手工', sendStatus: '已发送', confirmStatus: '已确认', voidStatus: '正常', billAmount: -300.00, sentAt: '2026-08-31 16:30', confirmedAt: '2026-09-07 00:30', confirmType: '系统自动确认' },
+                    // 已作废：赔付金额录入有误 → 作废重出；其下赔付流水已释放回待出账流水
+                    { billType: '贷记', billNo: 'AR-GD-202608-00004', generatedAt: '2026-08-31 15:10', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', currency: 'CNY', billingDate: '2026-08-31', generateSource: '财务手工', sendStatus: '未发送', confirmStatus: '未确认', voidStatus: '已作废', billAmount: -200.00, voidedAt: '2026-08-31 15:40', voidedBy: '财务-李伟', voidReason: '赔付金额录入有误（应为 −100），作废后重新出账' }
                 ]);
 
                 // 每张贷记单的赔付抵扣明细（负数流水）
                 const billFlows = reactive({
                     'AR-GD-202609-00001': [
-                        { waybillNo: 'YD20260413017', feeType: '超时赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -300.00, pricingUnit: '按票', amount: -300.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-09-14 10:20' },
-                        { waybillNo: 'YD20260413018', feeType: '破损赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -150.00, pricingUnit: '按票', amount: -150.00, description: '货物破损赔付（赔付行金额为负）', createdAt: '2026-09-14 10:25' }
+                        { waybillNo: 'YD20260413017', feeType: '超时赔付', currency: 'CNY', rate: 1.000000, unitPrice: -300.00, pricingUnit: '按票', amount: -300.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-09-14 10:20' },
+                        { waybillNo: 'YD20260413018', feeType: '破损赔付', currency: 'CNY', rate: 1.000000, unitPrice: -150.00, pricingUnit: '按票', amount: -150.00, description: '货物破损赔付（赔付行金额为负）', createdAt: '2026-09-14 10:25' }
                     ],
                     'AR-GD-202609-00002': [
-                        { waybillNo: 'YD20260413017', feeType: '货物丢失赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -180.00, pricingUnit: '按票', amount: -180.00, description: '货物部分丢失赔付（赔付行金额为负）', createdAt: '2026-09-15 13:30' }
+                        { waybillNo: 'YD20260413017', feeType: '货物丢失赔付', currency: 'CNY', rate: 1.000000, unitPrice: -180.00, pricingUnit: '按票', amount: -180.00, description: '货物部分丢失赔付（赔付行金额为负）', createdAt: '2026-09-15 13:30' }
                     ],
                     'AR-GD-202609-00003': [
-                        { waybillNo: 'YD20260413014', feeType: '破损赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -150.00, pricingUnit: '按票', amount: -150.00, description: '货物破损赔付（赔付行金额为负）', createdAt: '2026-09-16 09:30' }
+                        { waybillNo: 'YD20260413014', feeType: '破损赔付', currency: 'CNY', rate: 1.000000, unitPrice: -150.00, pricingUnit: '按票', amount: -150.00, description: '货物破损赔付（赔付行金额为负）', createdAt: '2026-09-16 09:30' }
                     ],
-                    'AR-GZ-202609-00001': [
-                        { waybillNo: 'YD20260413010', feeType: '超时赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -260.00, pricingUnit: '按票', amount: -260.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-09-13 09:40' }
+                    'AR-GZ-202609-00003': [
+                        { waybillNo: 'YD20260413010', feeType: '超时赔付', currency: 'CNY', rate: 1.000000, unitPrice: -260.00, pricingUnit: '按票', amount: -260.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-09-13 09:40' }
                     ],
                     'AR-GD-202608-00003': [
-                        { waybillNo: 'YD20260413018', feeType: '超时赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -300.00, pricingUnit: '按票', amount: -300.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-08-31 15:00' }
+                        { waybillNo: 'YD20260413018', feeType: '超时赔付', currency: 'CNY', rate: 1.000000, unitPrice: -300.00, pricingUnit: '按票', amount: -300.00, description: '派送超时赔付（赔付行金额为负）', createdAt: '2026-08-31 15:00' }
                     ],
                     'AR-GD-202608-00004': [
-                        { waybillNo: 'YD20260413016', feeType: '破损赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -200.00, pricingUnit: '按票', amount: -200.00, description: '货物破损赔付（赔付行金额为负，金额录入有误）', createdAt: '2026-08-31 14:50' }
+                        { waybillNo: 'YD20260413016', feeType: '破损赔付', currency: 'CNY', rate: 1.000000, unitPrice: -200.00, pricingUnit: '按票', amount: -200.00, description: '货物破损赔付（赔付行金额为负，金额录入有误）', createdAt: '2026-08-31 14:50' }
                     ]
                 });
 
-                // 账单草稿池里「华美 · 广东飞点 · CNY」的可成账流水（本页只用于「添加流水」候选；全量草稿池在「账单管理 → 草稿池」）
+                // 待出账流水里「华美 · 广东飞点 · CNY」的可成账流水（本页只用于「添加流水」候选；全量待出账流水在「账单管理 → 待出账流水」）
                 let flowSeq = 0;
                 const draftFlows = reactive([
-                    { key: 'DP01', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', waybillNo: 'YD20260413017', feeType: '包装破损赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -80.00, pricingUnit: '按票', amount: -80.00, description: '包装破损赔付（赔付行金额为负）', createdAt: '2026-09-15 09:10', auditStatus: '已审计' },
-                    { key: 'DP02', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', waybillNo: 'YD20260413016', feeType: '破损赔付', flowKind: '手工新增', currency: 'CNY', rate: 1.000000, unitPrice: -200.00, pricingUnit: '按票', amount: -200.00, description: '货物破损赔付（原 AR-GD-202608-00004 作废后释放回草稿池）', createdAt: '2026-08-31 14:50', auditStatus: '已审计' },
-                    { key: 'DP03', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', waybillNo: 'YD20260413018', feeType: '运费', flowKind: '运费', currency: 'CNY', rate: 1.000000, unitPrice: 7.75, pricingUnit: '按KG', quantity: 80, amount: 620.00, description: '运单应收运费（美森360 · 按KG · 包税）', remark: '09-15 15:00 审计通过，晚于本组出账时点 → 归下期', createdAt: '2026-09-15 15:00', auditStatus: '已审计' }
+                    { key: 'DP02', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', waybillNo: 'YD20260413017', feeType: '包装破损赔付', currency: 'CNY', rate: 1.000000, unitPrice: -80.00, pricingUnit: '按票', amount: -80.00, description: '包装破损赔付（赔付行金额为负）', createdAt: '2026-09-15 09:10', auditStatus: '已审计' },
+                    { key: 'DP03', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', waybillNo: 'YD20260413016', feeType: '破损赔付', currency: 'CNY', rate: 1.000000, unitPrice: -200.00, pricingUnit: '按票', amount: -200.00, description: '货物破损赔付（原 AR-GD-202608-00004 作废后释放回待出账流水）', createdAt: '2026-08-31 14:50', auditStatus: '已审计' },
+                    { key: 'DP04', customerName: '深圳市华美科技有限公司', customerNick: 'szcross', customerNo: 'KH1001', entityName: '广东飞点', waybillNo: 'YD20260413018', feeType: '运费', currency: 'CNY', rate: 1.000000, unitPrice: 7.75, pricingUnit: '按KG', quantity: 80, amount: 620.00, description: '运单应收运费（美森360 · 按KG · 包税）', remark: '09-15 15:00 审计通过，晚于本组出账时点 → 归下期', createdAt: '2026-09-15 15:00', auditStatus: '已审计' }
                 ]);
-                const nextFlowKey = () => { flowSeq += 1; return 'CK' + String(flowSeq).padStart(2, '0'); };
+                const nextFlowKey = () => { let key;do{flowSeq += 1;key='CK'+String(flowSeq).padStart(2,'0');}while(draftFlows.some(f=>f.key===key)||Object.values(billFlows).some(rows=>rows.some(f=>f.key===key)));return key; };
 
                 // ===== 已结转 = 派生状态（存在活跃的「贷记单入账」wallet_flow；撤销入账已下线，故结转即终态）=====
                 const settlements = reactive([
@@ -545,15 +545,15 @@
                     const rest = rows.filter((r, i) => i !== index);
                     const net = Number(rest.reduce((s, r) => s + Number(r.amount), 0).toFixed(2));
                     if (net >= 0) { ElMessage.warning('移除后本单净额将不再为负，单据类型会变成「应收账单」，请整张作废后重新生成'); return; }
-                    ElMessageBox.confirm('确认将流水从本贷记单移除？移除后该流水回到账单草稿池。', '移除流水', { confirmButtonText: '确认移除', cancelButtonText: '取消', type: 'warning' })
+                    ElMessageBox.confirm('确认将流水从本贷记单移除？移除后该流水回到待出账流水。', '移除流水', { confirmButtonText: '确认移除', cancelButtonText: '取消', type: 'warning' })
                         .then(() => {
                             const removed = rows.splice(index, 1)[0];
                             if (!removed) return;
                             draftFlows.push({
                                 key: nextFlowKey(), customerName: bill.customerName, customerNick: bill.customerNick, customerNo: bill.customerNo,
-                                entityName: bill.entityName, waybillNo: removed.waybillNo, feeType: removed.feeType, flowKind: removed.flowKind,
+                                entityName: bill.entityName, waybillNo: removed.waybillNo, feeType: removed.feeType,
                                 currency: removed.currency, rate: removed.rate, unitPrice: removed.unitPrice, pricingUnit: removed.pricingUnit,
-                                amount: removed.amount, description: removed.description, remark: '原 ' + bill.billNo + ' 移除后回到草稿池',
+                                amount: removed.amount, description: removed.description, remark: '原 ' + bill.billNo + ' 移除后回到待出账流水',
                                 createdAt: removed.createdAt, auditStatus: '已审计'
                             });
                             bill.billAmount = Number(rows.reduce((s, r) => s + Number(r.amount), 0).toFixed(2));
@@ -562,7 +562,7 @@
                         }).catch(() => {});
                 };
 
-                // 添加流水（候选 = 草稿池里同 客户 × 主体 × 币种 的已审计 · 未成账流水；默认全选）
+                // 添加流水（候选 = 待出账流水里同 客户 × 主体 × 币种 的已审计 · 未成账流水；默认全选）
                 const addFlowVisible = ref(false);
                 const addFlowPicked = ref([]);
                 const addFlowTableRef = ref(null);
@@ -594,8 +594,8 @@
                     const list = (billFlows[b.billNo] || []).slice();
                     rows.forEach(f => list.push(Object.assign({}, f)));
                     const net = Number(list.reduce((s, r) => s + Number(r.amount), 0).toFixed(2));
-                    if (net >= 0) { ElMessage.warning('并入后本单净额将不再为负，单据类型会变成「应收账单」，请改用「账单管理 → 草稿池 → 生成账单」重新出账'); return; }
-                    ElMessageBox.confirm('确认将 ' + rows.length + ' 条流水并入贷记单 ' + b.billNo + '（新增金额 ' + moneySigned(b.currency, rows.reduce((s, r) => s + Number(r.amount), 0)) + '）？并入后贷记金额重算、这些流水从草稿池移除。', '添加流水', { confirmButtonText: '确认添加', cancelButtonText: '取消', type: 'warning' })
+                    if (net >= 0) { ElMessage.warning('并入后本单净额将不再为负，单据类型会变成「应收账单」，请改用「账单管理 → 待出账流水 → 生成账单」重新出账'); return; }
+                    ElMessageBox.confirm('确认将 ' + rows.length + ' 条流水并入贷记单 ' + b.billNo + '（新增金额 ' + moneySigned(b.currency, rows.reduce((s, r) => s + Number(r.amount), 0)) + '）？并入后贷记金额重算、这些流水从待出账流水移除。', '添加流水', { confirmButtonText: '确认添加', cancelButtonText: '取消', type: 'warning' })
                         .then(() => {
                             billFlows[b.billNo] = list;
                             const keys = rows.map(f => f.key);
@@ -678,13 +678,13 @@
                     const reason = String(voidForm.reason || '').trim();
                     if (!reason) { ElMessage.warning('请填写作废原因'); return; }
                     const rows = (billFlows[row.billNo] || []).slice();
-                    // 流水释放回草稿池（带全账单上下文，才能在别的单据里被重新选到）；**本单明细保留为历史快照**（作废单据的明细仍可查）
+                    // 流水释放回待出账流水（带全账单上下文，才能在别的单据里被重新选到）；**本单明细保留为历史快照**（作废单据的明细仍可查）
                     rows.forEach(f => {
                         draftFlows.push({
                             key: nextFlowKey(), customerName: row.customerName, customerNick: row.customerNick, customerNo: row.customerNo,
-                            entityName: row.entityName, waybillNo: f.waybillNo, feeType: f.feeType, flowKind: f.flowKind,
+                            entityName: row.entityName, waybillNo: f.waybillNo, feeType: f.feeType,
                             currency: f.currency, rate: f.rate, unitPrice: f.unitPrice, pricingUnit: f.pricingUnit,
-                            amount: f.amount, description: f.description, remark: '原 ' + row.billNo + ' 作废后释放回草稿池',
+                            amount: f.amount, description: f.description, remark: '原 ' + row.billNo + ' 作废后释放回待出账流水',
                             createdAt: f.createdAt, auditStatus: '已审计'
                         });
                     });
@@ -693,7 +693,7 @@
                     row.voidedBy = '财务-李伟';
                     row.voidReason = reason;
                     voidVisible.value = false;
-                    ElMessage.success('贷记单已作废，赔付流水已释放回草稿池');
+                    ElMessage.success('贷记单已作废，赔付流水已释放回待出账流水');
                 };
 
                 // ===== 操作时间线（生成 → 发送 → 确认 → 结转 / 编辑 → 作废）=====
@@ -721,6 +721,69 @@
                     activeTab.value = bill.voidStatus === '已作废' ? 'voided' : (isSettled(bill) ? 'settled' : (bill.sendStatus === '已发送' ? 'sent' : 'pending'));
                     nextTick(() => openDetail(bill));
                 };
+                // 共享演示协议：仅保留在可访问窗口内；刷新创建新会话，旧窗口不得写回。
+                const demoClone=value=>JSON.parse(JSON.stringify(value));
+                const demoObject=value=>value!==null && typeof value==='object' && !Array.isArray(value);
+                const validDemo=value=>demoObject(value) && Array.isArray(value.bills)
+                    && value.bills.every(b=>demoObject(b)&&typeof b.billNo==='string'&&['应收','贷记'].includes(b.billType))
+                    && Array.isArray(value.draftFlows) && value.draftFlows.every(f=>demoObject(f)&&typeof f.key==='string')
+                    && demoObject(value.billFlows) && Object.values(value.billFlows).every(rows=>Array.isArray(rows)&&rows.every(demoObject));
+                let demoHost=window;
+                for(const getHost of [()=>window.opener?.top,()=>window.top,()=>window]){
+                    try{const host=getHost();if(!host)continue;const state=host.__lunaBillingDemo;host.__lunaBillingDemo=state;demoHost=host;break;}catch(e){/* 不可访问时继续使用可访问窗口，保证页面初始化。 */}
+                }
+                let demoState;
+                try{
+                    const reload=window.performance?.getEntriesByType('navigation')[0]?.type==='reload';
+                    const value=reload?null:demoHost.__lunaBillingDemo;
+                    demoState=validDemo(value)?demoClone(value):{bills:[],billFlows:{},draftFlows:[]};
+                    if(reload || !validDemo(value)){try{localStorage.removeItem('luna-contract-terms');}catch(e){/* 存储不可用不阻断页面。 */}}
+                    // 保持对象身份，用于阻止刷新前仍打开的旧页面覆盖新会话。
+                    if(!reload && validDemo(value))demoState=value;
+                    else demoHost.__lunaBillingDemo=demoState;
+                }catch(e){demoHost=window;demoState={bills:[],billFlows:{},draftFlows:[]};try{demoHost.__lunaBillingDemo=demoState;}catch(e){/* 独立降级运行 */}}
+                if(!demoObject(demoState.domains))demoState.domains={};
+                if(!Array.isArray(demoState.removedDraftKeys))demoState.removedDraftKeys=[];
+                const demoMerge=(base,updates,key)=>Array.from(new Map([...base,...updates].map(row=>[row[key],demoClone(row)])).values());
+                // 只回写本页相对加载快照的变化；保留其他页新增或修改的无关记录。
+                const demoPatch=(base,before,after,key)=>{
+                    const previous=new Map(before.map(row=>[row[key],JSON.stringify(row)]));
+                    const ids=new Set(after.map(row=>row[key]));
+                    const removed=new Set(before.filter(row=>!ids.has(row[key])).map(row=>row[key]));
+                    return demoMerge(base.filter(row=>!removed.has(row[key])),after.filter(row=>previous.get(row[key])!==JSON.stringify(row)),key);
+                };
+                const demoDomain='贷记';
+                if(!demoState.domains[demoDomain]){
+                    demoState.bills=demoMerge(bills,demoState.bills,'billNo');
+                    demoState.billFlows={...demoClone(billFlows),...demoState.billFlows};
+                    demoState.draftFlows=demoMerge(demoState.draftFlows,draftFlows.filter(f=>!demoState.draftFlows.some(x=>x.key===f.key)),'key').filter(f=>!demoState.removedDraftKeys.includes(f.key));
+                    demoState.domains[demoDomain]=true;
+                }
+                bills.splice(0,bills.length,...demoClone(demoState.bills.filter(b=>b.billType==='贷记')));
+                Object.assign(billFlows,demoClone(demoState.billFlows));
+                draftFlows.splice(0,draftFlows.length,...demoClone(demoState.draftFlows));
+                if(demoObject(demoState.creditState)){
+                    if(Array.isArray(demoState.creditState.settlements)&&demoState.creditState.settlements.every(x=>demoObject(x)&&typeof x.billNo==='string'))settlements.splice(0,settlements.length,...demoClone(demoState.creditState.settlements));
+                    if(demoObject(demoState.creditState.walletBalances))Object.assign(walletBalances,demoClone(demoState.creditState.walletBalances));
+                }
+                let demoPrevious=demoClone({bills,billFlows,draftFlows:draftFlows});
+                const saveDemo=()=>{
+                    try{
+                        if(demoHost.__lunaBillingDemo!==demoState)return;
+                        const owned=bills.filter(b=>b.billType===demoDomain);
+                        const previous=demoPrevious.bills.filter(b=>b.billType===demoDomain);
+                        demoState.bills=demoPatch(demoState.bills,previous,owned,'billNo');
+                        previous.filter(b=>!owned.some(x=>x.billNo===b.billNo)).forEach(b=>delete demoState.billFlows[b.billNo]);
+                        owned.forEach(b=>{if(JSON.stringify(demoPrevious.billFlows[b.billNo])!==JSON.stringify(billFlows[b.billNo]))demoState.billFlows[b.billNo]=demoClone(billFlows[b.billNo]||[]);});
+                        const removed=demoPrevious.draftFlows.filter(f=>!draftFlows.some(x=>x.key===f.key)).map(f=>f.key);
+                        demoState.removedDraftKeys=Array.from(new Set([...demoState.removedDraftKeys,...removed])).filter(k=>!draftFlows.some(f=>f.key===k));
+                        demoState.draftFlows=demoPatch(demoState.draftFlows,demoPrevious.draftFlows,draftFlows,'key');
+                        demoState.creditState=demoClone({settlements,walletBalances});
+                        demoPrevious=demoClone({bills,billFlows,draftFlows:draftFlows});
+                    }catch(e){/* 共享窗口失效不影响本页操作；刷新即可恢复演示。 */}
+                };
+                saveDemo();
+                Vue.watch([bills,billFlows,draftFlows,settlements,walletBalances],saveDemo,{deep:true,flush:'sync'});
                 initDeepLink();
 
                 return {

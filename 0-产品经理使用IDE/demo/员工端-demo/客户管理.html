@@ -1164,7 +1164,7 @@
                                     <el-table-column label="账期" width="110">
                                         <template #default="scope">
                                             <el-select v-model="scope.row.paymentTerm" size="small" style="width:100%" @change="(v) => onPaymentTermChange(scope.row, v)">
-                                                <el-option v-for="term in availablePaymentTerms" :key="term" :label="term" :value="term"></el-option>
+                                                <el-option v-for="term in (scope.row.billingCycle === '固定' ? ['月结','双月结','三月结'] : ['周结','到港前结','签收月结','到海外仓结','签收结'])" :key="term" :label="term" :value="term"></el-option>
                                             </el-select>
                                         </template>
                                     </el-table-column>
@@ -2319,7 +2319,10 @@ firstOrderTime: '2024-02-20 14:30:00',
                     ElMessage.success('合同信息保存成功！');
                 };
                 const saveBillingInfo = () => {
-                    ElMessage.success('账期信息保存成功！');
+                    const codes={'月结':101,'双月结':102,'三月结':103,'周结':201,'到港前结':202,'签收月结':203,'到海外仓结':204,'签收结':205};
+                    const contracts=editFormData.contracts || [];
+                    if(contracts.some(c=>!codes[c.paymentTerm] || !Number.isInteger(Number(c.daysOrDate)) || Number(c.daysOrDate)<1 || ([101,102,103].includes(codes[c.paymentTerm])&&Number(c.daysOrDate)>31))){ElMessage.warning('请补全签约账期及天数/号；按月类须为 1–31');return;}
+                    try{const saved=JSON.parse(localStorage.getItem('luna-contract-terms')||'{}');contracts.forEach(c=>{saved[editFormData.customerName+'|'+c.contractCompany]={code:codes[c.paymentTerm],daysOrDate:Number(c.daysOrDate)};});localStorage.setItem('luna-contract-terms',JSON.stringify(saved));const row=allData.value.find(r=>r.customerName===editFormData.customerName);if(row)row.contracts=JSON.parse(JSON.stringify(contracts));ElMessage.success('账期信息已保存，请返回出账预览点击「重新预览」');}catch(e){ElMessage.error('保存失败，请检查浏览器存储权限');}
                 };
                 const saveCommInfo = () => {
                     ElMessage.success('通信信息保存成功！');
@@ -2346,11 +2349,17 @@ firstOrderTime: '2024-02-20 14:30:00',
                     if (urlParams.get('action') === 'edit') {
                         const customerName = urlParams.get('customerName');
                         let targetRow = allData.value.find(item => item.customerName === customerName);
-                        if (!targetRow) {
-                            targetRow = allData.value[0];
+                        if (!targetRow && customerName === '深圳市华美科技有限公司' && urlParams.get('entityName') === '香港富力顿') {
+                            targetRow={customerCode:'KH1001',customerName,customerType:'企业',contracts:[{contractCompany:'香港富力顿',signStatus:'已签约',billingCycle:'固定',paymentTerm:'',daysOrDate:null}]};
+                            allData.value.push(targetRow);
                         }
+                        if(!targetRow){ElMessage.warning('未找到对应客户，请在客户列表查询');return;}
                         setTimeout(() => {
                             handleEdit(targetRow);
+                            if(urlParams.get('tab')==='billingInfo'){
+                                drawerActiveTab.value='billingInfo';
+                                try{const terms=JSON.parse(localStorage.getItem('luna-contract-terms')||'{}');const names={101:'月结',102:'双月结',103:'三月结',201:'周结',202:'到港前结',203:'签收月结',204:'到海外仓结',205:'签收结'};editFormData.contracts.forEach(c=>{const t=terms[customerName+'|'+c.contractCompany];if(t){c.paymentTerm=names[t.code];c.daysOrDate=t.daysOrDate;}});}catch(e){ElMessage.warning('读取已保存账期失败');}
+                            }
                         }, 100);
                     }
                 });

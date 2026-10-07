@@ -156,16 +156,22 @@
                         <el-table-column label="账户名称" min-width="130">
                             <template #default="scope">{{ accountNameOf(scope.row.entityName, scope.row.currency) }}</template>
                         </el-table-column>
-                        <el-table-column label="充值金额" min-width="120" align="right">
+                        <el-table-column label="客户申请金额" min-width="130" align="right">
                             <template #default="scope">
                                 {{ currencySymbol(scope.row.currency) }}{{ formatMoney(scope.row.amount) }}
                             </template>
                         </el-table-column>
-                        <el-table-column prop="bankAccount" label="打款账户" min-width="200" show-overflow-tooltip></el-table-column>
+                        <el-table-column label="审核确认金额" min-width="130" align="right">
+                            <template #default="scope">{{ scope.row.confirmedAmount == null ? '—' : currencySymbol(scope.row.currency) + formatMoney(scope.row.confirmedAmount) }}</template>
+                        </el-table-column>
+                        <el-table-column label="最终确认打款账户" min-width="220" show-overflow-tooltip><template #default="scope">{{ scope.row.confirmedBankAccount || scope.row.bankAccount }}</template></el-table-column>
                         <el-table-column prop="status" label="状态" min-width="90" align="center">
                             <template #default="scope">
                                 <el-tag :type="scope.row.status === '已通过' ? 'success' : (scope.row.status === '待审核' ? 'warning' : 'danger')" size="small">{{ scope.row.status }}</el-tag>
                             </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="90" fixed="right" align="center">
+                            <template #default="scope"><el-button link type="primary" size="small" @click="openRechargeDetail(scope.row)">详情</el-button></template>
                         </el-table-column>
                     </el-table>
                 </el-tab-pane>
@@ -229,6 +235,9 @@
                         </template>
                     </el-upload>
                 </el-form-item>
+                <el-form-item label="客户备注" prop="customerRemark">
+                    <el-input v-model="rechargeForm.customerRemark" type="textarea" :rows="3" maxlength="200" show-word-limit placeholder="请输入本次充值说明（非必填）"></el-input>
+                </el-form-item>
                 <div style="background: #f8f9fa; border-radius: 4px; padding: 12px 16px; color: #909399; font-size: 13px; line-height: 1.6;">
                     温馨提示：提交后财务将线下核对银行流水，审核通过后资金入账到对应钱包。审核通过前不会增加钱包余额。充值主体与币种仅显示您已开通的资金账户；如需开通其他主体或币种，请联系财务。
                 </div>
@@ -239,6 +248,15 @@
                     <el-button type="primary" @click="submitRecharge">提交充值申请</el-button>
                 </span>
             </template>
+        </el-dialog>
+        <el-dialog v-model="rechargeDetailVisible" title="充值记录详情" width="680px" destroy-on-close>
+            <div v-if="currentRechargeRecord">
+                <div class="section-title">充值信息</div>
+                <el-row :gutter="20"><el-col :span="12"><b>客户申请金额</b><div>{{ currencySymbol(currentRechargeRecord.currency) }}{{ formatMoney(currentRechargeRecord.amount) }}</div></el-col><el-col :span="12"><b>审核确认金额</b><div>{{ currentRechargeRecord.confirmedAmount == null ? '—' : currencySymbol(currentRechargeRecord.currency) + formatMoney(currentRechargeRecord.confirmedAmount) }}</div></el-col></el-row>
+                <el-row :gutter="20" style="margin-top:16px"><el-col :span="12"><b>审核结果</b><div>{{ currentRechargeRecord.status }}</div></el-col><el-col :span="12"><b>审核人及审核时间</b><div>{{ currentRechargeRecord.reviewer || '—' }} {{ currentRechargeRecord.reviewTime || '' }}</div></el-col></el-row>
+                <div class="section-title">备注</div><div><b>客户备注：</b>{{ currentRechargeRecord.customerRemark || '—' }}</div><div style="margin-top:12px"><b>审核备注：</b>{{ currentRechargeRecord.reviewRemark || '—' }}</div>
+            </div>
+            <template #footer><el-button @click="rechargeDetailVisible = false">关闭</el-button></template>
         </el-dialog>
     </div>
 
@@ -330,11 +348,11 @@
 
                 // === 充值记录 ===
                 const rechargeRecords = reactive([
-                    { applyNo: 'FD20260827001', time: '2026-08-27 10:23', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, bankAccount: '广州飞点-招商银行深圳分行(7559 1234 5678)', status: '已通过' },
-                    { applyNo: 'FD20260815001', time: '2026-08-15 09:58', entityName: '广东飞点', currency: 'CNY', amount: 800.00, bankAccount: '广东飞点-工商银行(4000 1111 2222)', status: '已通过' },
-                    { applyNo: 'FD20260825002', time: '2026-08-25 14:10', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', status: '已通过' },
-                    { applyNo: 'FD20260824003', time: '2026-08-24 09:45', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, bankAccount: '香港富力顿-汇丰银行(HSBC 123-456-789)', status: '已通过' },
-                    { applyNo: 'FD20260822004', time: '2026-08-22 16:30', entityName: '广州飞点', currency: 'USD', amount: 1200.00, bankAccount: '广州飞点-中国银行美元户(6217 8888 6666)', status: '已通过' }
+                    { applyNo: 'FD20260827001', time: '2026-08-27 10:23', entityName: '广州飞点', currency: 'CNY', amount: 3000.00, confirmedAmount: 2800.00, bankAccount: '客户原选-广州飞点招商银行(7559 1234 5678)', confirmedBankAccount: '深圳飞点-工商银行(4000 1111 2222)', status: '已通过', customerRemark: '用于本周海运账单预存', reviewRemark: '按到账金额确认；调整至实际到账账户', reviewer: '张珊', reviewTime: '2026-08-27 11:06' },
+                    { applyNo: 'FD20260815001', time: '2026-08-15 09:58', entityName: '广东飞点', currency: 'CNY', amount: 800.00, confirmedAmount: 800.00, bankAccount: '广东飞点-工商银行(4000 1111 2222)', status: '已通过', customerRemark: '', reviewRemark: '', reviewer: '李伟', reviewTime: '2026-08-15 10:20' },
+                    { applyNo: 'FD20260825002', time: '2026-08-25 14:10', entityName: '深圳飞点', currency: 'CNY', amount: 3200.00, confirmedAmount: 3200.00, bankAccount: '深圳飞点-招商银行(7559 2222 3333)', status: '已通过', customerRemark: '', reviewRemark: '', reviewer: '张珊', reviewTime: '2026-08-25 15:02' },
+                    { applyNo: 'FD20260824003', time: '2026-08-24 09:45', entityName: '香港富力顿', currency: 'HKD', amount: 15000.00, confirmedAmount: 15000.00, bankAccount: '香港富力顿-汇丰银行(HSBC 123-456-789)', status: '已通过', customerRemark: '', reviewRemark: '', reviewer: '张珊', reviewTime: '2026-08-24 10:12' },
+                    { applyNo: 'FD20260822004', time: '2026-08-22 16:30', entityName: '广州飞点', currency: 'USD', amount: 1200.00, confirmedAmount: 1200.00, bankAccount: '广州飞点-中国银行美元户(6217 8888 6666)', status: '已通过', customerRemark: '', reviewRemark: '', reviewer: '李伟', reviewTime: '2026-08-22 17:05' }
                 ]);
 
                 // === 充值弹窗 ===
@@ -348,6 +366,7 @@
                     bankAccountId: null,
                     voucher: '',
                     payTime: ''
+                    ,customerRemark: ''
                 });
                 const rechargeRules = {
                     entityName: [{ required: true, message: '请选择充值主体', trigger: 'change' }],
@@ -357,6 +376,9 @@
                     voucher: [{ required: true, message: '请上传打款凭证', trigger: 'change' }],
                     payTime: [{ required: true, message: '请选择支付时间', trigger: 'change' }]
                 };
+                const rechargeDetailVisible = ref(false);
+                const currentRechargeRecord = ref(null);
+                const openRechargeDetail = (row) => { currentRechargeRecord.value = row; rechargeDetailVisible.value = true; };
 
                 const availableBankAccounts = computed(() => {
                     return bankAccounts.filter(a => a.entityName === rechargeForm.entityName && a.currency === rechargeForm.currency && a.visible && a.status === '启用');
@@ -425,6 +447,7 @@
                     rechargeForm.bankAccountId = null;
                     rechargeForm.voucher = '';
                     rechargeForm.payTime = '';
+                    rechargeForm.customerRemark = '';
                     voucherList.value = [];
                     rechargeVisible.value = true;
                 };
@@ -446,6 +469,8 @@
                         entityName: rechargeForm.entityName,
                         currency: rechargeForm.currency,
                         amount: rechargeForm.amount,
+                        confirmedAmount: null,
+                        customerRemark: rechargeForm.customerRemark,
                         bankAccount: bank ? bank.name : '',
                         payTime: rechargeForm.payTime,
                         status: '待审核'
@@ -463,6 +488,7 @@
                     flowTypes, flowSearch, filteredFlows, flowTypeTag, payTimeOf,
                     handleFlowSearch, resetFlowSearch,
                     rechargeRecords,
+                    rechargeDetailVisible, currentRechargeRecord, openRechargeDetail,
                     rechargeVisible, rechargeFormRef, rechargeForm, rechargeRules,
                     voucherList, availableBankAccounts,
                     rechargeEntityOptions, rechargeCurrencyOptions,

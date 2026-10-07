@@ -2310,11 +2310,6 @@
                                             </el-table-column>
                                             <el-table-column prop="remark" label="备注" min-width="150" show-overflow-tooltip></el-table-column>
                                             <el-table-column prop="pickTime" label="拣货时间" width="140" align="center"><template #default="scope">{{ scope.row.pickTime || '—' }}</template></el-table-column>
-                                            <el-table-column label="操作" width="70" align="center" class-name="fee-op-cell">
-                                                <template #default="scope">
-                                                    <el-button link type="primary" size="small" @click="openFeeArDetail(scope.row)">详情</el-button>
-                                                </template>
-                                            </el-table-column>
                                         </el-table>
                                     </el-tab-pane>
                                     <el-tab-pane label="应付">
@@ -2774,30 +2769,6 @@
                 <el-form-item label="是否用户可见"><el-radio-group v-model="podVisible"><el-radio label="否">否</el-radio><el-radio label="是">是</el-radio></el-radio-group></el-form-item>
             </el-form>
             <template #footer><el-button @click="dialogSupPod = false">取消</el-button><el-button type="primary">抓取</el-button></template>
-        </el-dialog>
-
-        <!-- 应收流水行详情：来源规则下钻（运单审计用） -->
-        <el-dialog :model-value="!!feeArDetail" title="流水详情" width="720px" append-to-body @update:model-value="feeArDetail = null">
-            <el-descriptions v-if="feeArDetail" :column="2" border size="small">
-                <el-descriptions-item label="费用类型">{{ feeArDetail.type }}</el-descriptions-item>
-                <el-descriptions-item label="金额（原币）">{{ feeArDetail.currency }} {{ feeAmountText(feeArDetail) }}</el-descriptions-item>
-                <el-descriptions-item label="金额（本币）">¥ {{ cnyFormat(flowCnyValue(feeArDetail)) }}</el-descriptions-item>
-                <el-descriptions-item label="来源类型">{{ feeArDetail.sourceType === 20 ? '人工添加' : '系统自动计算' }}</el-descriptions-item>
-                <el-descriptions-item label="描述" :span="2">{{ feeArDetail.description || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="数据来源">{{ feeArDetail.source || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="来源规则类型">{{ feeArDetail.sourceRuleType ? feeRuleTypeLabel(feeArDetail.sourceRuleType) : '—' }}</el-descriptions-item>
-                <el-descriptions-item label="来源规则ID">{{ feeArDetail.sourceRuleId || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="生成节点">{{ generateNodeLabel(feeArDetail) }}</el-descriptions-item>
-                <el-descriptions-item label="来源规则名（快照）" :span="2">{{ feeArDetail.sourceRuleName || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="创建人">{{ feeArDetail.createdBy || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="拣货时间">{{ feeArDetail.pickTime || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="内部备注" :span="2">{{ feeArDetail.remark || '—' }}</el-descriptions-item>
-                <el-descriptions-item label="关联账单" :span="2">
-                    <el-tag v-if="feeArDetail.billNo" size="small" type="warning">{{ feeArDetail.billNo }}</el-tag>
-                    <span v-else style="color:var(--el-text-color-secondary);">未关联账单（仍在账单草稿池）</span>
-                </el-descriptions-item>
-            </el-descriptions>
-            <template #footer><el-button @click="feeArDetail = null">关闭</el-button></template>
         </el-dialog>
 
         <!-- 新增基础数据弹窗集合 -->
@@ -5461,11 +5432,8 @@
                 // 收货完成时由系统生成：运费（预置费用类型）→ 运费优惠 / 泡比优惠（费用类型取优惠规则配置的）→ 附加费（匹配动作类型=加收费用的规则）→ 附加费优惠
                 // 每条流水留痕来源规则，供运单审计下钻「这笔钱是哪条规则给的」；生成后进入账单草稿池（未关联账单即停留池内）
                 const feeArFlows = ref([
-                    { id: 9001, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 10.00, unit: 'KG', quantity: 120, amount: 1200.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价', remark: '当周公布价 × 计费重量；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
-                    { id: 9002, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费优惠', kindLabel: '运费优惠', currency: 'CNY', unitPrice: -1.00, unit: 'KG', quantity: 120, amount: -120.00, rate: 1, description: '运费优惠：S 级客户特批 -1.00/KG', remark: '客户特批（S 级客户）', pickTime: '2026-04-14 16:20', source: '特批规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 20, sourceRuleId: 5021, sourceRuleName: 'S级客户运费特批 -1.00/KG' },
-                    { id: 9003, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '泡比优惠', kindLabel: '泡比优惠', currency: 'CNY', unitPrice: -0.50, unit: 'KG', quantity: 120, amount: -60.00, rate: 1, description: '泡比优惠：泡比 360 ≥ 阈值 300，-0.50/KG', remark: '泡比 360 ≥ 阈值 300', pickTime: '2026-04-14 16:20', source: '泡比规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 30, sourceRuleId: 6012, sourceRuleName: '密度阈值300 泡比优惠 -0.50/KG' },
-                    { id: 9004, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 20.00, unit: 'KG', quantity: 5, amount: 100.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG', remark: '拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
-                    { id: 9005, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '附加费优惠', kindLabel: '附加费优惠', currency: 'CNY', unitPrice: -5.00, unit: 'KG', quantity: 5, amount: -25.00, rate: 1, description: '附加费优惠：A 级客户附加费 -5.00/KG', remark: 'A 级客户附加费优惠', pickTime: '2026-04-14 16:20', source: '附加费优惠规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 50, sourceRuleId: 8011, sourceRuleName: 'A级客户附加费优惠 -5.00/KG' },
+                    { id: 9001, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '运费', kindLabel: '运费', currency: 'CNY', unitPrice: 8.50, publishedPrice: 10, unit: 'KG', quantity: 120, amount: 1020.00, rate: 1, description: '美森360 快船 · 广州 → ONT8 · 100-500KG 段公布价（已并进运费优惠 -1.00 + 泡比优惠 -0.50）', remark: '最终单价 = 公布价 10 + 运费优惠 -1 + 泡比优惠 -0.5 = 8.5/KG；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '报价', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 10, sourceRuleId: 10231, sourceRuleName: '美森360/ONT8/100-500KG' },
+                    { id: 9004, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '超重费', kindLabel: '附加费', currency: 'CNY', unitPrice: 15.00, unit: 'KG', quantity: 5, amount: 75.00, rate: 1, description: '超重费：单箱实测 28KG 超阈值 25KG（已并进附加费优惠 -5.00）', remark: '最终单价 = 规则单价 20 + 附加费优惠 -5 = 15/KG；拣货实测触发', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 20, sourceRuleType: 40, sourceRuleId: 7011, sourceRuleName: '超重超长（字段&公式）· 按箱实测' },
                     { id: 9006, auditStatus: '已审计', billNo: 'AR-GZ-202608-00001', type: '库内贴标费', kindLabel: '附加费', currency: 'CNY', unitPrice: 0.50, unit: '张', quantity: 100, amount: 50.00, rate: 1, description: '库内贴标费：贴标 100 张', remark: '贴标100张（字段匹配型）；本行 8 月已随当期账单出账（同票其余流水 9 月成账）', pickTime: '2026-04-14 16:20', source: '附加费规则', sourceType: 10, createdBy: '系统自动', createdAt: '2026-04-13 10:00', generateNode: 10, sourceRuleType: 40, sourceRuleId: 7002, sourceRuleName: '库内贴标费（字段匹配）· 0.50/张' },
                     { id: 9007, auditStatus: '已审计', billNo: 'AR-GZ-202609-00001', type: '报关费', kindLabel: '人工添加', currency: 'CNY', unitPrice: 120.00, unit: '票', quantity: 1, amount: 120.00, rate: 1, description: '客户追加报关服务', remark: '业务手工新增；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
                     ,{ id: 9008, auditStatus: '已审计', billNo: 'AR-GZ-202609-00002', type: '报关费', kindLabel: '人工添加', currency: 'USD', unitPrice: 100.00, unit: '票', quantity: 1, amount: 100.00, rate: 7.1000, description: '海外报关代垫（USD 计价）', remark: '客户指定 USD 结算，按 7.1000 折合；09-08 审计通过，9 月手工成账', pickTime: '2026-04-14 16:20', source: '李四', sourceType: 20, createdBy: '李四', createdAt: '2026-04-14 09:30', generateNode: 30 }
@@ -5538,12 +5506,15 @@
                     }
                 })();
                 // 当前运单的流水（费用 tab 表绑定这些；已下单 / 收货中为空数组 → 页面无流水）
-                // 销售成本流水 = 应收流水的物理复制（费用类型「费用方向」含「销售成本」：运费 / 头程海运费 / 周六派送费）
+                // 销售成本流水 = 取运价公布价 + 附加费规则直接计算（费用类型「收付类型」含「销售成本」：运费 / 头程海运费 / 周六派送费）
                 tableData.value.forEach(w => {
                     if (Array.isArray(w.arFlows)) {
                         w.costFlows = w.arFlows
                             .filter(f => ['运费', '头程海运费', '周六派送费'].includes(f.type))
-                            .map(f => Object.assign({}, f, { id: (f.id || 0) + 100000 }));
+                            .map(f => {
+                                const p = f.publishedPrice != null ? f.publishedPrice : f.unitPrice;
+                                return Object.assign({}, f, { id: (f.id || 0) + 100000, unitPrice: p, amount: Number((p * (f.quantity || 0)).toFixed(2)) });
+                            });
                     }
                 });
                 const currentArFlows = computed(() => (currentRow.value && currentRow.value.arFlows) || []);
@@ -5568,14 +5539,6 @@
                     return `≈ CNY ${cnyFormat(flows.reduce((s, f) => s + flowCnyValue(f), 0))}`;
                 };
                 const rowDirSubtotalText = (r, dir) => { const subs = rowCurrencySubtotals(r, dir); return Object.keys(subs).map(c => `${c} ${cnyFormat(subs[c])}`).join(' / '); };
-
-                // 生成节点 / 来源规则类型标签（行详情用）
-                const generateNodeLabel = (row) => ({ 10: '收货完成', 20: '拣货完成', 30: '人工添加' }[row && row.generateNode] || '—');
-                const feeRuleTypeLabel = (t) => ({ 10: '运价行', 20: '运费优惠规则', 30: '泡比优惠规则', 40: '附加费规则', 50: '附加费优惠规则' }[t] || '—');
-
-                // 行详情：来源规则 / 数据来源 / 创建人 / 创建时间 / 生成节点 —— 运单审计下钻「这笔钱是哪条规则给的」
-                const feeArDetail = ref(null);
-                const openFeeArDetail = (row) => { feeArDetail.value = row; };
 
                 const handleSelectionChange = (val) => { selection.value = val; };
                 const isEditMode = ref(false);
@@ -5787,7 +5750,7 @@
                     podStatus, podVisible, buyInsurance, fileVisible, feeArFlows, feeApFlows,
                     feeArNet, feeApNet, feeCostNet, feeAmountText,
                     currentArFlows, currentApFlows, currentCostFlows, rowArTotal, rowApTotal, rowDirFlows, flowRate, flowCnyValue, cnyFormat, rowHasRate, rowMultiCurrency, rowDirTotalText, rowDirSubtotalText,
-                    feeArDetail, openFeeArDetail, FEE_ALLOWED_STATES, generateNodeLabel, feeRuleTypeLabel, waybillFeeAudited,
+                    FEE_ALLOWED_STATES, waybillFeeAudited,
                     pickupAction, pickupVol, pickupBoxes, pickupWeight, pickupAddresses, addPickupAddress, removePickupAddress, insurancePlan, insuranceProduct, insuranceAmount, insuranceRate, premium,
                     fbaOptions, otherOptions, privateOptions, vatOptions, getSelectedAddrIsNew, getSelectedVatIsNew,
                     formAddFba, formAddOther, formAddPrivate, formAddVat, formAddSku, formEditSkuDetail,
