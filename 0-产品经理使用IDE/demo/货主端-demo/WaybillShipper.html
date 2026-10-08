@@ -355,7 +355,7 @@
                                 <div style="font-weight: bold; font-size: 16px;">基本信息</div>
                             </template>
                             <el-row :gutter="20">
-                                <el-col :span="12"><el-form-item label="服务" required><el-select v-model="formCreate.service" style="width:100%"><el-option label="干线-尾程-包税" value="1"></el-option></el-select></el-form-item></el-col>
+                                <el-col :span="12"><el-form-item label="服务" required><el-select v-model="formCreate.service" style="width:100%" :disabled="isEditMode && billingRestricted"><el-option label="干线-尾程-包税" value="1"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8"><el-form-item label="申报币种" required><el-select v-model="formCreate.currency" style="width:100%"><el-option v-for="c in ['USD', 'CNY', 'EUR', 'GBP', 'JPY', 'KRW', 'MXN', 'NZD', 'SGD', 'THB', 'TWD', 'VND']" :key="c" :label="c" :value="c"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8"><el-form-item label="客户单号"><el-input v-model="formCreate.customerNo" placeholder="请输入客户单号"></el-input></el-form-item></el-col>
                                 <el-col :span="16"><el-form-item label="备注"><el-input v-model="formCreate.remark" placeholder="请输入备注"></el-input></el-form-item></el-col>
@@ -372,12 +372,12 @@
                             <el-row :gutter="20">
                                 <el-col :span="24">
                                     <el-form-item label="是否FBA仓">
-                                        <el-radio-group v-model="formCreate.isFba"><el-radio label="是" value="是"></el-radio><el-radio label="否" value="否"></el-radio></el-radio-group>
+                                        <el-radio-group v-model="formCreate.isFba" :disabled="isEditMode && billingRestricted"><el-radio label="是" value="是"></el-radio><el-radio label="否" value="否"></el-radio></el-radio-group>
                                     </el-form-item>
                                 </el-col>
                                 <el-col :span="8">
                                     <el-form-item label="地址简称" required>
-                                        <el-select v-model="formCreate.addrShort" @change="handleAddrChange" style="width:100%" placeholder="请选择或新增地址">
+                                        <el-select v-model="formCreate.addrShort" @change="handleAddrChange" style="width:100%" placeholder="请选择或新增地址" :disabled="isEditMode && billingRestricted">
                                             <template v-if="formCreate.isFba === '是'">
                                                 <el-option v-for="opt in fbaOptions" :key="opt.value" :label="opt.label" :value="opt.value"></el-option>
                                                 <el-option label="+ 新增FBA仓库信息" value="NEW_FBA" style="color: var(--el-color-primary); font-weight: bold;"></el-option>
@@ -426,7 +426,7 @@
                             <el-row :gutter="20">
                                 <el-col :span="24">
                                     <el-form-item label="是否包含FBA运单">
-                                        <el-radio-group v-model="formCreate.hasFbaOrder">
+                                        <el-radio-group v-model="formCreate.hasFbaOrder" :disabled="isEditMode && billingRestricted">
                                             <el-radio :label="true" :value="true">是</el-radio>
                                             <el-radio :label="false" :value="false">否</el-radio>
                                         </el-radio-group>
@@ -435,7 +435,7 @@
                                 <el-col :span="12" v-if="!formCreate.hasFbaOrder">
                                     <el-form-item label="总件数">
                                         <div style="display:flex;align-items:center;gap:12px;">
-                                            <el-input v-model="formCreate.pieces" type="number" @change="handlePiecesChange" placeholder="请输入件数" style="width:200px;"></el-input>
+                                            <el-input v-model="formCreate.pieces" type="number" @change="handlePiecesChange" placeholder="请输入件数" style="width:200px;" :disabled="isEditMode && billingRestricted"></el-input>
                                             <span @click="dialogBoxTemplate=true" style="color:#2DA44E;font-size:12px;cursor:pointer;white-space:nowrap;">💡 箱数太多？试试便捷输入</span>
                                         </div>
                                     </el-form-item>
@@ -670,7 +670,7 @@
                                                                     </div>
                             </template>
                             <el-row :gutter="20">
-                                <el-col :span="8"><el-form-item label="报关方式"><el-select v-model="formCreate.declare" style="width:100%"><el-option label="普通报关" value="1"></el-option><el-option label="9710" value="9710"></el-option><el-option label="9810" value="9810"></el-option><el-option label="0110" value="0110"></el-option><el-option label="1039" value="1039"></el-option></el-select></el-form-item></el-col>
+                                <el-col :span="8"><el-form-item label="报关方式"><el-select v-model="formCreate.declare" style="width:100%" :disabled="isEditMode && billingRestricted"><el-option label="普通报关" value="1"></el-option><el-option label="9710" value="9710"></el-option><el-option label="9810" value="9810"></el-option><el-option label="0110" value="0110"></el-option><el-option label="1039" value="1039"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8"><el-form-item label="清关方式"><el-select v-model="formCreate.clear" style="width:100%"><el-option label="一般贸易清关" value="1"></el-option><el-option label="快件清关" value="2"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8"><el-form-item label="交货条款"><el-select v-model="formCreate.terms" style="width:100%"><el-option label="DDU" value="DDU"></el-option><el-option label="DDP" value="DDP"></el-option><el-option label="EXW" value="EXW"></el-option><el-option label="FOB" value="FOB"></el-option><el-option label="CFR" value="CFR"></el-option><el-option label="CIF" value="CIF"></el-option></el-select></el-form-item></el-col>
                                 <el-col :span="8">
@@ -698,7 +698,7 @@
                         <el-row :gutter="20">
                             <el-col :span="12">
                                 <el-form-item label="是否送货上门">
-                                    <el-radio-group v-model="formCreate.isDeliveryToDoor">
+                                    <el-radio-group v-model="formCreate.isDeliveryToDoor" :disabled="isEditMode && billingRestricted">
                                         <el-radio label="是" value="是"></el-radio>
                                         <el-radio label="否" value="否"></el-radio>
                                     </el-radio-group>
@@ -706,7 +706,7 @@
                             </el-col>
                             <el-col :span="12" v-if="formCreate.isDeliveryToDoor === '是'">
                                 <el-form-item label="交货站点">
-                                    <el-select v-model="formCreate.deliveryStation" style="width: 100%"><el-option label="花都仓" value="花都仓"></el-option><el-option label="义务仓" value="义务仓"></el-option><el-option label="澄海仓" value="澄海仓"></el-option><el-option label="东莞仓" value="东莞仓"></el-option><el-option label="中山仓" value="中山仓"></el-option></el-select>
+                                    <el-select v-model="formCreate.deliveryStation" style="width: 100%" :disabled="isEditMode && billingRestricted"><el-option label="花都仓" value="花都仓"></el-option><el-option label="义务仓" value="义务仓"></el-option><el-option label="澄海仓" value="澄海仓"></el-option><el-option label="东莞仓" value="东莞仓"></el-option><el-option label="中山仓" value="中山仓"></el-option></el-select>
                                 </el-form-item>
                             </el-col>
                         </el-row>
@@ -862,7 +862,7 @@
             </div>
             <template #footer>
                 <el-button @click="dialogEditFbaBox = false">取消</el-button>
-                <el-button type="primary" @click="dialogEditFbaBox = false">确认修改</el-button>
+                <el-button type="primary" @click="confirmBoxDialog('fba')">确认修改</el-button>
             </template>
         </el-dialog>
 
@@ -956,7 +956,7 @@
             </div>
             <template #footer>
                 <el-button @click="dialogEditNonFbaBox = false">取消</el-button>
-                <el-button type="primary" @click="dialogEditNonFbaBox = false">确认修改</el-button>
+                <el-button type="primary" @click="confirmBoxDialog('nonfba')">确认修改</el-button>
             </template>
         </el-dialog>
 
@@ -1176,6 +1176,7 @@
                     </div>
                 </div>
 
+                <el-alert v-if="billingRestricted" :title="billingBlockMessage" type="warning" :closable="false" show-icon></el-alert>
                 <!-- 主体内容 -->
                 <div class="detail-content">
                     <!-- 左侧：主要信息区 -->
@@ -1256,7 +1257,7 @@
                                     <div v-if="(currentRow && currentRow.billingType) !== 'cbm'" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 24px;">
                                         <div>
                                             <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">收费重 (kg)</div>
-                                            <el-input v-if="isOverviewEditing" v-model="editForm.chargeWeight" size="small" style="width:100px;" class="edit-input"></el-input>
+                                            <el-input v-if="isOverviewEditing" v-model="editForm.chargeWeight" size="small" style="width:100px;" class="edit-input" :disabled="billingRestricted"></el-input>
                                             <div v-else style="font-size: 20px; font-weight: bold; color: var(--el-color-primary);">{{ editForm.chargeWeight }}</div>
                                         </div>
                                         <div>
@@ -1284,7 +1285,7 @@
                                     <div v-else style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 24px;">
                                         <div>
                                             <div style="color: var(--el-text-color-regular); margin-bottom: 8px; font-size: 13px;">收费重 (m³)</div>
-                                            <el-input v-if="isOverviewEditing" v-model="editForm.chargeWeight" size="small" style="width:100px;" class="edit-input"></el-input>
+                                            <el-input v-if="isOverviewEditing" v-model="editForm.chargeWeight" size="small" style="width:100px;" class="edit-input" :disabled="billingRestricted"></el-input>
                                             <div v-else style="font-size: 20px; font-weight: bold; color: var(--el-color-primary);">{{ editForm.chargeWeight }}</div>
                                         </div>
                                         <div>
@@ -1326,7 +1327,7 @@
                                             <el-row :gutter="20">
                                                 <el-col :span="12">
                                                     <el-form-item label="服务">
-                                                        <el-select v-model="editForm.service" style="width: 100%" class="edit-input">
+                                                        <el-select v-model="editForm.service" style="width: 100%" class="edit-input" :disabled="billingRestricted">
                                                             <el-option v-for="s in serviceOptions" :key="s" :label="s" :value="s"></el-option>
                                                         </el-select>
                                                     </el-form-item>
@@ -1364,7 +1365,7 @@
                                             <el-row :gutter="20">
                                                 <el-col :span="12">
                                                     <el-form-item label="报关方式">
-                                                        <el-select v-model="editForm.declareWay" style="width: 100%" class="edit-input">
+                                                        <el-select v-model="editForm.declareWay" style="width: 100%" class="edit-input" :disabled="billingRestricted">
                                                             <el-option label="普通报关" value="普通报关"></el-option>
                                                             <el-option label="9710" value="9710"></el-option>
                                                             <el-option label="9810" value="9810"></el-option>
@@ -1459,7 +1460,7 @@
                                             <el-row :gutter="20">
                                                 <el-col :span="12">
                                                     <el-form-item label="地址简称">
-                                                        <el-select v-model="editForm.addrShort" @change="handleAddrChangeEdit" class="edit-input" style="width:100%">
+                                                        <el-select v-model="editForm.addrShort" @change="handleAddrChangeEdit" class="edit-input" style="width:100%" :disabled="billingRestricted">
                                                             <template v-if="editForm.isFba === '是'">
                                                                 <el-option v-for="opt in fbaOptions" :key="opt.value" :label="opt.label" :value="opt.value">
                                                                     <span style="float: left">{{ opt.label }}</span>
@@ -1499,7 +1500,7 @@
                                                 <el-col :span="12"><el-form-item label="国家"><el-input v-model="editForm.country" class="edit-input"></el-input></el-form-item></el-col>
                                                 <el-col :span="12"><el-form-item label="省/州"><el-input v-model="editForm.state" class="edit-input"></el-input></el-form-item></el-col>
                                                 <el-col :span="12"><el-form-item label="城市"><el-input v-model="editForm.city" class="edit-input"></el-input></el-form-item></el-col>
-                                                <el-col :span="12"><el-form-item label="邮编"><el-input v-model="editForm.zip" class="edit-input"></el-input></el-form-item></el-col>
+                                                <el-col :span="12"><el-form-item label="邮编"><el-input v-model="editForm.zip" class="edit-input" :disabled="billingRestricted"></el-input></el-form-item></el-col>
                                                 <el-col :span="24"><el-form-item label="详细地址"><el-input v-model="editForm.address" class="edit-input"></el-input></el-form-item></el-col>
                                             </el-row>
                                         </el-form>
@@ -1510,13 +1511,13 @@
                                         </template>
                                         <el-form :model="editForm" label-position="top" disabled class="read-only-form">
                                             <el-form-item label="是否送货上门">
-                                                <el-radio-group v-model="editForm.isDeliveryToDoor">
+                                                <el-radio-group v-model="editForm.isDeliveryToDoor" :disabled="billingRestricted">
                                                     <el-radio label="是">是</el-radio>
                                                     <el-radio label="否">否</el-radio>
                                                 </el-radio-group>
                                             </el-form-item>
                                             <el-form-item label="交货站点" v-if="editForm.isDeliveryToDoor === '是'">
-                                                <el-select v-model="editForm.deliveryStation" class="edit-input" style="width: 100%"><el-option label="花都仓" value="花都仓"></el-option><el-option label="义务仓" value="义务仓"></el-option><el-option label="澄海仓" value="澄海仓"></el-option><el-option label="东莞仓" value="东莞仓"></el-option><el-option label="中山仓" value="中山仓"></el-option></el-select>
+                                                <el-select v-model="editForm.deliveryStation" class="edit-input" style="width: 100%" :disabled="billingRestricted"><el-option label="花都仓" value="花都仓"></el-option><el-option label="义务仓" value="义务仓"></el-option><el-option label="澄海仓" value="澄海仓"></el-option><el-option label="东莞仓" value="东莞仓"></el-option><el-option label="中山仓" value="中山仓"></el-option></el-select>
                                             </el-form-item>
                                             <div v-if="editForm.isDeliveryToDoor === '是' && editForm.deliveryStation" style="border: 1px solid var(--el-border-color); padding: 12px; border-radius: 4px; background: #fafafa; font-size: 13px; color: var(--el-text-color-regular); line-height: 1.5;">
                                                 <div style="font-weight:bold; margin-bottom: 8px; color: var(--el-text-color-primary);">实际地址信息</div>
@@ -2068,25 +2069,29 @@
             <el-form label-width="100px">
                 <el-form-item label="运单号"><el-input disabled :value="selectedOrderNos.join(', ') || '未选择数据'"></el-input></el-form-item>
                 <el-row :gutter="20">
-                    <el-col :span="12"><el-form-item label="关联单号"><el-input placeholder="不修改勿填"></el-input></el-form-item></el-col>
+                    <el-col :span="12"><el-form-item label="关联单号"><el-input v-model="batchEditDraft.relNo" placeholder="不修改勿填"></el-input></el-form-item></el-col>
                     <el-col v-if="editPermChecks.service" :span="12">
                         <el-form-item label="服务组合">
-                            <el-select style="width:100%" placeholder="不修改勿选" clearable>
+                            <el-select v-model="batchEditDraft.service" style="width:100%" placeholder="不修改勿选" clearable>
                                 <el-option v-for="s in serviceOptions" :key="s" :label="s" :value="s"></el-option>
                             </el-select>
                         </el-form-item>
                     </el-col>
-                    <el-col v-if="editPermChecks.销售代表" :span="12"><el-form-item label="销售代表"><el-input placeholder="不修改勿填"></el-input></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.客服代表" :span="12"><el-form-item label="客服代表"><el-input placeholder="不修改勿填"></el-input></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.客服备注" :span="12"><el-form-item label="客服备注"><el-input placeholder="不修改勿填"></el-input></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.内部备注" :span="12"><el-form-item label="内部备注"><el-input placeholder="不修改勿填"></el-input></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.报关方式" :span="12"><el-form-item label="报关方式"><el-select style="width:100%" placeholder="不修改勿选" clearable><el-option label="普通报关" value="1"></el-option><el-option label="9710" value="2"></el-option><el-option label="9810" value="3"></el-option></el-select></el-form-item></el-col>
-                    <el-col v-if="editPermChecks.清关方式" :span="12"><el-form-item label="清关方式"><el-select style="width:100%" placeholder="不修改勿选" clearable><el-option label="一般贸易清关" value="1"></el-option><el-option label="快件清关" value="2"></el-option></el-select></el-form-item></el-col>
+                    <el-col v-if="editPermChecks.销售代表" :span="12"><el-form-item label="销售代表"><el-input v-model="batchEditDraft.sales" placeholder="不修改勿填"></el-input></el-form-item></el-col>
+                    <el-col v-if="editPermChecks.客服代表" :span="12"><el-form-item label="客服代表"><el-input v-model="batchEditDraft.cs" placeholder="不修改勿填"></el-input></el-form-item></el-col>
+                    <el-col v-if="editPermChecks.客服备注" :span="12"><el-form-item label="客服备注"><el-input v-model="batchEditDraft.cusRemark" placeholder="不修改勿填"></el-input></el-form-item></el-col>
+                    <el-col v-if="editPermChecks.内部备注" :span="12"><el-form-item label="内部备注"><el-input v-model="batchEditDraft.innerRemark" placeholder="不修改勿填"></el-input></el-form-item></el-col>
+                    <el-col v-if="editPermChecks.报关方式" :span="12"><el-form-item label="报关方式"><el-select v-model="batchEditDraft.declareWay" style="width:100%" placeholder="不修改勿选" clearable><el-option label="普通报关" value="1"></el-option><el-option label="9710" value="2"></el-option><el-option label="9810" value="3"></el-option></el-select></el-form-item></el-col>
+                    <el-col v-if="editPermChecks.清关方式" :span="12"><el-form-item label="清关方式"><el-select v-model="batchEditDraft.clearWay" style="width:100%" placeholder="不修改勿选" clearable><el-option label="一般贸易清关" value="1"></el-option><el-option label="快件清关" value="2"></el-option></el-select></el-form-item></el-col>
                 </el-row>
             </el-form>
+            <el-table v-if="batchEditFailures.length" :data="batchEditFailures" size="small">
+                <el-table-column prop="orderNo" label="失败运单" width="160"></el-table-column>
+                <el-table-column prop="reason" label="失败原因"></el-table-column>
+            </el-table>
             <template #footer>
                 <el-button @click="dialogEdit = false">取消</el-button>
-                <el-button type="primary" @click="dialogEdit = false">保存</el-button>
+                <el-button type="primary" @click="saveBatchEdit">保存</el-button>
             </template>
         </el-dialog>
 
@@ -2357,13 +2362,13 @@
             <div>
                 <el-form label-width="120px" inline>
                     <el-form-item label="是否包含FBA运单">
-                        <el-radio-group v-model="formCreate.hasFbaOrder">
+                        <el-radio-group v-model="formCreate.hasFbaOrder" :disabled="isEditMode && billingRestricted">
                             <el-radio :label="true">是</el-radio>
                             <el-radio :label="false">否</el-radio>
                         </el-radio-group>
                     </el-form-item>
                     <el-form-item label="总件数" v-if="!formCreate.hasFbaOrder">
-                        <el-input v-model="formCreate.pieces" type="number" style="width: 150px;" @change="handlePiecesChange"></el-input>
+                        <el-input v-model="formCreate.pieces" type="number" style="width: 150px;" @change="handlePiecesChange" :disabled="isEditMode && billingRestricted"></el-input>
                     </el-form-item>
                     <el-form-item label="FBA运单数" v-if="formCreate.hasFbaOrder">
                         <el-input :model-value="formCreate.fbaOrders.length" @update:model-value="generateFbaOrders" type="number" style="width: 150px;"></el-input>
@@ -3053,6 +3058,7 @@
                 };
 
                 const handleBatchAddSkuSubmit = () => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     const selectedBoxes = getActiveBoxes().filter(box => box.selected);
                     if (selectedBoxes.length === 0) {
                         ElMessage.warning('请先在表格中勾选需要添加SKU的货箱');
@@ -3237,10 +3243,12 @@
                 };
 
                 const addSku = (box) => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     box.skus.push({ sku: '', qty: '', cnName: '', enName: '', price: '', material: '', usage: '', brand: '', model: '', hsCode: '', attr: [] });
                 };
 
                 const removeSku = (box, index) => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     if (box.skus.length > 1) {
                         box.skus.splice(index, 1);
                     }
@@ -3325,6 +3333,7 @@
                 };
 
                 const handlePiecesChange = (val) => {
+                    if ((isEditMode.value || drawerDetail.value) && acceptedCreate && !permitBillingChange(!sameValue(acceptedCreate.pieces,val))) { formCreate.pieces=acceptedCreate.pieces; return; }
                     const currentBoxCount = formCreate.boxes.length;
                     
                     if (val > currentBoxCount) {
@@ -3343,7 +3352,7 @@
                 const boxViewMode = ref('view');
                 let boxEditBackup = null;
                 const beginBoxEdit = () => { boxEditBackup = JSON.stringify(listBoxes.value); boxViewMode.value = 'edit'; };
-                const saveBoxEdit = () => { boxEditBackup = null; boxViewMode.value = 'view'; };
+                const saveBoxEdit = () => { if (isEditMode.value || drawerDetail.value) { if (!saveBillingDraft('create')) return; } boxEditBackup = null; boxViewMode.value = 'view'; };
                 const cancelBoxEdit = () => {
                     if (boxEditBackup) {
                         const restored = JSON.parse(boxEditBackup);
@@ -3360,6 +3369,7 @@
                     return '';
                 };
                 const copyBox = (box) => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     const clone = JSON.parse(JSON.stringify(box));
                     const seq = listBoxes.value.length + 1;
                     clone.sysNo = genSysNo(seq);
@@ -3425,9 +3435,11 @@
                     }
                 };
                 const addFbaOrder = () => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     formCreate.fbaOrders.push({ fbaNo: '', poNo: '', boxCount: 1, boxes: [] });
                 };
                 const addFbaOrderForDetail = () => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     const idx = formCreate.fbaOrders.length;
                     const fbaNo = 'FBA' + String(idx + 1).padStart(2, '0');
                     const blankBox = {
@@ -3447,6 +3459,7 @@
                     // Sync FBA order's boxCount - kept simple; template generation handles the actual box creation
                 };
                 const applyTemplates = () => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     if (formCreate.hasFbaOrder) {
                         // FBA模式：为每个FBA运单按箱型模板生成箱子
                         let globalIdx = 1;
@@ -3508,13 +3521,14 @@
                     }
                 };
                 const applyTemplatesFromDialog = () => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     applyTemplates();
                     if (!formCreate.hasFbaOrder) { formCreate.pieces = formCreate.boxes.length; }
                     dialogBoxTemplate.value = false;
                 };
                 const openBoxEditDialog = () => { boxEditBackup = JSON.stringify(formCreate.boxes); dialogBoxEdit.value = true; };
                 const beginDialogBoxEdit = () => { if (!boxEditBackup) boxEditBackup = JSON.stringify(formCreate.boxes); };
-                const saveBoxEditAndClose = () => { boxEditBackup = null; dialogBoxEdit.value = false; };
+                const saveBoxEditAndClose = () => { if (isEditMode.value || drawerDetail.value) { if (!saveBillingDraft('create')) return; } boxEditBackup = null; dialogBoxEdit.value = false; };
                 const cancelBoxEditAndClose = () => {
                     if (boxEditBackup) {
                         formCreate.boxes = JSON.parse(boxEditBackup);
@@ -3523,6 +3537,7 @@
                     dialogBoxEdit.value = false;
                 };
                 const addBoxManual = () => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     const blankBox = {
                         sysNo: '',
                         fbaExtNo: '',
@@ -3557,6 +3572,7 @@
                     }
                 };
                 const removeBox = (box) => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     if (formCreate.hasFbaOrder) {
                         for (const fba of formCreate.fbaOrders) {
                             const idx = fba.boxes.indexOf(box);
@@ -3568,6 +3584,7 @@
                     }
                 };
                 const addFbaBoxSmart = (fba) => {
+                    if ((isEditMode.value || drawerDetail.value) && !permitBillingChange(true)) return;
                     const lastBox = fba.boxes.length > 0 ? fba.boxes[fba.boxes.length - 1] : null;
                     const seq = fba.boxes.length + 1;
                     fba.boxes.push({
@@ -3937,6 +3954,7 @@
                 };
                 const onBoxOpSelectionChange = (rows) => { boxOpSelected.value = rows; };
                 const confirmBoxCancelReturn = () => {
+                    if (!permitBillingChange(boxOpSelected.value.length>0)) return;
                     if (boxOpSelected.value.length === 0) { ElMessage.warning('请至少选择一个货箱'); return; }
                     const allBoxes = getAllDetailBoxes();
                     // 取消时检查至少保留一个货箱（权限矩阵 [4]）
@@ -3958,7 +3976,7 @@
                 const detailActiveTab = ref('fee');          // 默认停在「费用明细」
                 const detailRightCollapsed = ref(true);      // 轨迹追踪默认收起
                 const detailEditMode = ref('view'); // 'view' | 'box' | 'measure' | 'transfer'
-                const saveDetailEdit = () => { detailEditMode.value = 'view'; ElMessage.success('保存成功'); };
+                const saveDetailEdit = () => { if (!saveBillingDraft('create')) return; detailEditMode.value = 'view'; ElMessage.success('保存成功'); };
                 const cancelDetailEdit = () => { detailEditMode.value = 'view'; };
                 // 状态维度编辑权限（按钮A：编辑货箱根据状态动态收敛字段）
                 const editBoxStates = ['已下单','收货中','已收货','转运中','已到港'];
@@ -4165,6 +4183,7 @@
                         ElMessage.warning('请选择拣货仓库');
                         return;
                     }
+                    if (!permitBillingChange(measurementChanged(pickBoxes.value))) return;
                     // 将拣货数据写回原box
                     pickBoxes.value.forEach(pb => {
                         const allBoxes = [...formCreate.boxes, ...formCreate.fbaOrders.flatMap(f => f.boxes)];
@@ -4177,6 +4196,7 @@
                         }
                     });
                     dialogPick.value = false;
+                    saveBillingDraft('create');
                     ElMessage.success('拣货完成');
                 };
 
@@ -4196,6 +4216,7 @@
                     }));
                 };
                 const confirmEditMeasure = () => {
+                    if (!permitBillingChange(measurementChanged(editMeasureBoxes.value))) return;
                     editMeasureBoxes.value.forEach(em => {
                         const allBoxes = [...formCreate.boxes, ...formCreate.fbaOrders.flatMap(f => f.boxes)];
                         const box = allBoxes.find(b => b.sysNo === em.sysNo);
@@ -4207,6 +4228,7 @@
                         }
                     });
                     dialogEditMeasure.value = false;
+                    saveBillingDraft('create');
                     ElMessage.success('测量数据已保存');
                 };
 
@@ -4221,7 +4243,91 @@
                     isDeliveryToDoor: '是', deliveryStation: '花都仓', warehouseCode: 'ONT8'
                 });
 
+                // 仅本地交互演示；真实后台必须按财务 R1.13 在保存事务内校验。
+                const billingBlockMessage = '该运单存在已审计应收业务流水，不能修改影响费用计算的参数。';
+                const hasAuditedReceivable = (row) => (row?.arFlows || []).some(f => f.auditStatus === '已审计');
+                const billingRestricted = computed(() => hasAuditedReceivable(currentRow.value));
+                const copyDraft = (v) => JSON.parse(JSON.stringify(v));
+                const valueKey = (v) => {
+                    if (Array.isArray(v)) return v.map(valueKey);
+                    if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map(k => [k, valueKey(v[k])]));
+                    if (v === undefined || v === null || v === '') return '';
+                    return typeof v === 'boolean' ? v : String(v);
+                };
+                const sameValue = (a,b) => JSON.stringify(valueKey(a)) === JSON.stringify(valueKey(b));
+                // 只投影已有计费依赖字段，不把备注、联系人、附件或全部 SKU 字段纳入。
+                const billingKeys = ['service','user','entityName','isFba','hasFbaOrder','addr','addrShort','warehouseCode','zipcode','zip','deliveryStation','isDeliveryToDoor','pieces','boxes','chargeWeight','realWeight','volWeight','volume','ratio','declare','declareWay','exportInspectFirst','isPrivateAddr'];
+                const boxBilling = b => ({sysNo:b.sysNo, weight:b.weight, length:b.length, width:b.width, height:b.height,
+                    pickWeight:b.pickWeight, pickLength:b.pickLength, pickWidth:b.pickWidth, pickHeight:b.pickHeight,
+                    skus:(b.skus||[]).map(k => ({sku:k.sku,qty:k.qty,attr:k.attr}))});
+                const billingProjection = draft => {
+                    const result = Object.fromEntries(billingKeys.filter(k => k in draft && k !== 'boxes').map(k => [k,draft[k]]));
+                    if (Array.isArray(draft.boxes)) result.boxes=draft.boxes.map(boxBilling);
+                    else if ('boxes' in draft) result.boxes=draft.boxes;
+                    if (draft.fbaOrders) result.fbaOrders=draft.fbaOrders.map(f => ({boxCount:f.boxCount,boxes:(f.boxes||[]).map(boxBilling)}));
+                    return result;
+                };
+                let acceptedCreate = null, acceptedOverview = null;
+                const captureBillingDraft = () => {
+                    acceptedCreate=copyDraft(formCreate); acceptedOverview=copyDraft(editForm);
+                };
+                const permitBillingChange = (changed, row=currentRow.value) => {
+                    // 每次提交读取当前流水，故页面打开后审计状态变化也会被拦截。
+                    if (changed && hasAuditedReceivable(row)) { ElMessage.error(billingBlockMessage); return false; }
+                    return true;
+                };
+                const saveBillingDraft = (kind) => {
+                    const draft=kind==='overview'?editForm:formCreate;
+                    const before=kind==='overview'?acceptedOverview:acceptedCreate;
+                    const changed=!!before && !sameValue(billingProjection(before),billingProjection(draft));
+                    if (!permitBillingChange(changed)) {
+                        // 整次提交拒绝，不部分保存；恢复此前接受的草稿，包括非计费修改。
+                        Object.keys(draft).forEach(k => delete draft[k]); Object.assign(draft,copyDraft(before));
+                        return false;
+                    }
+                    if (changed) {
+                        // 仅已有模拟单价/单位的算术演示，不实现真实取价、优惠或后台校验。
+                        const boxes=[...formCreate.boxes,...formCreate.fbaOrders.flatMap(f=>f.boxes)];
+                        const charge=kind==='overview'?Number(editForm.chargeWeight):boxes.reduce((n,b)=>n+Math.max(Number(b.pickWeight||b.weight)||0,((Number(b.pickLength||b.length)||0)*(Number(b.pickWidth||b.width)||0)*(Number(b.pickHeight||b.height)||0))/6000),0);
+                        const volume=kind==='overview'?Number(editForm.volume):boxes.reduce((n,b)=>n+((Number(b.pickLength||b.length)||0)*(Number(b.pickWidth||b.width)||0)*(Number(b.pickHeight||b.height)||0))/1000000,0);
+                        (currentRow.value.arFlows||[]).forEach(f=>{
+                            if(f.sourceType!==10 || f.auditStatus==='已审计' || f.billNo) return;
+                            const quantity={KG:charge,CBM:volume,'箱':boxes.length,'票':1}[f.unit];
+                            if(Number.isFinite(quantity)) { f.quantity=quantity; f.amount=Number((Number(f.unitPrice)*quantity).toFixed(2)); }
+                        });
+                        ElMessage.info('本地算术演示：自动行刷新计费量及金额，人工行保留；真实计费不在本原型执行');
+                    }
+                    if(kind==='overview') { currentRow.value.overviewDraft=copyDraft(draft); currentRow.value.service=draft.service; }
+                    else currentRow.value.boxDraft=copyDraft(draft);
+                    if(kind==='overview') acceptedOverview=copyDraft(draft); else acceptedCreate=copyDraft(draft);
+                    return true;
+                };
+                const measurementChanged = rows => rows.some(m => {
+                    const box=[...formCreate.boxes,...formCreate.fbaOrders.flatMap(f=>f.boxes)].find(b=>b.sysNo===m.sysNo);
+                    return box && ['Weight','Length','Width','Height'].some(k=>!sameValue(box['pick'+k],m[k.toLowerCase()]));
+                });
+                const confirmBoxDialog = kind => {
+                    if (!saveBillingDraft('create')) return;
+                    if(kind==='fba') dialogEditFbaBox.value=false; else dialogEditNonFbaBox.value=false;
+                };
+
+                const batchEditDraft=reactive({service:'',declareWay:'',exportInspectFirst:'',innerRemark:'',relNo:'',sales:'',cs:'',cusRemark:'',clearWay:'',importDeclareMode:''});
+                const batchEditFailures=ref([]);
+                const saveBatchEdit=()=>{
+                    batchEditFailures.value=[];
+                    let saved=0;
+                    selection.value.forEach(row=>{
+                        const changed=['service','declareWay','exportInspectFirst'].some(k=>batchEditDraft[k]!==''&&!sameValue(row[k],batchEditDraft[k]));
+                        if(changed&&hasAuditedReceivable(row)) {batchEditFailures.value.push({orderNo:row.orderNo,reason:billingBlockMessage});return;}
+                        Object.entries(batchEditDraft).forEach(([k,v])=>{if(v!=='') row[k]=v;}); saved++;
+                    });
+                    ElMessage[batchEditFailures.value.length?'warning':'success'](`成功 ${saved} 票，失败 ${batchEditFailures.value.length} 票`);
+                    if(!batchEditFailures.value.length) dialogEdit.value=false;
+                };
+
+
                 const saveEdit = () => {
+                    if (!saveBillingDraft('overview')) return;
                     ElMessage.success('运单修改保存成功');
                     isEditing.value = false;
                 };
@@ -4231,6 +4337,7 @@
                 const overviewSaving = ref(false);
                 const overviewSnapshot = reactive({ service:'', currency:'', vat:'', country:'' });
                 const startOverviewEdit = () => {
+                    acceptedOverview=copyDraft(editForm);
                     // 快照当前值，用于保存时判断变化
                     Object.assign(overviewSnapshot, {
                         service: editForm.service, currency: editForm.currency,
@@ -4239,12 +4346,14 @@
                     isOverviewEditing.value = true;
                 };
                 const cancelOverviewEdit = () => {
+                    if(acceptedOverview) Object.assign(editForm,copyDraft(acceptedOverview));
                     isOverviewEditing.value = false;
                 };
                 const saveOverviewEdit = () => {
                     const e = editForm;
                     const s = overviewSnapshot;
 
+                    if (!permitBillingChange(!sameValue(billingProjection(acceptedOverview),billingProjection(editForm)))) return;
                     // 联动校验链（简化版，完整校验需后端配合）
                     // L01: 审计锁 — 终态不可改服务
                     if (e.service !== s.service && ['已签收','退件','已取消'].includes(currentRow.value?.status)) {
@@ -4269,6 +4378,7 @@
                         ElMessage.warning('收件国家已变更，请检查 VAT/EORI 和交货站点是否仍然适用');
                     }
 
+                    if (!saveBillingDraft('overview')) return;
                     isOverviewEditing.value = false;
                     ElMessage.success('运单修改保存成功');
                 };
@@ -4369,7 +4479,7 @@
                         清关方式: noneIn('已清关', '已到仓', '已签收', '已取消', '退件'),
                     };
                 });
-                const onEditDialogOpen = () => { /* 预留：弹窗打开时的初始化逻辑 */ };
+                const onEditDialogOpen = () => { Object.keys(batchEditDraft).forEach(k=>batchEditDraft[k]=''); batchEditFailures.value=[]; };
 
                 // Supplier
 
@@ -4489,6 +4599,8 @@
                 };
 
                 const handleSaveEditSkuDetail = () => {
+                    const oldSku=[...formCreate.boxes,...formCreate.fbaOrders.flatMap(f=>f.boxes)].flatMap(b=>b.skus||[]).find(k=>k.sku===formEditSkuDetail.sku);
+                    if(oldSku && !permitBillingChange(!sameValue(oldSku.attr,formEditSkuDetail.attr))) return;
                     if (!editSkuTarget.value) return;
                     const skuCode = formEditSkuDetail.sku;
                     if (!skuCode) { ElMessage.warning('SKU编码为空，无法保存'); return; }
@@ -4610,10 +4722,13 @@
                 const flowCnyValue = (f) => Number(((Number(f && f.amount) || 0) * (Number(f && f.rate) > 0 ? Number(f.rate) : 1)).toFixed(2));
                 const cnyFormat = (v) => { const n = Number(v) || 0; const abs = Math.abs(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); return (n < 0 ? '-' : '') + abs; };
 
+                tableData.value.find(r=>r.orderNo==='YD20260413005').arFlows=[{auditStatus:'已审计'},{auditStatus:'待业务审计'}];
+
                 const handleSelectionChange = (val) => { selection.value = val; };
                 const isEditMode = ref(false);
 
                 const openCreate = () => {
+                    currentRow.value={};
                     isEditMode.value = false;
                     boxInputMode.value = 'list';
                     boxTemplates.length = 0;
@@ -4626,8 +4741,10 @@
                 };
 
                 const openEdit = (row) => {
+                    openDetail(row); drawerDetail.value=false;
                     currentRow.value = row;
                     isEditMode.value = true;
+                    captureBillingDraft();
                     drawerCreate.value = true;
                 };
 
@@ -4693,6 +4810,9 @@
                     detailBoxPage.value = 1;
                     detailFbaBoxPage.value = 1;
                     detailFbaTab.value = 'all';
+                    if(row.boxDraft) Object.assign(formCreate,copyDraft(row.boxDraft));
+                    if(row.overviewDraft) Object.assign(editForm,copyDraft(row.overviewDraft));
+                    captureBillingDraft();
                     drawerDetail.value = true;
                 };
 
@@ -4763,6 +4883,7 @@
                 };
 
                 const handleSaveCreate = () => {
+                    if (isEditMode.value && !permitBillingChange(!sameValue(billingProjection(acceptedCreate),billingProjection(formCreate)))) return;
                     if (totalBoxes.value === 0) {
                         if (boxInputMode.value === 'template') {
                             ElMessage.warning('请先在箱型模板中点击「应用 → 生成装箱清单」');
@@ -4782,11 +4903,13 @@
                     setTimeout(() => {
                         submitLoading.value = false;
                         drawerCreate.value = false;
-                        ElMessage.success('运单创建成功');
+                        if (isEditMode.value && !saveBillingDraft('create')) { drawerCreate.value=true; return; }
+                        ElMessage.success(isEditMode.value?'运单修改保存成功':'运单创建成功');
                     }, 800);
                 };
 
                 return {
+                    batchEditDraft, batchEditFailures, saveBatchEdit, billingBlockMessage, billingRestricted, confirmBoxDialog,
                     statusTabs, activeStatusTab, filteredTableData, isSearchExpanded, search, allTableColumns, doSearch, doReset,
                     tableData, handleSelectionChange, hasSelection, selectedOrderNos,
                     drawerCreate, activeFbaTab, dialogBatchSku, submitLoading, batchSelectedSkus, getActiveBoxes, toggleAllFba, toggleAllNonFba, getSelectedBoxesCount, handleBatchSkuChange, handleBatchAddSkuSubmit, formCreate, handleSaveCreate, handlePiecesChange, handleAddrChange, handleAddrChangeEdit, handleVatChange, addBoxDetail, removeBoxDetail,
