@@ -72,9 +72,12 @@
 </head>
 <body>
     <div id="app" class="layout-container">
+
+
         <div class="main-container">
             <!-- ===================== 舱位管理模块 ===================== -->
             <div class="content-area">
+<details style="margin:12px;padding:10px;background:#f8fafc;border:1px solid #e5e7eb"><summary>应付去重演示</summary><el-button size="small" @click="runApDedupDemo">运行六个案例</el-button><div v-for="item in apDemoResults" :key="item">{{ item }}</div></details>
                 <!-- 搜索 -->
                 <div class="page-card search-area">
                     <el-form :inline="true" :model="spaceSearchForm" size="default">
@@ -942,11 +945,37 @@
     </div>
 
     <script>
+// 仅本地原型；sourceFlowNo 是现有来源关联的展示映射，不定义新数据库字段。
+window.LunaApDemo=(()=>{
+ const read=()=>{const s=JSON.parse(localStorage.getItem('luna-ap-demo-v1')||'{}');return {...s,flows:(s.flows||[]).map(f=>f.sourceType===30&&f.waybillNo&&!f.sourceFlowNo?{...f,sourceFlowNo:'来源:'+[(f.blNo||f.blAmortize||''),(f.feeType||f.type),(f.currency||'CNY')].join('|')}:f),sources:s.sources||[],bills:s.bills||[]}};
+ const save=s=>localStorage.setItem('luna-ap-demo-v1',JSON.stringify(s));
+ const norm=f=>({...f,id:f.id||f.flowNo,flowNo:f.flowNo||String(f.id),waybillNo:f.waybillNo||'',blNo:f.blNo||f.blAmortize||'',feeType:f.feeType||f.type,currency:f.currency||'CNY'});
+ const sourceId=f=>String(f.sourceFlowNo||f.flowNo||f.id);
+ const sk=f=>[f.blNo,f.feeType,f.currency].join('|'),fk=f=>[f.waybillNo,f.blNo||'',f.feeType,f.currency].join('|');
+ const sources=s=>{
+  const m=new Map();[...s.sources,...s.flows.filter(f=>f.sourceType===20||!f.waybillNo)].filter(f=>!f.cancelled).map(norm).filter(f=>f.blNo).forEach(f=>m.set(sourceId(f),f));
+  const groups=new Map();s.flows.filter(f=>!f.cancelled&&f.sourceType===30&&f.waybillNo).map(norm).forEach(f=>{const id=f.sourceFlowNo||'来源:'+sk(f);const g=groups.get(id)||{...f,flowNo:id,sourceFlowNo:id,waybillNo:'',amount:0,status:'已摊'};g.amount+=Number(f.amount||0);if(f.auditStatus==='已审计')g.auditStatus='已审计';if(f.billNo)g.billNo=f.billNo;groups.set(id,g)});groups.forEach((f,id)=>{if(![...m.values()].some(x=>sk(x)===sk(f)))m.set(id,f)});return [...m.values()];
+ };
+ const check=(s,items,exclude='')=>{const a=new Set(),b=new Set();for(const x of items){const f=norm(x),k=sk(f),j=fk(f);if(f.blNo&&(a.has(k)||sources(s).some(t=>sourceId(t)!==String(exclude)&&String(t.id)!==String(exclude)&&sk(t)===k)))return `提单 ${f.blNo} 的费用类型「${f.feeType}」、币种「${f.currency}」重复`;if(f.waybillNo&&(b.has(j)||s.flows.filter(t=>!t.cancelled).map(norm).some(t=>String(t.id)!==String(exclude)&&t.flowNo!==String(exclude)&&fk(t)===j)))return `运单 ${f.waybillNo}、提单 ${f.blNo||'无提单'} 的费用类型「${f.feeType}」、币种「${f.currency}」重复`;if(f.blNo)a.add(k);if(f.waybillNo)b.add(j)}return ''};
+ const allocate=(s,input,targets)=>{
+  const src=norm(input),id=sourceId(src),v=targets.reduce((a,w)=>a+Number(w.volume||0),0);if(!targets.length||v<=0)throw Error('无有效实收体积，不可平摊');if(targets.some(w=>w.apAuditStatus==='已审计'))throw Error('目标运单应付已整票审计，不可平摊');
+  const old=s.flows.filter(f=>!f.cancelled&&f.sourceFlowNo===id&&f.waybillNo);if(old.length){if(old.length===targets.length&&targets.every(w=>old.some(f=>f.waybillNo===w.waybillNo)))return old;throw Error('来源费用已有有效分摊，请先撤销对应来源')}
+  let acc=0;const children=targets.map((w,i)=>{const f={...src,id:id+':'+w.waybillNo,flowNo:id+':'+w.waybillNo,sourceFlowNo:id,waybillNo:w.waybillNo,sourceType:30,amortizeStatus:20,status:'已摊',auditStatus:'待业务审计',billNo:''};f.amount=Math.round((i===targets.length-1?Number(src.amount)-acc:Number(src.amount)*w.volume/v)*100)/100;acc+=f.amount;if(i===targets.length-1)f.description='含尾差（提单平摊）';if(s.flows.filter(t=>!t.cancelled).map(norm).some(t=>fk(t)===fk(f)))throw Error(`运单 ${f.waybillNo}、提单 ${f.blNo} 的费用类型「${f.feeType}」、币种「${f.currency}」重复`);return f});
+  s.sources=s.sources.filter(f=>sourceId(f)!==id);s.sources.push({...src,sourceFlowNo:id,status:'已摊'});s.flows=s.flows.filter(f=>sourceId(f)!==id||f.waybillNo);s.flows.push(...children);return children;
+ };
+ const reverse=(s,input,targets)=>{const src=norm(input),id=sourceId(src),children=s.flows.filter(f=>!f.cancelled&&f.sourceFlowNo===id&&f.waybillNo);if(children.some(f=>f.auditStatus==='已审计'||f.billNo)||targets.some(w=>w.apAuditStatus==='已审计'&&children.some(f=>f.waybillNo===w.waybillNo)))throw Error('对应明细已审计、已进账单或运单应付整票审计，不可撤销');s.flows=s.flows.filter(f=>f.sourceFlowNo!==id);s.sources=s.sources.filter(f=>sourceId(f)!==id);s.sources.push({...src,sourceFlowNo:id,status:'待摊'});s.flows.push({...src,sourceFlowNo:id,waybillNo:'',amortizeStatus:10,status:'待摊',auditStatus:''})};
+ const cases=()=>{const s={flows:[],sources:[],bills:[]},w=[{waybillNo:'运单A',volume:1,apAuditStatus:'未审计'}],b={id:'来源B',flowNo:'来源B',blNo:'提单B',feeType:'海运费',currency:'CNY',amount:100,sourceType:30},c={...b,id:'来源C',flowNo:'来源C',blNo:'提单C',amount:200};allocate(s,b,w);const count=s.flows.length;allocate(s,b,w);const repeat=s.flows.length===count,dup=check(s,[b]);allocate(s,c,w);const both=s.flows.map(f=>`${f.blNo} ${f.currency} ${f.feeType} ${f.amount}`).join('；'),manual=check(s,[{...b,id:'人工',waybillNo:'运单A',sourceType:20}]),empty=check(s,[{...b,id:'空提单',blNo:'',waybillNo:'运单A',sourceType:20}]);reverse(s,b,w);return [`① 两个提单分摊成功：${both}`,`② 同提单重复新增/导入阻止：${dup}`,`③ 重复分摊${repeat?'未新增流水':'异常'}`,`④ 已有B时C仍成功；无提单人工${empty?'被阻止':'仍允许'}`,`⑤ 人工挂靠阻止：${manual}`,`⑥ 撤销B后C金额仍为 ${s.flows.find(f=>f.blNo==='提单C'&&f.waybillNo).amount}，B退回待摊`]};
+ return {read,save,norm,sources,check,allocate,reverse,cases,sourceId};
+})();
+</script>
+<script>
         const { createApp, ref, reactive, computed } = Vue;
         const { ElMessage, ElMessageBox } = ElementPlus;
 
         const app = createApp({
             setup() {
+ const apDemoResults = Vue.ref([]);
+ const runApDedupDemo = () => { apDemoResults.value = LunaApDemo.cases(); };
                 const activeMenu = ref('2'); 
                 const handleMenuSelect = (index) => { activeMenu.value = index; };
                 const handleAction = (msg) => { ElMessage.success(msg); };
@@ -1169,9 +1198,9 @@
                         const total = f[1];
                         const isLast = i === fees.length - 1;
                         const amortized = ready || isLast; // 已摊完 → 全部已摊；未摊完 → 前几条待摊、最后一条已摊
-                        const amount = amortized ? Math.round(total * 0.15 * 100) / 100 : total;
+                        const amount = total; // 来源费用总额，分摊明细承接有效金额。
                         return Object.assign({}, base, {
-                            type, amount, supplier: supplierOf[type] || '中远海运',
+                            id: `${row.blNo}:${type}:CNY`, flowNo: `${row.blNo}:${type}:CNY`, sourceFlowNo: `${row.blNo}:${type}:CNY`, blNo: row.blNo, type, feeType: type, amount, supplier: supplierOf[type] || '中远海运',
                             oaNo: 'OA-2026-0901-' + String(oaSeed + i).padStart(3, '0'),
                             remark: amortized ? '已平摊到运单' : '',
                             status: amortized ? '已摊' : '待摊',
@@ -1186,7 +1215,7 @@
                         try { linkList = JSON.parse(localStorage.getItem('luna_ap_amortize_link') || '[]'); } catch (e) {}
                         const linked = (Array.isArray(linkList) ? linkList : []).filter(l => l.blNo === (row && row.blNo));
                         const linkRows = linked.length ? linked.map(l => Object.assign({}, base, {
-                            type: l.type, amount: l.amount, supplier: l.supplier, currency: l.currency,
+                            id: l.id, flowNo: l.flowNo || String(l.id), waybillNo: l.waybillNo, blNo: l.blNo, type: l.type, amount: l.amount, supplier: l.supplier, currency: l.currency,
                             rate: l.rate, remark: l.remark || '运单审计「添加应付」挂靠同步 · 提单侧只读',
                             oaNo: '', bizTime: l.bizTime || base.bizTime, createdAt: l.createdAt || base.createdAt,
                             status: '运单挂靠', billNo: '', flowAudited: false, sourceType: 20, auditStatus: ''
@@ -1198,7 +1227,18 @@
                         })];
                         rows.push(...linkRows);
                     }
-                    return rows;
+                    const state = LunaApDemo.read();
+                    const existing = LunaApDemo.sources(state).filter(f => f.blNo === row.blNo && f.sourceType === 30);
+                    if (!existing.length) {
+                        rows.filter(f => f.sourceType === 30).forEach(f => {
+                            if (f.status === '已摊') {
+                                LunaApDemo.allocate(state, f, amortizeWaybills);
+                                state.flows.filter(x => x.sourceFlowNo === f.sourceFlowNo).forEach(x => { x.auditStatus = f.auditStatus; x.billNo = f.billNo; });
+                            } else { state.sources.push(f); state.flows.push({ ...LunaApDemo.norm(f), waybillNo: '', amortizeStatus: 10 }); }
+                        });
+                        LunaApDemo.save(state);
+                    }
+                    return [...LunaApDemo.sources(state).filter(f => f.blNo === row.blNo && f.sourceType === 30).map(f => { const children = state.flows.filter(x => x.sourceFlowNo === LunaApDemo.sourceId(f) && x.waybillNo); return { ...f, type: f.feeType || f.type, auditStatus: children.some(x => x.auditStatus === '已审计') ? '已审计' : f.auditStatus, billNo: (children.find(x => x.billNo) || {}).billNo || f.billNo }; }), ...rows.filter(f => f.sourceType === 20)];
                 };
                 const financeData = ref([]);
                 const selectedFinanceRows = ref([]);
@@ -1208,7 +1248,7 @@
                     if (!selectedFinanceRows.value.length) { ElMessage.warning('请先勾选需要审计的应付流水'); return; }
                     const rows = selectedFinanceRows.value.filter(r => r.status === '已摊' && r.auditStatus !== '已审计');
                     if (!rows.length) { ElMessage.warning('勾选的行中没有可审计的已摊应付流水（待摊不可审计、已审计无需再审）'); return; }
-                    rows.forEach(r => { r.auditStatus = '已审计'; });
+                    if (!persistFinanceAudits(rows, '已审计')) return;
                     ElMessage.success(`已审计 ${rows.length} 条应付流水`);
                 };
                 const rowReverseAuditFinance = () => {
@@ -1217,7 +1257,7 @@
                     if (!rows.length) { ElMessage.warning('勾选的行中没有可反审计的已摊应付流水'); return; }
                     const billed = rows.filter(r => r.billNo);
                     if (billed.length) { ElMessage.warning(`应付流水「${billed.map(r => r.type).join('、')}」已关联账单，不可反审计`); return; }
-                    rows.forEach(r => { r.auditStatus = '待审计'; });
+                    if (!persistFinanceAudits(rows, '待审计')) return;
                     ElMessage.success(`已反审计 ${rows.length} 条应付流水`);
                 };
                 const financeTotal = computed(() => financeData.value.reduce((s, r) => s + (r.status === '待摊' ? Number(r.amount) : 0), 0));
@@ -1253,11 +1293,13 @@
                 });
                 const auditFinance = () => {
                     if (!canAuditFinance.value) { ElMessage.warning(auditFinanceTip.value || '暂不可审计'); return; }
+                    if (!persistFinanceAudits(financeData.value.filter(r => r.sourceType === 30 && r.status === '已摊'), '已审计')) return;
                     currentSpaceDetail.value.auditStatus = '已审计';
                     ElMessage.success('提单已审计');
                 };
                 const reverseAuditFinance = () => {
                     if (!canReverseAuditFinance.value) { ElMessage.warning(reverseAuditFinanceTip.value || '暂不可反审计'); return; }
+                    if (!persistFinanceAudits(financeData.value.filter(r => r.sourceType === 30 && r.status === '已摊'), '待审计')) return;
                     currentSpaceDetail.value.auditStatus = '未审计';
                     ElMessage.success('提单已反审计');
                 };
@@ -1279,24 +1321,23 @@
                         if (r.rate === null || r.rate === undefined || r.rate === '') { ElMessage.warning(`「${r.type}」请填写汇率`); return; }
                         if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.type}」请填写金额（原币）`); return; }
                     }
-                    // 弹窗内多行去重
-                    const typeCount = {};
-                    rows.forEach(r => { typeCount[r.type] = (typeCount[r.type] || 0) + 1; });
-                    const dupType = Object.keys(typeCount).find(t => typeCount[t] > 1);
-                    if (dupType) { ElMessage.warning(`费用类型「${dupType}」在弹窗内重复，请勿重复添加`); return; }
-                    // ① 提单维度去重：当前提单已有同费用类型（含提单级 + 运单挂靠行）
-                    for (const r of rows) {
-                        if (financeData.value.some(f => f.type === r.type)) { ElMessage.warning(`费用类型「${r.type}」已存在，不能重复新增`); return; }
-                    }
-                    // ③ 平摊查目标运单：自动平摊时，任一目标运单已有同费用类型 → 平摊失败 + 提单侧新增失败
-                    if (feeAutoAmortize.value) {
-                        for (const r of rows) {
-                            const conflictWb = amortizeWaybills.filter(w => (w.existingApTypes || []).includes(r.type));
-                            if (conflictWb.length) { ElMessage.warning(`运单 ${conflictWb.map(w => w.waybillNo).join('、')} 已存在费用类型「${r.type}」，平摊失败，提单侧新增一并取消`); return; }
-                        }
-                    }
+                    const state = LunaApDemo.read(), blNo = currentSpaceDetail.value.blNo;
+                    const pending = rows.map((r,i) => ({ ...r, id: `AP-${Date.now()}-${i}`, flowNo: `FLW20261009${String(state.flows.length+i+1).padStart(3,'0')}`, blNo, feeType: r.type, sourceType: 30, amount: Number(r.amount), createdAt: '2026-10-09 09:30', createdBy: '财务', status: '待摊', auditStatus: '', billNo: '' }));
+                    const mirror = pending.find(r => financeData.value.some(f => f.sourceType === 20 && f.type === r.feeType && (f.currency || 'CNY') === r.currency));
+                    if (mirror) { ElMessage.warning(`提单 ${blNo} 的费用类型「${mirror.feeType}」、币种「${mirror.currency}」重复`); return; }
+                    const conflict = LunaApDemo.check(state, pending);
+                    if (conflict) { ElMessage.warning(conflict); return; }
                     const auto = feeAutoAmortize.value;
-                    rows.forEach(r => financeData.value.push({ type: r.type, amount: Number(r.amount), currency: r.currency, rate: Number(r.rate), supplier: r.supplier, entityName: r.entityName || '', oaNo: r.oaNo, remark: auto ? (r.remark ? r.remark + '；已平摊' : '已平摊') : (r.remark || ''), bizTime: r.bizTime || '', status: auto ? '已摊' : '待摊', billNo: '', auditStatus: auto ? '待审计' : '', sourceType: 30, createdAt: '2026-09-21 09:30', createdBy: '财务' }));
+                    try {
+                        const targets = currentAmortizeTargets();
+                        pending.forEach(f => {
+                            f.sourceFlowNo = f.flowNo;
+                            if (auto) { LunaApDemo.allocate(state, f, targets); f.status = '已摊'; f.auditStatus = '待审计'; }
+                            else { state.sources.push(f); state.flows.push({ ...LunaApDemo.norm(f), waybillNo: '', amortizeStatus: 10 }); }
+                        });
+                        LunaApDemo.save(state);
+                    } catch(e) { ElMessage.warning(e.message); return; }
+                    financeData.value.push(...pending);
                     feeDialogVisible.value = false;
                     ElMessage.success(auto ? `已新增 ${rows.length} 条应付费用并自动平摊到该提单下各运单（尾差挂最后一单）` : `已新增 ${rows.length} 条应付费用，落提单「待摊」，可批量平摊到运单`);
                 };
@@ -1322,7 +1363,14 @@
                     if (row.billNo) { ElMessage.warning('已进账单的流水不允许删除'); return; }
                     if (row.auditStatus === '已审计') { ElMessage.warning('该流水已审计，不可删除（如需调整请先反审计该流水）'); return; }
                     ElMessageBox.confirm(`确定删除「${row.type}」这条应付费用吗？`, '删除确认', { type: 'warning' })
-                        .then(() => { financeData.value = financeData.value.filter(r => r !== row); ElMessage.success('已删除'); })
+                         .then(() => {
+                            const state = LunaApDemo.read(), id = LunaApDemo.sourceId(row);
+                            const children = state.flows.filter(f => f.sourceFlowNo === id && f.waybillNo);
+                            if (children.length) { ElMessage.warning('已摊费用请先撤销对应来源的平摊'); return; }
+                            state.flows = state.flows.filter(f => LunaApDemo.sourceId(f) !== id);
+                            state.sources = state.sources.filter(f => LunaApDemo.sourceId(f) !== id);
+                            LunaApDemo.save(state); financeData.value = financeData.value.filter(r => r !== row); ElMessage.success('已删除');
+                        })
                         .catch(() => {});
                 };
 
@@ -1334,12 +1382,29 @@
                     const map = { view: '应付费用详情', amortize: '平摊确认', reverse: '撤销平摊确认', batchAmortize: '批量平摊确认', batchReverse: '批量撤销平摊确认' };
                     return map[financeDetailMode.value] || '应付费用详情';
                 });
-                // 平摊目标运单（mock）；existingApTypes = 该运单已有（运单级）应付费用类型，用于「费用类型唯一」校验（平摊到已有同类型的运单 → 平摊失败 + 提单侧新增失败）
+                // 配载实收体积演示；按实际提单和来源费用查重。
                 const amortizeWaybills = [
-                    { waybillNo: 'YD20260413005', customerName: '深圳大卖科技', service: '美森快船', country: '美国', pickSite: '深圳仓', customsType: '买单报关', boxes: 12, volume: 45.5, apAuditStatus: '未审计', existingApTypes: ['操作费', '海运费', '港杂费'] },
-                    { waybillNo: 'YD20260413007', customerName: '义乌星光进出口', service: '美森快船', country: '美国', pickSite: '义乌仓', customsType: '双清包税', boxes: 20, volume: 80.0, apAuditStatus: '未审计', existingApTypes: [] },
-                    { waybillNo: 'YD20260413009', customerName: '广州迅达贸易', service: '美森快船', country: '美国', pickSite: '广州仓', customsType: '买单报关', boxes: 35, volume: 174.5, apAuditStatus: '未审计', existingApTypes: [] }
+                    { waybillNo: 'YD20260413005', customerName: '深圳大卖科技', service: '美森快船', country: '美国', pickSite: '深圳仓', customsType: '买单报关', boxes: 12, volume: 45.5, apAuditStatus: '未审计' },
+                    { waybillNo: 'YD20260413007', customerName: '义乌星光进出口', service: '美森快船', country: '美国', pickSite: '义乌仓', customsType: '双清包税', boxes: 20, volume: 80.0, apAuditStatus: '未审计' },
+                    { waybillNo: 'YD20260413009', customerName: '广州迅达贸易', service: '美森快船', country: '美国', pickSite: '广州仓', customsType: '买单报关', boxes: 35, volume: 174.5, apAuditStatus: '未审计' }
                 ];
+                const currentAmortizeTargets = () => {
+                    const state = LunaApDemo.read();
+                    return amortizeWaybills.map(w => ({ ...w, apAuditStatus: (state.waybillAudit || {})[w.waybillNo] || w.apAuditStatus }));
+                };
+                const persistFinanceAudits = (rows, status) => {
+                    const state = LunaApDemo.read();
+                    for (const r of rows) {
+                        const id = LunaApDemo.sourceId(r), children = state.flows.filter(f => f.sourceFlowNo === id && f.waybillNo);
+                        if (status !== '已审计' && children.some(f => f.billNo)) { ElMessage.warning('对应来源明细已关联账单，不可反审计'); return false; }
+                    }
+                    rows.forEach(r => {
+                        const id = LunaApDemo.sourceId(r);
+                        state.sources.filter(f => LunaApDemo.sourceId(f) === id).forEach(f => { f.auditStatus = status; });
+                        state.flows.filter(f => f.sourceFlowNo === id && f.waybillNo).forEach(f => { f.auditStatus = status; });
+                    });
+                    LunaApDemo.save(state); rows.forEach(r => { r.auditStatus = status; }); return true;
+                };
                 const amortizePreview = computed(() => {
                     const totalVolume = amortizeWaybills.reduce((s, w) => s + w.volume, 0);
                     const totalAmount = financeDetailRows.value.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -1380,14 +1445,13 @@
                             ElMessage.warning(`运单 ${auditedWb.map(w => w.waybillNo).join('、')} 应付已整票审计，不可平摊应付费用；如需平摊请先到「运单审计」反审计该运单的应付`);
                             return;
                         }
-                        // ③ 平摊查目标运单：任一目标运单已有同费用类型 → 平摊失败
-                        const conflictList = [];
-                        rows.forEach(r => {
-                            const conflictWb = amortizeWaybills.filter(w => (w.existingApTypes || []).includes(r.type));
-                            if (conflictWb.length) conflictList.push(`费用类型「${r.type}」→ 运单 ${conflictWb.map(w => w.waybillNo).join('、')} 已存在`);
-                        });
-                        if (conflictList.length) { ElMessage.warning(`${conflictList.join('；')}，平摊失败`); return; }
-                        rows.forEach(r => { r.status = '已摊'; r.remark = r.remark ? r.remark + '；已平摊' : '已平摊'; });
+                        if (financeLocked.value) { ElMessage.warning('提单已审计，不可平摊'); return; }
+                        const state = LunaApDemo.read();
+                        try {
+                            rows.forEach(r => LunaApDemo.allocate(state, r, currentAmortizeTargets()));
+                            LunaApDemo.save(state);
+                        } catch(e) { ElMessage.warning(e.message); return; }
+                        rows.forEach(r => { r.status = '已摊'; r.auditStatus = '待审计'; });
                         ElMessage.success(`已按实收体积平摊 ${rows.length} 条应付费用到该提单下各运单（尾差已挂最后一个运单并备注）`);
                         financeDetailVisible.value = false;
                     } else if (mode === 'reverse' || mode === 'batchReverse') {
@@ -1404,6 +1468,9 @@
                         }
                         ElMessageBox.confirm(`确定撤销平摊 ${rows.length} 条应付费用吗？撤销后其下未审计、未进账单的运单应付流水将被删除，费用退回提单「待摊」`, '撤销平摊二次确认', { type: 'warning', confirmButtonText: '确认撤销', cancelButtonText: '取消' })
                             .then(() => {
+                                const state = LunaApDemo.read();
+                                try { rows.forEach(r => LunaApDemo.reverse(state, r, currentAmortizeTargets())); LunaApDemo.save(state); }
+                                catch(e) { ElMessage.warning(e.message); return; }
                                 rows.forEach(r => { r.status = '待摊'; r.auditStatus = ''; });
                                 ElMessage.success(`已撤销平摊 ${rows.length} 条应付费用，退回提单「待摊」，可修改金额后重新平摊`);
                                 financeDetailVisible.value = false;
@@ -1812,7 +1879,7 @@
                 const mockTicketData = ref([{ type: '查验异常', desc: '海关例行查验', status: '处理中' }]);
                 const mockSpaceLogData = ref([{ operator: '系统', action: '创建舱位', remark: '初始化数据', time: '2024-04-10' }]);
 
-                return {
+                return { apDemoResults, runApDedupDemo,
                     activeMenu, handleMenuSelect, handleAction,
                     spaceSearchForm, channelOptions, isSpaceSearchExpanded, spaceActiveTab, spaceTableData, getSpaceStatusType, spaceLoadLocked,
                      spaceDialogVisible, spaceDialogType, spaceFormData, agentOptions, trailerCompanyOptions, customsBrokerOptions, serviceOptions, specOptions, specToVolume, regionOptions, weekOptions, onSpecChange, openSpaceAddDialog,

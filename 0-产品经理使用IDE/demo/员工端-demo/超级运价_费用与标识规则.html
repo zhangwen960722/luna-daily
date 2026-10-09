@@ -361,7 +361,7 @@ data:function(){
 },
 computed:{
   dimOptions:function(){if(this.f.type==='fieldFormula'){return [{label:'服务组合',value:'combination'}]}return [{label:'尾程派送方式',value:'lastMile'},{label:'地址类型（第三方查询）',value:'address'},{label:'SKU属性（取自商品管理）',value:'sku'},{label:'是否FBA运单',value:'isFba'},{label:'报关方式',value:'customsMode'},{label:'自送标识',value:'selfDelivery'},{label:'出口先查后装模式（取自运单）',value:'exportInspectFirst'},{label:'邮编（第三方查询）',value:'zip'},{label:'交货站点（取自仓库列表-本地仓）',value:'warehouse'},{label:'服务组合',value:'combination'},{label:'用户',value:'user'}]},
-  pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'},{label:'按箱',value:'box'}]},
+  pricingUnitOptions:function(){if(this.f.type==='manual'){return [{label:'按数量',value:'unit'}]}if(this.f.type==='fieldFormula'){return [{label:'按箱',value:'box'}]}return [{label:'按票',value:'ticket'},{label:'按KG',value:'kg'},{label:'按m³',value:'cbm'}]},
   receivablePrice:function(){var rows=this.f.pricingRows||[];for(var i=0;i<rows.length;i++){if(rows[i].dir==='r'&&rows[i].price!==null&&rows[i].price!==undefined)return Number(rows[i].price)}return null},
   isReadonly: function(){ return this.editMode && this.rules[this.editIndex] && this.rules[this.editIndex].status === '已冻结'; },
   // 规则骨架锁定（编辑态）：规则类型 / 动作类型 / 维度 一旦落库即不可改 —— 改它们等于换成另一条规则，
@@ -552,6 +552,7 @@ methods:{
       if(!pr0){ElementPlus.ElMessage.warning('计价明细缺失，请刷新后重试');return}
       if(!pr0.feeLabel){ElementPlus.ElMessage.warning('计价明细：请选择费用类型');return}
       if(!pr0.pu){ElementPlus.ElMessage.warning('计价明细：请选择计价单位');return}
+      if(this.f.type==='field'&&['ticket','kg','cbm'].indexOf(pr0.pu)===-1){ElementPlus.ElMessage.warning('字段匹配规则的计价单位仅支持按票、按KG、按m³');return}
       if(pr0.price===null||pr0.price===undefined||pr0.price===''){ElementPlus.ElMessage.warning('计价明细：请输入单价');return}
     }
     var firstRow=this.f.pricingRows[0];

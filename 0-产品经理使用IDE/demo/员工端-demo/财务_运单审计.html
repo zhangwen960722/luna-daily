@@ -302,9 +302,12 @@
 </head>
 <body>
     <div id="app" class="layout-container" v-cloak>
+
+
         <!-- Main Content -->
         <div class="main-content">
             <div class="content-area" style="padding: 0;">
+<details style="margin:12px;padding:10px;background:#f8fafc;border:1px solid #e5e7eb"><summary>应付去重演示</summary><el-button size="small" @click="runApDedupDemo">运行六个案例</el-button><div v-for="item in apDemoResults" :key="item">{{ item }}</div></details>
                 <!-- Search & Tabs -->
                 <div class="card" style="border-bottom: 1px solid var(--el-border-color); border-radius: 4px 4px 0 0;">
                     <!-- 第一层：查询区（条件文字在框内；默认 3 个条件 + 更多查询条件；点击查询后收起）
@@ -3168,12 +3171,12 @@
         <el-dialog :model-value="!!feeApEditRow" title="编辑应付流水" width="900px" append-to-body @update:model-value="feeApEditRow = null">
             <div v-if="feeApEditRow" class="fee-add-card" style="margin-bottom: 0;">
                 <el-row :gutter="12">
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">提单号 <span class="fee-add-tag-note">（同步到提单 · 选填）</span></span><el-input :value="feeApEditRow.blAmortize || '—'" size="small" disabled></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">提单号 <span class="fee-add-tag-note">（同步到提单 · 选填）</span></span><el-select v-model="feeApEditRow.blAmortize" size="small" style="width:100%" clearable filterable><el-option v-for="b in apEditBlOptions" :key="b" :label="b" :value="b" :disabled="blAudited(b)"></el-option></el-select></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">业务时间 <i class="req">*</i></span><el-date-picker v-model="feeApEditRow.bizTime" type="date" size="small" style="width:100%" value-format="YYYY-MM-DD"></el-date-picker></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">OA审批编号 <i class="req">*</i></span><el-input v-model="feeApEditRow.oaNo" size="small" placeholder="请输入 OA 审批编号"></el-input></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">供应商 <i class="req">*</i></span><el-select v-model="feeApEditRow.supplier" size="small" style="width:100%" filterable @change="onApSupplierChange(feeApEditRow)"><el-option v-for="s in supplierOptions" :key="s" :label="s" :value="s"></el-option></el-select></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">我司主体 <i class="req">*</i></span><el-select v-model="feeApEditRow.entityName" size="small" style="width:100%" disabled><el-option v-for="e in entityOptionsBySupplier(feeApEditRow.supplier)" :key="e" :label="e" :value="e"></el-option></el-select></div></el-col>
-                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-input :value="feeApEditRow.type" size="small" disabled></el-input></div></el-col>
+                    <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">费用类型 <i class="req">*</i></span><el-select v-model="feeApEditRow.type" size="small" style="width:100%" filterable><el-option v-for="t in feeTypeApOptions" :key="t.name" :label="t.name" :value="t.name"></el-option></el-select></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">币种</span><el-select v-model="feeApEditRow.currency" size="small" style="width:100%" @change="handleFeeCurrencyChange(feeApEditRow)"><el-option label="CNY" value="CNY"></el-option><el-option label="USD" value="USD"></el-option><el-option label="HKD" value="HKD"></el-option><el-option label="EUR" value="EUR"></el-option></el-select></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">汇率</span><el-input v-model="feeApEditRow.rate" size="small"></el-input></div></el-col>
                     <el-col :span="8"><div class="fee-add-field"><span class="fee-add-field-label">金额（原币） <i class="req">*</i></span><el-input-number v-model="feeApEditRow.amount" size="small" style="width:100%" :controls="false" :precision="2"></el-input-number></div></el-col>
@@ -3747,12 +3750,38 @@
 
     </div>
     <script>
+// 仅本地原型；sourceFlowNo 是现有来源关联的展示映射，不定义新数据库字段。
+window.LunaApDemo=(()=>{
+ const read=()=>{const s=JSON.parse(localStorage.getItem('luna-ap-demo-v1')||'{}');return {...s,flows:(s.flows||[]).map(f=>f.sourceType===30&&f.waybillNo&&!f.sourceFlowNo?{...f,sourceFlowNo:'来源:'+[(f.blNo||f.blAmortize||''),(f.feeType||f.type),(f.currency||'CNY')].join('|')}:f),sources:s.sources||[],bills:s.bills||[]}};
+ const save=s=>localStorage.setItem('luna-ap-demo-v1',JSON.stringify(s));
+ const norm=f=>({...f,id:f.id||f.flowNo,flowNo:f.flowNo||String(f.id),waybillNo:f.waybillNo||'',blNo:f.blNo||f.blAmortize||'',feeType:f.feeType||f.type,currency:f.currency||'CNY'});
+ const sourceId=f=>String(f.sourceFlowNo||f.flowNo||f.id);
+ const sk=f=>[f.blNo,f.feeType,f.currency].join('|'),fk=f=>[f.waybillNo,f.blNo||'',f.feeType,f.currency].join('|');
+ const sources=s=>{
+  const m=new Map();[...s.sources,...s.flows.filter(f=>f.sourceType===20||!f.waybillNo)].filter(f=>!f.cancelled).map(norm).filter(f=>f.blNo).forEach(f=>m.set(sourceId(f),f));
+  const groups=new Map();s.flows.filter(f=>!f.cancelled&&f.sourceType===30&&f.waybillNo).map(norm).forEach(f=>{const id=f.sourceFlowNo||'来源:'+sk(f);const g=groups.get(id)||{...f,flowNo:id,sourceFlowNo:id,waybillNo:'',amount:0,status:'已摊'};g.amount+=Number(f.amount||0);if(f.auditStatus==='已审计')g.auditStatus='已审计';if(f.billNo)g.billNo=f.billNo;groups.set(id,g)});groups.forEach((f,id)=>{if(![...m.values()].some(x=>sk(x)===sk(f)))m.set(id,f)});return [...m.values()];
+ };
+ const check=(s,items,exclude='')=>{const a=new Set(),b=new Set();for(const x of items){const f=norm(x),k=sk(f),j=fk(f);if(f.blNo&&(a.has(k)||sources(s).some(t=>sourceId(t)!==String(exclude)&&String(t.id)!==String(exclude)&&sk(t)===k)))return `提单 ${f.blNo} 的费用类型「${f.feeType}」、币种「${f.currency}」重复`;if(f.waybillNo&&(b.has(j)||s.flows.filter(t=>!t.cancelled).map(norm).some(t=>String(t.id)!==String(exclude)&&t.flowNo!==String(exclude)&&fk(t)===j)))return `运单 ${f.waybillNo}、提单 ${f.blNo||'无提单'} 的费用类型「${f.feeType}」、币种「${f.currency}」重复`;if(f.blNo)a.add(k);if(f.waybillNo)b.add(j)}return ''};
+ const allocate=(s,input,targets)=>{
+  const src=norm(input),id=sourceId(src),v=targets.reduce((a,w)=>a+Number(w.volume||0),0);if(!targets.length||v<=0)throw Error('无有效实收体积，不可平摊');if(targets.some(w=>w.apAuditStatus==='已审计'))throw Error('目标运单应付已整票审计，不可平摊');
+  const old=s.flows.filter(f=>!f.cancelled&&f.sourceFlowNo===id&&f.waybillNo);if(old.length){if(old.length===targets.length&&targets.every(w=>old.some(f=>f.waybillNo===w.waybillNo)))return old;throw Error('来源费用已有有效分摊，请先撤销对应来源')}
+  let acc=0;const children=targets.map((w,i)=>{const f={...src,id:id+':'+w.waybillNo,flowNo:id+':'+w.waybillNo,sourceFlowNo:id,waybillNo:w.waybillNo,sourceType:30,amortizeStatus:20,status:'已摊',auditStatus:'待业务审计',billNo:''};f.amount=Math.round((i===targets.length-1?Number(src.amount)-acc:Number(src.amount)*w.volume/v)*100)/100;acc+=f.amount;if(i===targets.length-1)f.description='含尾差（提单平摊）';if(s.flows.filter(t=>!t.cancelled).map(norm).some(t=>fk(t)===fk(f)))throw Error(`运单 ${f.waybillNo}、提单 ${f.blNo} 的费用类型「${f.feeType}」、币种「${f.currency}」重复`);return f});
+  s.sources=s.sources.filter(f=>sourceId(f)!==id);s.sources.push({...src,sourceFlowNo:id,status:'已摊'});s.flows=s.flows.filter(f=>sourceId(f)!==id||f.waybillNo);s.flows.push(...children);return children;
+ };
+ const reverse=(s,input,targets)=>{const src=norm(input),id=sourceId(src),children=s.flows.filter(f=>!f.cancelled&&f.sourceFlowNo===id&&f.waybillNo);if(children.some(f=>f.auditStatus==='已审计'||f.billNo)||targets.some(w=>w.apAuditStatus==='已审计'&&children.some(f=>f.waybillNo===w.waybillNo)))throw Error('对应明细已审计、已进账单或运单应付整票审计，不可撤销');s.flows=s.flows.filter(f=>f.sourceFlowNo!==id);s.sources=s.sources.filter(f=>sourceId(f)!==id);s.sources.push({...src,sourceFlowNo:id,status:'待摊'});s.flows.push({...src,sourceFlowNo:id,waybillNo:'',amortizeStatus:10,status:'待摊',auditStatus:''})};
+ const cases=()=>{const s={flows:[],sources:[],bills:[]},w=[{waybillNo:'运单A',volume:1,apAuditStatus:'未审计'}],b={id:'来源B',flowNo:'来源B',blNo:'提单B',feeType:'海运费',currency:'CNY',amount:100,sourceType:30},c={...b,id:'来源C',flowNo:'来源C',blNo:'提单C',amount:200};allocate(s,b,w);const count=s.flows.length;allocate(s,b,w);const repeat=s.flows.length===count,dup=check(s,[b]);allocate(s,c,w);const both=s.flows.map(f=>`${f.blNo} ${f.currency} ${f.feeType} ${f.amount}`).join('；'),manual=check(s,[{...b,id:'人工',waybillNo:'运单A',sourceType:20}]),empty=check(s,[{...b,id:'空提单',blNo:'',waybillNo:'运单A',sourceType:20}]);reverse(s,b,w);return [`① 两个提单分摊成功：${both}`,`② 同提单重复新增/导入阻止：${dup}`,`③ 重复分摊${repeat?'未新增流水':'异常'}`,`④ 已有B时C仍成功；无提单人工${empty?'被阻止':'仍允许'}`,`⑤ 人工挂靠阻止：${manual}`,`⑥ 撤销B后C金额仍为 ${s.flows.find(f=>f.blNo==='提单C'&&f.waybillNo).amount}，B退回待摊`]};
+ return {read,save,norm,sources,check,allocate,reverse,cases,sourceId};
+})();
+</script>
+<script>
         const { createApp, ref, reactive, computed, watch } = Vue;
         const { ElMessageBox, ElMessage } = ElementPlus;
         const icons = ElementPlusIconsVue;
 
         const app = createApp({
             setup() {
+ const apDemoResults = Vue.ref([]);
+ const runApDedupDemo = () => { apDemoResults.value = LunaApDemo.cases(); };
                 const statusTabs = computed(() => {
                     const names = ['已收货','转运中','已到港','已清关','已到仓','已签收','退件'];   // 运单审计范围：已收货及之后；不含 已下单 / 收货中 / 已取消
                     const tabs = names.map(name => ({
@@ -6102,8 +6131,9 @@
                         const w = tableData.value.find(x => x.orderNo === l.waybillNo);
                         if (w) {
                             if (!Array.isArray(w.apFlows)) w.apFlows = [];
+                            if (w.apFlows.some(f => String(f.id) === String(l.id))) return;
                             w.apFlows.push({
-                                id: Date.now() + i + Math.floor(Math.random() * 1000),
+                                id: l.id || `MANUAL:${l.waybillNo}:${l.blNo}:${l.type}:${l.currency}`,
                                 auditStatus: '待业务审计', type: l.type, kindLabel: '手工新增', supplier: l.supplier,
                                 currency: l.currency, amount: l.amount, rate: l.rate,
                                 remark: l.remark || '', blAmortize: l.blNo || '', oaNo: l.oaNo || '',
@@ -6698,19 +6728,51 @@
                 const feeApEditRow = ref(null);
                 // 挂靠流水跨页同步 + 持久化：把「source=人工添加 + 填了提单号」的应付流水写入 localStorage（含运单号 + 提单号），供舱位管理提单侧只读展示、也供本页刷新后恢复
                 const AP_LINK_KEY = 'luna_ap_amortize_link';
+                const apEditBlOptions = computed(() => [...new Set([...(currentRow.value ? rowBlNos(currentRow.value) : []), ...(feeApEditRow.value && feeApEditRow.value.blAmortize ? [feeApEditRow.value.blAmortize] : [])])]);
+                const apStateForValidation = () => {
+                    const state = LunaApDemo.read();
+                    tableData.value.forEach(w => (w.apFlows || []).forEach(f => {
+                        const mapped = LunaApDemo.norm({ ...f, waybillNo: w.orderNo, blNo: f.blAmortize || '', sourceType: f.source === '提单平摊' ? 30 : 20 });
+                        if (mapped.sourceType === 30) mapped.sourceFlowNo = f.sourceFlowNo || `来源:${mapped.blNo}|${mapped.feeType}|${mapped.currency}`;
+                        if (!state.flows.some(x => String(x.id) === String(mapped.id) || (mapped.sourceType === 30 && x.sourceFlowNo === mapped.sourceFlowNo && x.waybillNo === mapped.waybillNo))) state.flows.push(mapped);
+                    }));
+                    // 提单来源费用初始演示目录；有跨页真实演示来源时以共享来源集合为准。
+                    const knownBl = new Set(LunaApDemo.sources(state).map(f => f.blNo));
+                    Object.entries(blFeeTypes).forEach(([blNo, types]) => {
+                        if (knownBl.has(blNo)) return;
+                        types.forEach(value => {
+                            const [feeType, currency] = value.split('|');
+                            state.sources.push({ id: `目录:${blNo}:${value}`, flowNo: `目录:${blNo}:${value}`, blNo, feeType, currency, sourceType: 30 });
+                        });
+                    });
+                    return state;
+                };
                 const syncApLinks = () => {
                     const list = [];
                     tableData.value.forEach(w => (w.apFlows || []).forEach(f => {
                         if (f.source === '人工添加' && f.blAmortize) {
                             list.push({
-                                waybillNo: w.orderNo, blNo: f.blAmortize,
+                                id: f.id, flowNo: String(f.id), waybillNo: w.orderNo, blNo: f.blAmortize,
                                 type: f.type, supplier: f.supplier, amount: Number(f.amount || 0), currency: f.currency,
                                 rate: Number(f.rate || 1), remark: f.remark || '', bizTime: f.bizTime || '', createdAt: f.createdAt || '',
                                 oaNo: f.oaNo || ''
                             });
                         }
                     }));
-                    try { localStorage.setItem(AP_LINK_KEY, JSON.stringify(list)); } catch (e) {}
+                    try {
+                        localStorage.setItem(AP_LINK_KEY, JSON.stringify(list));
+                        const state = LunaApDemo.read();
+                        // 仅替换本页管理的人工费用；不覆盖其他提单分摊记录。
+                        const managed = new Set(tableData.value.map(w => w.orderNo));
+                        state.flows = state.flows.filter(f => !(f.sourceType === 20 && managed.has(f.waybillNo) && f.auditPageManaged));
+                        tableData.value.forEach(w => (w.apFlows || []).filter(f => f.source === '人工添加').forEach(f => {
+                            const mapped = LunaApDemo.norm({ ...f, waybillNo: w.orderNo, sourceType: 20, auditPageManaged: true });
+                            state.flows = state.flows.filter(x => String(x.id) !== String(f.id)); state.flows.push(mapped);
+                        }));
+                        state.waybillAudit = { ...(state.waybillAudit || {}) };
+                        tableData.value.forEach(w => { state.waybillAudit[w.orderNo] = w.apAuditStatus || '未审计'; });
+                        LunaApDemo.save(state);
+                    } catch(e) { ElMessage.warning('本地演示数据保存失败：' + e.message); }
                 };
                 const saveFeeAp = () => {
                     const rows = feeApList.value.filter(r => r.type);
@@ -6726,26 +6788,10 @@
                         if (r.amount === null || r.amount === undefined || r.amount === '') { ElMessage.warning(`「${r.type}」请填写金额`); return; }
                         if (r.blNo && blAudited(r.blNo)) { ElMessage.warning(`提单 ${r.blNo} 已审计，不可新增挂靠该提单的应付流水；如需补录请先反审计提单`); return; }
                     }
-                    // 弹窗内多行去重
-                    const apTypeCount = {};
-                    rows.forEach(r => { const k = r.type + '|' + (r.currency || 'CNY'); apTypeCount[k] = (apTypeCount[k] || 0) + 1; });
-                    const apDupType = Object.keys(apTypeCount).find(t => apTypeCount[t] > 1);
-                    if (apDupType) { const p = apDupType.split('|'); ElMessage.warning(`费用类型「${p[0]}」+ 币种「${p[1]}」在弹窗内重复，请勿重复添加`); return; }
-                    // ② 运单维度去重：目标运单已有同 费用类型 + 币种（含运单级 + 平摊行）
-                    for (const r of rows) {
-                        for (const no of feeRowWaybills(r)) {
-                            const w = (feeAddContext.value.waybills || []).find(x => x.orderNo === no);
-                            const apArr = (w && Array.isArray(w.apFlows)) ? w.apFlows : feeApFlows.value;
-                            if (apArr.some(f => f.type === r.type && (f.currency || 'CNY') === (r.currency || 'CNY'))) { ElMessage.warning(`运单 ${no} 已存在费用类型「${r.type}」+ 币种「${r.currency || 'CNY'}」，不能重复新增`); return; }
-                        }
-                    }
-                    // ④ 挂靠查提单：填了提单号，该提单已有同 费用类型 + 币种（提单级）→ 反写失败 + 运单侧新增失败
-                    for (const r of rows) {
-                        if (r.blNo && (blFeeTypes[r.blNo] || []).includes(r.type + '|' + (r.currency || 'CNY'))) { ElMessage.warning(`提单 ${r.blNo} 已存在费用类型「${r.type}」+ 币种「${r.currency || 'CNY'}」，挂靠同步失败，运单侧新增一并取消`); return; }
-                    }
-                    // 一条费用 × 每票运单 = 一条流水（批量铺费用；适用运单带出主列表勾选的运单、不可修改）
                     const items = [];
-                    rows.forEach(r => feeRowWaybills(r).forEach(no => items.push(Object.assign({}, r, { waybillNo: no }))));
+                    rows.forEach(r => feeRowWaybills(r).forEach(no => items.push({ ...r, waybillNo: no, feeType: r.type, sourceType: 20 })));
+                    const conflict = LunaApDemo.check(apStateForValidation(), items);
+                    if (conflict) { ElMessage.warning(conflict + '，本次新增一并取消'); return; }
                     const audited = items.map(x => x.waybillNo).filter(no => feeAddWaybillApDisabled(no));
                     if (audited.length) { ElMessage.warning(`运单 ${[...new Set(audited)].join('、')} 应付已整票审计，不允许新增应付费用；如需补录请先反审计应付`); return; }
                     items.forEach(r => {
@@ -6766,15 +6812,34 @@
                 };
                 const saveFeeApEdit = () => {
                     if (!feeApEditRow.value) return;
-                    const src = (currentRow.value && currentRow.value.apFlows) || feeApFlows.value;
-                    const row = src.find(f => f.id === feeApEditRow.value.id);
-                    if (row) Object.assign(row, { supplier: feeApEditRow.value.supplier, currency: feeApEditRow.value.currency, rate: feeApEditRow.value.rate, amount: feeApEditRow.value.amount, remark: feeApEditRow.value.remark, oaNo: feeApEditRow.value.oaNo, bizTime: feeApEditRow.value.bizTime });
-                    ElMessage.success('已保存');
-                    feeApEditRow.value = null;
-                    syncApLinks();
+                    const edit = feeApEditRow.value, src = (currentRow.value && currentRow.value.apFlows) || feeApFlows.value;
+                    const row = src.find(f => f.id === edit.id);
+                    if (!row) return;
+                    if (!feeRowEditable(row)) { ElMessage.warning(feeRowLockReason(row)); return; }
+                    if (!edit.type || !edit.currency || !edit.supplier || !String(edit.oaNo || '').trim() || !edit.bizTime || edit.amount === null || edit.amount === undefined || edit.rate === null || edit.rate === '') { ElMessage.warning('请填写费用类型、币种、供应商、审批编号、业务时间、汇率及金额'); return; }
+                    if (edit.blAmortize && edit.blAmortize !== row.blAmortize && blAudited(edit.blAmortize)) { ElMessage.warning(`提单 ${edit.blAmortize} 已审计，不可挂靠`); return; }
+                    const conflict = LunaApDemo.check(apStateForValidation(), [{ ...edit, blNo: edit.blAmortize || '', feeType: edit.type, waybillNo: currentRow.value && currentRow.value.orderNo, sourceType: 20 }], edit.id);
+                    if (conflict) { ElMessage.warning(conflict + '，编辑未保存'); return; }
+                    Object.assign(row, { type: edit.type, blAmortize: edit.blAmortize || '', supplier: edit.supplier, currency: edit.currency, rate: edit.rate, amount: edit.amount, remark: edit.remark, oaNo: edit.oaNo, bizTime: edit.bizTime });
+                    syncApLinks(); ElMessage.success('已保存'); feeApEditRow.value = null;
                 };
+                // 来源分摊明细跨页只读展示，不生成第二笔费用。
+                const refreshApAllocations = () => {
+                    const state = LunaApDemo.read();
+                    tableData.value.forEach(w => {
+                        if (!Array.isArray(w.apFlows)) w.apFlows = [];
+                        w.apFlows = w.apFlows.filter(f => !f.sharedAllocation);
+                        state.flows.filter(f => f.sourceType === 30 && f.waybillNo === w.orderNo && !f.cancelled && f.sourceFlowNo).forEach(f => {
+                            if (!w.apFlows.some(x => (x.blAmortize || '') === f.blNo && x.type === f.feeType && x.currency === f.currency)) w.apFlows.push({ ...f, blAmortize: f.blNo, type: f.feeType, source: '提单平摊', sharedAllocation: true });
+                        });
+                    });
+                };
+                refreshApAllocations();
+                window.addEventListener('focus', refreshApAllocations);
+                window.addEventListener('storage', e => { if (e.key === 'luna-ap-demo-v1') refreshApAllocations(); });
+                Vue.watch(tableData, syncApLinks, { deep: true });
 
-                return {
+                return { apEditBlOptions, apDemoResults, runApDedupDemo,
                     statusTabs, activeStatusTab, filteredTableData, isSearchExpanded, search, allTableColumns,
                     handleSearch, resetSearch, handleExport, currentArFlows, currentApFlows, currentCostFlows, rowArTotal, rowApTotal, rowGrossProfit,
                     tableData, handleSelectionChange, hasSelection, selectedOrderNos,
